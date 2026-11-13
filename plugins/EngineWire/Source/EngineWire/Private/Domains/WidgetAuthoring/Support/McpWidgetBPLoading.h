@@ -45,6 +45,10 @@ bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
 // vanishes from the viewport. The outcome is not a failure of the edit that came before (a Blueprint with an
 // unrelated compile error must not fail a widget add); the return says whether it compiled clean.
 bool RefreshWidgetBlueprintClass(UWidgetBlueprint* WidgetBP);
+// The end of an edit of a Widget Blueprint its caller marked structurally modified: compiled first
+// (RefreshWidgetBlueprintClass), so the saved asset holds the generated class with the edit, then saved once; Result
+// answers saved. Saved first, the file held the class from before the edit. Returns whether the save landed.
+bool CompileAndSaveWidgetBlueprint(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Result);
 
 // The animation of that name, case ignored; nullptr when absent. A widget by name is UWidgetTree::FindWidget(FName).
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName);

@@ -15,18 +15,12 @@ UTexture2D* LoadTextureChecked(const TSharedPtr<FJsonObject>& Params, TSharedPtr
         Response->SetStringField(TEXT("error"), McpPathRefusalMessage(TEXT("assetPath"), AssetPath));
         return nullptr;
     }
-    AssetPath = SanitizedAssetPath;
-    if (AssetPath.IsEmpty())
-    {
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("assetPath is required"));
-        return nullptr;
-    }
-    UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AssetPath));
+    FString Error;
+    UTexture2D* Texture = LoadTextureAt(SanitizedAssetPath, TEXT("assetPath"), AssetPath, Error);
     if (!Texture)
     {
         Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
+        Response->SetStringField(TEXT("error"), Error);
         return nullptr;
     }
     return Texture;

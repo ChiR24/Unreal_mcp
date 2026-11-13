@@ -172,7 +172,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
         }
         ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
         ResultJson->SetBoolField(TEXT("success"), bFontApplied);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetNumberField(TEXT("fontSize"), AppliedSize);
         ResultJson->SetStringField(TEXT("font"), FontObject ? FontObject->GetPathName() : FString());
@@ -237,7 +237,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
         }
         ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
         ResultJson->SetBoolField(TEXT("success"), bMarginApplied);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetNumberField(TEXT("left"), Left);
         ResultJson->SetNumberField(TEXT("top"), Top);

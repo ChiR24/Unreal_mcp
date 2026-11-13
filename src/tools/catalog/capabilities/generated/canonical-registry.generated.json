@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6628ccfb90fc324a",
+  "catalogRevision": "8719fa768efb846f",
   "recordCount": 489,
   "records": [
     {
@@ -5554,7 +5554,7 @@
                 "configure_constraint_limits",
                 "assign"
               ],
-              "description": "Which edit physics asset variant to run.\ncreate: Create a PhysicsAsset for a skeletal mesh.\nadd_body: Add a physics body to a PhysicsAsset.\nconfigure_body: Configure the physics body of boneName in a Physics Asset, each field only when sent: mass in kg (the mass override), linearDamping, angularDamping, collisionEnabled (query and physics, or none), simulatePhysics (simulate with the ragdoll, or follow the animation as Kinematic). A call sending none is refused; the reply gives mass, damping and physicsType after the change, and saved.\nmodify_body: The edit=modify_body spelling of edit=configure_body: set a body's mass (kg), damping, collision or whether it simulates, each only when sent; a call sending none is refused and the reply gives the values after the change.\nadd_constraint: Add a physics constraint between two bodies; refuses a pair that already has one.\nset_constraint: Create or update the constraint between two physics bodies: an existing pair is edited in place, not duplicated.\nconfigure_constraint_limits: Change the angular limits of the joint between bodyA and bodyB: limits holds swing1LimitAngle, swing2LimitAngle and twistLimitAngle in degrees, with swing1Motion, swing2Motion and twistMotion (Free, Limited or Locked); an angle sent without its motion means Limited, and an axis not named keeps its setting. A pair with no joint is CONSTRAINT_NOT_FOUND. One undo step; saved unless save is false.\nassign: Assign a Physics Asset to a Skeletal Mesh in one undo step; the mesh is saved unless save is false (saved)."
+              "description": "Which edit physics asset variant to run.\ncreate: Create a PhysicsAsset for a skeletal mesh.\nadd_body: Add a physics body to a PhysicsAsset.\nconfigure_body: Configure the physics body of boneName in a Physics Asset, each field only when sent: mass in kg (the mass override), linearDamping, angularDamping, collisionEnabled (query and physics, or none), simulatePhysics (simulate with the ragdoll, or follow the animation as Kinematic). A call sending none is refused; the reply gives mass, damping and physicsType after the change, and saved.\nmodify_body: The edit=modify_body spelling of edit=configure_body: set a body's mass (kg), damping, collision or whether it simulates, each only when sent; a call sending none is refused and the reply gives the values after the change.\nadd_constraint: Add a physics constraint between two bodies; refuses a pair that already has one. As the editor makes joints: placed at bodyA's bone from the preview mesh's reference pose, named after that bone unless constraintName names it, and the pair no longer collides; PREVIEW_MESH_REQUIRED when the preview mesh lacks either bone.\nset_constraint: Create or update the constraint between two physics bodies: an existing pair is edited in place, not duplicated.\nconfigure_constraint_limits: Change the angular limits of the joint between bodyA and bodyB: limits holds swing1LimitAngle, swing2LimitAngle and twistLimitAngle in degrees, with swing1Motion, swing2Motion and twistMotion (Free, Limited or Locked); an angle sent without its motion means Limited, and an axis not named keeps its setting. A pair with no joint is CONSTRAINT_NOT_FOUND. One undo step; saved unless save is false.\nassign: Assign a Physics Asset to a Skeletal Mesh in one undo step; the mesh is saved unless save is false (saved)."
             }
           },
           "required": [
@@ -5824,8 +5824,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d0e7b53be63a5b982e5a9914226ecb3210a8bdbea81813d86020e703dd6e22ca",
-        "content": "18e67b975211876916ae17be5b03b7f6a0f286327b8d913e5c9f31fd29576395"
+        "schema": "8693dbf7de90a77d159abe5c4cb3eef2b13905546263a496837c9cb7d99bd233",
+        "content": "71360c1a956e12d31c791242eb7773ebb37854fdf08c18b8dd978088891340c1"
       }
     },
     {
@@ -6236,6 +6236,10 @@
               "type": "string",
               "description": "Canonical /Game SkeletalMesh asset path."
             },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "save": {
               "type": "boolean",
               "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
@@ -6256,10 +6260,6 @@
                 "x-unreal-reflection-boundary": true
               },
               "description": "Per-vertex skin weight descriptors with bone influences."
-            },
-            "dropRenderOnlyMorphs": {
-              "type": "boolean",
-              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
             },
             "sourceMeshPath": {
               "type": "string",
@@ -6290,7 +6290,7 @@
                 "mirror",
                 "prune"
               ],
-              "description": "Which edit skin weights variant to run.\nauto: Recompute LOD 0 skin weights of a skeletal mesh by smooth binding to its own skeleton (UE 5.5+ with GeometryScripting).\nset: Set the weights of vertices in a skin weight profile of a skeletal mesh (profileName, default CustomWeights; 'Default' is the mesh's own weights and is refused): each weights entry gives vertexIndex (a vertex of LOD lodIndex, default 0) its influences, boneIndex (the mesh's reference skeleton) with a weight 0 to 1, normalized on build; every other vertex keeps its weights in the profile (a new profile starts as a copy of the mesh's own). From UE 5.4 the profile is written into the mesh's source data and rebuilt, so it lasts; the reply reads it back (PROFILE_NOT_BUILT when the rebuild made none). A vertex or bone the mesh lacks, or influences that are all 0, are INVALID_ARGUMENT, and morph targets the mesh has only in render data RENDER_ONLY_MORPHS unless dropRenderOnlyMorphs. Saved unless save is false (saved).\ncopy: Replace the skin weights of an existing skeletal mesh with those of another skinned mesh (for example the body under a garment), vertex by nearest vertex, mapping bones by name; the mesh keeps its geometry, physics asset, sockets and LODs.\nmirror: Mirror the skin weights of one side of a skeletal mesh onto the other, swapping left and right bones by name (_l and _r, Left and Right, .L and .R); vertices on the symmetry plane keep their weights.\nprune: Remove skin influences below a weight threshold (each vertex keeps its strongest bone) and renormalize; a mesh with nothing below it is left untouched."
+              "description": "Which edit skin weights variant to run.\nauto: Recompute LOD 0 skin weights of a skeletal mesh by smooth binding to its own skeleton (UE 5.5+ with GeometryScripting). The rebuild keeps the morph targets of the mesh's source data from UE 5.7; before it, a mesh whose source data has morph targets is refused (MORPHS_WOULD_BE_LOST), and on every version morph targets only the render data has are refused (RENDER_ONLY_MORPHS) unless dropRenderOnlyMorphs is true.\nset: Set the weights of vertices in a skin weight profile of a skeletal mesh (profileName, default CustomWeights; 'Default' is the mesh's own weights and is refused): each weights entry gives vertexIndex (a vertex of LOD lodIndex, default 0) its influences, boneIndex (the mesh's reference skeleton) with a weight 0 to 1, normalized on build; every other vertex keeps its weights in the profile (a new profile starts as a copy of the mesh's own). From UE 5.4 the profile is written into the mesh's source data and rebuilt, so it lasts; the reply reads it back (PROFILE_NOT_BUILT when the rebuild made none). A vertex or bone the mesh lacks, or influences that are all 0, are INVALID_ARGUMENT, and morph targets the mesh has only in render data RENDER_ONLY_MORPHS unless dropRenderOnlyMorphs. Saved unless save is false (saved).\ncopy: Replace the skin weights of an existing skeletal mesh with those of another skinned mesh (for example the body under a garment), vertex by nearest vertex, mapping bones by name; the mesh keeps its geometry, physics asset, sockets and LODs.\nmirror: Mirror the skin weights of one side of a skeletal mesh onto the other, swapping left and right bones by name (_l and _r, Left and Right, .L and .R); vertices on the symmetry plane keep their weights.\nprune: Remove skin influences below a weight threshold (each vertex keeps its strongest bone) and renormalize; a mesh with nothing below it is left untouched."
             }
           },
           "required": [
@@ -6464,12 +6464,6 @@
             "weights": [
               "set"
             ],
-            "dropRenderOnlyMorphs": [
-              "set",
-              "copy",
-              "mirror",
-              "prune"
-            ],
             "sourceMeshPath": [
               "copy"
             ],
@@ -6518,8 +6512,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "041634220fa03de89e83c0b8ac0711622a806cf93e4e1501c12aa5959aafb383",
-        "content": "ee5aa09e8e5be2ce3507c311dbc4479fd94cb36f1788147a2c014850c1878598"
+        "schema": "0b4f7df0358fefca55c9365b2baa01db33b7f5786a93ea32d93d338a98c2a15d",
+        "content": "17e01343edc0332b23e40901331facd9cb1692e04c2eef4034ade3cadff37ba6"
       }
     },
     {
@@ -9809,7 +9803,7 @@
                 "reset_parameters",
                 "reparent"
               ],
-              "description": "Which edit material instance variant to run.\nadd_parameter: Add a parameter to a material.\nreset_parameters: Reset all parameter overrides on a material instance.\nreparent: Give a material instance another parent (a Material or a Material Instance) as the material instance editor does: an instance that compiles shaders of its own (a static switch or a base property override) has them compiled again for the new parent, and whatever draws it is redrawn. Its parameter overrides are kept, so one the new parent also has keeps its value there (reset_parameters drops them all). One undo step, and the instance is saved. Naming its current parent again rebuilds it from that parent."
+              "description": "Which edit material instance variant to run.\nadd_parameter: Add a parameter node to a material or material function, made and placed as add_scalar_parameter, add_vector_parameter, add_static_switch_parameter or add_texture_sample make theirs (value is their defaultValue, or a texture parameter's texture), and answered as they answer (the new node id and its placement). The rest of the graph is left where it is.\nreset_parameters: Reset all parameter overrides on a material instance.\nreparent: Give a material instance another parent (a Material or a Material Instance) as the material instance editor does: an instance that compiles shaders of its own (a static switch or a base property override) has them compiled again for the new parent, and whatever draws it is redrawn. Its parameter overrides are kept, so one the new parent also has keeps its value there (reset_parameters drops them all). One undo step, and the instance is saved. Naming its current parent again rebuilds it from that parent."
             }
           },
           "required": [
@@ -9943,8 +9937,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "194cd88e5d92f2dba7b7a5b9ec2ee6eee91e03f975aee5a4ea0b334aba284261",
-        "content": "8b9831a90821269015831c9949ec27a19f9361a7fa5db70c4b2e20e9215a5298"
+        "schema": "677976487f826d9c77657f67719354c60c304d1ddb67f71f292f76a4dfc22502",
+        "content": "60b1d3186ac932d30d82b48f21b7ec5191c98ccd5fc5908808b9d7ec46f85608"
       }
     },
     {
@@ -23639,7 +23633,7 @@
           "new widget",
           "menu widget"
         ],
-        "summary": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saveSucceeded); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
+        "summary": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saved); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
         "whenToUse": [
           "edit=create: A new UMG Widget Blueprint must be created.",
           "edit=set_parent_class: A Widget Blueprint must inherit from a specific UserWidget subclass.",
@@ -23781,7 +23775,7 @@
       },
       "examples": [
         {
-          "title": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saveSucceeded); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
+          "title": "Create or restructure a Widget Blueprint, chosen by edit. create makes one named name in path (default /Game/UI), or at widgetPath, from parentClass (default UserWidget; a native widget class or a Widget Blueprint class path, anything else INVALID_PARENT_CLASS), with an empty widget tree, then compiles and saves it (compileSucceeded, saved); a taken path is ALREADY_EXISTS. set_parent_class reparents it to a UserWidget class or Widget Blueprint, refreshes, compiles and saves (INVALID_CLASS, CYCLIC_PARENT). rename_widget renames slotName to newName and carries graph references, bindings, animations and navigation along (ALREADY_EXISTS, NAME_CONFLICT). reparent_widget moves slotName under the panel newParent at index (default last; the same parent reorders), keeping its slot layout; a move under its own child is INVALID_PARENT.",
           "input": {
             "action": "edit_widget_blueprint",
             "name": "WBP_MainUI",
@@ -23891,7 +23885,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "45084a0d46b105adc47e506997aeb23e33910efd71fb6f8478c65310164ba898",
-        "content": "87a2c79e5971d72fb4fa6d63af3231423056f6045cdedac224f45dff08a4c16c"
+        "content": "25b8772480d81c59c3426e028283a621f788dd085fc59cf53dfb78b399c0eae2"
       }
     },
     {
@@ -31382,7 +31376,7 @@
                 "configure_screen_percentage",
                 "configure_pp_blend"
               ],
-              "description": "Which configure post process variant to run.\nconfigure_bloom: Set bloom: amount (BloomIntensity) and threshold (BloomThreshold), written after settings, which takes any other bloom field by engine name (BloomSizeScale, BloomMethod). Send at least one.\nset_bloom_intensity: Set BloomIntensity to amount: 0 or more, 0.675 by default, 8 at the top of the editor slider; 0 turns bloom off.\nset_bloom_threshold: Set BloomThreshold to threshold, the brightness a pixel needs to bloom: -1 (the default) blooms everything, 0 or more only brighter pixels.\nconfigure_exposure: Set exposure: method (Manual, Histogram, the default, or Basic), compensationValue (AutoExposureBias, in stops), minBrightness and maxBrightness (the auto exposure range), then settings for any other exposure field (AutoExposureSpeedUp, AutoExposureSpeedDown). The range is in EV100 when the project extends the default luminance range, as UE 5 projects do, and in luminance otherwise. Send at least one.\nset_exposure_compensation: Set AutoExposureBias to compensationValue, in stops: +1 is twice as bright, -1 half; it applies with every exposure method.\nset_exposure_method: Set AutoExposureMethod: Manual (no adaptation: exposure from compensation and camera settings), Histogram (the default, adapting from the scene's brightness) or Basic (a cheaper adaptation). Anything else is INVALID_SETTING.\nset_exposure_min_max: Set the auto exposure range, AutoExposureMinBrightness and AutoExposureMaxBrightness (-10 or more): in EV100 when the project extends the default luminance range, as UE 5 projects do, in luminance otherwise. Equal values fix the exposure. A bound left out keeps its value; send at least one.\nconfigure_dof: Set depth of field from settings, by engine field name: DepthOfFieldFocalDistance (cm to the sharp plane; at 0, the default, there is no depth of field), DepthOfFieldFstop (1-32; lower blurs more), DepthOfFieldSensorWidth (mm), DepthOfFieldDepthBlurRadius and the rest of the Lens|Depth of Field fields.\nset_dof_method: Choose the depth of field the volume renders with method: UE 5 desktop and console renderers always use the cinematic one, so this picks what mobile renders, Gaussian (bMobileHQGaussian on: the high quality Gaussian blur) or Cinematic (off: mobile's own). CircleDOF and BokehDOF are taken as Cinematic, GaussianDOF as Gaussian.\nset_focal_distance: Set DepthOfFieldFocalDistance, the distance in cm from the camera to the sharp plane, 0 or more; depth of field shows only while it is above 0 (0 is the default).\nset_aperture: Set DepthOfFieldFstop to aperture, 1 to 32 (4 by default): a lower f-stop gives a shallower, blurrier depth of field. Shows once a focal distance is set.\nconfigure_bokeh: Set the shape of out-of-focus highlights from settings, by engine field name: DepthOfFieldBladeCount (aperture blades), DepthOfFieldMinFstop, DepthOfFieldSensorWidth (mm), DepthOfFieldSqueezeFactor (anamorphic).\nconfigure_motion_blur: Set motion blur from settings, by engine field name: MotionBlurAmount (0-1, 0.5 by default; 0 turns it off), MotionBlurMax (0-100, percent of the screen width, 5 by default), MotionBlurTargetFPS, MotionBlurPerObjectSize.\nset_motion_blur_amount: Set MotionBlurAmount to amount, 0 to 1 (0.5 by default); 0 turns motion blur off.\nset_motion_blur_max: Set MotionBlurMax to amount: the longest blur streak, 0 to 100 percent of the screen width (5 by default).\nconfigure_tonemapper: Set the filmic tonemapper's curve on a post-process volume from settings, by FPostProcessSettings field: FilmSlope, FilmToe, FilmShoulder, FilmBlackClip, FilmWhiteClip, ToneCurveAmount, ExpandGamut (each turns its override on).\nset_tonemapper_type: Choose the tonemapper look on a post-process volume: method Filmic (default: the engine's filmic tone curve, ToneCurveAmount and ExpandGamut 1) or Linear (the curve off, both 0); anything else is refused, nothing changed.\nset_pp_color_grading: Set color grading on the volume from settings, by engine field name: ColorSaturation, ColorContrast, ColorGamma and ColorGain as {x, y, z, w} (1 is neutral; w scales all three), ColorOffset (0 neutral), each also in a Shadows, Midtones or Highlights form (ColorSaturationShadows), and ColorGradingIntensity (0-1).\nset_pp_lut: Grade the volume with a color lookup table: lutPath is a texture in the 256x16 strip LUT format, which becomes ColorGradingLUT with its override on (ColorGradingIntensity sets how strongly it applies). A path that loads no texture is ASSET_NOT_FOUND.\nset_pp_white_balance: Set white balance on the volume from settings, by engine field name: WhiteTemp (Kelvin; 6500, the default, is neutral, lower is warmer) and WhiteTint (-1 to 1, green to magenta).\nconfigure_vignette: Set VignetteIntensity to amount: how much the screen edges darken, 0 (off) to 1 on the editor slider, 0.4 by default.\nconfigure_grain: Set film grain: amount (FilmGrainIntensity, 0 by default, 1 at the top of the slider) written after settings, which takes other grain fields by engine name (FilmGrainIntensityShadows, FilmGrainTexelSize, FilmGrainTexture). Send at least one.\nconfigure_chromatic_aberration: Set chromatic aberration: amount (SceneFringeIntensity, 0 by default, 5 at the top of the slider) written after settings, which takes other fields by engine name (ChromaticAberrationStartOffset 0-1). Send at least one.\nconfigure_lens_flare: Set lens flares from settings, by engine field name (LensFlareIntensity 0-16, 1 by default; LensFlareThreshold; LensFlareBokehSize; LensFlareTint). enabled false sets LensFlareIntensity 0; enabled true puts it back to 1 unless settings gives it.\nconfigure_ssao: Set screen-space ambient occlusion: amount (AmbientOcclusionIntensity, 0-1, 0.5 by default) written after settings, which takes other fields by engine name (AmbientOcclusionRadius in cm, AmbientOcclusionPower, AmbientOcclusionQuality 0-100). With Lumen on, its own occlusion replaces this. Send at least one.\nconfigure_gtao: Set ambient occlusion fields from settings, by engine field name (AmbientOcclusionQuality 0-100, AmbientOcclusionRadius, AmbientOcclusionIntensity); ground truth AO itself is chosen by r.AmbientOcclusion.Method, which this does not change.\nconfigure_ssr_settings: Set screen-space reflections on the volume from settings, by engine field name: ScreenSpaceReflectionIntensity and ScreenSpaceReflectionQuality (0-100; 100 and 50 by default) and ScreenSpaceReflectionMaxRoughness (0-1).\nconfigure_lumen_reflection_settings: Set Lumen reflections on the volume from settings, by engine field name, such as LumenReflectionQuality and LumenMaxRoughnessToTraceReflections (0-1); they show only where the project renders reflections with Lumen.\nconfigure_screen_percentage: Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved).\nconfigure_pp_blend: Set the volume's own fields: enabled, blendWeight (0-1, how much of the volume applies) and infiniteUnbound (true: the whole level, false: only inside its bounds). Send at least one."
+              "description": "Which configure post process variant to run.\nconfigure_bloom: Set bloom: amount (BloomIntensity) and threshold (BloomThreshold), written after settings, which takes any other bloom field by engine name (BloomSizeScale, BloomMethod). Send at least one.\nset_bloom_intensity: Set BloomIntensity to amount: 0 or more, 0.675 by default, 8 at the top of the editor slider; 0 turns bloom off.\nset_bloom_threshold: Set BloomThreshold to threshold, the brightness a pixel needs to bloom: -1 (the default) blooms everything, 0 or more only brighter pixels.\nconfigure_exposure: Set exposure: method (Manual, Histogram, the default, or Basic), compensationValue (AutoExposureBias, in stops), minBrightness and maxBrightness (the auto exposure range), then settings for any other exposure field (AutoExposureSpeedUp, AutoExposureSpeedDown). The range is in EV100 when the project extends the default luminance range, as UE 5 projects do, and in luminance otherwise. Send at least one.\nset_exposure_compensation: Set AutoExposureBias to compensationValue, in stops: +1 is twice as bright, -1 half; it applies with every exposure method.\nset_exposure_method: Set AutoExposureMethod: Manual (no adaptation: exposure from compensation and camera settings), Histogram (the default, adapting from the scene's brightness) or Basic (a cheaper adaptation). Anything else is INVALID_SETTING.\nset_exposure_min_max: Set the auto exposure range, AutoExposureMinBrightness and AutoExposureMaxBrightness (-10 or more): in EV100 when the project extends the default luminance range, as UE 5 projects do, in luminance otherwise. Equal values fix the exposure. A bound left out keeps its value; send at least one.\nconfigure_dof: Set depth of field from settings, by engine field name: DepthOfFieldFocalDistance (cm to the sharp plane; at 0, the default, there is no depth of field), DepthOfFieldFstop (1-32; lower blurs more), DepthOfFieldSensorWidth (mm), DepthOfFieldDepthBlurRadius and the rest of the Lens|Depth of Field fields.\nset_dof_method: Choose the depth of field the volume renders with method: UE 5 desktop and console renderers always use the cinematic one, so this picks what mobile renders, Gaussian (bMobileHQGaussian on: the high quality Gaussian blur) or Cinematic (off: mobile's own). CircleDOF and BokehDOF are taken as Cinematic, GaussianDOF as Gaussian.\nset_focal_distance: Set DepthOfFieldFocalDistance, the distance in cm from the camera to the sharp plane, 0 or more; depth of field shows only while it is above 0 (0 is the default).\nset_aperture: Set DepthOfFieldFstop to aperture, 1 to 32 (4 by default): a lower f-stop gives a shallower, blurrier depth of field. Shows once a focal distance is set.\nconfigure_bokeh: Set the shape of out-of-focus highlights from settings, by engine field name: DepthOfFieldBladeCount (aperture blades), DepthOfFieldMinFstop, DepthOfFieldSensorWidth (mm), DepthOfFieldSqueezeFactor (anamorphic).\nconfigure_motion_blur: Set motion blur from settings, by engine field name: MotionBlurAmount (0-1, 0.5 by default; 0 turns it off), MotionBlurMax (0-100, percent of the screen width, 5 by default), MotionBlurTargetFPS, MotionBlurPerObjectSize.\nset_motion_blur_amount: Set MotionBlurAmount to amount, 0 to 1 (0.5 by default); 0 turns motion blur off.\nset_motion_blur_max: Set MotionBlurMax to amount: the longest blur streak, 0 to 100 percent of the screen width (5 by default).\nconfigure_tonemapper: Set the filmic tonemapper's curve on a post-process volume from settings, by FPostProcessSettings field: FilmSlope, FilmToe, FilmShoulder, FilmBlackClip, FilmWhiteClip, ToneCurveAmount, ExpandGamut (each turns its override on).\nset_tonemapper_type: Choose the tonemapper look on a post-process volume: method Filmic (default: the engine's filmic tone curve, ToneCurveAmount and ExpandGamut 1) or Linear (the curve off, both 0); anything else is refused, nothing changed.\nset_pp_color_grading: Set color grading on the volume from settings, by engine field name: ColorSaturation, ColorContrast, ColorGamma and ColorGain as {x, y, z, w} (1 is neutral; w scales all three), ColorOffset (0 neutral), each also in a Shadows, Midtones or Highlights form (ColorSaturationShadows), and ColorGradingIntensity (0-1).\nset_pp_lut: Grade the volume with a color lookup table: lutPath is a texture in the 256x16 strip LUT format, which becomes ColorGradingLUT with its override on (ColorGradingIntensity sets how strongly it applies). A path that loads no texture is ASSET_NOT_FOUND.\nset_pp_white_balance: Set white balance on the volume from settings, by engine field name: WhiteTemp (Kelvin; 6500, the default, is neutral, lower is warmer) and WhiteTint (-1 to 1, green to magenta).\nconfigure_vignette: Set VignetteIntensity to amount: how much the screen edges darken, 0 (off) to 1 on the editor slider, 0.4 by default.\nconfigure_grain: Set film grain: amount (FilmGrainIntensity, 0 by default, 1 at the top of the slider) written after settings, which takes other grain fields by engine name (FilmGrainIntensityShadows, FilmGrainTexelSize, FilmGrainTexture). Send at least one.\nconfigure_chromatic_aberration: Set chromatic aberration: amount (SceneFringeIntensity, 0 by default, 5 at the top of the slider) written after settings, which takes other fields by engine name (ChromaticAberrationStartOffset 0-1). Send at least one.\nconfigure_lens_flare: Set lens flares from settings, by engine field name (LensFlareIntensity 0-16, 1 by default; LensFlareThreshold; LensFlareBokehSize; LensFlareTint). enabled false sets LensFlareIntensity 0; enabled true puts it back to 1 unless settings gives it.\nconfigure_ssao: Set screen-space ambient occlusion: amount (AmbientOcclusionIntensity, 0-1, 0.5 by default) written after settings, which takes other fields by engine name (AmbientOcclusionRadius in cm, AmbientOcclusionPower, AmbientOcclusionQuality 0-100). With Lumen on, its own occlusion replaces this. Send at least one.\nconfigure_gtao: Set ambient occlusion fields from settings, by engine field name (AmbientOcclusionQuality 0-100, AmbientOcclusionRadius, AmbientOcclusionIntensity); ground truth AO itself is chosen by r.AmbientOcclusion.Method, which this does not change.\nconfigure_ssr_settings: Set screen-space reflections on the volume from settings, by engine field name: ScreenSpaceReflectionIntensity and ScreenSpaceReflectionQuality (0-100; 100 and 50 by default) and ScreenSpaceReflectionMaxRoughness (0-1).\nconfigure_lumen_reflection_settings: Set Lumen reflections on the volume from settings, by engine field name, such as LumenReflectionQuality and LumenMaxRoughnessToTraceReflections (0-1); they show only where the project renders reflections with Lumen.\nconfigure_screen_percentage: Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved; before UE 5.3 Play In Editor is also made to use it over the level viewport's own). CVAR_UNAVAILABLE when the value did not take.\nconfigure_pp_blend: Set the volume's own fields: enabled, blendWeight (0-1, how much of the volume applies) and infiniteUnbound (true: the whole level, false: only inside its bounds). Send at least one."
             }
           },
           "required": [
@@ -31746,8 +31740,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6e0499250b33a73ef4c234087fc992a568d3d5d48c155fa859237578f2a2736b",
-        "content": "f119ce06c2a29eb8581ed62dd4d2060afbc5dd0e31f4bc89a1a0d7b89f811811"
+        "schema": "148458b8977d98184a491d088c904de440205590c860e6faf98094d065e1d17e",
+        "content": "8ae393fdc1e36f47e6e1b34f1c9132ace7b3bf3602731181e6b77e03c919d411"
       }
     },
     {
@@ -73841,28 +73835,21 @@
               "type": "string",
               "description": "Canonical /Game path of a MetaHuman Character asset."
             },
-            "exportType": {
-              "type": "string",
-              "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
-              "enum": [
-                "geometry",
-                "materials",
-                "dna"
-              ]
-            },
-            "projectPath": {
-              "type": "string",
-              "description": "Content folder receiving the exported assets."
-            },
             "assetsCreated": {
               "type": "number",
               "description": "Assets that appeared under projectPath. Zero means the export wrote nothing."
+            },
+            "changedAssets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The new packages under projectPath, the first 50."
             }
           },
           "required": [
             "success",
-            "characterPath",
-            "exportType"
+            "characterPath"
           ],
           "additionalProperties": false
         }
@@ -73880,9 +73867,11 @@
             "success": true,
             "message": "MetaHuman geometry exported",
             "characterPath": "/Game/MetaHumans/MH_Neo",
-            "exportType": "geometry",
-            "projectPath": "/Game/MetaHumans/Exported",
-            "assetsCreated": 2
+            "assetsCreated": 2,
+            "changedAssets": [
+              "/Game/MetaHumans/Exported/SKM_Neo_Body",
+              "/Game/MetaHumans/Exported/SKM_Neo_Head"
+            ]
           }
         }
       ],
@@ -73913,8 +73902,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "201869ed838cc9188e28e165ff8b6bfd12ed54ced669edc37b94b8a601c517dc",
-        "content": "ff55973467abebf428a772e65d17502bebc3525faf2bd7feb20ded3ab92bed98"
+        "schema": "29f872b11bc485c03054220b4db9d36e28571b68a60bf58b5b612366e80377d4",
+        "content": "0bc839c0340c9e9dbae6d448a8df4a1ed9a4480607c9e47f089e4b61abf6db40"
       }
     },
     {
@@ -80327,7 +80316,7 @@
                 "add_execution_calculation",
                 "add_cue"
               ],
-              "description": "Which configure gameplay effect variant to run.\nduration: Set a Gameplay Effect's duration policy: durationType Instant, Infinite or HasDuration (the default when duration is sent, else Instant) with duration in seconds, and period in seconds to make a non-Instant effect tick. Read back from the compiled class before it saves (DURATION_NOT_APPLIED otherwise).\nstacking: Set a Gameplay Effect's stacking: stackingType (None, AggregateBySource, AggregateByTarget), stackLimitCount (an omitted limit is kept), and the duration-refresh, period-reset and expiration policies; only the fields sent change, and an unknown value is refused before anything is written.\ntags: Add tags to a Gameplay Effect, each kind optional: grantedTags (the target has them while it is active), applicationRequiredTags (needed to apply), removalTags (remove it) and immunityTags (block other effects). Tags are added to those already there; every tag must be registered in the project, or nothing is written (GAMEPLAY_TAG_NOT_REGISTERED).\nadd_modifier: Add a modifier to a Gameplay Effect: targetAttribute (or attributeName; \"Health\", or \"AS_Stats.Health\" when several AttributeSets have one) changed by modifierOperation Add (the default; a negative modifierMagnitude subtracts), Multiply, Divide or Override with a fixed modifierMagnitude (setting=modifier_magnitude makes it SetByCaller). An attribute on no loaded AttributeSet is ATTRIBUTE_NOT_FOUND, one on several AMBIGUOUS_ATTRIBUTE; the binding is read back from the compiled class before it saves (MODIFIER_NOT_BOUND otherwise).\nmodifier_magnitude: Set modifier modifierIndex (default 0) of a Gameplay Effect to a fixed modifierMagnitude (magnitudeCalculationType ScalableFloat, the default) or to SetByCaller keyed by setByCallerTag (a registered tag, else a plain name), the value an effect spec supplies when it is applied. An index out of range is INVALID_INDEX; read back from the compiled class before it saves (MAGNITUDE_NOT_APPLIED otherwise).\nadd_execution_calculation: Add a GameplayEffectExecutionCalculation class to a Gameplay Effect's executions: calculationClass is a Blueprint path (/Game/X/GEC or /Game/X/GEC.GEC_C) or a native /Script/Module.Class. One already there is reported (alreadyPresent), not doubled; an unknown class is CLASS_NOT_FOUND. Saved (saved).\nadd_cue: Add a gameplay cue to a Gameplay Effect by cueTag, a tag registered in the project (GAMEPLAY_TAG_NOT_REGISTERED otherwise, nothing changed); the cue notify with that tag runs when the effect applies. The reply gives cueCount."
+              "description": "Which configure gameplay effect variant to run.\nduration: Set a Gameplay Effect's duration policy: durationType Instant, Infinite or HasDuration (the default when duration is sent, else Instant) with duration in seconds, and period in seconds to make a non-Instant effect tick. Read back from the compiled class before it saves (DURATION_NOT_APPLIED otherwise).\nstacking: Set a Gameplay Effect's stacking: stackingType (None, AggregateBySource, AggregateByTarget), stackLimitCount (an omitted limit is kept), and the duration-refresh, period-reset and expiration policies; only the fields sent change, and an unknown value is refused before anything is written.\ntags: Add tags to a Gameplay Effect, each kind optional: grantedTags (the target has them while it is active), applicationRequiredTags (needed to apply), removalTags (remove it) and immunityTags (block other effects). Tags are added to those already there; every tag must be registered in the project, or nothing is written (GAMEPLAY_TAG_NOT_REGISTERED).\nadd_modifier: Add a modifier to a Gameplay Effect: targetAttribute (or attributeName; \"Health\", or \"AS_Stats.Health\" when several AttributeSets have one) changed by modifierOperation Add (the default; a negative modifierMagnitude subtracts), Multiply, Divide or Override with a fixed modifierMagnitude (setting=modifier_magnitude makes it SetByCaller). An attribute on no loaded AttributeSet is ATTRIBUTE_NOT_FOUND, one on several AMBIGUOUS_ATTRIBUTE; the binding is read back from the compiled class before it saves (MODIFIER_NOT_BOUND otherwise).\nmodifier_magnitude: Set modifier modifierIndex (default 0) of a Gameplay Effect to a fixed modifierMagnitude (magnitudeCalculationType ScalableFloat, the default) or to SetByCaller keyed by setByCallerTag (a registered tag, else a plain name), the value an effect spec supplies when it is applied. An index out of range is INVALID_INDEX; read back from the compiled class before it saves (MAGNITUDE_NOT_APPLIED otherwise).\nadd_execution_calculation: Add a GameplayEffectExecutionCalculation class to a Gameplay Effect's executions: calculationClass is a Blueprint path (/Game/X/GEC or /Game/X/GEC.GEC_C) or a native /Script/Module.Class. One already there is reported (alreadyPresent), not doubled; an unknown class is CLASS_NOT_FOUND. Compiled, read back on the compiled class and saved (saved); COMPILE_FAILED, EDIT_NOT_APPLIED or SAVE_FAILED when a step fails.\nadd_cue: Add a gameplay cue to a Gameplay Effect by cueTag, a tag registered in the project (GAMEPLAY_TAG_NOT_REGISTERED otherwise, nothing changed); the cue notify with that tag runs when the effect applies. The reply gives cueCount."
             }
           },
           "required": [
@@ -80500,8 +80489,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7aa2621c5eccc69b781a9ce20ffa2dc1a3256c06a46775b2019991ea2702d0bb",
-        "content": "97f1639bf10a28e94807586970b5bacc92f6b7d2d89e5b53a1acadc38a316fd0"
+        "schema": "f1674e80b25c2f0867026f19fb77fe7ffedccea746c1f6f67d4c21ec5728fa9b",
+        "content": "88dbc82822e0d0d6dbda244c9eae04a36a8d51b9737a84176e87813de5546f01"
       }
     },
     {
@@ -90871,7 +90860,7 @@
         "topics": [
           "export_level"
         ],
-        "summary": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d), or as a copy saved to another /Game map path. levelPath, when given, must be the open level (LEVEL_NOT_LOADED otherwise); a /Game copy refuses a destination that already holds another level.",
+        "summary": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d, and answered relative to it), or as a copy saved to another /Game map path (answered as exportPath and savedAssetPath). levelPath, when given, must be the open level (LEVEL_NOT_LOADED for another level, LEVEL_NOT_FOUND where there is none). A /Game copy refuses a destination that already holds another level (ASSET_ALREADY_EXISTS) and the unsaved Open World template (UNSAVED_TEMPLATE_LEVEL); a level saved before stays open, but one never saved becomes the copy, as with save_as.",
         "whenToUse": [
           "The open level must be written out as text (.t3d) for a diff or another tool, or copied to a second map."
         ],
@@ -90937,7 +90926,7 @@
       },
       "examples": [
         {
-          "title": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d), or as a copy saved to another /Game map path. levelPath, when given, must be the open level (LEVEL_NOT_LOADED otherwise); a /Game copy refuses a destination that already holds another level.",
+          "title": "Export the open level: as a .t3d text file inside the project folder (exportPath ending .t3d, relative to the project, e.g. Saved/Exports/Demo.t3d, and answered relative to it), or as a copy saved to another /Game map path (answered as exportPath and savedAssetPath). levelPath, when given, must be the open level (LEVEL_NOT_LOADED for another level, LEVEL_NOT_FOUND where there is none). A /Game copy refuses a destination that already holds another level (ASSET_ALREADY_EXISTS) and the unsaved Open World template (UNSAVED_TEMPLATE_LEVEL); a level saved before stays open, but one never saved becomes the copy, as with save_as.",
           "input": {
             "action": "export_level",
             "exportPath": "Saved/Exports/Demo.t3d"
@@ -90975,7 +90964,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c9248f90a6522d6123ecbed054d953ccbec99903b670cb25831dcf2cd62e74d",
-        "content": "ebfd67c7d6cb054c467ed12c8abf23c5e57972c7cc3d328f10871550dc1852b0"
+        "content": "4954e5143b1cdb5bc44a43326524c03329882fddd3b164dbcb1984f46f438724"
       }
     },
     {
@@ -93994,7 +93983,7 @@
                 "data_layer",
                 "minimap_volume"
               ],
-              "description": "Which create level structure variant to run.\nlevel: Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.\nsublevel: Create an empty level asset (sublevelName, in sublevelPath, else beside the open level, or /Game/Maps when the open level was never saved) and stream it into the open level by streamingMethod (Blueprint, the default, or AlwaysLoaded). parentLevel, when given, must be the open level (PARENT_LEVEL_NOT_LOADED otherwise, nothing created). A level already at that path is reported (alreadyExisted, streamingAdded), not replaced; manage_level add_sublevel streams it. save (default true) saves the new level and the open level.\nlevel_instance: Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.\npacked_level_actor: Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).\ndata_layer: Create a World Partition data layer: a DataLayerAsset named dataLayerName in dataLayerAssetPath (default /Game/DataLayers), saved, and its instance in the open level, Runtime (streams in the game, the default) or Editor (organises the editor only), visible and loaded in the editor by default. Needs World Partition with external actors (WORLD_PARTITION_NOT_ENABLED, EXTERNAL_ACTORS_NOT_ENABLED); an unknown dataLayerType is refused before anything is created. Add actors with assign_actor_to_data_layer.\nminimap_volume: Place a World Partition minimap volume, the area the minimap builder captures: a box brush of extent (half size, default 10000 on each axis) at location, labelled volumeName (default MinimapVolume). A level without World Partition is refused (WORLD_PARTITION_NOT_ENABLED); UE 5.1 or later. The level stays unsaved unless save is true."
+              "description": "Which create level structure variant to run.\nlevel: Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.\nsublevel: Create an empty level asset (sublevelName, in sublevelPath, else beside the open level, or /Game/Maps when the open level was never saved) and stream it into the open level by streamingMethod (Blueprint, the default, or AlwaysLoaded). parentLevel, when given, must be the open level (PARENT_LEVEL_NOT_LOADED otherwise, nothing created). A level already at that path is reported (alreadyExisted, streamingAdded), not replaced; manage_level add_sublevel streams it. The new level is saved and only then streamed into the open level, which is saved with it (parentSaved); save false is refused, as a new level exists only once saved.\nlevel_instance: Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.\npacked_level_actor: Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).\ndata_layer: Create a World Partition data layer: a DataLayerAsset named dataLayerName in dataLayerAssetPath (default /Game/DataLayers), saved, and its instance in the open level, Runtime (streams in the game, the default) or Editor (organises the editor only), visible and loaded in the editor by default. Needs World Partition with external actors (WORLD_PARTITION_NOT_ENABLED, EXTERNAL_ACTORS_NOT_ENABLED); an unknown dataLayerType is refused before anything is created. Add actors with assign_actor_to_data_layer.\nminimap_volume: Place a World Partition minimap volume, the area the minimap builder captures: a box brush of extent (half size, default 10000 on each axis) at location, labelled volumeName (default MinimapVolume). A level without World Partition is refused (WORLD_PARTITION_NOT_ENABLED); UE 5.1 or later. The level stays unsaved unless save is true."
             }
           },
           "required": [
@@ -94235,8 +94224,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "307f567481077c243153d3bf10b52fb4a4e2a9b8c724de66081a68c4fff9b8ef",
-        "content": "b1fc5a5c78fd52294475775417f80d9862a061de846dfbd0366c34965817e446"
+        "schema": "0e4edf25ee225c61d06a731ac130bdd9c101af960f43e826dd25d0d09e680996",
+        "content": "27ccaa7c6195adfd8b7f272c5f01b8eff330b76f4254ee71ebcd70336a8799a2"
       }
     },
     {
@@ -100940,7 +100929,7 @@
             },
             "overwrite": {
               "type": "boolean",
-              "description": "Overwrite the asset when it already exists."
+              "description": "With true, a PCG graph already at the path is handed back untouched (created false); without it, it is refused (ASSET_ALREADY_EXISTS). Another kind of asset at the path is refused either way (ASSET_TYPE_MISMATCH)."
             },
             "graphPath": {
               "type": "string",
@@ -101302,8 +101291,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf846d852093dbfc4cab6789943f42d347ddeecba11858c473cf58a1b3c30fda",
-        "content": "9710952e7adbf22212a8ef29092268a189f24db48be7b531885c8004cc441898"
+        "schema": "fd9ec95377f36badd31987d1112bf2eeb1d825622cb0827b60ee76619092320f",
+        "content": "fb20251f213ce82e8fdc47fa35f4dab81dd66f34df1a3ad08cbc164213b3c97e"
       }
     },
     {
@@ -105211,7 +105200,7 @@
             },
             "filter": {
               "type": "string",
-              "description": "Which sections to return: parameters, expressions, connections, or all (default)."
+              "description": "Which sections to return: parameters, expressions, connections, or all (default); another word is refused."
             },
             "nodeId": {
               "type": "string",
@@ -105238,7 +105227,7 @@
             },
             "direction": {
               "type": "string",
-              "description": "Connection direction to report (inputs or outputs)."
+              "description": "Connection direction to report: inputs, outputs or both (the default); another word is refused."
             },
             "depth": {
               "type": "number",
@@ -105250,7 +105239,7 @@
             },
             "downstream": {
               "type": "boolean",
-              "description": "Report downstream connections instead of upstream."
+              "description": "Walk every downstream consumer, overriding direction and depth, as upstream does upstream."
             },
             "startNodeId": {
               "type": "string",
@@ -105258,7 +105247,7 @@
             },
             "endPin": {
               "type": "string",
-              "description": "Terminal pin name to stop the chain walk at."
+              "description": "The main material pin the walk ends at, by any name connect_nodes takes (BaseColor, Base Color, Cloth...); a name that is no main pin is INVALID_PIN, with the list."
             },
             "orphansOnly": {
               "type": "boolean",
@@ -105276,7 +105265,7 @@
                 "node_chain",
                 "subgraph"
               ],
-              "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node.",
+              "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node.",
               "default": "material"
             }
           },
@@ -105581,8 +105570,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ab5d61f4f46bb848054e730dd300d8bb07c649df89784ef488362082a35cb0bb",
-        "content": "86892eecf19497f99ec503faf879dcb30375a2c004aa27bcfd2b46ffaeb324b0"
+        "schema": "305cadc77ce79576349389661de57757ef7159697a0eb95534d8ef6f367192e0",
+        "content": "92c24d47ccfd6c04ab3719cd29281c0c93d5b3e978bfd8741b11e32722a2d9aa"
       }
     },
     {

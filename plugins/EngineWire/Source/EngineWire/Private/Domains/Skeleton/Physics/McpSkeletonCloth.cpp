@@ -84,6 +84,14 @@ UClothingAssetBase* ResolveClothAsset(USkeletalMesh* Mesh, const FString& ClothA
                 OutErrorCode = TEXT("CLOTH_NOT_FOUND");
                 return nullptr;
             }
+            // AddClothingAsset skips, without a word, an asset the mesh does not own (its outer); binding it then fails.
+            if (Loaded->GetOuter() != Mesh)
+            {
+                OutError = FString::Printf(TEXT("Cloth asset '%s' belongs to %s, and a clothing asset binds only to the mesh "
+                    "that owns it; nothing was changed."), *Loaded->GetName(), *Loaded->GetOuter()->GetPathName());
+                OutErrorCode = TEXT("CLOTH_NOT_OWNED");
+                return nullptr;
+            }
             Mesh->AddClothingAsset(Loaded);
         }
         return Loaded;

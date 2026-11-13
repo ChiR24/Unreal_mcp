@@ -52,6 +52,7 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
         ComponentClass = URectLightComponent::StaticClass();
     }
 
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(Context.RequestId);
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ChosenClass, ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector), FRotator::ZeroRotator);
     if (!Spawned)

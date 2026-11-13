@@ -146,7 +146,7 @@ bool HandleWidgetAuthoringPreview(
     const bool bOpen = GetJsonBoolField(Payload, TEXT("openEditor"), false);
     UAssetEditorSubsystem* AssetEditors = bOpen && GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     // The preview only draws the widget: without this the receipt lists widgetPath under changes.
     McpHandlerUtils::MarkNoAssetsChanged(ResultJson);
     ResultJson->SetNumberField(TEXT("width"), Size.X);

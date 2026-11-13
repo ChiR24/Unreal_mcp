@@ -1,6 +1,7 @@
 #include "Domains/Level/McpLevelActions.h"
 #include "Domains/Level/Lifecycle/McpLevelDirtyPackageLoad.h"
 #include "Domains/Level/World/McpLevelWorldAccess.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -25,17 +26,6 @@ FAssetData FindLevelAssetData(const FString& Path) {
   return AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path));
 }
 
-// The entry's tags, minus FiBData: Blueprint bytecode that is kilobytes of non-UTF8 text, not metadata.
-TSharedPtr<FJsonObject> TagsWithoutFiBData(const FAssetData& Data) {
-  TSharedPtr<FJsonObject> Tags = McpHandlerUtils::CreateResultObject();
-  for (const auto& Kvp : Data.TagsAndValues) {
-    const FString TagKey = Kvp.Key.ToString();
-    if (!TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
-      Tags->SetStringField(TagKey, Kvp.Value.AsString());
-    }
-  }
-  return Tags;
-}
 } // namespace
 
 bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -93,7 +83,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
       if (LevelAssetData.IsValid()) {
         Result->SetStringField(TEXT("assetClass"),
                                MCP_ASSET_DATA_GET_CLASS_PATH(LevelAssetData));
-        Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(LevelAssetData));
+        Result->SetObjectField(TEXT("tagsAndValues"), McpAssetRegistryTagsToJson(LevelAssetData));
       }
 
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level info retrieved"), Result);
@@ -115,7 +105,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
         Result->SetStringField(TEXT("objectPath"), MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData));
         Result->SetStringField(TEXT("assetClass"), MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
 
-        Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(AssetData));
+        Result->SetObjectField(TEXT("tagsAndValues"), McpAssetRegistryTagsToJson(AssetData));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level info retrieved (asset registry, not loaded)"), Result);

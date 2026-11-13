@@ -4,6 +4,9 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Dom/JsonObject.h"
 
+#include "AssetRegistry/AssetData.h"
+#include "Blueprint/BlueprintSupport.h"
+
 #include "Components/SceneComponent.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
@@ -89,6 +92,18 @@ AddAssetVerificationNested(TSharedPtr<FJsonObject> Response,
   TSharedPtr<FJsonObject> VerificationObj = MakeShared<FJsonObject>();
   AddAssetVerification(VerificationObj, Asset);
   Response->SetObjectField(FieldName, VerificationObj);
+}
+
+// An asset's registry tags, tag name to value, without the find-in-Blueprints index the editor stores as a tag
+// (FiBData, or FiB before it): kilobytes of search text that is not metadata. Both get_metadata actions and get_summary.
+inline TSharedPtr<FJsonObject> McpAssetRegistryTagsToJson(const FAssetData &AssetData) {
+  TSharedPtr<FJsonObject> Tags = MakeShared<FJsonObject>();
+  for (const auto &Kvp : AssetData.TagsAndValues) {
+    if (Kvp.Key != FBlueprintTags::FindInBlueprintsData && Kvp.Key != FBlueprintTags::UnversionedFindInBlueprintsData) {
+      Tags->SetStringField(Kvp.Key.ToString(), Kvp.Value.AsString());
+    }
+  }
+  return Tags;
 }
 
 static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response,

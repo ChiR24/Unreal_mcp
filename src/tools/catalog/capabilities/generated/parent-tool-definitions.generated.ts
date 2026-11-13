@@ -12839,7 +12839,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "direction": {
           "type": "string",
-          "description": "Connection direction to report (inputs or outputs)."
+          "description": "Connection direction to report: inputs, outputs or both (the default); another word is refused."
         },
         "directory": {
           "type": "string",
@@ -12860,7 +12860,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "downstream": {
           "type": "boolean",
-          "description": "Report downstream connections instead of upstream."
+          "description": "Walk every downstream consumer, overriding direction and depth, as upstream does upstream."
         },
         "dryRun": {
           "type": "boolean",
@@ -12925,7 +12925,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "endPin": {
           "type": "string",
-          "description": "Terminal pin name to stop the chain walk at."
+          "description": "The main material pin the walk ends at, by any name connect_nodes takes (BaseColor, Base Color, Cloth...); a name that is no main pin is INVALID_PIN, with the list."
         },
         "enumPath": {
           "type": "string",
@@ -13076,7 +13076,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "export",
             "instanced_property"
           ],
-          "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node."
+          "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node."
         },
         "inputName": {
           "type": "string",
@@ -21452,6 +21452,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Numeric parameter."
         },
+        "changedAssets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The new packages under projectPath, the first 50."
+        },
         "characterPath": {
           "type": "string",
           "description": "Canonical /Game path of a MetaHuman Character asset."
@@ -21476,15 +21483,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "enableCameraLag": {
           "type": "boolean",
           "description": "Boolean parameter."
-        },
-        "exportType": {
-          "type": "string",
-          "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
-          "enum": [
-            "geometry",
-            "materials",
-            "dna"
-          ]
         },
         "fieldOfView": {
           "type": "number",
@@ -21532,10 +21530,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pluginAvailable": {
           "type": "boolean",
           "description": "MetaHuman Creator is loaded on this editor."
-        },
-        "projectPath": {
-          "type": "string",
-          "description": "Content folder receiving the exported assets."
         },
         "ready": {
           "type": "boolean",
@@ -27078,7 +27072,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "data_layer",
             "minimap_volume"
           ],
-          "description": "Which create level structure variant to run.\nlevel: Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.\nsublevel: Create an empty level asset (sublevelName, in sublevelPath, else beside the open level, or /Game/Maps when the open level was never saved) and stream it into the open level by streamingMethod (Blueprint, the default, or AlwaysLoaded). parentLevel, when given, must be the open level (PARENT_LEVEL_NOT_LOADED otherwise, nothing created). A level already at that path is reported (alreadyExisted, streamingAdded), not replaced; manage_level add_sublevel streams it. save (default true) saves the new level and the open level.\nlevel_instance: Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.\npacked_level_actor: Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).\ndata_layer: Create a World Partition data layer: a DataLayerAsset named dataLayerName in dataLayerAssetPath (default /Game/DataLayers), saved, and its instance in the open level, Runtime (streams in the game, the default) or Editor (organises the editor only), visible and loaded in the editor by default. Needs World Partition with external actors (WORLD_PARTITION_NOT_ENABLED, EXTERNAL_ACTORS_NOT_ENABLED); an unknown dataLayerType is refused before anything is created. Add actors with assign_actor_to_data_layer.\nminimap_volume: Place a World Partition minimap volume, the area the minimap builder captures: a box brush of extent (half size, default 10000 on each axis) at location, labelled volumeName (default MinimapVolume). A level without World Partition is refused (WORLD_PARTITION_NOT_ENABLED); UE 5.1 or later. The level stays unsaved unless save is true."
+          "description": "Which create level structure variant to run.\nlevel: Create an empty level asset, levelName in levelPath (default /Game/Maps), saved unless save is false. bCreateWorldPartition makes it a World Partition level (external actors then default on; bUseExternalActors false keeps them in the level). A level already at that path is reported (alreadyExisted), never replaced. loadAfterCreate opens it, refused with DIRTY_PACKAGES (naming them) when open levels have unsaved changes the load would drop.\nsublevel: Create an empty level asset (sublevelName, in sublevelPath, else beside the open level, or /Game/Maps when the open level was never saved) and stream it into the open level by streamingMethod (Blueprint, the default, or AlwaysLoaded). parentLevel, when given, must be the open level (PARENT_LEVEL_NOT_LOADED otherwise, nothing created). A level already at that path is reported (alreadyExisted, streamingAdded), not replaced; manage_level add_sublevel streams it. The new level is saved and only then streamed into the open level, which is saved with it (parentSaved); save false is refused, as a new level exists only once saved.\nlevel_instance: Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.\npacked_level_actor: Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).\ndata_layer: Create a World Partition data layer: a DataLayerAsset named dataLayerName in dataLayerAssetPath (default /Game/DataLayers), saved, and its instance in the open level, Runtime (streams in the game, the default) or Editor (organises the editor only), visible and loaded in the editor by default. Needs World Partition with external actors (WORLD_PARTITION_NOT_ENABLED, EXTERNAL_ACTORS_NOT_ENABLED); an unknown dataLayerType is refused before anything is created. Add actors with assign_actor_to_data_layer.\nminimap_volume: Place a World Partition minimap volume, the area the minimap builder captures: a box brush of extent (half size, default 10000 on each axis) at location, labelled volumeName (default MinimapVolume). A level without World Partition is refused (WORLD_PARTITION_NOT_ENABLED); UE 5.1 or later. The level stays unsaved unless save is true."
         },
         "label": {
           "type": "string",
@@ -28411,7 +28405,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "overwrite": {
           "type": "boolean",
-          "description": "Overwrite the asset when it already exists."
+          "description": "With true, a PCG graph already at the path is handed back untouched (created false); without it, it is refused (ASSET_ALREADY_EXISTS). Another kind of asset at the path is refused either way (ASSET_TYPE_MISMATCH)."
         },
         "parentGraphPath": {
           "type": "string",

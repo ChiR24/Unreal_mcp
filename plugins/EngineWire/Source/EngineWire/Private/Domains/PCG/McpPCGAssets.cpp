@@ -76,7 +76,8 @@ bool TryGetPCGAssetPath(const TSharedPtr<FJsonObject>& Payload, std::initializer
     return true;
 }
 
-UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError)
+UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError,
+                                 FString& OutCode)
 {
     bOutCreated = false;
     bOutSaved = false;
@@ -87,11 +88,18 @@ UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool
         UPCGGraph* Existing = LoadPCGAsset<UPCGGraph>(GraphPath, TEXT("PCG graph"), LoadedPath, OutError);
         if (!Existing)
         {
+            // Another kind of asset holds the path.
+            if (const UObject* Found = McpLoadAsset(LoadedPath))
+            {
+                OutError = FString::Printf(TEXT("'%s' is a %s, not a PCG graph; nothing was changed."), *GraphPath, *Found->GetClass()->GetName());
+            }
+            OutCode = TEXT("ASSET_TYPE_MISMATCH");
             return nullptr;
         }
         if (!bOverwrite)
         {
             OutError = FString::Printf(TEXT("PCG graph already exists at '%s'."), *GraphPath);
+            OutCode = TEXT("ASSET_ALREADY_EXISTS");
             return nullptr;
         }
         return Existing;
@@ -102,18 +110,12 @@ UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool
     if (!Package)
     {
         OutError = FString::Printf(TEXT("Failed to create package '%s'."), *GraphPath);
+        OutCode = TEXT("CREATE_FAILED");
         return nullptr;
     }
 
     UPCGGraph* Graph = NewObject<UPCGGraph>(Package, *AssetName, RF_Public | RF_Standalone | RF_Transactional);
-    if (!Graph)
-    {
-        OutError = FString::Printf(TEXT("Failed to create PCG graph '%s'."), *GraphPath);
-        return nullptr;
-    }
-
     Graph->MarkPackageDirty();
-    Package->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(Graph);
     bOutCreated = true;
 
@@ -123,6 +125,7 @@ UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool
         if (!bOutSaved)
         {
             OutError = FString::Printf(TEXT("Created PCG graph '%s' but failed to save it."), *GraphPath);
+            OutCode = TEXT("SAVE_FAILED");
             return nullptr;
         }
     }

@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Domains/MaterialAuthoring/Parameters/McpMatParamValue.h"
 #include "Domains/MaterialAuthoring/Queries/McpMatFunctionIO.h"
 #include "Materials/MaterialExpressionRuntimeVirtualTextureSampleParameter.h"
 #include "Materials/MaterialExpressionTextureBase.h"
@@ -52,7 +53,23 @@ void SendMaterialInstanceInfo(UEngineWireSubsystem* Bridge, const FString& Reque
   for (const FTextureParameterValue& Param : Instance->TextureParameterValues)
     AddOverride(Param.ParameterInfo.Name, TEXT("texture"),
                 MakeShared<FJsonValueString>(Param.ParameterValue ? Param.ParameterValue->GetPathName() : FString()));
+  // What set_static_switch_parameter_value and the base property setters write, which this left out.
+  FStaticParameterSet StaticParams = McpInstanceStaticParameters(Instance);
+  for (const FStaticSwitchParameter& Switch : McpStaticSwitches(StaticParams))
+  {
+    if (Switch.bOverride)
+      AddOverride(Switch.ParameterInfo.Name, TEXT("staticSwitch"), MakeShared<FJsonValueBoolean>(Switch.Value));
+  }
   Result->SetArrayField(TEXT("parameterOverrides"), Overrides);
+  const FMaterialInstanceBasePropertyOverrides& BaseProps = Instance->BasePropertyOverrides;
+  TSharedPtr<FJsonObject> PropertyOverrides = McpHandlerUtils::CreateResultObject();
+  if (BaseProps.bOverride_BlendMode)
+    PropertyOverrides->SetStringField(TEXT("blendMode"), MaterialEnumShortName(StaticEnum<EBlendMode>(), BaseProps.BlendMode));
+  if (BaseProps.bOverride_ShadingModel)
+    PropertyOverrides->SetStringField(TEXT("shadingModel"), MaterialEnumShortName(StaticEnum<EMaterialShadingModel>(), BaseProps.ShadingModel));
+  if (BaseProps.bOverride_TwoSided)
+    PropertyOverrides->SetBoolField(TEXT("twoSided"), BaseProps.TwoSided != 0);
+  Result->SetObjectField(TEXT("propertyOverrides"), PropertyOverrides);
   Bridge->SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Material instance: its parent and parameter overrides (the node graph lives on the parent)."),
                                  Result);
@@ -91,9 +108,16 @@ bool HandleGetMaterialInfo(UEngineWireSubsystem* Bridge, const FString& RequestI
       return true;
     }
 
-    // Optional filter: "parameters", "expressions", "connections", or "all" (default)
+    // Optional filter: "parameters", "expressions", "connections", or "all" (default). Another word answered three
+    // empty sections as a success.
     FString Filter;
     Payload->TryGetStringField(TEXT("filter"), Filter);
+    if (!Filter.IsEmpty() && Filter != TEXT("all") && Filter != TEXT("parameters") && Filter != TEXT("expressions") &&
+        Filter != TEXT("connections")) {
+      Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown filter '%s': it takes parameters, "
+          "expressions, connections or all (the default)."), *Filter), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     bool bWantParams      = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("parameters");
     bool bWantExpressions = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("expressions");
     bool bWantConnections = Filter.IsEmpty() || Filter == TEXT("all") || Filter == TEXT("connections");
@@ -115,6 +139,10 @@ bool HandleGetMaterialInfo(UEngineWireSubsystem* Bridge, const FString& RequestI
                              MaterialEnumShortName(StaticEnum<EBlendMode>(), Material->BlendMode));
 
       Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
+      // What set_shading_model writes: the one model, or FromMaterialExpression when a graph node picks it.
+      Result->SetStringField(TEXT("shadingModel"), Material->IsShadingModelFromMaterialExpression()
+          ? FString(TEXT("FromMaterialExpression"))
+          : MaterialEnumShortName(StaticEnum<EMaterialShadingModel>(), Material->GetShadingModels().GetFirstShadingModel()));
     } else {
       Result->SetStringField(TEXT("description"), Function->Description);
       Result->SetBoolField(TEXT("exposeToLibrary"), Function->bExposeToLibrary);

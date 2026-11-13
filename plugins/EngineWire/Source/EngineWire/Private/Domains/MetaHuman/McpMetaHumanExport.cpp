@@ -8,7 +8,7 @@ namespace McpMetaHumanHandlers
 namespace
 {
 /**
- * Count assets under a content folder.
+ * The packages under a content folder.
  *
  * The three export UFUNCTIONs return void and report failure only to the log,
  * so a reflected call that "succeeded" proves nothing about whether anything
@@ -16,13 +16,18 @@ namespace
  * available at this layer, and without it this handler would report success
  * for an export that produced no assets at all.
  */
-int32 CountAssetsUnder(const FString& ContentPath)
+TSet<FName> PackagesUnder(const FString& ContentPath)
 {
     const FAssetRegistryModule& Registry =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
     TArray<FAssetData> Assets;
     Registry.Get().GetAssetsByPath(FName(*ContentPath), Assets, /*bRecursive=*/true);
-    return Assets.Num();
+    TSet<FName> Packages;
+    for (const FAssetData& Asset : Assets)
+    {
+        Packages.Add(Asset.PackageName);
+    }
+    return Packages;
 }
 
 const TCHAR* const ExportLibraryClassPath =
@@ -112,7 +117,7 @@ bool HandleExportMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    const int32 AssetsBefore = CountAssetsUnder(ProjectPath);
+    const TSet<FName> Before = PackagesUnder(ProjectPath);
 
     TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
     Args->SetObjectField(TEXT("InParams"), Params);
@@ -127,14 +132,23 @@ bool HandleExportMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    const int32 AssetsAfter = CountAssetsUnder(ProjectPath);
-    const int32 AssetsCreated = AssetsAfter - AssetsBefore;
+    TArray<FString> Created;
+    for (const FName& Package : PackagesUnder(ProjectPath))
+    {
+        if (!Before.Contains(Package))
+        {
+            Created.Add(Package.ToString());
+        }
+    }
+    Created.Sort();
+    const int32 AssetsCreated = Created.Num();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
-    Result->SetStringField(TEXT("exportType"), ExportType);
-    Result->SetStringField(TEXT("projectPath"), ProjectPath);
+    Result->SetStringField(TEXT("characterPath"), Character->GetOutermost()->GetName());
     Result->SetNumberField(TEXT("assetsCreated"), AssetsCreated);
+    // The receipt lists a call's changes from changedAssets: the new packages, the first 50 of a large export.
+    Created.SetNum(FMath::Min(Created.Num(), 50));
+    Result->SetArrayField(TEXT("changedAssets"), McpHandlerUtils::ToJsonStringArray(Created));
 
     // An export that wrote nothing is a failure, however cleanly the reflected
     // call returned. Overwriting in place legitimately creates no new asset, so

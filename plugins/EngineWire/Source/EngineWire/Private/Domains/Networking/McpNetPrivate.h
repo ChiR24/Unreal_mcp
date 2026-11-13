@@ -45,8 +45,14 @@ AActor* LoadActorDefaultsOrReply(FNetworkingActionContext& Context, const FStrin
 // authority and no pawn a controller; null after the reply (INVALID_PARAMS when the name is missing, NO_WORLD,
 // NOT_FOUND). OutWorld, when given, gets the world searched.
 AActor* FindNetActorOrReply(FNetworkingActionContext& Context, const FString& ActorName, UWorld** OutWorld = nullptr);
-// Mark the edited Blueprint modified, save it (saved), and send the verified success reply.
-bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
+// Mark the edited Blueprint modified, compile it first when bCompile (compiled: a variable or function edit regenerates
+// the class, an actor-default edit does not), save it (saved; SAVE_FAILED when it could not be written) and send the
+// verified success reply.
+bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message,
+                           bool bCompile = false);
+// Whether the Blueprint's actor or component replicates (its class default): an RPC or a replicated variable travels
+// only then.
+bool McpBlueprintReplicates(const UBlueprint* Blueprint);
 // The Blueprint's own function graph named Name (FName compare, case ignored), or null.
 UEdGraph* FindFunctionGraph(UBlueprint* Blueprint, FName Name);
 // True when Name is free for a new function in Blueprint (FKismetNameValidator: own and inherited members).

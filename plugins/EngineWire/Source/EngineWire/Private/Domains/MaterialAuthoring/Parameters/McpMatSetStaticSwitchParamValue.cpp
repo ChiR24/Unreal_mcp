@@ -22,18 +22,8 @@ bool HandleSetStaticSwitchParameterValue(UEngineWireSubsystem* Bridge, const FSt
   };
   // A switch lives in the static parameter set, which has to be rebuilt.
   Writer.SetOverride = [Value](UMaterialInstanceConstant* Instance, FName Name) {
-    FStaticParameterSet StaticParams;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Instance->GetStaticParameterValues(StaticParams);
-#else
-    StaticParams = Instance->GetStaticParameters();
-#endif
-    // UE 5.1 keeps the switch list in FStaticParameterSet::EditorOnly; 5.0 and 5.2+ hold it directly.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-    TArray<FStaticSwitchParameter>& Switches = StaticParams.EditorOnly.StaticSwitchParameters;
-#else
-    TArray<FStaticSwitchParameter>& Switches = StaticParams.StaticSwitchParameters;
-#endif
+    FStaticParameterSet StaticParams = McpInstanceStaticParameters(Instance);
+    TArray<FStaticSwitchParameter>& Switches = McpStaticSwitches(StaticParams);
     FStaticSwitchParameter* Switch = Switches.FindByPredicate(
         [Name](const FStaticSwitchParameter& Entry) { return Entry.ParameterInfo.Name == Name; });
     if (!Switch) {

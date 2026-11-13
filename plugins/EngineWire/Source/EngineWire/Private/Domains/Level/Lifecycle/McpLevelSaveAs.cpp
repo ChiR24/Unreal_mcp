@@ -78,10 +78,7 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     bool bSaved = false;
     if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
-      if (World->GetWorldPartition() && World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/"))) {
-        // Saving the unsaved Open World template as a new package fails on its
-        // private template references and then asserts in the world partition
-        // subsystem, so refuse before touching it.
+      if (McpSafeOperations::McpIsUnsavedWorldPartitionTemplate(World)) {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
                                TEXT("save_level_as cannot save an unsaved World Partition template level; create_level or load a level first"),
                                TEXT("UNSAVED_TEMPLATE_LEVEL"));

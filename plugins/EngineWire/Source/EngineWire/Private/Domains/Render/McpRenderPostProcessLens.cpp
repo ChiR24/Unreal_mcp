@@ -29,11 +29,14 @@ bool HandleRenderPostProcessLensAction(
         }
         TArray<FString> Applied;
         TArray<FString> Unsupported;
-        McpSetConsoleVariableNamed(
-            TEXT("r.ScreenPercentage"),
-            FString::SanitizeFloat(ScreenPercentage),
-            Applied,
-            Unsupported);
+        McpSetScreenPercentage(ScreenPercentage, Applied, Unsupported);
+        // As the folder's console actions: a value that did not take was answered as configured.
+        if (Applied.Num() == 0)
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Settings not available: no "
+                "console variable took: %s. Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
+            return true;
+        }
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         Result->SetNumberField(TEXT("screenPercentage"), ScreenPercentage);
         AddStringArray(Result, TEXT("appliedCVars"), Applied);

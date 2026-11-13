@@ -42,10 +42,8 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // Object- and package-name characters (a level name is both), reserved device names (CON, LPT1, ...) and length.
     FText InvalidNameReason;
-    if (!FName::IsValidXName(LevelName, FString(INVALID_OBJECTNAME_CHARACTERS) + INVALID_LONGPACKAGE_CHARACTERS, &InvalidNameReason) ||
-        !FFileHelper::IsFilenameValidForSaving(LevelName, InvalidNameReason))
+    if (!IsValidLevelName(LevelName, InvalidNameReason))
     {
         Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid levelName '%s': %s"), *LevelName, *InvalidNameReason.ToString()),

@@ -82,9 +82,24 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             FGameplayEffectExecutionDefinition ExecDef;
             ExecDef.CalculationClass = CalcClass;
             EffectCDO->Executions.Add(ExecDef);
-            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+            // Compiled, read back and saved as every other effect edit: it was saved with no compile, and a failed save
+            // answered success with saved false.
+            const auto CompiledEffect = [Blueprint]
+            {
+                return Blueprint->GeneratedClass ? Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+            };
+            if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Execution calculation"), [&CompiledEffect, CalcClass]
+                {
+                    const UGameplayEffect* Compiled = CompiledEffect();
+                    return Compiled && Compiled->Executions.ContainsByPredicate([CalcClass](const FGameplayEffectExecutionDefinition& Def)
+                        { return Def.CalculationClass.Get() == CalcClass; });
+                }))
+            {
+                return true;
+            }
+            EffectCDO = CompiledEffect();
         }
-        const bool bSaved = !bAlreadyPresent && McpSafeAssetSave(Blueprint);
+        const bool bSaved = !bAlreadyPresent;
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);

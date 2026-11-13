@@ -123,7 +123,9 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
     if (Payload->TryGetArrayField(TEXT("parameters"), Entries) && Entries->Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
-      ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(), *Entries, Payload, Socket, Results, Failed);
+      // The instance was saved as it was made; the values are saved once after them.
+      Result->SetBoolField(TEXT("saved"), ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(),
+                                                                     *Entries, Payload, Socket, Results, Failed));
       if (Failed.Num() > 0) {
         Result->SetArrayField(TEXT("parameters"), Results);
         Bridge->SendAutomationResponse(Socket, RequestId, false,

@@ -16,10 +16,11 @@ bool HandleCreatePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestId
     const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
     bool bCreated = false;
     bool bSaved = false;
-    UPCGGraph* Graph = CreateOrReusePCGGraph(GraphPath, bOverwrite, bSave, bCreated, bSaved, Error);
+    FString Code;
+    UPCGGraph* Graph = CreateOrReusePCGGraph(GraphPath, bOverwrite, bSave, bCreated, bSaved, Error, Code);
     if (!Graph)
     {
-        Bridge->SendAutomationError(Socket, RequestId, Error, bOverwrite ? TEXT("CREATE_FAILED") : TEXT("ASSET_ALREADY_EXISTS"));
+        Bridge->SendAutomationError(Socket, RequestId, Error, Code);
         return true;
     }
 
@@ -53,10 +54,11 @@ bool HandleCreatePCGSubgraph(UEngineWireSubsystem* Bridge, const FString& Reques
     const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
     bool bCreated = false;
     bool bSubgraphSaved = false;
-    UPCGGraph* Subgraph = CreateOrReusePCGGraph(SubgraphPath, bOverwrite, bSave, bCreated, bSubgraphSaved, Error);
+    FString Code;
+    UPCGGraph* Subgraph = CreateOrReusePCGGraph(SubgraphPath, bOverwrite, bSave, bCreated, bSubgraphSaved, Error, Code);
     if (!Subgraph)
     {
-        Bridge->SendAutomationError(Socket, RequestId, Error, bOverwrite ? TEXT("CREATE_FAILED") : TEXT("ASSET_ALREADY_EXISTS"));
+        Bridge->SendAutomationError(Socket, RequestId, Error, Code);
         return true;
     }
 

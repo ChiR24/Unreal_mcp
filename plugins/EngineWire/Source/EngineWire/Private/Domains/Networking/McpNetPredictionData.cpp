@@ -108,10 +108,7 @@ bool HandleAddNetworkPredictionData(FNetworkingActionContext& Context)
 
     // The variable only reaches clients when the owning actor or component replicates; say so, never flip it.
     // A component's variable additionally needs its owner to be a possessed pawn or a PlayerController.
-    UObject* Defaults = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
-    const AActor* ActorDefaults = Cast<AActor>(Defaults);
-    const UActorComponent* ComponentDefaults = Cast<UActorComponent>(Defaults);
-    const bool bReplicates = ActorDefaults ? ActorDefaults->GetIsReplicated() : (ComponentDefaults && ComponentDefaults->GetIsReplicated());
+    const bool bReplicates = McpBlueprintReplicates(Blueprint);
 
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     ResultJson->SetBoolField(TEXT("success"), bSaved);

@@ -64,7 +64,11 @@ TAsset* LoadPCGAsset(const FString& RawPath, const TCHAR* Label, FString& OutPat
     }
     return Asset;
 }
-UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError);
+// The PCG graph at GraphPath, made when there is none (saved when bSave). Null with OutError and OutCode when another kind
+// of asset holds the path (ASSET_TYPE_MISMATCH), a graph is there and bOverwrite is false (ASSET_ALREADY_EXISTS; with
+// it the graph is handed back untouched), or the new graph could not be made or saved (CREATE_FAILED, SAVE_FAILED).
+UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError,
+                                 FString& OutCode);
 TSharedPtr<FJsonObject> BuildGraphResult(UPCGGraph* Graph, const FString& GraphPath, bool bCreated, bool bSaved);
 TSharedPtr<FJsonObject> BuildNodeResult(UPCGGraph* Graph, UPCGNode* Node, const FString& GraphPath);
 UPCGNode* FindPCGNode(UPCGGraph* Graph, const FString& NodeId);

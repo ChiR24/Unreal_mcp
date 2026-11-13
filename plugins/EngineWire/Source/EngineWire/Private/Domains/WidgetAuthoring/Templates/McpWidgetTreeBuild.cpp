@@ -3,6 +3,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 #include "Domains/WidgetAuthoring/Templates/McpWidgetSpec.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelWidget.h"
@@ -223,7 +224,7 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
     {
         return true;
     }
-    const bool bSaved = MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
     FString ValidationError;
     if (!ValidateWidgetCreation(WidgetBP, RootName, ValidationError))
     {
@@ -232,7 +233,7 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
         Subsystem.SendAutomationError(Socket, RequestId, ValidationError + TEXT(" The tree was removed again."), TEXT("ENGINE_ERROR"));
         return true;
     }
-    RefreshWidgetBlueprintClass(WidgetBP); // every widget is a variable: give the generated class their properties
+    CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson); // every widget is a variable: give the generated class their properties
     TArray<TSharedPtr<FJsonValue>> Names;
     for (const UWidget* Widget : Created)
     {
@@ -243,7 +244,6 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
     ResultJson->SetStringField(TEXT("slotName"), RootName);
     ResultJson->SetArrayField(TEXT("widgets"), Names);
     ResultJson->SetNumberField(TEXT("widgetCount"), Created.Num());
-    ResultJson->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
     Subsystem.SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Added widget tree '%s' (%d widgets)"), *RootName, Created.Num()), ResultJson);

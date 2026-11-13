@@ -5,6 +5,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetGuidRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelSlot.h"
@@ -94,13 +95,10 @@ bool HandleWidgetAuthoringDuplicate(
     }
     const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
     const FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
-    UWidgetBlueprint* WidgetBP = WidgetPath.IsEmpty() ? nullptr : LoadWidgetBlueprint(WidgetPath);
-    UWidget* Source = WidgetBP && WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidget* Source = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
     if (!Source)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, WidgetBP
-            ? FString::Printf(TEXT("Widget '%s' not found in %s (get_widget_info lists the tree)."), *SlotName, *WidgetPath)
-            : FString::Printf(TEXT("Widget Blueprint '%s' not found."), *WidgetPath), TEXT("NOT_FOUND"));
         return true;
     }
     // Under the source's own parent by default, right after it.
@@ -129,13 +127,13 @@ bool HandleWidgetAuthoringDuplicate(
         : (Parent == Source->GetParent() ? Parent->GetChildIndex(Source) + 1 : Parent->GetChildrenCount() - 1);
     Parent->ShiftChild(FMath::Clamp(Wanted, 0, Parent->GetChildrenCount() - 1), Copy);
     RegisterAllWidgetGuids(WidgetBP);
-    MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
     // The copies are variables: without a compile the generated class has no property for them, and an
     // edit_graph step naming one failed as "not marked as a variable".
-    RefreshWidgetBlueprintClass(WidgetBP);
+    CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), Copy->GetName());
     ResultJson->SetStringField(TEXT("newParent"), Parent->GetName());
     ResultJson->SetNumberField(TEXT("index"), Parent->GetChildIndex(Copy));

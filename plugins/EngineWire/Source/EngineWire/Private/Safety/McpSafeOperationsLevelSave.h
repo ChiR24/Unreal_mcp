@@ -23,6 +23,13 @@ inline bool McpIsUnsavedLevelPath(const FString& PackagePath)
     return PackagePath.StartsWith(TEXT("/Temp/")) || PackagePath.StartsWith(TEXT("/Engine/Transient"));
 }
 
+// The unsaved Open World template: saving it as a new package fails on its private template references and then
+// asserts in the world partition subsystem, so save_as and export_level refuse it before touching it.
+inline bool McpIsUnsavedWorldPartitionTemplate(const UWorld* World)
+{
+    return World->GetWorldPartition() && McpIsUnsavedLevelPath(World->GetOutermost()->GetName());
+}
+
 inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
 {
     if (!Level)

@@ -31,7 +31,7 @@ export const RENDER_SCREEN_RECORDS: readonly CapabilityRecordSource[] = [
   R('configure_grain', 'Set film grain: amount (FilmGrainIntensity, 0 by default, 1 at the top of the slider) written after settings, which takes other grain fields by engine name (FilmGrainIntensityShadows, FilmGrainTexelSize, FilmGrainTexture). Send at least one.', { settings: P.ppSettings, amount: { type: 'number', description: 'Film grain intensity; written after settings.' }, ...BLEND }),
   buildRecord({
     id: `${ID}configure_screen_percentage`, action: 'configure_screen_percentage', family: F,
-    summary: 'Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved).',
+    summary: 'Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved; before UE 5.3 Play In Editor is also made to use it over the level viewport\'s own). CVAR_UNAVAILABLE when the value did not take.',
     whenToUse: WU, whenNotToUse: ['Default settings are sufficient.'],
     inputProps: { screenPercentage: P.screenPercentage },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',

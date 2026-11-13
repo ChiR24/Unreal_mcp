@@ -123,11 +123,10 @@ bool HandleWidgetAuthoringGenericComponent(
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-        McpSafeAssetSave(WidgetBP);
-        RefreshWidgetBlueprintClass(WidgetBP); // the new widget is a variable: give the generated class its property
+        CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson); // the new widget is a variable: the class gets its property
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("componentName"), ComponentName);
         ResultJson->SetStringField(TEXT("componentType"), WidgetClass->GetName());
         ResultJson->SetStringField(TEXT("parentName"), NewWidget->GetParent() ? NewWidget->GetParent()->GetName() : FString());

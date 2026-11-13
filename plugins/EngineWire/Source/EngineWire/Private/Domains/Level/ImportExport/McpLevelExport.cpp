@@ -21,47 +21,28 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
-
-    UWorld *WorldToExport = nullptr;
-    if (!LevelPath.IsEmpty()) {
-      // The source level must exist before it is exported
-      if (!FPackageName::DoesPackageExist(LevelPath)) {
-        // Also check file on disk as fallback
-        FString Filename;
-        bool bFileFound = false;
-        if (FPackageName::TryConvertLongPackageNameToFilename(
-                LevelPath, Filename, FPackageName::GetMapPackageExtension())) {
-          bFileFound = IFileManager::Get().FileExists(
-              *FPaths::ConvertRelativePathToFull(Filename));
-        }
-        if (!bFileFound) {
-          Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                                 FString::Printf(TEXT("Source level not found: %s"), *LevelPath),
-                                 TEXT("LEVEL_NOT_FOUND"));
-          return true;
-        }
-      }
-      UWorld *Current = McpHandlerUtils::GetEditorWorld();
-      if (Current && (IsCurrentEditorWorldPackage(LevelPath) ||
-                      Current->GetPathName() == LevelPath)) {
-        WorldToExport = Current;
-      } else {
-        Subsystem.SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(
-                TEXT("Requested level is not loaded: %s. Load the level before exporting it."),
-                *LevelPath),
-            TEXT("LEVEL_NOT_LOADED"));
-        return true;
-      }
-    }
-    if (!WorldToExport)
-      WorldToExport = McpHandlerUtils::GetEditorWorld();
-
+    UWorld *WorldToExport = McpHandlerUtils::GetEditorWorld();
     if (!WorldToExport) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("No world loaded"),
                              TEXT("NO_WORLD"));
+      return true;
+    }
+    // levelPath must name the open level. It is compared before any file is looked for: the open level named before
+    // its first save was LEVEL_NOT_FOUND where it is the level to export. A miss says whether a level is there at all.
+    if (!LevelPath.IsEmpty() && !CheckLevelPathIsOpenLevel(Payload).IsEmpty()) {
+      if (!FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(LevelPath))) {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                               FString::Printf(TEXT("Source level not found: %s"), *LevelPath),
+                               TEXT("LEVEL_NOT_FOUND"));
+        return true;
+      }
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(
+              TEXT("Requested level is not loaded: %s. Load the level before exporting it."),
+              *LevelPath),
+          TEXT("LEVEL_NOT_LOADED"));
       return true;
     }
 
@@ -84,7 +65,10 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       IFileManager::Get().MakeDirectory(*FPaths::GetPath(FullT3D), true);
       const bool bWrote = UExporter::ExportToFile(WorldToExport, nullptr, *FullT3D, false, false) != 0;
       TSharedPtr<FJsonObject> T3DResult = McpHandlerUtils::CreateResultObject();
-      T3DResult->SetStringField(TEXT("exportPath"), FullT3D);
+      // Relative to the project, as the path is given: the absolute one told a caller where the project lives.
+      FString ShownT3D = FullT3D;
+      FPaths::MakePathRelativeTo(ShownT3D, *FPaths::ConvertRelativePathToFull(FPaths::ProjectDir()));
+      T3DResult->SetStringField(TEXT("exportPath"), ShownT3D);
       T3DResult->SetStringField(TEXT("format"), TEXT("t3d"));
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, bWrote,
                              bWrote ? TEXT("Level exported as T3D") : TEXT("T3D export failed"),
@@ -114,21 +98,44 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
+    // McpSafeLevelSave never saves over another level, but its refusal reached only the log and the reply blamed the
+    // GPU driver: it is named here, as save_as names it.
+    if (FPackageName::DoesPackageExist(SafeExportPath) && !IsCurrentEditorWorldPackage(SafeExportPath)) {
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Something already exists at %s, and export_level never overwrites it: pick another exportPath."), *SafeExportPath),
+          TEXT("ASSET_ALREADY_EXISTS"));
+      return true;
+    }
+    if (McpSafeOperations::McpIsUnsavedWorldPartitionTemplate(WorldToExport)) {
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("export_level cannot copy an unsaved World Partition template level; create_level or load a level first"),
+                             TEXT("UNSAVED_TEMPLATE_LEVEL"));
+      return true;
+    }
+
     // Ensure directory only after the export destination is validated as a
     // writable /Game map inside the project Content directory.
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(AbsoluteFilePath), true);
 
-    // CRITICAL: Use McpSafeLevelSave instead of FEditorFileUtils::SaveMap
-    // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
-    bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, SafeExportPath);
-    if (bExported) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Level exported"), nullptr);
-    } else {
+    // FEditorFileUtils::SaveLevel duplicates a level saved before into the copy and leaves it open, but renames one never
+    // saved to the copy, so the editor is left on it, as after save_as (SaveWorld, 5.0 to 5.8).
+    const bool bWasSaved = !McpSafeOperations::McpIsUnsavedLevelPath(WorldToExport->GetOutermost()->GetName());
+    if (!McpSafeLevelSave(WorldToExport->PersistentLevel, SafeExportPath)) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                             TEXT("Failed to export level after 5 retries (check GPU driver stability)"),
+                             FString::Printf(TEXT("Failed to export the level to %s; the Output Log says why"), *SafeExportPath),
                              TEXT("EXPORT_FAILED"));
+      return true;
     }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("exportPath"), SafeExportPath);
+    Result->SetStringField(TEXT("format"), TEXT("umap"));
+    // exportPath is not a field the receipt reads; savedAssetPath gives it the copy's handle and change.
+    Result->SetStringField(TEXT("savedAssetPath"), SafeExportPath);
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+                           bWasSaved ? FString::Printf(TEXT("Level exported to %s"), *SafeExportPath)
+                                     : FString::Printf(TEXT("Level exported to %s; it had never been saved, so the editor now has the copy open"),
+                                                       *SafeExportPath),
+                           Result);
     return true;
 }
 } // namespace McpLevelHandlers

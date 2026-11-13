@@ -25,7 +25,7 @@ bool HandleSetScalarParameterValue(UEngineWireSubsystem* Bridge, const FString& 
     Instance->SetScalarParameterValueEditorOnly(Name, Value);
   };
   Writer.DescribeValue = [Value](UMaterialInterface*, FName, const TSharedPtr<FJsonObject>& Result) {
-    Result->SetNumberField(TEXT("value"), Value);
+    Result->SetNumberField(TEXT("value"), McpHandlerUtils::ReadableFloat(static_cast<float>(Value))); // the float the parameter holds
   };
   SetMaterialParameterValue(Bridge, RequestId, Payload, Socket, Writer);
   return true;

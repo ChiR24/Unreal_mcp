@@ -3,8 +3,9 @@
 
 namespace McpMaterialAuthoringHandlers
 {
-void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
+bool ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
 {
+  FString Written;
   for (int32 Index = 0; Index < Entries.Num(); ++Index) {
     TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
     const TSharedPtr<FJsonObject>* EntryObj = nullptr;
@@ -13,11 +14,8 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
     }
     One->RemoveField(TEXT("parameters"));
     One->SetStringField(TEXT("assetPath"), AssetPath);
-    // The setter reads save from its own payload, so a save:false given once for the whole call has to be
-    // copied in; every entry saved the asset whatever the caller said.
-    if (Shared.IsValid() && !One->HasField(TEXT("save")) && Shared->HasField(TEXT("save"))) {
-      One->SetField(TEXT("save"), Shared->TryGetField(TEXT("save")));
-    }
+    // Each value is set without saving and the asset is saved once after the loop: five values were five saves.
+    One->SetBoolField(TEXT("save"), false);
     const FString Name = GetJsonStringField(One, TEXT("parameterName"));
     const FString ItemId = FString::Printf(TEXT("%s#param%d"), *RequestId, Index);
     const FMcpCapturedResponse Reply = McpCaptureResponse(ItemId, [&] {
@@ -26,8 +24,8 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
     if (Reply.bSuccess) {
       // The setter names the asset it wrote (the package path) the way a single parameter's reply does, so the
       // caller's reply can name it too and the receipt lists it.
-      if (OutChangedAssetPath && OutChangedAssetPath->IsEmpty() && Reply.Result.IsValid()) {
-        Reply.Result->TryGetStringField(TEXT("assetPath"), *OutChangedAssetPath);
+      if (Written.IsEmpty() && Reply.Result.IsValid()) {
+        Reply.Result->TryGetStringField(TEXT("assetPath"), Written);
       }
     } else {
       // A row only for a value that did not apply: {parameterName, applied: true} per entry repeated the request.
@@ -39,6 +37,11 @@ void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
       OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
     }
   }
+  if (OutChangedAssetPath) {
+    *OutChangedAssetPath = Written;
+  }
+  UObject* Asset = !Written.IsEmpty() && GetJsonBoolField(Shared, TEXT("save"), true) ? McpLoadAsset(Written) : nullptr;
+  return Asset && McpSafeAssetSave(Asset);
 }
 
 // assets: several materials retuned under the one consent this call carried. Each entry runs
@@ -100,8 +103,9 @@ bool HandleSetMaterialParameter(UEngineWireSubsystem* Bridge, const FString& Req
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
       FString ChangedAsset;
-      ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Payload, Socket, Results, Failed, &ChangedAsset);
+      const bool bSaved = ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Payload, Socket, Results, Failed, &ChangedAsset);
       TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+      Data->SetBoolField(TEXT("saved"), bSaved);
       if (Results.Num() > 0) {
         Data->SetArrayField(TEXT("parameters"), Results);
       }

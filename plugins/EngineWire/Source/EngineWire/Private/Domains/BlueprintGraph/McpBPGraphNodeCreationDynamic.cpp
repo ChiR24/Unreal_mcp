@@ -11,36 +11,6 @@
 
 namespace McpBlueprintGraphHandlers
 {
-// Read the requested target class for a node with a class pin. Checks
-// targetClass first, then the legacy memberClass / nodeClass / widgetType
-// fields, then peels a "CastTo<Class>" prefix from the nodeType as a final
-// fallback. Returns empty string if nothing was supplied.
-static FString ReadTargetClassPayload(
-    const FActionContext& Context,
-    const FString& NodeType)
-{
-    FString TargetClass;
-    Context.Payload->TryGetStringField(TEXT("targetClass"), TargetClass);
-    if (TargetClass.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("memberClass"), TargetClass);
-    }
-    if (TargetClass.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("nodeClass"), TargetClass);
-    }
-    if (TargetClass.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("widgetType"), TargetClass);
-    }
-    if (TargetClass.IsEmpty() &&
-        NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase))
-    {
-        TargetClass = NodeType.Mid(6);
-    }
-    return TargetClass;
-}
-
 // The editor offers a node only in a graph whose schema can hold it: an animation node placed in an event graph
 // compiled clean and never ran.
 FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph)
@@ -126,42 +96,9 @@ void CreateDynamicNode(
         return;
     }
 
-    // DynamicCast nodes must have TargetType set, or they render as an
-    // unusable "Bad cast node" (wildcard Object pin, no typed "As <Class>"
-    // output). Read the requested class (with legacy fallbacks) and resolve it.
     if (NodeClass->IsChildOf(UK2Node_DynamicCast::StaticClass()))
     {
-        const FString TargetClass = ReadTargetClassPayload(Context, NodeType);
-        if (TargetClass.IsEmpty())
-        {
-            Context.SendError(
-                TEXT("DynamicCast node requires a 'targetClass' (Blueprint asset "
-                     "path like /Game/Blueprints/BP_Cole, or a class name)."),
-                TEXT("INVALID_ARGUMENT"));
-            return;
-        }
-        UClass* ResolvedTarget = ResolveClassByName(TargetClass);
-        if (!ResolvedTarget)
-        {
-            Context.SendError(
-                FString::Printf(
-                    TEXT("Could not resolve targetClass '%s' for DynamicCast."),
-                    *TargetClass),
-                TEXT("CLASS_NOT_FOUND"));
-            return;
-        }
-
-        FGraphNodeCreator<UK2Node_DynamicCast> CastCreator(*Context.TargetGraph);
-        UK2Node_DynamicCast* CastNode = CastCreator.CreateNode(false);
-        CastNode->TargetType = ResolvedTarget;
-        // Cast purity is configurable via the payload; defaults to impure
-        // (the conventional exec-driven Cast To... node). Setting pure=true
-        // gives a pure data-only cast with no exec pins, useful inside
-        // binding/pure functions.
-        bool bPureCast = false;
-        Context.Payload->TryGetBoolField(TEXT("pure"), bPureCast);
-        CastNode->SetPurity(bPureCast);
-        Context.FinalizeNode(CastCreator, CastNode, X, Y);
+        CreateCastNode(Context, NodeType, X, Y);
         return;
     }
 

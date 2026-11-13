@@ -151,7 +151,7 @@ void AddViewShotSizeForMcp(const TSharedPtr<FJsonObject> &Resp, FIntPoint Size, 
 
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
                                  const TSharedPtr<FJsonObject> &Payload,
-                                 TArray<uint8> &OutPngData,
+                                 TArray64<uint8> &OutPngData,
                                  FIntVector &OutSize, FString &OutError,
                                  FIntPoint *OutSourceSize) {
   TSharedRef<SWidget> WindowWidget = Window;
@@ -196,34 +196,9 @@ bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
     OutSize.Y = TargetSize.Y;
   }
 
-  IImageWrapperModule &ImageWrapperModule =
-      FModuleManager::LoadModuleChecked<IImageWrapperModule>(
-          FName("ImageWrapper"));
-  TSharedPtr<IImageWrapper> ImageWrapper =
-      ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
-  if (!ImageWrapper.IsValid()) {
-    OutError = TEXT("Failed to create PNG image wrapper");
-    return false;
-  }
-
-  TArray<uint8> RawData;
-  RawData.SetNumUninitialized(Bitmap.Num() * 4);
-  for (int32 PixelIndex = 0; PixelIndex < Bitmap.Num(); ++PixelIndex) {
-    const FColor &Pixel = Bitmap[PixelIndex];
-    RawData[PixelIndex * 4 + 0] = Pixel.R;
-    RawData[PixelIndex * 4 + 1] = Pixel.G;
-    RawData[PixelIndex * 4 + 2] = Pixel.B;
-    RawData[PixelIndex * 4 + 3] = Pixel.A;
-  }
-
-  if (!ImageWrapper->SetRaw(RawData.GetData(), RawData.Num(), OutSize.X,
-                            OutSize.Y, ERGBFormat::RGBA, 8)) {
-    OutError =
-        TEXT("Failed to prepare Slate window screenshot pixels for PNG encoding");
-    return false;
-  }
-
-  OutPngData = ImageWrapper->GetCompressed(100);
+  OutPngData.Reset();
+  FImageUtils::PNGCompressImageArray(OutSize.X, OutSize.Y,
+                                     TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()), OutPngData);
   if (OutPngData.Num() == 0) {
     OutError = TEXT("Failed to encode Slate window screenshot as PNG");
     return false;

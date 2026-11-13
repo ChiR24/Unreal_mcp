@@ -1,5 +1,6 @@
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
+#include "Domains/Skeleton/SkinWeights/McpSkeletonSkinWeightSource.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "EngineWireSubsystem.h"
@@ -61,6 +62,34 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("%s has no skeleton to bind to"), *SkeletalMeshPath), TEXT("SKELETON_NOT_FOUND"));
             return true;
+        }
+        // The rebuild below drops a morph target only the render data has, as every source writer's does (they refuse
+        // it the same way), and before UE 5.7 the round trip through the dynamic mesh carries no morph target at all
+        // (FMeshDescriptionToDynamicMesh reads none on 5.5 and 5.6): refused before anything changes.
+        McpSkinSource::FSourceMesh Source;
+        FString SourceCode;
+        if (McpSkinSource::Read(Mesh, 0, true, Source, SourceCode, Error))
+        {
+            TArray<TSharedPtr<FJsonValue>> Dropped;
+            if (!McpSkinSource::CheckRenderOnlyMorphs(Mesh, Source, GetJsonBoolField(Payload, TEXT("dropRenderOnlyMorphs"), false), Dropped, Error))
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("RENDER_ONLY_MORPHS"));
+                return true;
+            }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
+            TArray<FString> MorphNames;
+            for (const TPair<FName, TArray<FVector3f>>& Morph : Source.Morphs)
+            {
+                MorphNames.Add(Morph.Key.ToString());
+            }
+            if (MorphNames.Num() > 0)
+            {
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("On this engine version the "
+                    "smooth binding rebuilds LOD 0 without its morph targets (%s), so nothing was changed."),
+                    *FString::Join(MorphNames, TEXT(", "))), TEXT("MORPHS_WOULD_BE_LOST"));
+                return true;
+            }
+#endif
         }
         UDynamicMesh* Working = NewObject<UDynamicMesh>();
         EGeometryScriptOutcomePins ReadOutcome = EGeometryScriptOutcomePins::Failure;

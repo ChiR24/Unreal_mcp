@@ -9,8 +9,7 @@
 namespace McpLevelHandlers {
 bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+    Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
 
     if (LevelPath.IsEmpty()) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
@@ -53,10 +52,7 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
-    const FString AssetName = FPaths::GetBaseFilename(LongPackageName);
-    const FString ObjectPath = AssetName.IsEmpty()
-                                   ? LongPackageName
-                                   : FString::Printf(TEXT("%s.%s"), *LongPackageName, *AssetName);
+    const FString ObjectPath = McpToObjectPath(LongPackageName);
     FLevelFileDeletion Deletion;
     DeleteLevelFiles(LongPackageName, false, Deletion);
     ScanLevelPackagePath(LongPackageName, Deletion.MapFilename, true);
@@ -86,23 +82,19 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     const bool bMapFileStillExists = !Deletion.MapFilename.IsEmpty() &&
                                      IFileManager::Get().FileExists(*Deletion.MapFilename);
-    const bool bPackageStillExists = FPackageName::DoesPackageExist(LongPackageName);
-    const bool bDeleted = (Deletion.bDeletedMap && !bMapFileStillExists) ||
-                          (!Deletion.bMapExisted && !bPackageExisted && !bPackageStillLoaded);
+    // A level that is nowhere (on disk, in the registry, in memory) stays a success, as a cleanup may repeat, and says
+    // nothing was deleted.
+    const bool bNowhere = !Deletion.bMapExisted && !bPackageExisted && !bPackageStillLoaded;
+    const bool bDeleted = (Deletion.bDeletedMap && !bMapFileStillExists) || bNowhere;
     const bool bDeletedWithSidecars = bDeleted && Deletion.SidecarsRemoved();
     const bool bExternalSidecarDeleteFailed = !Deletion.SidecarErrorMessage.IsEmpty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), LongPackageName);
-    Result->SetStringField(TEXT("objectPath"), ObjectPath);
-    Result->SetStringField(TEXT("mapFilename"), Deletion.MapFilename);
-    Result->SetBoolField(TEXT("deleted"), bDeletedWithSidecars);
+    Result->SetBoolField(TEXT("deleted"), bDeletedWithSidecars && !bNowhere);
     Result->SetBoolField(TEXT("deletedMapFile"), Deletion.bDeletedMap);
-    Result->SetBoolField(TEXT("mapDeletedOrAlreadyAbsent"), bDeleted);
     Result->SetBoolField(TEXT("builtDataExists"), Deletion.bBuiltDataExists);
     Result->SetBoolField(TEXT("deletedBuiltData"), Deletion.bDeletedBuiltData);
-    Result->SetBoolField(TEXT("externalSidecarDeleteAttempted"), Deletion.bSidecarDeleteAttempted);
-    Result->SetBoolField(TEXT("externalSidecarDeleteFailed"), bExternalSidecarDeleteFailed);
     Result->SetBoolField(TEXT("externalActorsExists"), Deletion.bExternalActorsExists);
     Result->SetBoolField(TEXT("deletedExternalActors"), Deletion.bDeletedExternalActors);
     Result->SetBoolField(TEXT("externalObjectsExists"), Deletion.bExternalObjectsExists);
@@ -112,13 +104,9 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       Result->SetStringField(TEXT("externalDeleteErrorCode"), Deletion.SidecarErrorCode);
     }
     Result->SetBoolField(TEXT("wasLoaded"), bWasLoaded);
-    Result->SetBoolField(TEXT("packageUnloadAttempted"), bPackageUnloadAttempted);
-    Result->SetBoolField(TEXT("packageUnloadSucceeded"), bPackageUnloadSucceeded);
     Result->SetBoolField(TEXT("packageStillLoaded"), bPackageStillLoaded);
     Result->SetBoolField(TEXT("currentWorldMatchesTarget"), bCurrentWorldMatchesTarget);
     Result->SetNumberField(TEXT("removedStreamingRefs"), RemovedStreamingRefs);
-    Result->SetBoolField(TEXT("fileExistsAfter"), bMapFileStillExists);
-    Result->SetBoolField(TEXT("packageExistsAfter"), bPackageStillExists);
 
     if (bExternalSidecarDeleteFailed) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -128,7 +116,9 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                                  : Deletion.SidecarErrorCode);
     } else if (bDeletedWithSidecars) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             FString::Printf(TEXT("Level file deleted: %s"), *LongPackageName), Result);
+                             bNowhere ? FString::Printf(TEXT("No level at %s; nothing was deleted"), *LongPackageName)
+                                      : FString::Printf(TEXT("Level file deleted: %s"), *LongPackageName),
+                             Result);
     } else if (bCurrentWorldMatchesTarget || bPackageStillLoaded) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Level is still loaded and cannot be deleted safely: %s"), *LongPackageName),

@@ -2,15 +2,47 @@
 
 namespace McpMaterialAuthoringHandlers
 {
-ECustomMaterialOutputType ParseCustomOutputType(FString Type, ECustomMaterialOutputType Fallback)
+bool ParseCustomOutputType(FString Type, ECustomMaterialOutputType& Out)
 {
   Type.RemoveFromStart(TEXT("CMOT_"));
-  return Type == TEXT("Float1") ? CMOT_Float1
-       : Type == TEXT("Float2") ? CMOT_Float2
-       : Type == TEXT("Float3") ? CMOT_Float3
-       : Type == TEXT("Float4") ? CMOT_Float4
-       : Type == TEXT("MaterialAttributes") ? CMOT_MaterialAttributes
-       : Fallback;
+  static const TPair<const TCHAR*, ECustomMaterialOutputType> Types[] = {{TEXT("Float1"), CMOT_Float1},
+      {TEXT("Float2"), CMOT_Float2}, {TEXT("Float3"), CMOT_Float3}, {TEXT("Float4"), CMOT_Float4},
+      {TEXT("MaterialAttributes"), CMOT_MaterialAttributes}};
+  for (const TPair<const TCHAR*, ECustomMaterialOutputType>& Entry : Types) {
+    if (Type == Entry.Key) {
+      Out = Entry.Value;
+      return true;
+    }
+  }
+  return false;
+}
+
+FString CheckCustomExpressionPayload(const TSharedPtr<FJsonObject>& Payload)
+{
+  const TCHAR* const Types = TEXT("Float1, Float2, Float3, Float4 or MaterialAttributes");
+  ECustomMaterialOutputType Parsed = CMOT_Float1;
+  FString OutputType;
+  if (Payload->TryGetStringField(TEXT("outputType"), OutputType) && !OutputType.IsEmpty() &&
+      !ParseCustomOutputType(OutputType, Parsed)) {
+    return FString::Printf(TEXT("outputType '%s' is not %s."), *OutputType, Types);
+  }
+  for (const TCHAR* Field : {TEXT("inputs"), TEXT("additionalOutputs")}) {
+    const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;
+    if (!Payload->TryGetArrayField(Field, Entries) || !Entries) {
+      continue;
+    }
+    for (const TSharedPtr<FJsonValue>& Entry : *Entries) {
+      const TSharedPtr<FJsonObject>* Object = nullptr;
+      FString Name, Type;
+      if (!Entry->TryGetObject(Object) || !Object || !(*Object)->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+        return FString::Printf(TEXT("Every entry of %s needs a name."), Field);
+      }
+      if ((*Object)->TryGetStringField(TEXT("type"), Type) && !Type.IsEmpty() && !ParseCustomOutputType(Type, Parsed)) {
+        return FString::Printf(TEXT("%s entry '%s' has type '%s', which is not %s."), Field, *Name, *Type, Types);
+      }
+    }
+  }
+  return FString();
 }
 
 void ApplyCustomInputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload)
@@ -53,7 +85,9 @@ bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TShar
     (*OutputObj)->TryGetStringField(TEXT("type"), OType);
     FCustomOutput NewOutput;
     NewOutput.OutputName = FName(*OutputName);
-    NewOutput.OutputType = ParseCustomOutputType(OType, CMOT_Float1);
+    ECustomMaterialOutputType Type = CMOT_Float1; // no type: Float1, as the details panel adds one
+    ParseCustomOutputType(OType, Type);
+    NewOutput.OutputType = Type;
     Custom->AdditionalOutputs.Add(NewOutput);
   }
   // The output pins are Outputs, not AdditionalOutputs, and the engine rebuilds them only from the
@@ -83,6 +117,11 @@ bool HandleAddCustomExpression(UEngineWireSubsystem* Bridge, const FString& Requ
     }
     Payload->TryGetStringField(TEXT("outputType"), OutputType);
     Payload->TryGetStringField(TEXT("description"), Description);
+    const FString Problem = CheckCustomExpressionPayload(Payload);
+    if (!Problem.IsEmpty()) {
+      Bridge->SendAutomationError(Socket, RequestId, Problem + TEXT(" No node was added."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     UMaterialExpressionCustom *CustomExpr =
         NewObject<UMaterialExpressionCustom>(
@@ -90,7 +129,9 @@ bool HandleAddCustomExpression(UEngineWireSubsystem* Bridge, const FString& Requ
             RF_Transactional);
     CustomExpr->Code = Code;
 
-    CustomExpr->OutputType = ParseCustomOutputType(OutputType, CMOT_Float1);
+    ECustomMaterialOutputType Type = CMOT_Float1;
+    ParseCustomOutputType(OutputType, Type);
+    CustomExpr->OutputType = Type;
 
     if (!Description.IsEmpty()) {
       CustomExpr->Description = Description;

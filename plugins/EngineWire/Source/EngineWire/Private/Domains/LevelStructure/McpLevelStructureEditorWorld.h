@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Misc/FileHelper.h"
 
 class FMcpBridgeWebSocket;
 class UClass;
@@ -28,6 +29,14 @@ void SendLevelEditResult(
 // streamingMethod "Blueprint" names ULevelStreamingDynamic and "AlwaysLoaded" ULevelStreamingAlwaysLoaded
 // (case-insensitive); null for anything else.
 UClass* ResolveLevelStreamingClass(const FString& StreamingMethod);
+
+// A level name is an object name, a package name and a file name: false with OutReason for a character none of them
+// takes, a reserved device name (CON, LPT1, ...) or a length past what a file takes. create_level and create_sublevel.
+inline bool IsValidLevelName(const FString& Name, FText& OutReason)
+{
+    return FName::IsValidXName(Name, FString(INVALID_OBJECTNAME_CHARACTERS) + INVALID_LONGPACKAGE_CHARACTERS, &OutReason) &&
+           FFileHelper::IsFilenameValidForSaving(Name, OutReason);
+}
 
 // The editor world's streaming level whose package (or its short name) is LevelName; when none is and the package
 // exists at LevelName, under the persistent level's folder, or under /Game, a ULevelStreamingDynamic is added for it.

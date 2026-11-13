@@ -2,7 +2,6 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "GameFramework/Actor.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -17,19 +16,15 @@
 #include "Misc/ScopeExit.h"
 
 #include "Camera/PlayerCameraManager.h"
-#include "Components/InputComponent.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 #include "EditorViewportClient.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
-#include "Exporters/Exporter.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
 #include "IAssetViewport.h"
-#include "Misc/OutputDevice.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
 #include "Slate/SceneViewport.h"

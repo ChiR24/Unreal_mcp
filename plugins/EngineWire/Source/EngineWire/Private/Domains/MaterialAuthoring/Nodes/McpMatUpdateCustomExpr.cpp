@@ -28,6 +28,11 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Node is not a Custom Expression."), TEXT("INVALID_NODE_TYPE"));
       return true;
     }
+    const FString Problem = CheckCustomExpressionPayload(Payload);
+    if (!Problem.IsEmpty()) {
+      Bridge->SendAutomationError(Socket, RequestId, Problem + TEXT(" Nothing was changed."), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     FString NewCode;
     if (Payload->TryGetStringField(TEXT("code"), NewCode)) {
@@ -41,7 +46,9 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
 
     FString NewOutputType;
     if (Payload->TryGetStringField(TEXT("outputType"), NewOutputType)) {
-      CustomExpr->OutputType = ParseCustomOutputType(NewOutputType, CustomExpr->OutputType);
+      ECustomMaterialOutputType Type = CustomExpr->OutputType;
+      ParseCustomOutputType(NewOutputType, Type);
+      CustomExpr->OutputType = Type;
     }
 
     ApplyCustomInputs(CustomExpr, Payload);

@@ -84,7 +84,7 @@ bool HandleWidgetAuthoringCreation(
             : FString::Printf(TEXT("Widget blueprint created but post-create steps failed: %s"), *Name));
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBlueprint));
         ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
-        ResultJson->SetBoolField(TEXT("saveSucceeded"), bSaved);
+        ResultJson->SetBoolField(TEXT("saved"), bSaved);
 
         McpHandlerUtils::AddVerification(ResultJson, WidgetBlueprint);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, bPostCreateSucceeded,
@@ -157,7 +157,7 @@ bool HandleWidgetAuthoringCreation(
         ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("parentClass"), NewParentClass->GetPathName());
         ResultJson->SetStringField(TEXT("previousParentClass"), PreviousParent);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Set parent class to: %s"), *ParentClass));

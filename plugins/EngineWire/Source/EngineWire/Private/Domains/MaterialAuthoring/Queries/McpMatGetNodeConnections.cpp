@@ -26,6 +26,12 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
     FString Direction;
     Payload->TryGetStringField(TEXT("direction"), Direction);
     if (Direction.IsEmpty()) Direction = TEXT("both");
+    // Another word answered no connections as a success.
+    if (Direction != TEXT("inputs") && Direction != TEXT("outputs") && Direction != TEXT("both")) {
+      Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown direction '%s': it takes inputs, outputs "
+          "or both (the default)."), *Direction), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     bool bWantInputs  = (Direction == TEXT("inputs")  || Direction == TEXT("both"));
     bool bWantOutputs = (Direction == TEXT("outputs") || Direction == TEXT("both"));
 

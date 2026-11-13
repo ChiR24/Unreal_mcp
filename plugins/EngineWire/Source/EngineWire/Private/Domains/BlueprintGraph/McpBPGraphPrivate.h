@@ -187,6 +187,9 @@ bool TryCreateCustomEventNode(
     const FString& NodeType,
     float X,
     float Y);
+// A cast node for every spelling that asks for one (Cast, CastTo<Class>, DynamicCast, K2Node_DynamicCast): the class from
+// targetClass (or memberClass, nodeClass, widgetType, or the CastTo suffix), `pure` read on each. Replies on its own.
+void CreateCastNode(FActionContext& Context, const FString& NodeType, float X, float Y);
 bool TryCreateSpecialNode(
     FActionContext& Context,
     const FString& NodeType,

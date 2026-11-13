@@ -31,6 +31,10 @@ bool HandleGetConnectedSubgraph(UEngineWireSubsystem* Bridge, const FString& Req
       ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
         if (Input.Expression) { Adj.Add(Input.Expression, Expr); Adj.Add(Expr, Input.Expression); Reads.Add(Expr, Input.Expression); }
       });
+      // A named reroute usage reads its declaration: what fed the declaration was listed as orphaned.
+      if (UMaterialExpression *Declaration = McpNamedRerouteSource(Expr)) {
+        Adj.Add(Declaration, Expr); Adj.Add(Expr, Declaration); Reads.Add(Expr, Declaration);
+      }
     }
 
     // Find nodes connected to Material main pins (or MF FunctionOutputs)

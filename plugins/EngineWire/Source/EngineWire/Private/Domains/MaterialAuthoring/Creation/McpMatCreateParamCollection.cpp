@@ -129,14 +129,12 @@ bool HandleCreateParameterCollection(UEngineWireSubsystem* Bridge, const FString
   Result->SetStringField(TEXT("assetPath"), Collection->GetPathName());
   Result->SetBoolField(TEXT("created"), bCreated);
   Result->SetArrayField(TEXT("added"), Added);
-  // A float written as a double read 0.30000001192092896; 7 significant digits are all a float holds.
-  const auto Clean = [](float Value) { return FCString::Atod(*FString::Printf(TEXT("%.7g"), Value)); };
   TArray<TSharedPtr<FJsonValue>> ScalarRows, VectorRows;
   for (const FCollectionScalarParameter& Param : Collection->ScalarParameters)
   {
     TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
     Row->SetStringField(TEXT("name"), Param.ParameterName.ToString());
-    Row->SetNumberField(TEXT("default"), Clean(Param.DefaultValue));
+    Row->SetNumberField(TEXT("default"), McpHandlerUtils::ReadableFloat(Param.DefaultValue));
     ScalarRows.Add(MakeShared<FJsonValueObject>(Row));
   }
   for (const FCollectionVectorParameter& Param : Collection->VectorParameters)
@@ -146,7 +144,7 @@ bool HandleCreateParameterCollection(UEngineWireSubsystem* Bridge, const FString
     TArray<TSharedPtr<FJsonValue>> Color;
     for (const float Channel : {Param.DefaultValue.R, Param.DefaultValue.G, Param.DefaultValue.B, Param.DefaultValue.A})
     {
-      Color.Add(MakeShared<FJsonValueNumber>(Clean(Channel)));
+      Color.Add(MakeShared<FJsonValueNumber>(McpHandlerUtils::ReadableFloat(Channel)));
     }
     Row->SetArrayField(TEXT("default"), Color);
     VectorRows.Add(MakeShared<FJsonValueObject>(Row));

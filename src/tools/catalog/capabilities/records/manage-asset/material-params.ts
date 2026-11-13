@@ -19,7 +19,7 @@ const MAT_ALIAS = str('Material asset path (accepted in place of assetPath).');
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep the change in memory only.');
 // A material info read can narrow its output: which sections, and which nodes' connections.
 const INFO_FILTERS = {
-  filter: str('Which sections to return: parameters, expressions, connections, or all (default).'),
+  filter: str('Which sections to return: parameters, expressions, connections, or all (default); another word is refused.'),
   nodeId: str('A node, by the id the graph lists: material and function report only the connections touching it; node_details, node_properties and node_connections describe it; node_chain and subgraph start from it (node_chain also takes it as startNodeId; subgraph needs it unless orphansOnly is true).'),
   nodeIds: arr('Only report connections touching these nodes.'),
 };
@@ -80,7 +80,7 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['The compile errors of an edited graph must be read; a material that fails to compile renders as the default material.', 'Graph edits left the asset unsaved, so it must be compiled and saved.'],
       whenNotToUse: ['A property or parameter was just set (material.set_material_property and material.set_material_parameter already recompile).', 'Domain, blend mode or node counts are wanted rather than compile errors (use material.get_material_info).'],
       examples: [ex('Compile after editing the graph', { assetPath: M }, DONE)] }),
-  r('get_material_info', 'material', 'Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).', schema({ assetPath: MAT, materialPath: MAT_ALIAS, ...INFO_FILTERS }, [], ['assetPath', 'materialPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
+  r('get_material_info', 'material', 'Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).', schema({ assetPath: MAT, materialPath: MAT_ALIAS, ...INFO_FILTERS }, [], ['assetPath', 'materialPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
     { whenToUse: ['An existing material must be understood before editing: node ids, parameter names, wiring, domain and blend mode, or the parent and overrides of an instance.'],
       whenNotToUse: ['Shading model, sampler counts or the instances of a parent are wanted (use asset.query_asset lookup=material_stats or asset.list kind=material_instances).'],
       examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),

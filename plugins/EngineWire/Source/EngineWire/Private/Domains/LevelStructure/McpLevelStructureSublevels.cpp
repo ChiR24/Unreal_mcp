@@ -29,10 +29,7 @@ bool HandleCreateSublevel(
 
     // CRITICAL: sublevelName is required - no default fallback to prevent hidden errors
     FString SublevelName;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("sublevelName"), SublevelName);
-    }
+    Payload->TryGetStringField(TEXT("sublevelName"), SublevelName);
 
     if (SublevelName.IsEmpty())
     {
@@ -40,10 +37,26 @@ bool HandleCreateSublevel(
             TEXT("sublevelName is required for create_sublevel"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    FText InvalidNameReason;
+    if (!IsValidLevelName(SublevelName, InvalidNameReason))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid sublevelName '%s': %s"), *SublevelName, *InvalidNameReason.ToString()),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     FString SublevelPath = GetJsonStringField(Payload, TEXT("sublevelPath"), TEXT(""));
     FString ParentLevel = GetJsonStringField(Payload, TEXT("parentLevel"), TEXT(""));
-    bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+    // A new sublevel exists only once saved: with save false the new world was cleaned out of memory and the open level
+    // was left streaming a package that exists nowhere.
+    if (!GetJsonBoolField(Payload, TEXT("save"), true))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("A new sublevel exists only once it is saved, so save false cannot make one. Nothing was created."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     // streamingMethod picks the streaming class; it used to be ignored and every sublevel streamed by Blueprint.
     const FString StreamingMethod = GetJsonStringField(Payload, TEXT("streamingMethod"), TEXT("Blueprint"));
     UClass* StreamingClass = ResolveLevelStreamingClass(StreamingMethod);
@@ -68,7 +81,6 @@ bool HandleCreateSublevel(
     if (!ParentLevel.IsEmpty())
     {
         FString NormalizedParentPath = FPackageName::ObjectPathToPackageName(ParentLevel);
-        NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
         NormalizedParentPath = McpRootedContentPath(NormalizedParentPath);
         if (!NormalizedParentPath.Equals(OpenLevel, ESearchCase::IgnoreCase))
         {
@@ -171,51 +183,37 @@ bool HandleCreateSublevel(
 
     SublevelPackage->MarkPackageDirty();
 
-    bool bSaveSucceeded = true;
-    if (bSave)
-    {
-        bSaveSucceeded = SaveLevelWorld(NewSublevelWorld, SublevelPackageName);
-    }
-
-    ULevelStreaming* StreamingLevel = NewObject<ULevelStreaming>(World, StreamingClass);
-    if (StreamingLevel)
-    {
-        StreamingLevel->SetWorldAssetByPackageName(FName(*SublevelPackageName));
-        StreamingLevel->LevelTransform = FTransform::Identity;
-        StreamingLevel->SetShouldBeVisible(true);
-        StreamingLevel->SetShouldBeLoaded(true);
-
-        World->AddStreamingLevel(StreamingLevel);
-    }
-
-    World->MarkPackageDirty();
-
-    // Save parent world if requested (to persist streaming level reference)
-    if (bSave && StreamingLevel)
-    {
-        McpSafeAssetSave(World);
-    }
-
-    // Unload the saved sublevel world so a later LoadMap of it does not die with "World Memory Leaks".
-    if (bSaveSucceeded && NewSublevelWorld)
-    {
-        CleanupCreatedLevelWorldAfterSave(NewSublevelWorld, SublevelPackage, FullSublevelPath);
-    }
-
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("sublevelName"), SublevelName);
     ResponseJson->SetStringField(TEXT("sublevelPath"), FullSublevelPath);
     ResponseJson->SetStringField(TEXT("parentLevel"), World->GetMapName());
-    ResponseJson->SetBoolField(TEXT("saved"), bSave && bSaveSucceeded);
-    ResponseJson->SetBoolField(TEXT("streamingAdded"), StreamingLevel != nullptr);
-
-    if (bSave && !bSaveSucceeded)
+    // The open level streams the sublevel only once it is on disk: a failed save used to add the entry and save the
+    // open level with it before SAVE_FAILED was answered.
+    if (!SaveLevelWorld(NewSublevelWorld, SublevelPackageName))
     {
+        ResponseJson->SetBoolField(TEXT("saved"), false);
+        ResponseJson->SetBoolField(TEXT("streamingAdded"), false);
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Sublevel created but save failed: %s"), *SublevelName),
+            FString::Printf(TEXT("Sublevel created but save failed: %s; the open level does not stream it"), *SublevelName),
             ResponseJson, TEXT("SAVE_FAILED"));
         return true;
     }
+
+    ULevelStreaming* StreamingLevel = NewObject<ULevelStreaming>(World, StreamingClass);
+    StreamingLevel->SetWorldAssetByPackageName(FName(*SublevelPackageName));
+    StreamingLevel->LevelTransform = FTransform::Identity;
+    StreamingLevel->SetShouldBeVisible(true);
+    StreamingLevel->SetShouldBeLoaded(true);
+    World->AddStreamingLevel(StreamingLevel);
+    World->MarkPackageDirty();
+    // The open level keeps the streaming entry only once saved with it.
+    ResponseJson->SetBoolField(TEXT("parentSaved"), McpSafeAssetSave(World));
+
+    // Unload the saved sublevel world so a later LoadMap of it does not die with "World Memory Leaks".
+    CleanupCreatedLevelWorldAfterSave(NewSublevelWorld, SublevelPackage, FullSublevelPath);
+
+    ResponseJson->SetBoolField(TEXT("saved"), true);
+    ResponseJson->SetBoolField(TEXT("streamingAdded"), true);
 
     FString Message = FString::Printf(TEXT("Created sublevel: %s at %s"), *SublevelName, *FullSublevelPath);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);

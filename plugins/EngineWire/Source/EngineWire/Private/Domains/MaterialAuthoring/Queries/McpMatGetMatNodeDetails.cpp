@@ -62,7 +62,7 @@ bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& R
     // nothing, so a written value could never be confirmed.
     if (UMaterialExpressionScalarParameter *ScalarParam = Cast<UMaterialExpressionScalarParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), ScalarParam->ParameterName.ToString());
-      Result->SetNumberField(TEXT("scalarDefault"), ScalarParam->DefaultValue);
+      Result->SetNumberField(TEXT("scalarDefault"), McpHandlerUtils::ReadableFloat(ScalarParam->DefaultValue));
     } else if (UMaterialExpressionVectorParameter *VectorParam = Cast<UMaterialExpressionVectorParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), VectorParam->ParameterName.ToString());
       Result->SetObjectField(TEXT("vectorDefault"), McpHandlerUtils::LinearColorToJson(VectorParam->DefaultValue));

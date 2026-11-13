@@ -11,12 +11,11 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const TSharedPtr<FJsonObject>& P
     {
         TEXTURE_ERROR_RESPONSE(McpPathRefusalMessage(TEXT("assetPath"), AssetPath));
     }
-    AssetPath = SanitizedAssetPath;
-
-    UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AssetPath));
+    FString Error;
+    UTexture2D* Texture = LoadTextureAt(SanitizedAssetPath, TEXT("assetPath"), AssetPath, Error);
     if (!Texture)
     {
-        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
+        TEXTURE_ERROR_RESPONSE(Error);
     }
 
     TSharedPtr<FJsonObject> TextureInfo = McpHandlerUtils::CreateResultObject();

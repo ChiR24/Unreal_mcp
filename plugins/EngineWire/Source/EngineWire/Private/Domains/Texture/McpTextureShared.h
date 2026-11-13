@@ -32,6 +32,9 @@ bool ValidateTextureIterationCount(double Value, const TCHAR* Name,
                                    int32 MinValue, int32 MaxValue,
                                    int32& OutValue, FString& OutError);
 FString NormalizeTexturePath(const FString& Path);
+// The texture at RawPath through the shared canonicalizer (OutPath), or null with OutError: "<Field> is required" for an
+// empty RawPath, "<Field>: no texture at '<RawPath>'" when no texture is there. Every texture action loads through it.
+UTexture2D* LoadTextureAt(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError);
 // RawPath as a texture whose source is 8-bit BGRA or single-channel G8 (channel_extract output);
 // null with OutError naming the source format otherwise. bConvertToBGRA8 rewrites a G8 source to
 // BGRA8 in the asset, for the operations that edit it in place; the ones that only read use

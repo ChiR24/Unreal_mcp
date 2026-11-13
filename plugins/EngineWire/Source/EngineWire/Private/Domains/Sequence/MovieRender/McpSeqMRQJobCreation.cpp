@@ -92,17 +92,21 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
   Job->UserData = FString::Printf(TEXT("%s%s"), CreationJobIdPrefix,
                                   *FGuid::NewGuid().ToString());
   EnsureEssentialSettings(Job);
+  Message.Reset();
   if (!ApplyOutputSettings(Job, Payload, Message, Code)) {
     RollBackJob();
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   }
+  // A note when the start frame had to move off the sequence's first frame: said in the receipt, as configure does.
+  const FString Note = Message;
   if (!ValidateQueueResourceLimits(Queue, Message, Code)) {
     RollBackJob();
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   }
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                                    TEXT("Movie Render Queue job created."),
+                                    Note.IsEmpty() ? FString(TEXT("Movie Render Queue job created."))
+                                                   : TEXT("Movie Render Queue job created; ") + Note,
                                     BuildJobResult(Job, Queue));
   return true;
 }

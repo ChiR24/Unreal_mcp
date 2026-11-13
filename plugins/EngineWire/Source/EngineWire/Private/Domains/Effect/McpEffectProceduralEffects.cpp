@@ -88,6 +88,7 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
     Context.Payload->TryGetNumberField(TEXT("scattering"), Scattering);
     Context.Payload->TryGetNumberField(TEXT("extinction"), Extinction);
 
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(Context.RequestId);
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         AExponentialHeightFog::StaticClass(),
         ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),

@@ -37,16 +37,10 @@ bool HandleWidgetAuthoringLocalization(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -66,10 +60,10 @@ bool HandleWidgetAuthoringLocalization(
                 TEXT("UNSUPPORTED_WIDGET"));
             return true;
         }
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         ResultJson->SetBoolField(TEXT("success"), bApplied);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("namespace"), Namespace);
         ResultJson->SetStringField(TEXT("key"), Key);
@@ -91,16 +85,10 @@ bool HandleWidgetAuthoringLocalization(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -133,7 +121,7 @@ bool HandleWidgetAuthoringLocalization(
         }
 
         ResultJson->SetBoolField(TEXT("success"), bBound);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("stringTableId"), StringTableId);
         ResultJson->SetStringField(TEXT("stringKey"), StringKey);
@@ -151,7 +139,7 @@ bool HandleWidgetAuthoringLocalization(
             return true;
         }
 
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bound localized text"), ResultJson);
         return true;

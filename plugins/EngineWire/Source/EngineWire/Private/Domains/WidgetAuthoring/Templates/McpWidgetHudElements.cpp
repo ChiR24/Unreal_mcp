@@ -2,6 +2,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 #include "Domains/WidgetAuthoring/Templates/McpWidgetSpec.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -67,7 +68,7 @@ bool HandleWidgetAuthoringHudElements(
             TEXT("ANIMATION_FAILED"));
         return true;
     }
-    const bool bSaved = MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
     FString ValidationError;
     if (!ValidateWidgetCreation(WidgetBP, SlotName, ValidationError))
     {
@@ -79,7 +80,7 @@ bool HandleWidgetAuthoringHudElements(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError + TEXT(" The HUD piece was removed again."), TEXT("ENGINE_ERROR"));
         return true;
     }
-    RefreshWidgetBlueprintClass(WidgetBP); // the HUD piece's widgets are variables: give the generated class their properties
+    CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson); // the HUD piece's widgets are variables: give the generated class their properties
     TArray<TSharedPtr<FJsonValue>> Names;
     for (const UWidget* Widget : Created)
     {
@@ -90,7 +91,6 @@ bool HandleWidgetAuthoringHudElements(
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetArrayField(TEXT("widgets"), Names);
-    ResultJson->SetBoolField(TEXT("saved"), bSaved);
     if (!Animation.IsEmpty())
     {
         ResultJson->SetStringField(TEXT("animationName"), Animation);

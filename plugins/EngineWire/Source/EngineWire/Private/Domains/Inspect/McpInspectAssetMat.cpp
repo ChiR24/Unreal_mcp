@@ -59,7 +59,7 @@ void McpDescribeMaterialAsset(UMaterialInterface *Material, TSharedPtr<FJsonObje
         float Value = 0.0f;
         const bool bResolved = Material->GetScalarParameterValue(FHashedMaterialParameterInfo(Info), Value);
         TSharedPtr<FJsonObject> Entry = McpMakeParameterEntry(Info, bResolved);
-        Entry->SetNumberField(TEXT("value"), Value);
+        Entry->SetNumberField(TEXT("value"), McpHandlerUtils::ReadableFloat(Value));
         Scalars.Add(MakeShared<FJsonValueObject>(Entry));
     }
     Infos.Reset();

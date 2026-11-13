@@ -4,9 +4,23 @@
 
 #include <type_traits>
 
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Editor.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "GameFramework/Actor.h"
+
+// The undo step of a spawn, "Spawn Actors": a spawn ran outside any transaction, so undo answered
+// NOTHING_TO_UNDO and the actors stayed. A single spawn opens it before it touches the level and
+// describes it in its reply; a run inside spawn_batch (captured) gets none, because the batch holds
+// one for every item.
+inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction(const FString &RequestId) {
+  if (FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
+    return nullptr;
+  }
+  return MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Spawn Actors")),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
+}
 
 // Spawn directly into the active PIE/editor world to avoid viewport placement
 // paths that are unsafe under null-renderer automation.

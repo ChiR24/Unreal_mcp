@@ -29,7 +29,7 @@ export const SKELETON_PHYSICS_MORPH_RECORDS: readonly CapabilityRecordSource[] =
     plugins: ESU, exampleInput: { action: 'configure_physics_body', physicsAssetPath: '/Game/PA_Char', boneName: 'spine_01', mass: 5, linearDamping: 0.25, collisionEnabled: true },
     exampleOutput: { success: true, message: 'Physics body configured' } }),
   buildRecord({ parentTool: T, id: `${T}.add_physics_constraint`, action: 'add_physics_constraint', family: F,
-    summary: 'Add a physics constraint between two bodies; refuses a pair that already has one.', whenToUse: ['Bodies must be jointed.'], whenNotToUse: ['Rigid bodies suffice.'],
+    summary: 'Add a physics constraint between two bodies; refuses a pair that already has one. As the editor makes joints: placed at bodyA\'s bone from the preview mesh\'s reference pose, named after that bone unless constraintName names it, and the pair no longer collides; PREVIEW_MESH_REQUIRED when the preview mesh lacks either bone.', whenToUse: ['Bodies must be jointed.'], whenNotToUse: ['Rigid bodies suffice.'],
     inputProps: { physicsAssetPath: P.physicsAssetPath, bodyA: P.bodyA, bodyB: P.bodyB, constraintName: A.constraintName, limits: A.limits, save: A.save }, required: ['physicsAssetPath', 'bodyA', 'bodyB'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: ESU,
     exampleInput: { action: 'add_physics_constraint', physicsAssetPath: '/Game/PA_Char', bodyA: 'spine_01', bodyB: 'spine_02', constraintName: 'Spine' },

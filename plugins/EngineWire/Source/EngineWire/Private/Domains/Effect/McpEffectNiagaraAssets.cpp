@@ -51,6 +51,7 @@ bool CreateNiagaraEffectFromPayload(
         return true;
     }
 
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(Context.RequestId);
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
         ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),

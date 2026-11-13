@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "HAL/IConsoleManager.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 // Sets a console variable as the console does and reads it back. IConsoleVariable::Set drops a write with only a log
 // line when the variable is read-only, or when a source of higher priority holds it (a value typed in the console
@@ -39,4 +40,15 @@ inline bool McpSetConsoleVariableNamed(const FString& Name, const FString& Value
     }
     OutApplied.Add(Name);
     return true;
+}
+
+// The render resolution of game views in percent (r.ScreenPercentage), filed as McpSetConsoleVariableNamed files it.
+// Before 5.3 Play In Editor takes the level viewport's screen percentage over it while
+// r.Editor.Viewport.OverridePIEScreenPercentage is on, so that goes off with it. Both doors to the variable set it here.
+inline void McpSetScreenPercentage(double Percent, TArray<FString>& OutApplied, TArray<FString>& OutNotSet)
+{
+    McpSetConsoleVariableNamed(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(Percent), OutApplied, OutNotSet);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+    McpSetConsoleVariableNamed(TEXT("r.Editor.Viewport.OverridePIEScreenPercentage"), TEXT("0"), OutApplied, OutNotSet);
+#endif
 }

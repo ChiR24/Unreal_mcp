@@ -1,6 +1,13 @@
-#include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Landscape/McpLandscapeShared.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+
+#include "Dom/JsonObject.h"
+#include "Landscape.h"
+#include "LandscapeEdit.h"
+#include "LandscapeInfo.h"
+#include "Misc/FileHelper.h"
 
 namespace McpLandscapeHandlers {
 namespace {

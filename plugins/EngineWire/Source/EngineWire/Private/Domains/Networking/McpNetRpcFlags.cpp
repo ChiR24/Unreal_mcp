@@ -89,6 +89,12 @@ bool SetRpcFlag(FNetworkingActionContext& Context, EFunctionFlags Flag, const TC
     const bool bOn = GetJsonBoolField(Context.Payload, Field, true);
     const bool bChanged = ((Rpc.Flags() & Flag) != 0) != bOn;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
+    ResultJson->SetStringField(TEXT("functionName"), FunctionName);
+    ResultJson->SetBoolField(Field, bOn);
+    ResultJson->SetBoolField(TEXT("changed"), bChanged);
+    const FString Detail = FString::Printf(TEXT("RPC %s %s for %s%s"), What, bOn ? TEXT("on") : TEXT("off"), *FunctionName,
+        bChanged ? TEXT("") : TEXT(" (already so; nothing changed)"));
+    const FString Message = FString::Printf(TEXT("RPC %s configured"), What);
     if (bChanged)
     {
         Blueprint->Modify();
@@ -96,22 +102,13 @@ bool SetRpcFlag(FNetworkingActionContext& Context, EFunctionFlags Flag, const TC
         Rpc.Set(Flag, bOn);
         // As the editor's Reliable checkbox does: the function's signature flags changed.
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        ResultJson->SetBoolField(TEXT("compiled"), McpSafeCompileBlueprint(Blueprint));
-        ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
+        return SaveBlueprintAndReply(Context, Blueprint, Detail, *Message, true);
     }
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-    ResultJson->SetBoolField(Field, bOn);
-    ResultJson->SetBoolField(TEXT("changed"), bChanged);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s %s for %s%s"), What, bOn ? TEXT("on") : TEXT("off"), *FunctionName,
-        bChanged ? TEXT("") : TEXT(" (already so; nothing changed)")));
+    ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    if (!bChanged)
-    {
-        McpHandlerUtils::MarkNoAssetsChanged(ResultJson);
-    }
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
-        FString::Printf(TEXT("RPC %s configured"), What), ResultJson);
+    McpHandlerUtils::MarkNoAssetsChanged(ResultJson);
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, Message, ResultJson);
     return true;
 }
 }

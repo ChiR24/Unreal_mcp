@@ -2,6 +2,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -69,7 +70,7 @@ bool AddConfiguredWidget(
         return true;
     }
 
-    MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
     FString ValidationError;
     if (!ValidateWidgetCreation(WidgetBP, SlotName, ValidationError))
@@ -84,12 +85,12 @@ bool AddConfiguredWidget(
     }
     // Every widget added here is a variable, so the generated class gets its property now: an edit_graph
     // step naming it right after this call failed as "not marked as a variable" until a compile.
-    RefreshWidgetBlueprintClass(WidgetBP);
+    CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
     const FString Message = FString::Printf(TEXT("Added %s"), Label);
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Message);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultJson);

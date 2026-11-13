@@ -73,6 +73,7 @@ FString FindNiagaraSystemForPreset(const FString& Preset, TArray<FString>& OutCa
 
 bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* Template, const FString& TemplatePath)
 {
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(Context.RequestId);
     AEmitter* Emitter = Cast<AEmitter>(SpawnActorInActiveWorld<AActor>(
         AEmitter::StaticClass(),
         ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),

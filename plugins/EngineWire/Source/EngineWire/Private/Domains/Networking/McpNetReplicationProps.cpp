@@ -72,16 +72,9 @@ bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
         VarDesc->PropertyFlags &= ~static_cast<uint64>(CPF_Net);
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Property replication configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("Property %s replication set to %s"), *PropertyName, bReplicated ? TEXT("true") : TEXT("false")),
+        TEXT("Property replication configured"), true);
 }
 
 bool HandleSetReplicationCondition(FNetworkingActionContext& Context)
@@ -129,16 +122,8 @@ bool HandleSetReplicationCondition(FNetworkingActionContext& Context)
         return true;
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication condition set to %s"), *Condition));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Replication condition configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Replication condition set to %s"), *Condition),
+        TEXT("Replication condition configured"), true);
 }
 
 bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)

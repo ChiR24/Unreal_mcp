@@ -176,14 +176,14 @@ bool HandleWidgetAuthoringEventBindings(
             : TEXT("widgetPath, slotName and bindingSource (the function the event calls) are required."), TEXT("MISSING_PARAMETER"));
         return true;
     }
-    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-    if (!WidgetBP)
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidget* Widget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
+    if (!Widget)
     {
         return true;
     }
-    UWidget* Widget = WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
     TArray<FEventBinding> Bindings;
-    if (Widget && (bClicked || bHovered) && Widget->IsA<UButton>())
+    if ((bClicked || bHovered) && Widget->IsA<UButton>())
     {
         Bindings.Add({ bClicked ? FName(TEXT("OnClicked")) : FName(TEXT("OnHovered")), FName(*Handler) });
         const FString Unhover = GetJsonStringField(Payload, TEXT("onUnhoveredFunction"));
@@ -192,16 +192,16 @@ bool HandleWidgetAuthoringEventBindings(
             Bindings.Add({ TEXT("OnUnhovered"), FName(*Unhover) });
         }
     }
-    else if (Widget && !bClicked && !bHovered && !ValueChangedDelegate(Widget).IsNone())
+    else if (!bClicked && !bHovered && !ValueChangedDelegate(Widget).IsNone())
     {
         Bindings.Add({ ValueChangedDelegate(Widget), FName(*Handler) });
     }
     if (Bindings.Num() == 0)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, Widget
-            ? FString::Printf(TEXT("'%s' is a %s; %s needs %s."), *SlotName, *Widget->GetClass()->GetName(), *SubAction,
-                              bClicked || bHovered ? TEXT("a Button") : TEXT("a Slider, SpinBox, CheckBox or ComboBoxString"))
-            : FString::Printf(TEXT("No widget '%s' in '%s'."), *SlotName, *WidgetPath), Widget ? TEXT("UNSUPPORTED_WIDGET") : TEXT("WIDGET_NOT_FOUND"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("'%s' is a %s; %s needs %s."), *SlotName, *Widget->GetClass()->GetName(), *SubAction,
+                            bClicked || bHovered ? TEXT("a Button") : TEXT("a Slider, SpinBox, CheckBox or ComboBoxString")),
+            TEXT("UNSUPPORTED_WIDGET"));
         return true;
     }
     for (const FEventBinding& Binding : Bindings)

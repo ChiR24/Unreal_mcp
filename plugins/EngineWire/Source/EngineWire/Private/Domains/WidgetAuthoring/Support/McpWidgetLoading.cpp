@@ -90,6 +90,14 @@ bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)
     return McpSafeOperations::McpSafeAssetSave(WidgetBP);
 }
 
+bool CompileAndSaveWidgetBlueprint(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Result)
+{
+    RefreshWidgetBlueprintClass(WidgetBP);
+    const bool bSaved = McpSafeOperations::McpSafeAssetSave(WidgetBP);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    return bSaved;
+}
+
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName)
 {
     for (UWidgetAnimation* Anim : WidgetBP->Animations)

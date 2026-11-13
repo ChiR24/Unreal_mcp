@@ -167,7 +167,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Export a mesh as glTF binary', { assetPath: '/Engine/BasicShapes/Cube' }, { success: true, assetPath: '/Engine/BasicShapes/Cube.Cube', format: 'glb', path: 'X:/Games/MyGame/Saved/Exports/Cube.glb', bytes: 41764 })] }
   ),
-  r('add_material_parameter', 'asset', 'Add a parameter to a material.',
+  r('add_material_parameter', 'asset', 'Add a parameter node to a material or material function, made and placed as add_scalar_parameter, add_vector_parameter, add_static_switch_parameter or add_texture_sample make theirs (value is their defaultValue, or a texture parameter\'s texture), and answered as they answer (the new node id and its placement). The rest of the graph is left where it is.',
     schema({ assetPath: str('The material or material function (add_parameter), or the material instance (reset_parameters, reparent).'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
     OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A new scalar, vector, texture or static-switch parameter must be introduced on a material or material function.'],

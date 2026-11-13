@@ -242,7 +242,9 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     bool bReplaceSources = false;
     Context.Payload->TryGetBoolField(TEXT("replaceSourceActors"), bReplaceSources);
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    AActor* ResultActor = ActorsToMerge[0];
+    // What the call made: the merged mesh, or the actor holding it when it replaced the sources. The first source, which
+    // the call did not touch, used to be verified in its place.
+    UObject* Made = MergedMesh;
     if (bReplaceSources)
     {
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Merge Actors")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>(ActorsToMerge));
@@ -262,7 +264,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         {
             ActorSubsystem->DestroyActor(Actor);
         }
-        ResultActor = Merged;
+        Made = Merged;
         Transaction.DescribeInto(Response);
     }
     Response->SetNumberField(TEXT("mergedActorCount"), ActorsToMerge.Num());
@@ -284,8 +286,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     }
     Response->SetArrayField(TEXT("assets"), AssetPaths);
 
-    // The actor the level now holds: the merged one when it replaced the sources (it named a destroyed source).
-    McpHandlerUtils::AddVerification(Response, ResultActor);
+    McpHandlerUtils::AddVerification(Response, Made);
 
     Context.Bridge.SendAutomationResponse(
         Context.RequestingSocket, Context.RequestId, true,

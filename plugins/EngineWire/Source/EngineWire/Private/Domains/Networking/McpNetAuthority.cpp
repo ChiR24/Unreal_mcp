@@ -107,18 +107,15 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
         return true;
     }
 
+    ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
+    const FString Detail = FString::Printf(TEXT("%d of %d replicated variable(s) changed; they %s"), ChangedCount, ReplicatedCount,
+        bIsAutonomousProxy ? TEXT("now replicate to the autonomous proxy only (COND_AutonomousOnly)") : TEXT("no longer use COND_AutonomousOnly"));
     if (ChangedCount > 0)
     {
-        Blueprint->Modify();
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        return SaveBlueprintAndReply(Context, Blueprint, Detail, TEXT("Autonomous proxy configured"), true);
     }
-
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%d of %d replicated variable(s) changed; they %s"), ChangedCount, ReplicatedCount,
-        bIsAutonomousProxy ? TEXT("now replicate to the autonomous proxy only (COND_AutonomousOnly)") : TEXT("no longer use COND_AutonomousOnly")));
+    ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);
     return true;

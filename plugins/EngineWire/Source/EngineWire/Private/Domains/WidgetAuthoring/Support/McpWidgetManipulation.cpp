@@ -62,12 +62,12 @@ bool HandleWidgetAuthoringManipulation(
             Widget->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_DoNotDirty);
             Widget->MarkAsGarbage();
         }
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         // The class still carried the removed widgets' variables, which kept their names taken too.
-        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+        WidgetAuthoringHelpers::CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("removedWidget"), SlotName);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Removed widget"), ResultJson);
@@ -86,16 +86,10 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*OldName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *OldName), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -136,12 +130,12 @@ bool HandleWidgetAuthoringManipulation(
             FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);
         }
         const int32 AnimationBindings = WidgetAuthoringHelpers::McpRenameWidgetReferences(WidgetBP, OldFName, NewFName);
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         // The renamed variable widget has no property under its new name until a compile.
-        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
+        WidgetAuthoringHelpers::CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("oldName"), OldName);
         ResultJson->SetStringField(TEXT("newName"), NewName);
         ResultJson->SetNumberField(TEXT("animationBindingsRenamed"), AnimationBindings);
@@ -162,16 +156,10 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -215,7 +203,7 @@ bool HandleWidgetAuthoringManipulation(
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("widgetClass"), TargetWidget->GetClass()->GetName());
         // UWidget::IsVisible() asks the LIVE Slate widget, which a design-time

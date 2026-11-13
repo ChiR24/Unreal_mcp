@@ -4,6 +4,28 @@
 
 namespace McpMaterialAuthoringHandlers
 {
+// An instance's static parameter set (GetStaticParameterValues from 5.1, GetStaticParameters before), and its switch
+// list (UE 5.1 keeps it in EditorOnly; 5.0 and 5.2+ hold it directly). set_static_switch_parameter_value writes through
+// them and get_material_info reads through them.
+inline FStaticParameterSet McpInstanceStaticParameters(UMaterialInstance* Instance)
+{
+  FStaticParameterSet StaticParams;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+  Instance->GetStaticParameterValues(StaticParams);
+#else
+  StaticParams = Instance->GetStaticParameters();
+#endif
+  return StaticParams;
+}
+inline TArray<FStaticSwitchParameter>& McpStaticSwitches(FStaticParameterSet& StaticParams)
+{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+  return StaticParams.EditorOnly.StaticSwitchParameters;
+#else
+  return StaticParams.StaticSwitchParameters;
+#endif
+}
+
 // How one set_<kind>_parameter_value writes its value.
 struct FParameterValueWriter
 {

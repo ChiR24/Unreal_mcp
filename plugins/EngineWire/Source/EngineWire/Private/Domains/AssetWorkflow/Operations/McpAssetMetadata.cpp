@@ -138,12 +138,7 @@ bool UEngineWireSubsystem::HandleGetMetadata(
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
   // 1. Asset Registry Tags
-  FAssetData AssetData(Asset);
-  TSharedPtr<FJsonObject> TagsObj = McpHandlerUtils::CreateResultObject();
-  for (const auto &Kvp : AssetData.TagsAndValues) {
-    TagsObj->SetStringField(Kvp.Key.ToString(), Kvp.Value.AsString());
-  }
-  Resp->SetObjectField(TEXT("tags"), TagsObj);
+  Resp->SetObjectField(TEXT("tags"), McpAssetRegistryTagsToJson(FAssetData(Asset)));
 
   // 2. Package Metadata information
   UPackage *Package = Asset->GetOutermost();

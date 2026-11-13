@@ -68,17 +68,8 @@ void McpAppendObjectMetadata(UObject *Object, TSharedPtr<FJsonObject> Resp)
     }
     Resp->SetObjectField(TEXT("metadata"), Metadata);
     Resp->SetNumberField(TEXT("metadataCount"), Metadata->Values.Num());
-    TSharedPtr<FJsonObject> AssetTags = McpHandlerUtils::CreateResultObject();
-    if (Object->IsAsset())
-    {
-        const FAssetData AssetData(Object);
-        const FAssetDataTagMap Tags = AssetData.TagsAndValues.CopyMap();
-        for (const TPair<FName, FString> &Pair : Tags)
-        {
-            AssetTags->SetStringField(Pair.Key.ToString(), Pair.Value);
-        }
-    }
-    Resp->SetObjectField(TEXT("assetRegistryTags"), AssetTags);
+    Resp->SetObjectField(TEXT("assetRegistryTags"),
+                         Object->IsAsset() ? McpAssetRegistryTagsToJson(FAssetData(Object)) : MakeShared<FJsonObject>());
 }
 } // namespace
 

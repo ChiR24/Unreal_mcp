@@ -18,13 +18,18 @@ inline bool McpIsJsonFloatArray(const TArray<TSharedPtr<FJsonValue>>& Values, in
 }
 
 // A vector (or with bColor a color) sent to a parameter the gateway cannot type: an object, whose keys the readers take by
-// name, or an array of exactly 3 numbers (3 or 4 for a color). False for anything else, which the loose readers turned
-// into the default ([2, 2], "abc") or cut short ([1, 2, 3, 4]) without a word.
+// name (a color's with a number under r or x, which an empty object lacked and read as the default), or an array of
+// exactly 3 numbers (3 or 4 for a color). False for anything else, which the loose readers turned into the default
+// ([2, 2], "abc") or cut short ([1, 2, 3, 4]) without a word.
 inline bool McpIsJsonVectorValue(const TSharedPtr<FJsonValue>& Value, bool bColor = false)
 {
     const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-    return Value.IsValid() && (Value->Type == EJson::Object || (Value->TryGetArray(Values) && Values &&
-        (McpIsJsonFloatArray(*Values, 3) || (bColor && McpIsJsonFloatArray(*Values, 4)))));
+    const TSharedPtr<FJsonObject>* Object = nullptr;
+    double First = 0.0;
+    return Value.IsValid() &&
+        ((Value->TryGetObject(Object) && Object && (!bColor || (*Object)->TryGetNumberField(TEXT("r"), First) ||
+                                                    (*Object)->TryGetNumberField(TEXT("x"), First))) ||
+         (Value->TryGetArray(Values) && Values && (McpIsJsonFloatArray(*Values, 3) || (bColor && McpIsJsonFloatArray(*Values, 4)))));
 }
 
 // The first of Fields holding a number, into OutValue; false, OutValue untouched, when none does.

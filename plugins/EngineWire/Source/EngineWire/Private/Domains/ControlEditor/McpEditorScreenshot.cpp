@@ -146,7 +146,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
       return true;
     }
 
-    TArray<uint8> PngData;
+    TArray64<uint8> PngData;
     FIntVector ImageSize(0, 0, 0);
     FIntPoint SourceSize(0, 0);
     FString CaptureError;

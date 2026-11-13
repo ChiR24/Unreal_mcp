@@ -1,5 +1,6 @@
 // Copyright (c) 2024 EngineWire Contributors
 
+#include "Domains/MaterialAuthoring/McpMatPrivate.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -10,13 +11,7 @@
 
 #include "Materials/MaterialInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Engine/Texture.h"
-#include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
-#include "Materials/MaterialExpressionScalarParameter.h"
-#include "Materials/MaterialExpressionStaticSwitchParameter.h"
-#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
-#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialFunction.h"
 #include "Materials/MaterialInstanceConstant.h"
 
@@ -63,46 +58,28 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     return true;
   }
 
-  UObject *HostOuter = Material ? static_cast<UObject*>(Material)
-                                : static_cast<UObject*>(Function);
-
-  UMaterialExpression *NewExpression = nullptr;
+  // The material authoring adders make, name, group and place the node; this maps its fields onto theirs. It used to
+  // make the node by hand and then run LayoutMaterialExpressions, which moved every connected node of the graph onto
+  // the engine's grid on each add, with no undo step.
   Type = Type.ToLower();
-
-  // A material's node is made by UMaterialEditingLibrary::CreateMaterialExpression (graph registration, undo,
-  // editor-only data); a material function's is made here by hand and added to its expression list.
-  auto CreateExpr = [&](UClass* ExprClass) -> UMaterialExpression* {
-    if (Material) {
-      return UMaterialEditingLibrary::CreateMaterialExpression(Material, ExprClass);
-    }
-    UMaterialExpression* Expr = NewObject<UMaterialExpression>(HostOuter, ExprClass, NAME_None, RF_Transactional);
-    if (Expr) {
-      MCP_GET_FUNCTION_EXPRESSIONS(Function).Add(Expr);
-    }
-    return Expr;
-  };
-
-  if (Type == TEXT("scalar")) {
-    NewExpression = CreateExpr(UMaterialExpressionScalarParameter::StaticClass());
-    if (UMaterialExpressionScalarParameter *ScalarParam =
-            Cast<UMaterialExpressionScalarParameter>(NewExpression)) {
-      ScalarParam->ParameterName = FName(*Name);
-      double Val = 0.0;
-      if (Payload->TryGetNumberField(TEXT("value"), Val)) {
-        ScalarParam->DefaultValue = (float)Val;
-      }
-    }
-  } else if (Type == TEXT("vector")) {
-    NewExpression = CreateExpr(UMaterialExpressionVectorParameter::StaticClass());
-    if (UMaterialExpressionVectorParameter *VectorParam =
-            Cast<UMaterialExpressionVectorParameter>(NewExpression)) {
-      VectorParam->ParameterName = FName(*Name);
-      if (Payload->HasTypedField<EJson::Object>(TEXT("value"))) {
-        VectorParam->DefaultValue = ExtractLinearColorField(Payload, TEXT("value"), FLinearColor(0, 0, 0, 1));
-      }
-    }
-  } else if (Type == TEXT("texture")) {
-    // The path is checked before the node is made: a refused one used to leave an unnamed parameter node in the graph.
+  const bool bTexture = Type == TEXT("texture");
+  const TCHAR *Adder = Type == TEXT("scalar") ? TEXT("add_scalar_parameter")
+                     : Type == TEXT("vector") ? TEXT("add_vector_parameter")
+                     : Type == TEXT("staticswitch") || Type == TEXT("static_switch") ? TEXT("add_static_switch_parameter")
+                     : bTexture ? TEXT("add_texture_sample") : nullptr;
+  if (!Adder) {
+    SendAutomationError(
+        Socket, RequestId,
+        FString::Printf(TEXT("Unsupported parameter type: %s"), *Type),
+        TEXT("INVALID_TYPE"));
+    return true;
+  }
+  TSharedPtr<FJsonObject> Mapped = MakeShared<FJsonObject>();
+  Mapped->Values = Payload->Values;
+  Mapped->SetStringField(TEXT("assetPath"), AssetPath);
+  Mapped->RemoveField(TEXT("value"));
+  if (bTexture) {
+    // The path is checked here as it always was, before anything is made.
     FString TexPath;
     if (Payload->TryGetStringField(TEXT("value"), TexPath) &&
         !TexPath.IsEmpty()) {
@@ -114,56 +91,14 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
                                TEXT("SECURITY_VIOLATION"));
         return true;
       }
+      Mapped->SetStringField(TEXT("texturePath"), TexPath);
     }
-    NewExpression = CreateExpr(UMaterialExpressionTextureSampleParameter2D::StaticClass());
-    if (UMaterialExpressionTextureSampleParameter2D *TexParam =
-            Cast<UMaterialExpressionTextureSampleParameter2D>(NewExpression)) {
-      TexParam->ParameterName = FName(*Name);
-      if (UTexture *Tex = TexPath.IsEmpty() ? nullptr : LoadObject<UTexture>(nullptr, *TexPath)) {
-        TexParam->Texture = Tex;
-      }
-    }
-  } else if (Type == TEXT("staticswitch") || Type == TEXT("static_switch")) {
-    NewExpression = CreateExpr(UMaterialExpressionStaticSwitchParameter::StaticClass());
-    if (UMaterialExpressionStaticSwitchParameter *SwitchParam =
-            Cast<UMaterialExpressionStaticSwitchParameter>(NewExpression)) {
-      SwitchParam->ParameterName = FName(*Name);
-      bool Val = false;
-      if (Payload->TryGetBoolField(TEXT("value"), Val)) {
-        SwitchParam->DefaultValue = Val;
-      }
-    }
-  } else {
-    SendAutomationError(
-        Socket, RequestId,
-        FString::Printf(TEXT("Unsupported parameter type: %s"), *Type),
-        TEXT("INVALID_TYPE"));
-    return true;
+    return McpMaterialAuthoringHandlers::HandleAddTextureSample(this, RequestId, Adder, Mapped, Socket);
   }
-
-  if (NewExpression) {
-    if (Material) {
-      UMaterialEditingLibrary::LayoutMaterialExpressions(Material);
-      UMaterialEditingLibrary::RecompileMaterial(Material);
-      Material->MarkPackageDirty();
-    } else {
-      Function->PostEditChange();
-      Function->MarkPackageDirty();
-    }
-
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("assetPath"), AssetPath);
-    Resp->SetStringField(TEXT("parameterName"), Name);
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Parameter added"),
-                           Resp, FString());
-  } else {
-    SendAutomationError(Socket, RequestId,
-                        TEXT("Failed to create parameter expression"),
-                        TEXT("CREATE_FAILED"));
+  if (const TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("value"))) {
+    Mapped->SetField(TEXT("defaultValue"), Value);
   }
-
-  return true;
+  return McpMaterialAuthoringHandlers::HandleAddParameterNode(this, RequestId, Adder, Mapped, Socket);
 }
 
 bool UEngineWireSubsystem::HandleListMaterialInstances(

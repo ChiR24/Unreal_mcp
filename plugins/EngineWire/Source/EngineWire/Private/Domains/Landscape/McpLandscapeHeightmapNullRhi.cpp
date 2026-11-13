@@ -29,8 +29,8 @@ void SendNullRhiValidatedResponse(
                        Landscape->GetPackage()->GetPathName());
   Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
   Resp->SetStringField(TEXT("operation"), Operation);
-  Resp->SetNumberField(TEXT("modifiedVertices"),
-                       RequestedSizeX * RequestedSizeY);
+  // No vertex moved: the region's size is regionSizeX/Y (this counted it as moved).
+  Resp->SetNumberField(TEXT("modifiedVertices"), 0);
   Resp->SetNumberField(TEXT("regionSizeX"), RequestedSizeX);
   Resp->SetNumberField(TEXT("regionSizeY"), RequestedSizeY);
   Resp->SetBoolField(TEXT("flushSkipped"), true);

@@ -115,8 +115,12 @@ inline FString NormalizeMaterialInputName(const FString& InputName)
 
 // Reads `additionalOutputs` onto a Custom node (false when the payload has none) and rebuilds its output pins.
 bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload);
-// "Float1".."Float4" / "MaterialAttributes", with or without "CMOT_"; Fallback for anything else.
-ECustomMaterialOutputType ParseCustomOutputType(FString Type, ECustomMaterialOutputType Fallback);
+// "Float1".."Float4" / "MaterialAttributes", with or without "CMOT_", into Out; false, Out untouched, for anything else.
+bool ParseCustomOutputType(FString Type, ECustomMaterialOutputType& Out);
+// What add_custom_expression and update_custom_expression would make of an unknown outputType or entry type (a Float1
+// pin) or of an inputs or additionalOutputs entry with no name (nothing), checked before the node is made or changed:
+// the refusal, or empty when the payload holds.
+FString CheckCustomExpressionPayload(const TSharedPtr<FJsonObject>& Payload);
 // Rebuilds Inputs from payload `inputs` [{name}]; an input that keeps its name keeps its wire.
 void ApplyCustomInputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload);
 
@@ -191,9 +195,10 @@ bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestI
 bool HandleSetMaterialParameter(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 // Runs each {parameterName, parameterType, value | texturePath} entry through set_material_parameter
 // on AssetPath under a captured reply; one result per entry, "name: why" for each that failed.
-// Shared is the call's own payload: a flag given once there (save) is every entry's unless the entry names its own.
-// OutChangedAssetPath, when given, takes the assetPath the first entry that applied replied with.
-void ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath = nullptr);
+// Each entry is set without saving, and the asset is saved once after them when one applied and Shared (the call's own
+// payload) does not say save false: true when that save ran and succeeded. OutChangedAssetPath, when given, takes the
+// assetPath the first entry that applied replied with.
+bool ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath = nullptr);
 // build_material_graph: runs each additive step through RunStep (the subsystem's
 // own manage_material_authoring entry) with its reply captured, then compiles and saves once.
 bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<void(const FString&, const TSharedPtr<FJsonObject>&)> RunStep);

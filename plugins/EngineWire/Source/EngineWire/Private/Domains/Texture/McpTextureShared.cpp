@@ -116,8 +116,7 @@ TArray<uint8> ReadSourceBGRA(UTexture2D* Texture)
     return Pixels;
 }
 
-UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
-                              bool bConvertToBGRA8, FString* OutErrorCode)
+UTexture2D* LoadTextureAt(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError)
 {
     OutPath = NormalizeTexturePath(RawPath);
     UTexture2D* Texture = OutPath.IsEmpty() ? nullptr : LoadObject<UTexture2D>(nullptr, *OutPath);
@@ -125,6 +124,16 @@ UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FStrin
     {
         OutError = RawPath.IsEmpty() ? FString::Printf(TEXT("%s is required"), Field)
                                      : FString::Printf(TEXT("%s: no texture at '%s'"), Field, *RawPath);
+    }
+    return Texture;
+}
+
+UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
+                              bool bConvertToBGRA8, FString* OutErrorCode)
+{
+    UTexture2D* Texture = LoadTextureAt(RawPath, Field, OutPath, OutError);
+    if (!Texture)
+    {
         return nullptr;
     }
     const ETextureSourceFormat Format = Texture->Source.GetFormat();

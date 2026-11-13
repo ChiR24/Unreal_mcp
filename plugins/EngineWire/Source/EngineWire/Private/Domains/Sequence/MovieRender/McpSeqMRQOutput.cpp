@@ -212,7 +212,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
       // Said in the receipt itself: a moved start is still a dropped frame,
       // and the caller must not have to read customStartFrame back to learn it.
       OutMessage = FString::Printf(
-          TEXT("Movie Render Queue output settings configured; startFrame moved from %d to %d "
+          TEXT("startFrame moved from %d to %d "
                "because MRQ renders a single image when a custom range begins on the sequence's "
                "first frame, so frame %d will not be rendered."),
           Requested, StartFrame, Requested);
@@ -266,7 +266,7 @@ bool HandleConfigureOutputSettings(UEngineWireSubsystem *Subsystem,
   Subsystem->SendAutomationResponse(
       Socket, RequestId, true,
       Message.IsEmpty() ? FString(TEXT("Movie Render Queue output settings configured."))
-                        : Message,
+                        : TEXT("Movie Render Queue output settings configured; ") + Message,
       BuildJobResult(Job, Queue));
   return true;
 }

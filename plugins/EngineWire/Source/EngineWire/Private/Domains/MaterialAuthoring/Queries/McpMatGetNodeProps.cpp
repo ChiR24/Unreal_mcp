@@ -51,10 +51,10 @@ bool HandleGetNodeProperties(UEngineWireSubsystem* Bridge, const FString& Reques
       Result->SetArrayField(TEXT("additionalOutputs"), OutputsArr);
     } else if (UMaterialExpressionScalarParameter *SP = Cast<UMaterialExpressionScalarParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), SP->ParameterName.ToString());
-      Result->SetNumberField(TEXT("defaultValue"), SP->DefaultValue);
+      Result->SetNumberField(TEXT("defaultValue"), McpHandlerUtils::ReadableFloat(SP->DefaultValue));
       Result->SetStringField(TEXT("group"), SP->Group.ToString());
-      Result->SetNumberField(TEXT("sliderMin"), SP->SliderMin);
-      Result->SetNumberField(TEXT("sliderMax"), SP->SliderMax);
+      Result->SetNumberField(TEXT("sliderMin"), McpHandlerUtils::ReadableFloat(SP->SliderMin));
+      Result->SetNumberField(TEXT("sliderMax"), McpHandlerUtils::ReadableFloat(SP->SliderMax));
     } else if (UMaterialExpressionVectorParameter *VP = Cast<UMaterialExpressionVectorParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), VP->ParameterName.ToString());
       Result->SetObjectField(TEXT("defaultValue"), McpHandlerUtils::LinearColorToJson(VP->DefaultValue));
@@ -100,21 +100,25 @@ bool HandleGetNodeProperties(UEngineWireSubsystem* Bridge, const FString& Reques
       Result->SetStringField(TEXT("description"), FO->Description);
     } else if (UMaterialExpressionTextureSample *TS = Cast<UMaterialExpressionTextureSample>(Expr)) {
       Result->SetStringField(TEXT("texturePath"), TS->Texture ? TS->Texture->GetPathName() : TEXT(""));
+      // A texture parameter is a sample too: this arm took it before any parameter arm, so its name and group went unread.
+      if (const UMaterialExpressionTextureSampleParameter *TP = Cast<UMaterialExpressionTextureSampleParameter>(TS)) {
+        Result->SetStringField(TEXT("parameterName"), TP->ParameterName.ToString());
+        Result->SetStringField(TEXT("group"), TP->Group.ToString());
+      }
     } else if (UMaterialExpressionTextureCoordinate *TC = Cast<UMaterialExpressionTextureCoordinate>(Expr)) {
       Result->SetNumberField(TEXT("coordinateIndex"), TC->CoordinateIndex);
-      Result->SetNumberField(TEXT("uTiling"), TC->UTiling);
-      Result->SetNumberField(TEXT("vTiling"), TC->VTiling);
+      Result->SetNumberField(TEXT("uTiling"), McpHandlerUtils::ReadableFloat(TC->UTiling));
+      Result->SetNumberField(TEXT("vTiling"), McpHandlerUtils::ReadableFloat(TC->VTiling));
     } else {
-      // Generic fallback: dump all UPROPERTY fields
+      // Generic fallback: every property the node class adds, typed as Foundation's reflection reads answer it (this
+      // answered export text, '(R=1.000000,G=0.000000,...)', where the other reads answer {r, g, b, a}).
       TSharedPtr<FJsonObject> PropsObj = MakeShared<FJsonObject>();
       for (TFieldIterator<FProperty> PropIt(Expr->GetClass()); PropIt; ++PropIt) {
         FProperty *Prop = *PropIt;
         // Skip inherited UMaterialExpression properties
         if (Prop->GetOwnerClass() == UMaterialExpression::StaticClass()) continue;
         if (Prop->GetOwnerClass() == UObject::StaticClass()) continue;
-        FString ValueStr;
-        MCP_PROPERTY_EXPORT_TEXT(Prop, ValueStr, Prop->ContainerPtrToValuePtr<void>(Expr), nullptr, Expr, 0);
-        PropsObj->SetStringField(Prop->GetName(), ValueStr);
+        PropsObj->SetField(Prop->GetName(), McpPropertyReflection::ExportPropertyToJsonValueOrText(Expr, Prop));
       }
       Result->SetObjectField(TEXT("properties"), PropsObj);
     }

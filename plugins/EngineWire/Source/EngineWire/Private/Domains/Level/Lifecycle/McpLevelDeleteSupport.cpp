@@ -118,10 +118,10 @@ void DeleteLevelFiles(const FString& PackagePath, bool bDelete, FLevelFileDeleti
     return;
   }
   Out.bDeletedMap = Out.bMapExisted && FileManager.Delete(*Out.MapFilename, false, true, true);
-  Out.bDeletedBuiltData = Out.bBuiltDataExists && FileManager.Delete(*BuiltDataFilename, false, true, true);
   if (Out.bMapExisted && !Out.bDeletedMap) {
-    return;
+    return; // a map that stayed keeps its lighting build and its external actors
   }
+  Out.bDeletedBuiltData = Out.bBuiltDataExists && FileManager.Delete(*BuiltDataFilename, false, true, true);
   Out.bSidecarDeleteAttempted = true;
   const TCHAR* Roots[] = {TEXT("__ExternalActors__"), TEXT("__ExternalObjects__")};
   bool* Exists[] = {&Out.bExternalActorsExists, &Out.bExternalObjectsExists};

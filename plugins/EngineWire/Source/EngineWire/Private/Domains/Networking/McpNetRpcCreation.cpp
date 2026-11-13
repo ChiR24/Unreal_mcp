@@ -101,27 +101,15 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
         }
     }
 
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    const bool bCompiled = McpSafeCompileBlueprint(Blueprint);
-    const bool bSaved = McpSafeAssetSave(Blueprint);
     // An RPC only travels when its actor (or component) replicates; say so, never flip it.
-    const UObject* Defaults = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
-    const AActor* ActorDefaults = Cast<AActor>(Defaults);
-    const UActorComponent* ComponentDefaults = Cast<UActorComponent>(Defaults);
-    const bool bReplicates = ActorDefaults ? ActorDefaults->GetIsReplicated() : (ComponentDefaults && ComponentDefaults->GetIsReplicated());
-
-    ResultJson->SetBoolField(TEXT("success"), true);
+    const bool bReplicates = McpBlueprintReplicates(Blueprint);
     ResultJson->SetStringField(TEXT("functionName"), FunctionName);
     ResultJson->SetStringField(TEXT("rpcType"), RpcName);
     ResultJson->SetBoolField(TEXT("reliable"), bReliable);
-    ResultJson->SetBoolField(TEXT("compiled"), bCompiled);
-    ResultJson->SetBoolField(TEXT("saved"), bSaved);
     ResultJson->SetBoolField(TEXT("actorReplicates"), bReplicates);
-    ResultJson->SetStringField(TEXT("message"), bReplicates
+    return SaveBlueprintAndReply(Context, Blueprint, bReplicates
         ? FString::Printf(TEXT("Created %s RPC %s with %d input(s); its body is the function graph of that name."), *RpcName, *FunctionName, Inputs.Num())
-        : FString::Printf(TEXT("Created %s RPC %s with %d input(s), but %s does not replicate, so the call never leaves the machine that makes it until replication is turned on."), *RpcName, *FunctionName, Inputs.Num(), *Blueprint->GetName()));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("RPC function created"), ResultJson);
-    return true;
+        : FString::Printf(TEXT("Created %s RPC %s with %d input(s), but %s does not replicate, so the call never leaves the machine that makes it until replication is turned on."), *RpcName, *FunctionName, Inputs.Num(), *Blueprint->GetName()),
+        TEXT("RPC function created"), true);
 }
 }

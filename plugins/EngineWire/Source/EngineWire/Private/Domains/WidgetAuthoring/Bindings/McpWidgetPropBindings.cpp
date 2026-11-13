@@ -141,12 +141,10 @@ bool HandleWidgetAuthoringPropertyBindings(
             TEXT("MISSING_PARAMETER"));
         return true;
     }
-    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-    UWidget* Widget = WidgetBP && WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidget* Widget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
     if (!Widget)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("No widget '%s' in '%s'."), *SlotName, *WidgetPath),
-            WidgetBP ? TEXT("WIDGET_NOT_FOUND") : TEXT("NOT_FOUND"));
         return true;
     }
     FName Property;

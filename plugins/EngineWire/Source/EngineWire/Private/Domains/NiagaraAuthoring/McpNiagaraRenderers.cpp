@@ -76,11 +76,12 @@ static bool LoadRendererAsset(FActionContext& Context, const TCHAR* Field, TAsse
 // a missing flag itself only outside Play In Editor and never saves it, so a material assigned during play, or one
 // no viewport showed before a cook, rendered wrong: set it by reflection (the bitfields are deprecated for direct
 // access in 5.8) as the details panel does, which recompiles, and save the project material.
-static void EnsureNiagaraUsage(UMaterialInterface* Material, const TCHAR* FlagName)
+static void EnsureNiagaraUsage(FActionContext& Context, UMaterialInterface* Material, const TCHAR* FlagName)
 {
     UMaterial* Base = Material ? Material->GetMaterial() : nullptr;
     FBoolProperty* Flag = Base ? FindFProperty<FBoolProperty>(UMaterial::StaticClass(), FlagName) : nullptr;
-    if (!Flag || Flag->GetPropertyValue_InContainer(Base) || !Base->GetPathName().StartsWith(TEXT("/Game/")))
+    // Engine content, which every project on the install shares, is left alone; a project plugin's is the project's.
+    if (!Flag || Flag->GetPropertyValue_InContainer(Base) || McpSafeOperations::IsEngineContentPackage(Base->GetOutermost()->GetName()))
     {
         return;
     }
@@ -88,6 +89,15 @@ static void EnsureNiagaraUsage(UMaterialInterface* Material, const TCHAR* FlagNa
     Flag->SetPropertyValue_InContainer(Base, true);
     Base->PostEditChange();
     McpSafeOperations::McpSafeAssetSave(Base);
+    // The receipt lists a call's changes from changedAssets: the material written beside the system.
+    TArray<TSharedPtr<FJsonValue>> Changed;
+    const TArray<TSharedPtr<FJsonValue>>* Listed = nullptr;
+    if (Context.Result->TryGetArrayField(TEXT("changedAssets"), Listed) && Listed)
+    {
+        Changed = *Listed;
+    }
+    Changed.Add(MakeShared<FJsonValueString>(Base->GetOutermost()->GetName()));
+    Context.Result->SetArrayField(TEXT("changedAssets"), Changed);
 }
 
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
@@ -100,7 +110,7 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
         {
             return true;
         }
-        EnsureNiagaraUsage(Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));
+        EnsureNiagaraUsage(Context, Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));
         const auto SetMaterial = [Material, &Context](auto& Renderer)
         {
             if (Material)
@@ -130,7 +140,7 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
         // Mesh particles draw the mesh's own materials, which need their mesh-particle flag the same way.
         for (const FStaticMaterial& Slot : Mesh ? Mesh->GetStaticMaterials() : TArray<FStaticMaterial>())
         {
-            EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));
+            EnsureNiagaraUsage(Context, Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));
         }
         return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [Mesh, &Context](UNiagaraMeshRendererProperties& Renderer)
         {

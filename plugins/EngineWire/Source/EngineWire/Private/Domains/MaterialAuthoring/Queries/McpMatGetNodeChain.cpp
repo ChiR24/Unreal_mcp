@@ -20,6 +20,19 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       return true;
     }
     const bool bAnyMainPin = EndPin.IsEmpty();
+    // endPin by the names connect_nodes takes, compared by input: a name that is no main pin, or a spelling connect
+    // takes, answered pathFound false as a success.
+    const FExpressionInput *EndInput = nullptr;
+    if (!bAnyMainPin && Material) {
+      EndPin = NormalizeMaterialInputName(EndPin);
+      EndInput = GetMainMaterialInput(Material, EndPin);
+      if (!EndInput) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown input on main node: %s. Main inputs: %s."), *EndPin, *ListMainMaterialInputs(Material)),
+            TEXT("INVALID_PIN"));
+        return true;
+      }
+    }
 
     UMaterialExpression *StartExpr = FIND_EXPR_IN_HOST(StartNodeId);
     if (!StartExpr) {
@@ -37,6 +50,8 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
       ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
         if (Input.Expression) Downstream.Add(Input.Expression, Expr);
       });
+      // A named reroute usage reads its declaration, so the chain runs on through it.
+      if (UMaterialExpression *Declaration = McpNamedRerouteSource(Expr)) Downstream.Add(Declaration, Expr);
     }
 
     TMap<UMaterialExpression*, UMaterialExpression*> Parent;
@@ -54,10 +69,12 @@ bool HandleGetNodeChain(UEngineWireSubsystem* Bridge, const FString& RequestId, 
         bPathFound = true; PathEnd = Cur; break;
       }
       if (Material) {
-        bool bHit = false;
-        ForEachMainMaterialInput(Material, [&](const TCHAR *PinName, const FExpressionInput &Input) {
-          bHit = bHit || ((bAnyMainPin || EndPin == PinName) && Input.Expression == Cur);
-        });
+        bool bHit = EndInput && EndInput->Expression == Cur;
+        if (bAnyMainPin) {
+          ForEachMainMaterialInput(Material, [&](const TCHAR *, const FExpressionInput &Input) {
+            bHit = bHit || Input.Expression == Cur;
+          });
+        }
         if (bHit) {
           bPathFound = true; PathEnd = Cur; break;
         }

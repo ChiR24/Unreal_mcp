@@ -56,6 +56,7 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
       return true;
     }
     UClass *CameraClass = ACameraActor::StaticClass();
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(
         CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,
         CameraLabel);
@@ -65,6 +66,9 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
       // An unbound camera stayed in the level behind a success; it goes again and the call fails.
       if (!BindingGuid.IsValid()) {
         GEditor->GetEditorSubsystem<UEditorActorSubsystem>()->DestroyActor(Spawned);
+        if (SpawnStep) {
+          SpawnStep->Cancel(); // nothing was added: undo keeps no step for it
+        }
         SendAutomationError(Socket, RequestId,
                             TEXT("The camera could not be bound to the sequence; nothing was added."),
                             TEXT("BIND_FAILED"));

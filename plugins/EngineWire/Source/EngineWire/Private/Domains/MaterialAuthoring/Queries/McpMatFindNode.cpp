@@ -23,25 +23,22 @@ bool HandleFindNode(UEngineWireSubsystem* Bridge, const FString& RequestId, cons
         ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
         : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 
-    TMap<FGuid, int32> ConnectionCountMap;
+    // One pass over every input: a wire counts for the node it enters and for the node it leaves. Keyed by the
+    // expression, as two nodes can share a GUID (a pasted or duplicated node), and the second was left out.
+    TMap<const UMaterialExpression*, int32> ConnectionCountMap;
     for (UMaterialExpression *Expr : Exprs) {
       if (!Expr) continue;
-      int32 Count = 0;
-      // Inputs wired into this node, then other nodes' inputs wired from it.
-      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) { Count += Input.Expression ? 1 : 0; });
-      for (UMaterialExpression *Other : Exprs) {
-        if (!Other || Other == Expr) continue;
-        ForEachExpressionInput(Other, [&](FExpressionInput &Input, const FString &) { Count += Input.Expression == Expr ? 1 : 0; });
-      }
-      ConnectionCountMap.Add(Expr->MaterialExpressionGuid, Count);
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
+        if (Input.Expression) {
+          ++ConnectionCountMap.FindOrAdd(Expr);
+          ++ConnectionCountMap.FindOrAdd(static_cast<const UMaterialExpression*>(Input.Expression));
+        }
+      });
     }
 
-    TSet<FGuid> SeenIds;
     TArray<TSharedPtr<FJsonValue>> Matches;
     for (UMaterialExpression *Expr : Exprs) {
       if (!Expr) continue;
-
-      if (SeenIds.Contains(Expr->MaterialExpressionGuid)) continue;
 
       FString ClassName = Expr->GetClass()->GetName();
 
@@ -65,15 +62,13 @@ bool HandleFindNode(UEngineWireSubsystem* Bridge, const FString& RequestId, cons
         if (!bNameMatch) continue;
       }
 
-      SeenIds.Add(Expr->MaterialExpressionGuid);
-
       TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
       Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
       Obj->SetStringField(TEXT("type"), ClassName);
       Obj->SetStringField(TEXT("desc"), Expr->GetDescription());
       Obj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
       Obj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
-      int32 *CC = ConnectionCountMap.Find(Expr->MaterialExpressionGuid);
+      const int32 *CC = ConnectionCountMap.Find(Expr);
       Obj->SetNumberField(TEXT("connectionCount"), CC ? *CC : 0);
       Matches.Add(MakeShared<FJsonValueObject>(Obj));
     }

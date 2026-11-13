@@ -74,17 +74,12 @@ bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
     Variable->PropertyFlags |= CPF_Net | CPF_RepNotify;
     Variable->RepNotifyFunc = FuncName;
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    ResultJson->SetBoolField(TEXT("compiled"), McpSafeCompileBlueprint(Blueprint));
-    ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
-
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("repNotifyFunc"), RepNotifyFunc);
     ResultJson->SetBoolField(TEXT("functionCreated"), bCreate);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%s replicates and calls %s on clients when a new value arrives%s"), *PropertyName, *RepNotifyFunc,
-        bCreate ? TEXT("; the function was created empty, so give it a body") : TEXT("")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("ReplicatedUsing configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("%s replicates and calls %s on clients when a new value arrives%s"), *PropertyName, *RepNotifyFunc,
+                        bCreate ? TEXT("; the function was created empty, so give it a body") : TEXT("")),
+        TEXT("ReplicatedUsing configured"), true);
 }
 
 bool HandleConfigurePushModel(FNetworkingActionContext& Context)
@@ -126,16 +121,8 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
         return true;
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetBoolField(TEXT("usePushModel"), false);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("PushModel entries cleared from %d replicated variable(s)"), ReplicatedCount));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Push model configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("PushModel entries cleared from %d replicated variable(s)"), ReplicatedCount), TEXT("Push model configured"), true);
 }
 }

@@ -43,8 +43,6 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "ImageUtils.h"
-#include "IImageWrapper.h"
-#include "IImageWrapperModule.h"
 #include "Misc/Base64.h"
 #include "Widgets/SWindow.h"
 
@@ -175,6 +173,6 @@ void AddViewShotSizeForMcp(const TSharedPtr<FJsonObject> &Resp, FIntPoint Size, 
 // OutSize is the PNG's size; OutSourceSize, when given, the window's before any downscale.
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
                                  const TSharedPtr<FJsonObject> &Payload,
-                                 TArray<uint8> &OutPngData,
+                                 TArray64<uint8> &OutPngData,
                                  FIntVector &OutSize, FString &OutError,
                                  FIntPoint *OutSourceSize = nullptr);

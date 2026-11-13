@@ -1,8 +1,8 @@
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 
-#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
-#include "Safety/McpSafeOperations.h"
+#include "AnimationRuntime.h"
+#include "Engine/SkeletalMesh.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
@@ -134,6 +134,26 @@ bool UEngineWireSubsystem::HandleAddPhysicsConstraint(
         return true;
     }
     const bool bCreated = Constraint == nullptr;
+    // A new joint sits at bodyA's bone, as the editor's joints sit at their child bone: Frame2 is that bone in bodyB's
+    // bone space, from the preview mesh's reference pose. Both frames used to keep their defaults, and the locked linear
+    // motion pulled bodyA's bone onto bodyB's.
+    FTransform FrameB = FTransform::Identity;
+    if (bCreated)
+    {
+        const USkeletalMesh* PreviewMesh = PhysicsAsset->GetPreviewMesh();
+        const int32 BoneA = PreviewMesh ? PreviewMesh->GetRefSkeleton().FindBoneIndex(FName(*BodyA)) : INDEX_NONE;
+        const int32 BoneB = PreviewMesh ? PreviewMesh->GetRefSkeleton().FindBoneIndex(FName(*BodyB)) : INDEX_NONE;
+        if (BoneA == INDEX_NONE || BoneB == INDEX_NONE)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("A new joint is placed from the preview "
+                "mesh's reference pose, and %s. Nothing was added."), PreviewMesh ? TEXT("the preview mesh lacks one of the two "
+                "bones") : TEXT("this physics asset has no preview mesh: set one first")), TEXT("PREVIEW_MESH_REQUIRED"));
+            return true;
+        }
+        const FReferenceSkeleton& RefSkeleton = PreviewMesh->GetRefSkeleton();
+        FrameB = FAnimationRuntime::GetComponentSpaceTransformRefPose(RefSkeleton, BoneA)
+                     .GetRelativeTransform(FAnimationRuntime::GetComponentSpaceTransformRefPose(RefSkeleton, BoneB));
+    }
     TArray<UObject*> Edited = {PhysicsAsset};
     if (!bCreated)
     {
@@ -150,11 +170,17 @@ bool UEngineWireSubsystem::HandleAddPhysicsConstraint(
             Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
             Constraint->DefaultInstance.ConstraintBone1 = FName(*BodyA);
             Constraint->DefaultInstance.ConstraintBone2 = FName(*BodyB);
+            // Named after its child bone, as the editor names its joints, so a lookup by joint name finds it.
+            Constraint->DefaultInstance.JointName = FName(*BodyA);
+            Constraint->DefaultInstance.SetRefFrame(EConstraintFrame::Frame1, FTransform::Identity);
+            Constraint->DefaultInstance.SetRefFrame(EConstraintFrame::Frame2, FrameB);
             // A new joint starts at 45 degrees Limited on every axis; limits refines it.
             Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
             Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
             Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.0f);
             PhysicsAsset->ConstraintSetup.Add(Constraint);
+            // The joined pair stops colliding with each other, as with the editor's joints.
+            PhysicsAsset->DisableCollision(PhysicsAsset->FindBodyIndex(FName(*BodyA)), PhysicsAsset->FindBodyIndex(FName(*BodyB)));
         }
 
         // Set default constraint profile name via JointName (ProfileName removed in UE 5.7)

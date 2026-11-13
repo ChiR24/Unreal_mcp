@@ -1,6 +1,7 @@
 #include "Domains/Networking/McpNetPrivate.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 
+#include "Components/ActorComponent.h"
 #include "Kismet2/Kismet2NameValidators.h"
 
 namespace McpNetworkingHandlers
@@ -37,10 +38,15 @@ AActor* LoadActorDefaultsOrReply(FNetworkingActionContext& Context, const FStrin
     return CDO;
 }
 
-bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message)
+bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message,
+                           bool bCompile)
 {
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    if (bCompile)
+    {
+        Context.ResultJson->SetBoolField(TEXT("compiled"), McpSafeCompileBlueprint(Blueprint));
+    }
     // A Blueprint that could not be written answered success, with only saved false to tell.
     if (!McpSafeAssetSave(Blueprint))
     {
@@ -55,6 +61,14 @@ bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Bluepr
     McpHandlerUtils::AddVerification(Context.ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, Message, Context.ResultJson);
     return true;
+}
+
+bool McpBlueprintReplicates(const UBlueprint* Blueprint)
+{
+    const UObject* Defaults = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
+    const AActor* ActorDefaults = Cast<AActor>(Defaults);
+    const UActorComponent* ComponentDefaults = Cast<UActorComponent>(Defaults);
+    return ActorDefaults ? ActorDefaults->GetIsReplicated() : (ComponentDefaults && ComponentDefaults->GetIsReplicated());
 }
 
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)

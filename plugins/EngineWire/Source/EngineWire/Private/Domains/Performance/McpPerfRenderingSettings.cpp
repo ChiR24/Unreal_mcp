@@ -81,11 +81,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
                 TEXT("scale is required: the render resolution in percent (100 is full resolution), or 0 for the engine default"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        McpSetConsoleVariableNamed(TEXT("r.ScreenPercentage"), FString::SanitizeFloat(Scale), Applied, NotSet);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
-        // Before 5.3 Play In Editor takes the level viewport's screen percentage over r.ScreenPercentage while this is on.
-        McpSetConsoleVariableNamed(TEXT("r.Editor.Viewport.OverridePIEScreenPercentage"), TEXT("0"), Applied, NotSet);
-#endif
+        McpSetScreenPercentage(Scale, Applied, NotSet);
         SendPerfCVarResult(Context, Scale > 0.0 ? FString::Printf(TEXT("Game views render at %g%% resolution"), Scale)
                                                 : FString(TEXT("Game views back to the engine default resolution")), Applied, NotSet);
         return true;
