@@ -42,7 +42,6 @@ bool HandleTriggerAction(
         return true;
     }
     Result->SetStringField(TEXT("triggerPath"), TriggerBP->GetPathName());
-    Result->SetStringField(TEXT("blueprintPath"), TriggerBP->GetPathName());
     Result->SetStringField(TEXT("triggerShape"), TriggerShape);
     SendInteractableResult(Subsystem, RequestId, RequestingSocket, TriggerBP, Result,
                            {TEXT("created trigger blueprint")}, TEXT("Trigger actor created"));

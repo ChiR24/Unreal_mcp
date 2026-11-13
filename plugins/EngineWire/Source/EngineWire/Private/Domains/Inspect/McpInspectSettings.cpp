@@ -15,9 +15,6 @@ bool HandleInspectSettingsAction(
 {
         if (LowerSubAction.Equals(TEXT("get_project_settings")))
         {
-            Resp->SetStringField(TEXT("action"), TEXT("inspect"));
-            Resp->SetStringField(TEXT("subAction"), SubAction);
-            Resp->SetStringField(TEXT("message"), TEXT("Project settings retrieved"));
             Resp->SetStringField(TEXT("projectName"), FApp::GetProjectName());
             Resp->SetStringField(TEXT("engineVersion"), FEngineVersion::Current().ToString());
             Resp->SetStringField(TEXT("buildConfig"), LexToString(FApp::GetBuildConfiguration()));
@@ -41,21 +38,15 @@ bool HandleInspectSettingsAction(
         }
         else if (LowerSubAction.Equals(TEXT("get_editor_settings")))
         {
-            Resp->SetStringField(TEXT("action"), TEXT("inspect"));
-            Resp->SetStringField(TEXT("subAction"), SubAction);
-            Resp->SetStringField(TEXT("message"), TEXT("Editor settings retrieved"));
             if (const ULevelEditorViewportSettings* ViewportSettings = GetDefault<ULevelEditorViewportSettings>())
             {
                 Resp->SetNumberField(TEXT("mouseSensitivity"), ViewportSettings->MouseSensitivty);
                 Resp->SetNumberField(TEXT("mouseScrollCameraSpeed"), ViewportSettings->MouseScrollCameraSpeed);
                 Resp->SetBoolField(TEXT("useDistanceScaledCamera"), ViewportSettings->bUseDistanceScaledCameraSpeed);
             }
-            if (GEditor)
-            {
-                Resp->SetBoolField(TEXT("isSimulating"), GEditor->bIsSimulatingInEditor);
-                Resp->SetBoolField(TEXT("isPIEActive"), GEditor->PlayWorld != nullptr);
-                Resp->SetNumberField(TEXT("gameAgnosticSavedFPS"), GEngine ? GEngine->GetMaxFPS() : 0.0);
-            }
+            Resp->SetBoolField(TEXT("isSimulating"), GEditor->bIsSimulatingInEditor);
+            Resp->SetBoolField(TEXT("isPIEActive"), GEditor->PlayWorld != nullptr);
+            Resp->SetNumberField(TEXT("gameAgnosticSavedFPS"), GEngine ? GEngine->GetMaxFPS() : 0.0);
             Resp->SetBoolField(TEXT("isEditor"), GIsEditor);
             Resp->SetNumberField(TEXT("gRunningCommandlet"), IsRunningCommandlet() ? 1 : 0);
             McpAddShaderCompileState(Resp, nullptr);
@@ -124,20 +115,17 @@ bool HandleInspectSettingsAction(
         else if (LowerSubAction.Equals(TEXT("get_selected_actors")))
         {
             TArray<TSharedPtr<FJsonValue>> ActorsArray;
-            if (GEditor)
+            TArray<AActor*> SelectedActors;
+            GEditor->GetSelectedActors()->GetSelectedObjects(SelectedActors);
+            for (AActor* Actor : SelectedActors)
             {
-                TArray<AActor*> SelectedActors;
-                GEditor->GetSelectedActors()->GetSelectedObjects(SelectedActors);
-                for (AActor* Actor : SelectedActors)
+                if (Actor)
                 {
-                    if (Actor)
-                    {
-                        TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-                        ActorObj->SetStringField(TEXT("name"), Actor->GetName());
-                        ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
-                        ActorObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
-                        ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
-                    }
+                    TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
+                    ActorObj->SetStringField(TEXT("name"), Actor->GetName());
+                    ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
+                    ActorObj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+                    ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
                 }
             }
             Resp->SetArrayField(TEXT("actors"), ActorsArray);

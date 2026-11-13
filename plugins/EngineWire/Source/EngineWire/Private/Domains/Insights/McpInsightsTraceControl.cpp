@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Insights/McpInsightsRequests.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -140,9 +141,10 @@ bool HandleStartSession(
     if (HasActiveTrace())
     {
         TSharedPtr<FJsonObject> Result =
-            CreateInsightsResult(TEXT("start_session"), TEXT("start_trace"));
+            McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("status"), TEXT("already_started"));
-        AddStartFields(Request, Result);
+        // The running trace's own destination and channels: the request's (a generated file name nothing writes to)
+        // stood beside them.
         AddTraceStatus(Result);
         const bool bViewerFailed = bLaunchViewer && !LaunchInsightsViewer(FString(), Result);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, !bViewerFailed,
@@ -177,7 +179,7 @@ bool HandleStartSession(
     }
 
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("start_session"), TEXT("start_trace"));
+        McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("status"), TEXT("started"));
     AddStartFields(Request, Result);
     AddTraceStatus(Result);

@@ -114,7 +114,7 @@ bool HandleInspectRaycastWorldAction(
             Hit->SetNumberField(TEXT("distance"), Result.Distance);
             if (const AActor *Actor = Result.GetActor())
             {
-                Hit->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+                Hit->SetStringField(TEXT("actorName"), McpActorRef(Actor));
             }
             if (const UPrimitiveComponent *Component = Result.GetComponent())
             {

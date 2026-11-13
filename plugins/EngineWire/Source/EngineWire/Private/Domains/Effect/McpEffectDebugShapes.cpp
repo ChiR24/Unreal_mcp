@@ -158,7 +158,6 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         // only place the engine keeps debug primitives, so their buffers are the
         // live count. Batched primitives carry no shape names, hence counts.
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetArrayField(TEXT("shapeTypes"), Shapes);
         Response->SetArrayField(TEXT("shapes"), Shapes);
         Response->SetNumberField(TEXT("count"), Shapes.Num());
         int32 Lines = 0;
@@ -183,7 +182,6 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         Active->SetNumberField(TEXT("lines"), Lines); Active->SetNumberField(TEXT("points"), Points); Active->SetNumberField(TEXT("meshes"), Meshes);
         Active->SetNumberField(TEXT("total"), Lines + Points + Meshes); Active->SetBoolField(TEXT("worldAvailable"), bWorldAvailable);
         Response->SetObjectField(TEXT("active"), Active); Response->SetArrayField(TEXT("batchers"), Batchers);
-        Response->SetNumberField(TEXT("activeCount"), Lines + Points + Meshes);
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, true,
             TEXT("Debug shape status retrieved"), Response);

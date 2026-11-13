@@ -25,11 +25,11 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return false;
     }
 
-    // systemPath is canonical; system / niagaraSystemPath / assetPath are accepted aliases.
+    // systemPath is canonical; system / assetPath are accepted aliases.
     const FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
     if (SystemPath.IsEmpty())
     {
-        Context.SendError(TEXT("systemPath required (aliases: system, niagaraSystemPath, assetPath)"), TEXT("INVALID_ARGUMENT"));
+        Context.SendError(TEXT("systemPath required (aliases: system, assetPath)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -118,7 +118,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     Response->SetBoolField(TEXT("autoActivate"), bAutoActivate);
     if (Parent)
     {
-        Response->SetStringField(TEXT("attachedTo"), Parent->GetActorLabel());
+        Response->SetStringField(TEXT("attachedTo"), McpActorRef(Parent));
     }
     McpHandlerUtils::AddVerification(Response, Spawned);
     Context.Bridge.SendAutomationResponse(

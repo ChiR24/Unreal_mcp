@@ -30,7 +30,6 @@ bool HandleLeverAction(
         return true;
     }
     Result->SetStringField(TEXT("leverPath"), LeverBP->GetPathName());
-    Result->SetStringField(TEXT("blueprintPath"), LeverBP->GetPathName());
     SendInteractableResult(Subsystem, RequestId, RequestingSocket, LeverBP, Result,
                            {TEXT("created lever blueprint")}, TEXT("Lever actor created"));
     return true;

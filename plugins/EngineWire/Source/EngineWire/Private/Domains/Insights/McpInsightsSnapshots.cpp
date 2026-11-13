@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Insights/McpInsightsRequests.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
@@ -33,7 +34,7 @@ bool HandleWriteSnapshot(
     }
 
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("write_snapshot"));
+        McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("status"), TEXT("snapshot_written"));
     Result->SetStringField(TEXT("snapshotPath"), Path);
     AddTraceStatus(Result);
@@ -73,7 +74,7 @@ bool HandleSendSnapshot(
     }
 
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("send_snapshot"));
+        McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("status"), TEXT("snapshot_sent"));
     Result->SetStringField(TEXT("host"), Host);
     Result->SetNumberField(TEXT("port"), Port);

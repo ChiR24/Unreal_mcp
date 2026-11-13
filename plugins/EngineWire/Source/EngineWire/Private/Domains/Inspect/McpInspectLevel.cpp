@@ -91,7 +91,6 @@ void McpAppendLevelDetails(UWorld *World, TSharedPtr<FJsonObject> Resp)
         Settings->SetBoolField(TEXT("forceNoPrecomputedLighting"), WorldSettings->bForceNoPrecomputedLighting);
     }
     Resp->SetObjectField(TEXT("worldSettings"), Settings);
-    Resp->SetBoolField(TEXT("worldPartitionEnabled"), bWorldPartition);
     // NumLightingUnbuiltObjects is the counter behind the "LIGHTING NEEDS TO BE
     // REBUILT" viewport warning; zero means the static lighting build is current.
     const int32 UnbuiltLighting = static_cast<int32>(World->NumLightingUnbuiltObjects);

@@ -22163,7 +22163,7 @@
               "status",
               "analyze"
             ],
-            "description": "Which get trace status variant to run; omit for 'status'.\nstatus: Query the current trace session status.\nanalyze: Read a captured trace file's metadata: whether it exists, its size, extension, .utrace flag and modified time.",
+            "description": "Which get trace status variant to run; omit for 'status'.\nstatus: Query the current trace session status.\nanalyze: Read a captured .utrace file's metadata: whether it exists, its size and modified time.",
             "default": "status"
           },
           "jobId": {

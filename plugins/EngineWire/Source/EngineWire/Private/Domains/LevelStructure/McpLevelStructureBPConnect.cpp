@@ -8,12 +8,8 @@
 #include "Engine/Level.h"
 #include "Engine/LevelScriptBlueprint.h"
 #include "Engine/World.h"
-#include "K2Node.h"
-#include "K2Node_CallFunction.h"
-#include "K2Node_Event.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -35,8 +31,8 @@ bool HandleConnectLevelBlueprintNodes(
 
     if (SourceNodeName.IsEmpty() || TargetNodeName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("sourceNodeName and targetNodeName are required"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("sourceNodeName and targetNodeName are required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -55,33 +51,26 @@ bool HandleConnectLevelBlueprintNodes(
 
     if (!SourceNode || !TargetNode)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Could not find nodes: source='%s' target='%s'"),
-                *SourceNodeName, *TargetNodeName), nullptr);
+                *SourceNodeName, *TargetNodeName), TEXT("NODE_NOT_FOUND"));
         return true;
     }
 
-    // Find pins and connect
-    UEdGraphPin* SourcePin = nullptr;
-    UEdGraphPin* TargetPin = nullptr;
-
-    for (UEdGraphPin* Pin : SourceNode->Pins)
+    // A pin by its name or the name the editor shows.
+    const auto FindPin = [](const UEdGraphNode* Node, const FString& Name) -> UEdGraphPin*
     {
-        if (Pin->PinName.ToString() == SourcePinName || Pin->GetDisplayName().ToString() == SourcePinName)
+        for (UEdGraphPin* Pin : Node->Pins)
         {
-            SourcePin = Pin;
-            break;
+            if (Pin->PinName.ToString() == Name || Pin->GetDisplayName().ToString() == Name)
+            {
+                return Pin;
+            }
         }
-    }
-
-    for (UEdGraphPin* Pin : TargetNode->Pins)
-    {
-        if (Pin->PinName.ToString() == TargetPinName || Pin->GetDisplayName().ToString() == TargetPinName)
-        {
-            TargetPin = Pin;
-            break;
-        }
-    }
+        return nullptr;
+    };
+    UEdGraphPin* SourcePin = FindPin(SourceNode, SourcePinName);
+    UEdGraphPin* TargetPin = FindPin(TargetNode, TargetPinName);
 
     // A missing pin, or a link the schema refused (wrong direction, incompatible
     // types), used to come back as success:true with "Nodes prepared for
@@ -130,7 +119,6 @@ bool HandleConnectLevelBlueprintNodes(
     ResponseJson->SetStringField(TEXT("sourcePin"), SourcePinName);
     ResponseJson->SetStringField(TEXT("targetNode"), TargetNodeName);
     ResponseJson->SetStringField(TEXT("targetPin"), TargetPinName);
-    ResponseJson->SetBoolField(TEXT("connected"), bConnected);
 
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel,
         FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),

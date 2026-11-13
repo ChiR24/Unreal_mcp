@@ -9,6 +9,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/App.h"
+#include "Misc/PackageName.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 
 namespace McpLevelStructure
@@ -25,8 +26,7 @@ bool HandleOpenLevelBlueprint(
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 
@@ -36,8 +36,8 @@ bool HandleOpenLevelBlueprint(
     // here (bAllowTransient) and the "unsaved level" branch below stays
     // reachable; node authoring still refuses a transient level.
     FString OpenLevelError;
-    ULevel* PersistentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, OpenLevelError, true);
-    if (!PersistentLevel)
+    ULevel* Level = ResolveTargetLevelForBlueprintRequest(World, Payload, OpenLevelError, true);
+    if (!Level)
     {
         Subsystem->SendAutomationError(Socket, RequestId,
             OpenLevelError, TEXT("LEVEL_NOT_OPEN"));
@@ -45,23 +45,23 @@ bool HandleOpenLevelBlueprint(
     }
 
     // Check if the level is saved (has a valid package path)
-    FString LevelPackageName = PersistentLevel->GetOutermost()->GetName();
+    FString LevelPackageName = Level->GetOutermost()->GetName();
+    const FString LevelName = FPackageName::GetShortName(LevelPackageName);
     bool bIsSavedLevel = !LevelPackageName.IsEmpty() && !LevelPackageName.StartsWith(TEXT("/Temp/"));
 
     // For unsaved levels, GetLevelScriptBlueprint(false) may fail to create the blueprint
     // because it requires a valid package path
     // Pass false to allow creation of Level Blueprint if it doesn't exist
-    ULevelScriptBlueprint* LevelBP = PersistentLevel->GetLevelScriptBlueprint(false);
+    ULevelScriptBlueprint* LevelBP = Level->GetLevelScriptBlueprint(false);
     if (!LevelBP)
     {
         if (!bIsSavedLevel)
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("Level Blueprint unavailable for unsaved levels. Please save the level first."), nullptr);
+            Subsystem->SendAutomationError(Socket, RequestId,
+                TEXT("Level Blueprint unavailable for unsaved levels. Please save the level first."), TEXT("TRANSIENT_LEVEL"));
             return true;
         }
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to get or create Level Blueprint"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to get or create Level Blueprint"), TEXT("CREATE_FAILED"));
         return true;
     }
 
@@ -77,7 +77,7 @@ bool HandleOpenLevelBlueprint(
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
-    ResponseJson->SetStringField(TEXT("levelName"), World->GetMapName());
+    ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetBoolField(TEXT("openedEditor"), bOpenedEditor);
     ResponseJson->SetBoolField(TEXT("headlessSafeMode"), !bCanOpenEditorUi);
 
@@ -85,12 +85,12 @@ bool HandleOpenLevelBlueprint(
     if (bCanOpenEditorUi && !bOpenedEditor)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("The Level Blueprint of %s exists, but "
-            "its editor did not open."), *World->GetMapName()), ResponseJson, TEXT("EDITOR_NOT_OPENED"));
+            "its editor did not open."), *LevelName), ResponseJson, TEXT("EDITOR_NOT_OPENED"));
         return true;
     }
     FString Message = bCanOpenEditorUi
-        ? FString::Printf(TEXT("Opened Level Blueprint for: %s"), *World->GetMapName())
-        : FString::Printf(TEXT("Verified Level Blueprint for: %s (headless editor UI skipped)"), *World->GetMapName());
+        ? FString::Printf(TEXT("Opened Level Blueprint for: %s"), *LevelName)
+        : FString::Printf(TEXT("Verified Level Blueprint for: %s (headless editor UI skipped)"), *LevelName);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }

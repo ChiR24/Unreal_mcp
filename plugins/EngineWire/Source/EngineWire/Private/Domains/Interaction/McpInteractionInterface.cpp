@@ -40,7 +40,7 @@ bool HandleInteractableInterfaceAction(
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Interactable interface already exists at %s. Choose a different name or folder."), *InterfacePath),
-            TEXT("ALREADY_EXISTS"));
+            TEXT("ASSET_ALREADY_EXISTS"));
         return true;
     }
 
@@ -81,6 +81,7 @@ bool HandleInteractableInterfaceAction(
     Result->SetStringField(TEXT("interfacePath"), InterfaceBP->GetPathName());
     Result->SetStringField(TEXT("interfaceName"), Name);
     Result->SetBoolField(TEXT("created"), true);
+    Result->SetBoolField(TEXT("saved"), bInterfaceSaved);
     Result->SetArrayField(TEXT("functionsAdded"), FunctionsAdded);
     TArray<FString> InterfaceChanges;
     InterfaceChanges.Add(TEXT("created interactable interface"));

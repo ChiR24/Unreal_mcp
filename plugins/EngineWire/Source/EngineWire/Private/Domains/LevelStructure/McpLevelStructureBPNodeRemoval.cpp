@@ -79,11 +79,10 @@ bool HandleRemoveLevelBlueprintNode(
             TEXT("AMBIGUOUS_NODE"));
         return true;
     }
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    TArray<TSharedPtr<FJsonValue>> Removed;
+    TArray<FString> Removed;
     for (UEdGraphNode* Node : ToRemove)
     {
-        Removed.Add(MakeShared<FJsonValueString>(Node->GetName()));
+        Removed.Add(Node->GetName());
         FBlueprintEditorUtils::RemoveNode(LevelBP, Node, true);
     }
     if (ToRemove.Num() == 0 && !bUnboundOnly)
@@ -96,9 +95,9 @@ bool HandleRemoveLevelBlueprintNode(
     {
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(LevelBP);
     }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("removedCount"), ToRemove.Num());
-    Result->SetArrayField(TEXT("removedNodes"), Removed);
-    Result->SetBoolField(TEXT("unboundOnly"), bUnboundOnly);
+    Result->SetArrayField(TEXT("removedNodes"), McpHandlerUtils::ToJsonStringArray(Removed));
     McpHandlerUtils::AddVerification(Result, LevelBP);
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel,
         FString::Printf(TEXT("Removed %d level blueprint node(s)"), ToRemove.Num()), Result);

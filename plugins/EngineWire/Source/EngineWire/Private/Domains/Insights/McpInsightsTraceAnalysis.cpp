@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Insights/McpInsightsRequests.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -22,7 +23,7 @@ bool HandleAnalyzeTrace(
     if (!TryResolveTracePath(Payload, true, false, false, Path, Error, ErrorCode))
     {
         TSharedPtr<FJsonObject> Result =
-            CreateInsightsResult(TEXT("analyze_trace"));
+            McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("exists"), false);
         Result->SetStringField(TEXT("path"), Path);
         Result->SetStringField(TEXT("analysisScope"),
@@ -34,16 +35,12 @@ bool HandleAnalyzeTrace(
 
     const FFileStatData Stat = IFileManager::Get().GetStatData(*Path);
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("analyze_trace"));
+        McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("status"), TEXT("analyzed"));
     Result->SetStringField(TEXT("analysisScope"),
         TEXT("local_file_metadata"));
     Result->SetStringField(TEXT("path"), Path);
-    Result->SetStringField(TEXT("extension"), FPaths::GetExtension(Path));
     Result->SetBoolField(TEXT("exists"), Stat.bIsValid);
-    Result->SetBoolField(TEXT("isDirectory"), Stat.bIsDirectory);
-    Result->SetBoolField(TEXT("hasUtraceExtension"),
-        FPaths::GetExtension(Path).Equals(TEXT("utrace"), ESearchCase::IgnoreCase));
     Result->SetNumberField(TEXT("sizeBytes"), static_cast<double>(Stat.FileSize));
     Result->SetStringField(TEXT("modifiedUtc"),
         Stat.ModificationTime.ToString(TEXT("%Y-%m-%dT%H:%M:%SZ")));

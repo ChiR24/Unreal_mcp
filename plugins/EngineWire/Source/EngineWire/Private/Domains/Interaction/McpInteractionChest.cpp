@@ -38,7 +38,6 @@ bool HandleChestAction(
             return true;
         }
         Result->SetStringField(TEXT("chestPath"), ChestBP->GetPathName());
-        Result->SetStringField(TEXT("blueprintPath"), ChestBP->GetPathName());
         Result->SetBoolField(TEXT("locked"), Locked);
         Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
         SendInteractableResult(Subsystem, RequestId, RequestingSocket, ChestBP, Result,

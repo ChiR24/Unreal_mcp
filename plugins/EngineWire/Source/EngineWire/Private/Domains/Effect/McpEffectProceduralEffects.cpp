@@ -69,9 +69,8 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
             Removed.Add(Label);
         }
     }
-    TArray<TSharedPtr<FJsonValue>> RemovedActors = McpHandlerUtils::ToJsonStringArray(Removed);
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetArrayField(TEXT("removedActors"), RemovedActors);
+    Response->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(Removed));
     Response->SetNumberField(TEXT("removed"), Removed.Num());
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true,

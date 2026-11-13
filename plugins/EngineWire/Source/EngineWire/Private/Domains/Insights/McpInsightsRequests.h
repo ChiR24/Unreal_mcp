@@ -27,10 +27,6 @@ struct FTraceStartRequest
 
 // The payload's subAction (or action), lower-cased, with start_unreal_insights/capture_insights_trace -> start_session.
 FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload);
-// TraceAction defaults to SubAction.
-TSharedPtr<FJsonObject> CreateInsightsResult(
-    const FString& SubAction,
-    const FString& TraceAction = FString());
 // Whether a trace consumer is connected (always false before 5.3, which cannot tell).
 bool HasActiveTrace();
 void AddTraceStatus(TSharedPtr<FJsonObject>& Result);

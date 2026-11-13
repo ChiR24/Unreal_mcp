@@ -88,7 +88,6 @@ bool HandleEnableInputMapping(
         InputSubsystem->AddMappingContext(Context, Priority);
         const bool bEnabled = InputSubsystem->HasMappingContext(Context);
         Result->SetBoolField(TEXT("enabled"), bEnabled);
-        Result->SetBoolField(TEXT("runtimeApplied"), bEnabled);
         if (!bEnabled)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,

@@ -23,24 +23,15 @@ bool HandleGetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString&
       return true;
     }
 
-    UPackage* WorldPackage = EditorWorld->GetOutermost();
-    UPackage* LevelPackage = CurrentLevel->GetOutermost();
+    const FString LevelPath = CurrentLevel->GetOutermost()->GetName();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("mapName"), EditorWorld->GetMapName());
-    Result->SetStringField(TEXT("mapPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
-    Result->SetStringField(TEXT("levelName"),
-                           LevelPackage ? FPackageName::GetShortName(LevelPackage->GetName())
-                                        : CurrentLevel->GetName());
-    Result->SetStringField(TEXT("levelPath"), LevelPackage ? LevelPackage->GetName() : TEXT(""));
+    Result->SetStringField(TEXT("levelName"), FPackageName::GetShortName(LevelPath));
+    Result->SetStringField(TEXT("levelPath"), LevelPath);
     // The editor's "current level" can be a streaming sub-level; also publish
     // the persistent map so callers do not mistake one for the other.
-    Result->SetStringField(TEXT("persistentLevelPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
-    Result->SetBoolField(TEXT("currentLevelIsSubLevel"), CurrentLevel != EditorWorld->PersistentLevel);
-    // Include editor-world identity separately from the map package so agents
-    // can distinguish persistent map state from transient PIE/editor worlds.
-    Result->SetStringField(TEXT("editorWorldName"), EditorWorld->GetName());
-    Result->SetStringField(TEXT("editorWorldPath"), WorldPackage ? WorldPackage->GetPathName() : TEXT(""));
+    Result->SetStringField(TEXT("persistentLevelPath"), EditorWorld->GetOutermost()->GetName());
     Result->SetStringField(TEXT("worldType"), LexToString(EditorWorld->WorldType));
     // Actors.Num() also counted the empty slots a Blueprint recompile leaves behind (36 extra after one).
     Result->SetNumberField(TEXT("actorCount"), static_cast<int32>(Algo::CountIf(CurrentLevel->Actors, [](const AActor *A) { return IsValid(A); })));

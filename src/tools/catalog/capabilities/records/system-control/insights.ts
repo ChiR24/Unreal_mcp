@@ -192,7 +192,7 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'analyze_trace',
     domain: DOM,
     family: FAM,
-    summary: 'Read a captured trace file\'s metadata: whether it exists, its size, extension, .utrace flag and modified time.',
+    summary: 'Read a captured .utrace file\'s metadata: whether it exists, its size and modified time.',
     whenToUse: ['A captured .utrace file must be checked for existence, size and modified time.'],
     whenNotToUse: ['A live session status is needed (use get_trace_status).'],
     inputProps: { traceFile: { type: 'string', description: 'Trace file to analyze.' } },

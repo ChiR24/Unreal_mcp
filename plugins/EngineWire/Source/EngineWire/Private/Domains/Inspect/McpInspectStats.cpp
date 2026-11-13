@@ -126,18 +126,11 @@ bool HandleInspectStatsAction(
                     }
                 }
             }
+            // actorCount: the level actors control_actor.list reports; totalWorldActors: every AActor (WorldSettings, the
+            // builder brush, DefaultPhysicsVolume and other editor-only or transient actors included), as the record says.
             Resp->SetNumberField(TEXT("actorCount"), ActorCount);
             Resp->SetNumberField(TEXT("totalWorldActors"), TotalWorldActors);
-            // Both numbers under explicit names: nonEditorActorCount is the
-            // level-actor set control_actor.list reports; allActorCount is
-            // every AActor (WorldSettings, builder brush, DefaultPhysicsVolume
-            // and other editor-only/transient actors included).
-            Resp->SetNumberField(TEXT("nonEditorActorCount"), ActorCount);
-            Resp->SetNumberField(TEXT("allActorCount"), TotalWorldActors);
             Resp->SetNumberField(TEXT("editorOnlyActorCount"), FMath::Max(0, TotalWorldActors - ActorCount));
-            Resp->SetStringField(TEXT("actorCountSemantics"),
-                TEXT("actorCount/nonEditorActorCount = level actors (EditorActorSubsystem.GetAllLevelActors, the same set control_actor.list reports); ")
-                TEXT("allActorCount/totalWorldActors = every AActor in the world, including editor-only/transient actors such as WorldSettings, the builder brush and DefaultPhysicsVolume."));
             McpAppendSceneStatCategories(World, Resp);
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

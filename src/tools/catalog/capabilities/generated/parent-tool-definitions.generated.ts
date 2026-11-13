@@ -22617,6 +22617,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor form: the Niagara component that took the values."
         },
+        "deleted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Their labels."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -22692,13 +22699,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "removed": {
           "type": "number",
           "description": "How many actors were deleted."
-        },
-        "removedActors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Their labels."
         },
         "saved": {
           "type": "boolean",
@@ -25918,6 +25918,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the Blueprint was saved."
         },
         "success": {
           "type": "boolean",
@@ -31208,7 +31212,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "status",
             "analyze"
           ],
-          "description": "Which get trace status variant to run; omit for 'status'.\nstatus: Query the current trace session status.\nanalyze: Read a captured trace file's metadata: whether it exists, its size, extension, .utrace flag and modified time.",
+          "description": "Which get trace status variant to run; omit for 'status'.\nstatus: Query the current trace session status.\nanalyze: Read a captured .utrace file's metadata: whether it exists, its size and modified time.",
           "default": "status"
         },
         "jobId": {

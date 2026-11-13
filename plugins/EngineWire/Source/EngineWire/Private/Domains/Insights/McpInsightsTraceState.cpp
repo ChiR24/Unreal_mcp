@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Insights/McpInsightsRequests.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
@@ -15,7 +16,7 @@ bool HandleStopSession(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("stop_session"), TEXT("stop_trace"));
+        McpHandlerUtils::CreateResultObject();
     const bool bStopped = FTraceAuxiliary::Stop();
     Result->SetStringField(TEXT("status"), bStopped ? TEXT("stopped") : TEXT("not_active"));
     AddTraceStatus(Result);
@@ -32,7 +33,7 @@ bool HandlePauseSession(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("pause_session"), TEXT("pause_trace"));
+        McpHandlerUtils::CreateResultObject();
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
     if (!HasActiveTrace())
     {
@@ -71,7 +72,7 @@ bool HandleResumeSession(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("resume_session"), TEXT("resume_trace"));
+        McpHandlerUtils::CreateResultObject();
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
     if (!HasActiveTrace())
     {
@@ -110,7 +111,7 @@ bool HandleGetTraceStatus(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("get_trace_status"));
+        McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("status"), TEXT("queried"));
     AddTraceStatus(Result);
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,

@@ -105,17 +105,6 @@ FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload)
         : SubAction;
 }
 
-TSharedPtr<FJsonObject> CreateInsightsResult(
-    const FString& SubAction,
-    const FString& TraceAction)
-{
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("action"), TEXT("manage_insights"));
-    Result->SetStringField(TEXT("subAction"), SubAction);
-    Result->SetStringField(TEXT("traceAction"), TraceAction.IsEmpty() ? SubAction : TraceAction);
-    return Result;
-}
-
 bool HasActiveTrace()
 {
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
@@ -155,7 +144,6 @@ void AddTraceStatus(TSharedPtr<FJsonObject>& Result)
     FGuid TraceGuid;
     const bool bConnected = FTraceAuxiliary::IsConnected(SessionGuid, TraceGuid);
     Result->SetBoolField(TEXT("connected"), bConnected);
-    Result->SetBoolField(TEXT("isTracing"), bConnected);
     Result->SetStringField(TEXT("destination"),
         FTraceAuxiliary::GetTraceDestinationString());
     if (bConnected)

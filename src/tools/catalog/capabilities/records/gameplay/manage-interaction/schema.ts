@@ -94,7 +94,12 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     inputProps: { ...spec.inputProps },
     required: [...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,
-    outputProps: { assetPath: P.assetPath, ...(spec.outputProps ?? {}) },
+    outputProps: {
+      assetPath: P.assetPath,
+      // Every writer saves the Blueprint it changed and says whether that worked.
+      ...(spec.read === true ? {} : { saved: bool('Whether the Blueprint was saved.') }),
+      ...(spec.outputProps ?? {}),
+    },
     outputRequired: [],
     effect: spec.read === true ? 'read' : 'write',
     latency: 'interactive',

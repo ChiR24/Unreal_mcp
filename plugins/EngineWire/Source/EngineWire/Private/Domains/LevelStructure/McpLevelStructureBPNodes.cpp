@@ -34,14 +34,8 @@ bool HandleAddLevelBlueprintNode(
     FString NodeName = GetJsonStringField(Payload, TEXT("nodeName"), TEXT(""));
     const TSharedPtr<FJsonObject>* PositionJson = nullptr;
     Payload->TryGetObjectField(TEXT("nodePosition"), PositionJson);
-    int32 PosX = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("x"))) : 0;
-    int32 PosY = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("y"))) : 0;
-    const TArray<TSharedPtr<FJsonValue>>* PositionArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("position"), PositionArray) && PositionArray && PositionArray->Num() >= 2)
-    {
-        PosX = static_cast<int32>((*PositionArray)[0]->AsNumber());
-        PosY = static_cast<int32>((*PositionArray)[1]->AsNumber());
-    }
+    const int32 PosX = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("x"))) : 0;
+    const int32 PosY = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("y"))) : 0;
     // Friendly names such as EventBeginPlay / PrintString.
     FString AliasEventName;
     FString AliasFunctionName;
@@ -53,8 +47,7 @@ bool HandleAddLevelBlueprintNode(
 
     if (NodeClass.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("nodeClass is required"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("nodeClass is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -90,139 +83,117 @@ bool HandleAddLevelBlueprintNode(
         NodeClassObj = McpBlueprintGraphHandlers::FindNodeClassByName(NodeClass);
         TriedPaths += TEXT(", the node catalog");
     }
-    // Only for a graph node: it reads the class default as one, which check()s on any other class (nodeClass "Actor").
-    const FString Mismatch = NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass())
-        ? McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClassObj, EventGraph) : FString();
+    if (!NodeClassObj || !NodeClassObj->IsChildOf(UK2Node::StaticClass()))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            NodeClassObj ? FString::Printf(TEXT("Class '%s' found but is not a K2Node subclass"), *NodeClass)
+                         : FString::Printf(TEXT("Node class not found. Tried paths: [%s]"), *TriedPaths),
+            TEXT("NODE_CLASS_NOT_FOUND"));
+        return true;
+    }
+    // After the refusal above: it reads the class default as a graph node, which check()s on any other class
+    // (nodeClass "Actor").
+    const FString Mismatch = McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClassObj, EventGraph);
     if (!Mismatch.IsEmpty())
     {
         Subsystem->SendAutomationError(Socket, RequestId, Mismatch, TEXT("NODE_NOT_ALLOWED_IN_GRAPH"));
         return true;
     }
 
-    FString CreatedNodeName;
-    bool bStructural = false;
-    if (NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass()))
+    UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
+    FString AliasError;
+    FString AliasCode;
+    const FString MemberClass = GetJsonStringField(Payload, TEXT("memberClass"), TEXT(""));
+    // Every refusal below drops the node it made, so no orphan stays in the graph to take a later node's name.
+    if (!ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError, AliasCode))
     {
-        UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
-        FString AliasError;
-        FString AliasCode;
-        const FString MemberClass = GetJsonStringField(Payload, TEXT("memberClass"), TEXT(""));
-        // Every refusal below drops the node it made, so no orphan stays in the graph to take a later node's name.
-        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, MemberClass, AliasError, AliasCode))
-        {
-            NewNode->MarkAsGarbage();
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, AliasCode);
-            return true;
-        }
-        // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
-        if (UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(NewNode))
-        {
-            if (!CallNode->GetTargetFunction())
-            {
-                NewNode->MarkAsGarbage();
-                Subsystem->SendAutomationError(Socket, RequestId,
-                    TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
-                    TEXT("INVALID_ARGUMENT"));
-                return true;
-            }
-        }
-        if (NewNode)
-        {
-            if (!NodeName.IsEmpty())
-            {
-                FString SafeNodeName = NodeName.TrimStartAndEnd();
-                for (const TCHAR* Bad : { TEXT(" "), TEXT("/"), TEXT("\\"), TEXT(":"), TEXT("."), TEXT("'"), TEXT("\"") }) { SafeNodeName.ReplaceInline(Bad, TEXT("_")); }
-                if (!SafeNodeName.IsEmpty())
-                {
-                    FName UniqueNodeName = MakeUniqueObjectName(EventGraph, NodeClassObj, FName(*SafeNodeName));
-                    NewNode->Rename(*UniqueNodeName.ToString(), EventGraph, REN_DontCreateRedirectors | REN_NonTransactional);
-                }
-            }
-            NewNode->CreateNewGuid();
-            // After the rename: a bound event's function name carries the node name. Before the pins: they come
-            // from the actor's class, the event's signature or the variable's property. eventName binds nothing
-            // else here: BeginPlay, Tick and the other events are nodeClass aliases, and an ignored eventName left
-            // an unbound event node.
-            const FString EventName = GetJsonStringField(Payload, TEXT("eventName"), TEXT(""));
-            FString BindError = TEXT("eventName applies to a K2Node_ActorBoundEvent only; pass BeginPlay, Tick and the "
-                                     "other events as nodeClass (EventBeginPlay, EventTick).");
-            FString BindCode = TEXT("INVALID_ARGUMENT");
-            if ((!EventName.IsEmpty() && !NewNode->IsA<UK2Node_ActorBoundEvent>()) ||
-                !McpBindLevelActorNode(NewNode, CurrentLevel, GetJsonStringField(Payload, TEXT("actorName"), TEXT("")),
-                                       EventName, BindError, BindCode) ||
-                !BindLevelBlueprintVariableNode(NewNode, LevelBP, GetJsonStringField(Payload, TEXT("memberName"), TEXT("")),
-                                                MemberClass, BindError, BindCode))
-            {
-                NewNode->MarkAsGarbage();
-                Subsystem->SendAutomationResponse(Socket, RequestId, false, BindError, nullptr, BindCode);
-                return true;
-            }
-            // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Node families
-            // such as UK2Node_SpawnActorFromClass read checked pin accessors inside
-            // PostPlacedNewNode() (GetScaleMethodPin() => FindPinChecked()), which
-            // check()-asserts the editor when the pin does not exist yet. The editor
-            // palette survives because its cached template node already carries pins;
-            // creating from scratch via NewObject does not, so it crashed here
-            // (EdGraphNode.h:586). Allocating first makes the checked accessor safe.
-            if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
-            NewNode->PostPlacedNewNode();
-            NewNode->NodePosX = PosX;
-            NewNode->NodePosY = PosY;
-            // Refuse stacked placements BEFORE the node joins the graph: estimate
-            // its extent from the pins just allocated and test it against every
-            // occupant. A refusal names each overlapping node with its full
-            // coordinates plus two concrete free slots, so the caller can re-run
-            // with a position that lands instead of guessing.
-            {
-                float NewWidth = 0.0f;
-                float NewHeight = 0.0f;
-                McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-                TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-                if (McpGraphLayout::CheckGraphNodeOverlap(
-                        EventGraph, static_cast<float>(PosX), static_cast<float>(PosY),
-                        NewWidth, NewHeight, Overlapping,
-                        McpGraphLayout::NodeOverlapPadding, NewNode))
-                {
-                    FString OverlapMessage;
-                    TSharedPtr<FJsonObject> OverlapDetails =
-                        McpGraphLayout::BuildNodeOverlapDetails(
-                            static_cast<float>(PosX), static_cast<float>(PosY),
-                            NewWidth, NewHeight, Overlapping, OverlapMessage, EventGraph, NewNode);
-                    NewNode->MarkAsGarbage();
-                    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                        OverlapMessage, OverlapDetails, TEXT("NODE_OVERLAP"));
-                    return true;
-                }
-            }
-            EventGraph->AddNode(NewNode, true, false);
-            CreatedNodeName = NewNode->GetName();
-            bStructural = NewNode->NodeCausesStructuralBlueprintChange();
-        }
-    }
-
-    // Check if node creation actually succeeded
-    if (CreatedNodeName.IsEmpty())
-    {
-        FString ErrorMsg;
-        if (!NodeClassObj)
-        {
-            ErrorMsg = FString::Printf(TEXT("Node class not found. Tried paths: [%s]"), *TriedPaths);
-        }
-        else if (!NodeClassObj->IsChildOf(UK2Node::StaticClass()))
-        {
-            ErrorMsg = FString::Printf(TEXT("Class '%s' found but is not a K2Node subclass"), *NodeClass);
-        }
-        else
-        {
-            ErrorMsg = FString::Printf(TEXT("Failed to create node instance of class: %s"), *NodeClass);
-        }
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, ErrorMsg, nullptr);
+        NewNode->MarkAsGarbage();
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, AliasCode);
         return true;
     }
+    // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
+    if (UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(NewNode))
+    {
+        if (!CallNode->GetTargetFunction())
+        {
+            NewNode->MarkAsGarbage();
+            Subsystem->SendAutomationError(Socket, RequestId,
+                TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+    if (!NodeName.IsEmpty())
+    {
+        FString SafeNodeName = NodeName.TrimStartAndEnd();
+        for (const TCHAR* Bad : { TEXT(" "), TEXT("/"), TEXT("\\"), TEXT(":"), TEXT("."), TEXT("'"), TEXT("\"") }) { SafeNodeName.ReplaceInline(Bad, TEXT("_")); }
+        if (!SafeNodeName.IsEmpty())
+        {
+            FName UniqueNodeName = MakeUniqueObjectName(EventGraph, NodeClassObj, FName(*SafeNodeName));
+            NewNode->Rename(*UniqueNodeName.ToString(), EventGraph, REN_DontCreateRedirectors | REN_NonTransactional);
+        }
+    }
+    NewNode->CreateNewGuid();
+    // After the rename: a bound event's function name carries the node name. Before the pins: they come
+    // from the actor's class, the event's signature or the variable's property. eventName binds nothing
+    // else here: BeginPlay, Tick and the other events are nodeClass aliases, and an ignored eventName left
+    // an unbound event node.
+    const FString EventName = GetJsonStringField(Payload, TEXT("eventName"), TEXT(""));
+    FString BindError = TEXT("eventName applies to a K2Node_ActorBoundEvent only; pass BeginPlay, Tick and the "
+                             "other events as nodeClass (EventBeginPlay, EventTick).");
+    FString BindCode = TEXT("INVALID_ARGUMENT");
+    if ((!EventName.IsEmpty() && !NewNode->IsA<UK2Node_ActorBoundEvent>()) ||
+        !McpBindLevelActorNode(NewNode, CurrentLevel, GetJsonStringField(Payload, TEXT("actorName"), TEXT("")),
+                               EventName, BindError, BindCode) ||
+        !BindLevelBlueprintVariableNode(NewNode, LevelBP, GetJsonStringField(Payload, TEXT("memberName"), TEXT("")),
+                                        MemberClass, BindError, BindCode))
+    {
+        NewNode->MarkAsGarbage();
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, BindError, nullptr, BindCode);
+        return true;
+    }
+    // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Node families
+    // such as UK2Node_SpawnActorFromClass read checked pin accessors inside
+    // PostPlacedNewNode() (GetScaleMethodPin() => FindPinChecked()), which
+    // check()-asserts the editor when the pin does not exist yet. The editor
+    // palette survives because its cached template node already carries pins;
+    // creating from scratch via NewObject does not, so it crashed here
+    // (EdGraphNode.h:586). Allocating first makes the checked accessor safe.
+    if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+    NewNode->PostPlacedNewNode();
+    NewNode->NodePosX = PosX;
+    NewNode->NodePosY = PosY;
+    // Refuse stacked placements BEFORE the node joins the graph: estimate
+    // its extent from the pins just allocated and test it against every
+    // occupant. A refusal names each overlapping node with its full
+    // coordinates plus two concrete free slots, so the caller can re-run
+    // with a position that lands instead of guessing.
+    {
+        float NewWidth = 0.0f;
+        float NewHeight = 0.0f;
+        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+        if (McpGraphLayout::CheckGraphNodeOverlap(
+                EventGraph, static_cast<float>(PosX), static_cast<float>(PosY),
+                NewWidth, NewHeight, Overlapping,
+                McpGraphLayout::NodeOverlapPadding, NewNode))
+        {
+            FString OverlapMessage;
+            TSharedPtr<FJsonObject> OverlapDetails =
+                McpGraphLayout::BuildNodeOverlapDetails(
+                    static_cast<float>(PosX), static_cast<float>(PosY),
+                    NewWidth, NewHeight, Overlapping, OverlapMessage, EventGraph, NewNode);
+            NewNode->MarkAsGarbage();
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                OverlapMessage, OverlapDetails, TEXT("NODE_OVERLAP"));
+            return true;
+        }
+    }
+    EventGraph->AddNode(NewNode, true, false);
 
     // An event node adds a function to the class, as the editor's own placement marks it; a plain mark left the
     // skeleton class without it until something else recompiled the level blueprint.
-    if (bStructural)
+    if (NewNode->NodeCausesStructuralBlueprintChange())
     {
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(LevelBP);
     }
@@ -234,20 +205,14 @@ bool HandleAddLevelBlueprintNode(
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
     ResponseJson->SetStringField(TEXT("nodeClass"), NodeClass);
-    ResponseJson->SetStringField(TEXT("nodeName"), CreatedNodeName);
-    if (UEdGraphNode* CreatedGraphNode = FindObject<UEdGraphNode>(EventGraph, *CreatedNodeName))
-    {
-        ResponseJson->SetStringField(TEXT("nodeTitle"), CreatedGraphNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
-        ResponseJson->SetStringField(TEXT("nodeId"), CreatedGraphNode->NodeGuid.ToString());
-        // The names connect_level_blueprint_nodes takes (a bound event's OtherActor, an actor reference's output), in
-        // the shape blueprint.edit_graph answers with.
-        ResponseJson->SetStringField(TEXT("pins"), McpDescribeNodePins(CreatedGraphNode));
-    }
-    ResponseJson->SetNumberField(TEXT("posX"), PosX);
-    ResponseJson->SetNumberField(TEXT("posY"), PosY);
-    ResponseJson->SetBoolField(TEXT("nodeCreated"), true);
+    ResponseJson->SetStringField(TEXT("nodeName"), NewNode->GetName());
+    ResponseJson->SetStringField(TEXT("nodeTitle"), NewNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
+    ResponseJson->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
+    // The names connect_level_blueprint_nodes takes (a bound event's OtherActor, an actor reference's output), in
+    // the shape blueprint.edit_graph answers with.
+    ResponseJson->SetStringField(TEXT("pins"), McpDescribeNodePins(NewNode));
 
-    FString Message = FString::Printf(TEXT("Added node to Level Blueprint: %s"), *CreatedNodeName);
+    FString Message = FString::Printf(TEXT("Added node to Level Blueprint: %s"), *NewNode->GetName());
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel, Message, ResponseJson);
     return true;
 }

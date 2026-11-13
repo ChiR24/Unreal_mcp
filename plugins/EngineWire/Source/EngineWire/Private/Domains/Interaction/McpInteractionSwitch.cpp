@@ -38,7 +38,6 @@ bool HandleSwitchAction(
             return true;
         }
         Result->SetStringField(TEXT("switchPath"), SwitchBP->GetPathName());
-        Result->SetStringField(TEXT("blueprintPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("switchType"), SwitchType);
         Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
         SendInteractableResult(Subsystem, RequestId, RequestingSocket, SwitchBP, Result,

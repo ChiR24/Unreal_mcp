@@ -181,10 +181,12 @@ void SendInteractableResult(
     TSharedPtr<FJsonObject> Result, TArray<FString> Changes, const FString& Message)
 {
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    if (McpSafeAssetSave(Blueprint))
+    const bool bSaved = McpSafeAssetSave(Blueprint);
+    if (bSaved)
     {
         Changes.Add(TEXT("saved"));
     }
+    Result->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Result, Blueprint);
     AddMutationEvidence(Result, Blueprint, Changes);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);

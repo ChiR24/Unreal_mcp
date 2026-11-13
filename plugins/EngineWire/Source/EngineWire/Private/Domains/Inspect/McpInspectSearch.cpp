@@ -13,8 +13,7 @@ bool HandleInspectSearchAction(
         {
             // Honors `filter` (label/name/class substring), `limit` (default 100)
             // and `offset`, and lists the PIE world while a session runs so the
-            // numbers match control_actor.list. `actors` mirrors `objects`
-            // because the list_objects contract declares the former.
+            // numbers match control_actor.list, as the `actors` its contract declares.
             FString Filter;
             Payload->TryGetStringField(TEXT("filter"), Filter);
             const int32 Limit = FMath::Max(1, GetJsonIntField(Payload, TEXT("limit"), 100));
@@ -54,7 +53,6 @@ bool HandleInspectSearchAction(
                     ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
                 }
             }
-            Resp->SetArrayField(TEXT("objects"), ObjectsArray);
             Resp->SetArrayField(TEXT("actors"), ObjectsArray);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
             Resp->SetNumberField(TEXT("matchedCount"), MatchedCount);
@@ -146,9 +144,7 @@ bool HandleInspectSearchAction(
                     }
                 }
             }
-            Resp->SetArrayField(TEXT("objects"), ObjectsArray);
-            // The find_by_tag contract declares `actors`; both names carry the
-            // same [{label, name, path, class}] entries.
+            // [{label, name, path, class}], as the `actors` the find_by_tag contract declares.
             Resp->SetArrayField(TEXT("actors"), ObjectsArray);
             Resp->SetStringField(TEXT("tag"), Tag);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
