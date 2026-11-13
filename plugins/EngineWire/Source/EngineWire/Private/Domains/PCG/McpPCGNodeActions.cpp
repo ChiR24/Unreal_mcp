@@ -13,21 +13,29 @@ bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
 {
     FString Error;
     int32 AppliedSettings = 0;
+    // A node this call added goes again with a refused setting: it stayed in the graph, unsaved and unannounced.
+    const auto RefuseSettings = [&]()
+    {
+        if (!bEdit)
+        {
+            Graph->RemoveNode(Node);
+        }
+        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
+        return true;
+    };
     const TSharedPtr<FJsonObject>* SettingsObject = nullptr;
     if (Payload->TryGetObjectField(TEXT("settings"), SettingsObject) && SettingsObject && SettingsObject->IsValid())
     {
         if (!ApplySettingsObject(Settings, *SettingsObject, Error, AppliedSettings))
         {
-            Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-            return true;
+            return RefuseSettings();
         }
     }
 
     int32 AppliedConvenienceSettings = 0;
     if (!ApplyPCGConvenienceSettings(SubAction, Settings, Payload, Error, AppliedConvenienceSettings))
     {
-        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-        return true;
+        return RefuseSettings();
     }
 
     // An edit that changed nothing (or sent only a meshPath or class the node has no slot for) answered "updated".

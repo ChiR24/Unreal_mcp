@@ -190,7 +190,7 @@ export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'set_pcg_partition_grid_size', plugins: PLUGIN,
-    family: F, summary: 'Set the size of the cells partitioned PCG generates in (gridSize, a whole number of world units above 0): scope world (the default) sets the PCG world actor\'s partition grid, scope component one PCG component\'s generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. Saved with the level unless save is false, which saves every unsaved change in that level too.',
+    family: F, summary: 'Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor\'s partition grid (at least 400), scope component one PCG component\'s generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it.',
     whenToUse: ['Partitioned PCG makes too many small cells, or cells too large to stream well.'], whenNotToUse: ['A node is added (add_pcg_node).'],
     inputProps: {
       scope: P.pcgScope, gridSize: P.pcgGridSize,

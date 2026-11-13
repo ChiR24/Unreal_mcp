@@ -41,6 +41,13 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     }
     if (!Component && bCreateComponent)
     {
+        // A new component has no graph and never schedules: it was made, refused GENERATION_NOT_SCHEDULED, and left.
+        if (!Graph)
+        {
+            Bridge->SendAutomationError(Socket, RequestId, TEXT("createComponent needs graphPath: a new PCG component has no "
+                "graph to generate. Nothing was created."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
         if (!Actor)
         {
@@ -93,7 +100,8 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("graphPath"), GraphPath);
+    // The graph the component runs when none was sent (it answered an empty string).
+    Result->SetStringField(TEXT("graphPath"), !GraphPath.IsEmpty() || !Component->GetGraph() ? GraphPath : Component->GetGraph()->GetPathName());
     // The owner's label (it named the object, and nothing when the component was found by path).
     Result->SetStringField(TEXT("actorName"), McpActorRef(Component->GetOwner()));
     Result->SetStringField(TEXT("componentName"), Component->GetName());
@@ -147,7 +155,8 @@ bool HandleSetComponentGridSize(UEngineWireSubsystem* Bridge, const FString& Req
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("scope"), TEXT("component"));
-    Result->SetStringField(TEXT("actorName"), Actor ? Actor->GetName() : FString());
+    // The owner's label, as execute_pcg_graph answers it: the object name, and nothing when found by path.
+    Result->SetStringField(TEXT("actorName"), McpActorRef(Component->GetOwner()));
     Result->SetStringField(TEXT("componentName"), Component->GetName());
     Result->SetStringField(TEXT("componentPath"), Component->GetPathName());
     Result->SetNumberField(TEXT("previousGridSize"), PreviousGridSize);
@@ -226,6 +235,14 @@ bool HandleSetPCGPartitionGridSize(UEngineWireSubsystem* Bridge, const FString& 
     if (Scope == TEXT("component"))
     {
         return HandleSetComponentGridSize(Bridge, RequestId, Payload, Socket, World, GridSize, bSave);
+    }
+    // Clamped to 400 by the engine only from 5.7: below it a small world grid re-created the partition actors of every
+    // partitioned component on that grid.
+    if (GridSize < 400)
+    {
+        Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("A world partition grid of %d cm is under the 400 cm "
+            "the engine allows; give gridSize 400 or more (centimetres)."), GridSize), TEXT("INVALID_ARGUMENT"));
+        return true;
     }
 
     return HandleSetWorldGridSize(Bridge, RequestId, Socket, World, GridSize, bSave);

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1e8aa930a1afc140",
+  "catalogRevision": "d22382ca420574b1",
   "recordCount": 489,
   "records": [
     {
@@ -101122,7 +101122,7 @@
                 "set_node_settings",
                 "set_partition_grid_size"
               ],
-              "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of world units above 0): scope world (the default) sets the PCG world actor's partition grid, scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. Saved with the level unless save is false, which saves every unsaved change in that level too."
+              "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor's partition grid (at least 400), scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it."
             }
           },
           "required": [
@@ -101367,8 +101367,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4f243d82926bf2e1c5103f6fe54a030d18155536bb4b14105258af24b253128f",
-        "content": "1e74dfd3f8ba93f7d4cf00278d6636933340cee09f54416eec1daaf4f06fb4f3"
+        "schema": "5bd851a0683e33631a018cfd3637ac4c92fe2a521c5745a2e7d8bf1858887a97",
+        "content": "328fea23beeb043dfb7001c6abfc83f39cdb03673df696b10d89e032d7bfde0c"
       }
     },
     {
@@ -101388,7 +101388,7 @@
           "run pcg graph",
           "generate pcg"
         ],
-        "summary": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save also saves the level.",
+        "summary": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save true also saves the level (default false), every other unsaved change in it with it.",
         "whenToUse": [
           "A PCG graph must be generated in the level."
         ],
@@ -101470,7 +101470,7 @@
       },
       "examples": [
         {
-          "title": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save also saves the level.",
+          "title": "Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component's graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save true also saves the level (default false), every other unsaved change in it with it.",
           "input": {
             "action": "execute_pcg_graph",
             "graphPath": "/Game/PCG/PCG_MyGraph",
@@ -101514,7 +101514,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bca098efcb2db4d2fc6ea1139d3ca3defc6c4696d911e725496369f7b73a3028",
-        "content": "f1e6c2d7fbc2603f6a949f2625b5c548486c20a6045f415a8087d5a898120378"
+        "content": "bd7bc4b163483aa15c26cc5cd0cd046ef0d0775dc128ba075190dd4262c16921"
       }
     },
     {

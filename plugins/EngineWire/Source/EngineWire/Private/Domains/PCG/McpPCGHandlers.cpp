@@ -25,6 +25,9 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
     const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+    // The level-scoped actions save the level only when asked: the default wrote every other unsaved change in it,
+    // and on a level never saved it answered SAVE_FAILED for a call that had done everything else.
+    const bool bLevelSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
     if (SubAction == TEXT("create_pcg_graph"))
     {
@@ -38,12 +41,12 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
 
     if (SubAction == TEXT("execute_pcg_graph"))
     {
-        return McpPCGHandlers::HandleExecutePCGGraph(this, RequestId, Payload, Socket, bSave);
+        return McpPCGHandlers::HandleExecutePCGGraph(this, RequestId, Payload, Socket, bLevelSave);
     }
 
     if (SubAction == TEXT("set_pcg_partition_grid_size"))
     {
-        return McpPCGHandlers::HandleSetPCGPartitionGridSize(this, RequestId, Payload, Socket, bSave);
+        return McpPCGHandlers::HandleSetPCGPartitionGridSize(this, RequestId, Payload, Socket, bLevelSave);
     }
 
     FString GraphRawPath = McpGetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});

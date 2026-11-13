@@ -93,34 +93,12 @@ UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName)
 bool SaveEditorWorldIfRequested(UWorld* World, bool bSave, bool& bOutSaved, FString& OutError)
 {
     bOutSaved = false;
-    if (!World)
-    {
-        OutError = TEXT("Could not resolve the editor world for level save.");
-        return false;
-    }
-
     if (!bSave)
     {
         return true;
     }
-
-    if (!World->PersistentLevel)
-    {
-        OutError = TEXT("Could not resolve the persistent level for PCG save.");
-        return false;
-    }
-
-    UPackage* WorldPackage = World->GetOutermost();
-    const FString LevelPath = WorldPackage ? WorldPackage->GetName() : FString();
-    if (LevelPath.IsEmpty())
-    {
-        OutError = TEXT("Could not resolve the current level package path for PCG save.");
-        return false;
-    }
-
-    World->Modify();
-    World->MarkPackageDirty();
-    World->PersistentLevel->Modify();
+    // Its callers refuse a null world first, and a world has a persistent level and a package name.
+    const FString LevelPath = World->GetOutermost()->GetName();
     World->PersistentLevel->MarkPackageDirty();
 
     bOutSaved = McpSafeLevelSave(World->PersistentLevel, LevelPath);

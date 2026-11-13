@@ -68,20 +68,27 @@ bool ApplySettingsObject(UPCGSettings* Settings, const TSharedPtr<FJsonObject>& 
         return true;
     }
 
+    // Every property is found before any is written: a key the class lacks left the ones before it changed in memory,
+    // with no PostEditChange, notification or save.
+    TArray<TPair<FProperty*, TSharedPtr<FJsonValue>>> Writes;
     for (const auto& Pair : SettingsObject->Values)
     {
         const FString FieldName = McpJsonKey(Pair.Key);
         FProperty* Property = Settings->GetClass()->FindPropertyByName(FName(*FieldName));
         if (!Property)
         {
-            OutError = FString::Printf(TEXT("PCG settings property '%s' was not found on '%s'."), *FieldName, *Settings->GetClass()->GetName());
+            OutError = FString::Printf(TEXT("PCG settings property '%s' was not found on '%s'. Nothing was changed."), *FieldName, *Settings->GetClass()->GetName());
             return false;
         }
-
+        Writes.Emplace(Property, Pair.Value);
+    }
+    for (const TPair<FProperty*, TSharedPtr<FJsonValue>>& Write : Writes)
+    {
         FString ApplyError;
-        if (!ApplyJsonValueToProperty(Settings, Property, Pair.Value, ApplyError))
+        if (!ApplyJsonValueToProperty(Settings, Write.Key, Write.Value, ApplyError))
         {
-            OutError = FString::Printf(TEXT("Failed to apply PCG settings property '%s': %s"), *FieldName, *ApplyError);
+            OutError = FString::Printf(TEXT("Failed to apply PCG settings property '%s': %s (%d written before it)"),
+                *Write.Key->GetName(), *ApplyError, OutAppliedCount);
             return false;
         }
         ++OutAppliedCount;

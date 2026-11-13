@@ -199,8 +199,12 @@ void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, b
         Node->NodeTitle = FName(*Title);
     }
 
-    double X = 0.0;
-    double Y = 0.0;
+    // From the node's own position: the axis not sent was set to 0.
+    int32 OldX = 0;
+    int32 OldY = 0;
+    Node->GetNodePosition(OldX, OldY);
+    double X = OldX;
+    double Y = OldY;
     const bool bHasX = Payload->TryGetNumberField(TEXT("x"), X) || Payload->TryGetNumberField(TEXT("posX"), X);
     const bool bHasY = Payload->TryGetNumberField(TEXT("y"), Y) || Payload->TryGetNumberField(TEXT("posY"), Y);
     if (bHasX || bHasY)
