@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d22382ca420574b1",
+  "catalogRevision": "35eb161fc4281373",
   "recordCount": 489,
   "records": [
     {
@@ -119003,7 +119003,7 @@
         "topics": [
           "lumen_update_scene"
         ],
-        "summary": "Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.",
+        "summary": "Make Lumen rebuild its scene surface cache (r.LumenScene.SurfaceCache.Reset), after big changes to lighting or geometry; the reply names the variable set. Nothing checks that Lumen is on. CVAR_UNAVAILABLE when the variable is missing or held at another value.",
         "whenToUse": [
           "Lumen GI must refresh the scene capture."
         ],
@@ -119052,7 +119052,7 @@
       },
       "examples": [
         {
-          "title": "Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.",
+          "title": "Make Lumen rebuild its scene surface cache (r.LumenScene.SurfaceCache.Reset), after big changes to lighting or geometry; the reply names the variable set. Nothing checks that Lumen is on. CVAR_UNAVAILABLE when the variable is missing or held at another value.",
           "input": {
             "action": "lumen_update_scene"
           },
@@ -119089,7 +119089,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-        "content": "d2a0fad477fea6e7f114d47df0b8540428a3137e4293cca075a9ea4a48e718ab"
+        "content": "a50fb03f240964aa73ef25a09af761c84b0bcd10a0ad54deff7e1ac6eb715b5b"
       }
     },
     {

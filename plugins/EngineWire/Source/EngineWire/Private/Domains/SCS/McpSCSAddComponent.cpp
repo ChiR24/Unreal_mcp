@@ -72,10 +72,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &MeshPath, const FString &MaterialPath) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-  if (IsPlayInEditorActive()) {
-    return PIEActiveError();
-  }
-
   UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result, false);
   if (!Blueprint) {
     return Result;
@@ -147,7 +143,10 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     }
   }
 
-  if (FindScsNodeByName(SCS, ComponentName)) {
+  // A name an inherited member holds (a Character's Mesh) too: CreateNode picked a free one and SetVariableName below
+  // forced the taken one back, two members of one name.
+  if (FindScsNodeByName(SCS, ComponentName) ||
+      SCS->GenerateNewComponentName(CompClass, FName(*ComponentName)) != FName(*ComponentName)) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),

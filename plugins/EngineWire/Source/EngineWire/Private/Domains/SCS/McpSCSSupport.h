@@ -12,11 +12,10 @@ namespace McpSCSHandlers {
 
 // Marks Result failed with Error/Code and returns it, for `return SCSFail(Result, ...)`.
 TSharedPtr<FJsonObject> SCSFail(TSharedPtr<FJsonObject> Result, const FString &Error, const TCHAR *Code);
-// The Blueprint at BlueprintPath; null after marking Result ASSET_NOT_FOUND, or SCS_NOT_FOUND when bRequireScs and it
-// has no SimpleConstructionScript.
+// The Blueprint at BlueprintPath; null after marking Result PIE_ACTIVE during Play, ASSET_NOT_FOUND, or SCS_NOT_FOUND
+// when bRequireScs and it has no SimpleConstructionScript.
 UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Result, bool bRequireScs = true);
 bool IsPlayInEditorActive();
-TSharedPtr<FJsonObject> PIEActiveError();
 FString GetSCSNodeName(const USCS_Node *Node);
 bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name);
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);

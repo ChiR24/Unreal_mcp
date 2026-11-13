@@ -103,6 +103,12 @@ TSharedPtr<FJsonObject> SCSFail(TSharedPtr<FJsonObject> Result, const FString &E
 }
 
 UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Result, bool bRequireScs) {
+  // Every SCS edit compiles the Blueprint, which during Play can take the editor down: only add refused it.
+  if (IsPlayInEditorActive()) {
+    SCSFail(Result, TEXT("SCS operations cannot modify Blueprints during Play In Editor (PIE). Please stop the play "
+                         "session first."), TEXT("PIE_ACTIVE"));
+    return nullptr;
+  }
   FString NormalizedPath;
   FString ErrorMsg;
   UBlueprint *Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
@@ -131,11 +137,6 @@ bool IsPlayInEditorActive() {
     }
   }
   return false;
-}
-
-TSharedPtr<FJsonObject> PIEActiveError() {
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  return SCSFail(Result, TEXT("SCS operations cannot modify Blueprints during Play In Editor " "(PIE). Please stop the play session first."), TEXT("PIE_ACTIVE"));
 }
 
 FString GetSCSNodeName(const USCS_Node *Node) {

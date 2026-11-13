@@ -94,27 +94,43 @@ FSCSHandlers::RemoveSCSComponents(const FString &BlueprintPath,
     return Result;
   }
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
-  TArray<TSharedPtr<FJsonValue>> Results;
+  TArray<TSharedPtr<FJsonObject>> Rows;
   TArray<FString> Missing;
+  int32 Removed = 0;
   for (const FString &Name : ComponentNames) {
     USCS_Node *Node = FindScsNodeByName(SCS, Name);
+    // The single removal's root rule, per name: the default root with no child comes straight back on compile.
+    const bool bLoneDefaultRoot = Node && Node == SCS->GetDefaultSceneRootNode() && Node->GetChildNodes().Num() == 0;
     TSharedPtr<FJsonObject> One = McpHandlerUtils::CreateResultObject();
     One->SetStringField(TEXT("componentName"), Name);
-    One->SetBoolField(TEXT("success"), Node != nullptr);
-    if (Node) {
+    One->SetBoolField(TEXT("success"), Node && !bLoneDefaultRoot);
+    if (Node && !bLoneDefaultRoot) {
       SCS->RemoveNodeAndPromoteChildren(Node);
+      ++Removed;
     } else {
-      One->SetStringField(TEXT("error"), TEXT("Component not found"));
+      One->SetStringField(TEXT("error"), Node ? TEXT("DefaultSceneRoot is the only scene root and the engine re-creates it")
+                                              : TEXT("Component not found"));
       Missing.Add(Name);
     }
-    Results.Add(MakeShared<FJsonValueObject>(One));
+    Rows.Add(One);
   }
   bool bCompiled = false;
   bool bSaved = false;
-  if (Missing.Num() < ComponentNames.Num()) {
+  if (Removed > 0) {
     FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
   }
-  const int32 Removed = ComponentNames.Num() - Missing.Num();
+  // As the single removal looks after its compile: a node that is back was not removed.
+  TArray<TSharedPtr<FJsonValue>> Results;
+  for (const TSharedPtr<FJsonObject> &One : Rows) {
+    const FString Name = One->GetStringField(TEXT("componentName"));
+    if (One->GetBoolField(TEXT("success")) && FindScsNodeByName(SCS, Name)) {
+      One->SetBoolField(TEXT("success"), false);
+      One->SetStringField(TEXT("error"), TEXT("still in the Blueprint after the compile"));
+      Missing.Add(Name);
+      --Removed;
+    }
+    Results.Add(MakeShared<FJsonValueObject>(One));
+  }
   Result->SetArrayField(TEXT("results"), Results);
   Result->SetNumberField(TEXT("removed"), Removed);
   Result->SetBoolField(TEXT("compiled"), bCompiled);
@@ -122,7 +138,7 @@ FSCSHandlers::RemoveSCSComponents(const FString &BlueprintPath,
   Result->SetBoolField(TEXT("success"), Missing.Num() == 0);
   Result->SetStringField(TEXT("message"), Missing.Num() == 0
       ? FString::Printf(TEXT("Removed %d SCS components"), Removed)
-      : FString::Printf(TEXT("Removed %d of %d SCS components; not found: %s"), Removed,
+      : FString::Printf(TEXT("Removed %d of %d SCS components; not removed: %s"), Removed,
                         ComponentNames.Num(), *FString::Join(Missing, TEXT(", "))));
   if (Missing.Num() > 0) {
     Result->SetStringField(TEXT("error"), Result->GetStringField(TEXT("message")));

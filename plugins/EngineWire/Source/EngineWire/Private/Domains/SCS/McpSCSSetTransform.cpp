@@ -67,6 +67,8 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
   // Writing engine defaults because the caller's fields never arrived is the
   // silent no-op this handler was bitten by — refuse loudly instead.
   if (!bHasLocation && !bHasRotation && !bHasScale) {
+    // The override the resolver may have made goes too: it stayed, and the child stopped following the parent.
+    CreatedOverride.Rollback();
     return SCSFail(Result, TEXT("No transform fields provided — pass at least one of location/" "rotation/scale as a [x,y,z] array (or {x,y,z}/{pitch,yaw,roll} object)."), TEXT("INVALID_ARGUMENT"));
   }
 

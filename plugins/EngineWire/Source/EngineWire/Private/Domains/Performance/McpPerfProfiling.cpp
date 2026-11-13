@@ -45,16 +45,9 @@ bool RequireEditor(
 // when it differs, which gives set semantics.
 bool SetStatOverlay(const FPerformanceActionContext& Context, const FString& Stat, bool bEnabled)
 {
-    FViewport* ActiveViewport = GEditor->GetActiveViewport();
-    FViewportClient* ViewportClient = ActiveViewport ? ActiveViewport->GetClient() : nullptr;
-    if (!ViewportClient)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
-            TEXT("No active editor viewport; the stat overlay state cannot be read or set. Focus a level viewport and retry."),
-            TEXT("NO_VIEWPORT"));
-        return true;
-    }
-    const bool bWasEnabled = ViewportClient->IsStatEnabled(Stat);
+    // Read where a Stat command lands, the running game's viewport during Play: the level viewport read here was the
+    // wrong one then, so a second show hid the overlay and a hide could show it.
+    const bool bWasEnabled = McpIsStatShown(Stat);
     if (bWasEnabled != bEnabled)
     {
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), *FString::Printf(TEXT("stat %s"), *Stat));

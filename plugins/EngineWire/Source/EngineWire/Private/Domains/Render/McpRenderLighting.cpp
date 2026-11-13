@@ -89,18 +89,19 @@ bool HandleRenderLightingAction(
         return true;
     }
 
+    // Its own three only: asked before the reflection, scene capture and post-process handlers, it answered another
+    // sub-action's actor with no primitive component COMPONENT_NOT_FOUND.
+    if (SubAction != TEXT("set_light_channel") && SubAction != TEXT("set_actor_light_channel") &&
+        SubAction != TEXT("configure_indirect_lighting_cache"))
+    {
+        return false;
+    }
     FString Reference;
     ReadActorReference(Payload, Reference);
     AActor* Actor = FindRenderActor(Reference);
     if (!Actor)
     {
-        if (SubAction == TEXT("set_light_channel") ||
-            SubAction == TEXT("set_actor_light_channel") ||
-            SubAction == TEXT("configure_indirect_lighting_cache"))
-        {
-            return SendMissingActor(Subsystem, RequestId, Reference, RequestingSocket);
-        }
-        return false;
+        return SendMissingActor(Subsystem, RequestId, Reference, RequestingSocket);
     }
 
     if (SubAction == TEXT("set_light_channel"))
@@ -148,11 +149,7 @@ bool HandleRenderLightingAction(
         {
             return true;
         }
-        TArray<UObject*> Targets;
-        for (UPrimitiveComponent* Component : Components)
-        {
-            Targets.Add(Component);
-        }
+        TArray<UObject*> Targets(Components);
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Actor Light Channel")),
                                                 EMcpMutationDurability::EditorStateOnly, Targets);
         for (UPrimitiveComponent* Component : Components)
@@ -187,11 +184,7 @@ bool HandleRenderLightingAction(
             return true;
         }
         // The components were never in a transaction, so undo left the cache as set.
-        TArray<UObject*> Targets;
-        for (UPrimitiveComponent* Component : Components)
-        {
-            Targets.Add(Component);
-        }
+        TArray<UObject*> Targets(Components);
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Indirect Lighting Cache")),
                                                 EMcpMutationDurability::EditorStateOnly, Targets);
         for (UPrimitiveComponent* Component : Components)

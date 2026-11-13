@@ -697,7 +697,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'lumen_update_scene',
     domain: 'render',
     family: 'render',
-    summary: 'Ask Lumen to recapture its scene (r.Lumen.Scene.Recapture) in the editor world, after big changes to lighting or geometry; nothing checks that Lumen is on, so executed only means the command ran.',
+    summary: 'Make Lumen rebuild its scene surface cache (r.LumenScene.SurfaceCache.Reset), after big changes to lighting or geometry; the reply names the variable set. Nothing checks that Lumen is on. CVAR_UNAVAILABLE when the variable is missing or held at another value.',
     whenToUse: ['Lumen GI must refresh the scene capture.'],
     whenNotToUse: ['A full lighting build is needed (use build_lighting via build_environment).'],
     inputProps: {},

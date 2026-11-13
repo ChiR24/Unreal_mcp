@@ -3,9 +3,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "Editor.h"
-#include "Engine/Engine.h"
-#include "Engine/World.h"
+#include "Foundation/Render/McpConsoleVariableWrite.h"
 
 namespace McpRenderHandlers
 {
@@ -14,27 +12,21 @@ bool HandleLumenUpdateScene(
     const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (GEditor)
+    // The renderer resets the surface cache and puts the variable back to 0. It ran "r.Lumen.Scene.Recapture", a
+    // command no engine version has, and answered "triggered" over the false Exec returned.
+    static const TCHAR* const ResetVariable = TEXT("r.LumenScene.SurfaceCache.Reset");
+    IConsoleVariable* Variable = IConsoleManager::Get().FindConsoleVariable(ResetVariable);
+    const FString NotTaken = Variable ? McpSetConsoleVariable(*Variable, TEXT("1")) : FString(TEXT("is not in this engine version"));
+    if (!NotTaken.IsEmpty())
     {
-        UWorld* World = GEditor->GetEditorWorldContext().World();
-        if (World)
-        {
-            GEngine->Exec(World, TEXT("r.Lumen.Scene.Recapture"));
-
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("action"), TEXT("manage_render"));
-            Result->SetStringField(TEXT("subAction"), TEXT("lumen_update_scene"));
-            Result->SetStringField(TEXT("command"), TEXT("r.Lumen.Scene.Recapture"));
-            Result->SetBoolField(TEXT("executed"), true);
-
-            Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-                TEXT("Lumen scene recapture triggered."), Result);
-            return true;
-        }
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s %s; the Lumen scene was not reset."), ResetVariable, *NotTaken), TEXT("CVAR_UNAVAILABLE"));
+        return true;
     }
-
-    Subsystem->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Could not execute command (no world context)."), TEXT("EXECUTION_FAILED"));
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("variable"), ResetVariable);
+    Result->SetBoolField(TEXT("executed"), true);
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lumen scene surface cache reset."), Result);
     return true;
 }
 }
