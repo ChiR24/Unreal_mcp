@@ -126,6 +126,13 @@ bool HandleRenderSceneCaptureAction(
         Cast<ASceneCaptureCube>(Actor) ? Cast<ASceneCaptureCube>(Actor)->GetCaptureComponentCube() : nullptr;
     if (!Capture2D && !CaptureCube)
     {
+        if (bCaptureSubAction)
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s is no scene capture (SceneCapture2D or SceneCaptureCube)."), *Actor->GetActorLabel()),
+                TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
         return false;
     }
 
@@ -196,6 +203,15 @@ bool HandleRenderSceneCaptureAction(
     }
     else if (SubAction == TEXT("capture_scene"))
     {
+        // Refused before the call: a capture into no render target ran and was refused after.
+        if (!((Capture2D && Capture2D->TextureTarget) || (CaptureCube && CaptureCube->TextureTarget)))
+        {
+            Subsystem->SendAutomationError(
+                RequestingSocket, RequestId,
+                TEXT("Cannot capture scene: assign a render target to the capture component first."),
+                TEXT("RENDER_TARGET_NOT_ASSIGNED"));
+            return true;
+        }
         if (Capture2D)
         {
             Capture2D->CaptureScene();
@@ -219,25 +235,18 @@ bool HandleRenderSceneCaptureAction(
         CaptureCube->MarkRenderStateDirty();
     }
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
-    Result->SetBoolField(TEXT("captured"), false);
     if (SubAction == TEXT("configure_capture_resolution"))
     {
         Result->SetNumberField(TEXT("resolution"), Capture2D->TextureTarget->SizeX);
     }
     if (SubAction == TEXT("capture_scene"))
     {
-        const bool bHasRenderTarget = (Capture2D && Capture2D->TextureTarget) || (CaptureCube && CaptureCube->TextureTarget);
-        if (!bHasRenderTarget)
-        {
-            Subsystem->SendAutomationError(
-                RequestingSocket, RequestId,
-                TEXT("Cannot capture scene: assign a render target to the capture component first."),
-                TEXT("RENDER_TARGET_NOT_ASSIGNED"));
-            return true;
-        }
         Result->SetBoolField(TEXT("captured"), true);
     }
-    Result->SetStringField(TEXT("renderTargetPath"), Capture2D && Capture2D->TextureTarget ? Capture2D->TextureTarget->GetPathName() : TEXT(""));
+    if (Capture2D && Capture2D->TextureTarget)
+    {
+        Result->SetStringField(TEXT("renderTargetPath"), Capture2D->TextureTarget->GetPathName());
+    }
     McpHandlerUtils::AddVerification(Result, Actor);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Scene capture action applied."), Result);
     return true;

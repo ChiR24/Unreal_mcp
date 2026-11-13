@@ -134,8 +134,6 @@ TSharedPtr<FJsonObject> BuildGraphResult(UPCGGraph* Graph, const FString& GraphP
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("graphPath"), GraphPath);
-    Result->SetStringField(TEXT("assetPath"), GraphPath);
-    Result->SetStringField(TEXT("name"), FPackageName::GetShortName(GraphPath));
     Result->SetBoolField(TEXT("created"), bCreated);
     Result->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Result, Graph);

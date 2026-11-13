@@ -190,14 +190,8 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     Resp->SetStringField(TEXT("componentPath"), SplinesComponent->GetPathName());
     Resp->SetNumberField(TEXT("pointCount"), ControlPoints.Num());
     Resp->SetNumberField(TEXT("segmentCount"), Segments.Num());
-    Resp->SetNumberField(TEXT("width"), Width);
-    Resp->SetBoolField(TEXT("closedLoop"), bClosedLoop);
-    Resp->SetBoolField(TEXT("raiseTerrain"), bRaiseTerrain);
-    Resp->SetBoolField(TEXT("lowerTerrain"), bLowerTerrain);
-    if (!LayerName.IsEmpty())
-    {
-        Resp->SetStringField(TEXT("layerName"), LayerName);
-    }
+    // As the control points hold it; the closed loop, terrain and layer settings went back as sent.
+    Resp->SetNumberField(TEXT("width"), ControlPoints[0]->Width);
     Undo->DescribeInto(Resp);
     // The merge draws the splines into their layer and the layers into the terrain, outside the undo step, as the
     // Landscape mode does on its next tick: so the reply and the next raycast already see the shaped ground.

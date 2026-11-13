@@ -96,7 +96,8 @@ FString ToScript(const TSharedPtr<FJsonValue>& Value)
     }
 }
 
-// (let name value) for each parameter, all on one line placed before the script's first line, so its line numbers hold.
+// (let name value) for each parameter, all on one line placed before the script's first line, so its line numbers hold,
+// unless an argument's text holds a line break (the language has no escape for one): each moves the lines after it down.
 FString Bound(const TArray<FString>& Params, const TSharedPtr<FJsonObject>& Args)
 {
     FString Out;

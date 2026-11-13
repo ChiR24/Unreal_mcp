@@ -32,10 +32,8 @@ bool McpParseTickResolution(const FString &Text, FFrameRate &Out) {
 bool UEngineWireSubsystem::HandleSequenceSetDisplayRate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString SeqPath;
-  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_set_display_rate"), SeqPath);
+  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, Payload, TEXT("sequence_set_display_rate"), SeqPath);
   if (!SeqObj) {
     return true;
   }
@@ -45,15 +43,14 @@ bool UEngineWireSubsystem::HandleSequenceSetDisplayRate(
       FFrameRate NewRate;
       FString FrameRateError;
       if (McpSequenceFrameRate::TryParse(
-              LocalPayload, TEXT("frameRate"), NewRate, FrameRateError)) {
+              Payload, TEXT("frameRate"), NewRate, FrameRateError)) {
         // One undo step: Modify after the change recorded nothing to undo to.
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Sequence Display Rate")),
                                                 EMcpMutationDurability::EditorStateOnly, {LevelSeq, MovieScene});
         MovieScene->SetDisplayRate(NewRate);
         LevelSeq->MarkPackageDirty();
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        Resp->SetStringField(TEXT("displayRate"),
-                             MovieScene->GetDisplayRate().ToPrettyText().ToString());
+        Resp->SetNumberField(TEXT("frameRate"), MovieScene->GetDisplayRate().AsDecimal());
         McpHandlerUtils::AddVerification(Resp, LevelSeq);
         SendAutomationResponse(Socket, RequestId, true,
                                TEXT("Display rate set"), Resp, FString());
@@ -122,11 +119,9 @@ bool UEngineWireSubsystem::HandleSequenceSetTickResolution(
     Resp->SetStringField(TEXT("previousTickResolution"), Previous.ToPrettyText().ToString());
     // A display frame that is not a whole number of ticks falls between them.
     if (!MovieScene->GetDisplayRate().IsMultipleOf(MovieScene->GetTickResolution())) {
-      TArray<TSharedPtr<FJsonValue>> Warnings;
-      Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("The display rate %s is not a whole number of ticks at %s, "
-          "so frames fall between ticks."), *MovieScene->GetDisplayRate().ToPrettyText().ToString(),
-          *MovieScene->GetTickResolution().ToPrettyText().ToString())));
-      Resp->SetArrayField(TEXT("warnings"), Warnings);
+      Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(TEXT("The display rate %s is "
+          "not a whole number of ticks at %s, so frames fall between ticks."), *MovieScene->GetDisplayRate().ToPrettyText().ToString(),
+          *MovieScene->GetTickResolution().ToPrettyText().ToString())}));
     }
     McpHandlerUtils::AddVerification(Resp, Sequence);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Tick resolution set"),

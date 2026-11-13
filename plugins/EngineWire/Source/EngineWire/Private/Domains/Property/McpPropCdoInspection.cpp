@@ -10,25 +10,38 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
+#include "Algo/AnyOf.h"
 #include "Components/ActorComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "GameFramework/Actor.h"
 
+namespace
+{
+// The names of Filter no class of Classes has: missingProperties, as get_component_details and get_property list them.
+void McpAddMissingProperties(const TSharedPtr<FJsonObject>& Resp, const TArray<FName>& Filter, const TSet<const UClass*>& Classes)
+{
+    TArray<FString> Missing;
+    for (const FName& Name : Filter)
+    {
+        if (!Algo::AnyOf(Classes, [&Name](const UClass* Class) { return FindFProperty<FProperty>(Class, Name) != nullptr; }))
+        {
+            Missing.Add(Name.ToString());
+        }
+    }
+    if (Missing.Num() > 0)
+    {
+        Resp->SetArrayField(TEXT("missingProperties"), McpHandlerUtils::ToJsonStringArray(Missing));
+    }
+}
+} // namespace
+
 bool UEngineWireSubsystem::HandleInspectCdoAction(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("inspect_cdo: payload missing"),
-                            TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
     BlueprintPath.TrimStartAndEndInline();
@@ -56,15 +69,6 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
     Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
 
     TArray<FName> PropertyNameFilter;
-    FString PropertyPathFilter;
-    if (Payload->TryGetStringField(TEXT("propertyPath"), PropertyPathFilter))
-    {
-        PropertyPathFilter.TrimStartAndEndInline();
-        if (!PropertyPathFilter.IsEmpty())
-        {
-            PropertyNameFilter.Add(FName(*PropertyPathFilter));
-        }
-    }
     const TArray<TSharedPtr<FJsonValue>>* PropNamesArr = nullptr;
     if (Payload->TryGetArrayField(TEXT("propertyNames"), PropNamesArr) && PropNamesArr)
     {
@@ -129,6 +133,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
         {
             Resp->SetObjectField(TEXT("properties"), CompJson);
         }
+        McpAddMissingProperties(Resp, PropertyNameFilter, {FoundComp->GetClass()});
         Resp->SetBoolField(TEXT("success"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("CDO component inspected"), Resp, FString());
@@ -156,6 +161,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
 
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
     TSet<FString> SeenNames;
+    TSet<const UClass*> ListedClasses = {CDO->GetClass()};
     TMap<FString, FString> ScsSourceMap = McpPropertyCdoComponents::BuildScsSourceMap(Blueprint);
 
     if (AActor* DefaultActor = Cast<AActor>(CDO))
@@ -167,6 +173,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
             if (!Comp) continue;
             const FString CompName = Comp->GetName();
             SeenNames.Add(CompName);
+            ListedClasses.Add(Comp->GetClass());
             const FString Source = ScsSourceMap.Contains(CompName)
                 ? TEXT("Native_Override") : TEXT("Native");
             ComponentsArray.Add(MakeShared<FJsonValueObject>(
@@ -183,6 +190,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
             return true;
         }
         SeenNames.Add(VarName);
+        ListedClasses.Add(Node->ComponentTemplate->GetClass());
         bool bOverridden = false;
         TSharedPtr<FJsonObject> CompObj = McpPropertyCdoComponents::BuildComponentSummary(
             McpPropertyCdoComponents::EffectiveTemplate(Blueprint, Node, &bOverridden), VarName,
@@ -201,6 +209,7 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
 
     McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Resp,
                                              TEXT("missingComponents"));
+    McpAddMissingProperties(Resp, PropertyNameFilter, ListedClasses);
     Resp->SetArrayField(TEXT("components"), ComponentsArray);
     Resp->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
     Resp->SetBoolField(TEXT("success"), true);

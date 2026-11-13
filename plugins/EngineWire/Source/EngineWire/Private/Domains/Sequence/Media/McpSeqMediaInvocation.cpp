@@ -36,6 +36,13 @@ bool SetBoolProperty(UObject *Object,
   return true;
 }
 
+bool GetBoolProperty(const UObject *Object, const FString &PropertyName) {
+  const FBoolProperty *Property =
+      Object ? FindFProperty<FBoolProperty>(Object->GetClass(), *PropertyName)
+             : nullptr;
+  return Property && Property->GetPropertyValue_InContainer(Object);
+}
+
 bool SetStringProperty(UObject *Object,
                        const FString &PropertyName,
                        const FString &Value) {

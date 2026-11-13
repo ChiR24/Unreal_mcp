@@ -16,8 +16,9 @@ bool HandleListLightTypes(
     const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // The four engine lights first, then every other concrete ALight class.
-    TArray<FString> Names = {TEXT("DirectionalLight"), TEXT("PointLight"), TEXT("SpotLight"), TEXT("RectLight")};
+    // The four engine lights and the sky light create_light also makes (an AInfo, no ALight) first, then every other
+    // concrete ALight class.
+    TArray<FString> Names = {TEXT("DirectionalLight"), TEXT("PointLight"), TEXT("SpotLight"), TEXT("RectLight"), TEXT("SkyLight")};
     for (TObjectIterator<UClass> It; It; ++It)
     {
         if (It->IsChildOf(ALight::StaticClass()) && !It->HasAnyClassFlags(CLASS_Abstract))

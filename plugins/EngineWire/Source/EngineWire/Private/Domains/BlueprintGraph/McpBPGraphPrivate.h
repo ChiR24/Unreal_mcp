@@ -143,6 +143,9 @@ FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph);
 const FString* StandardMacroGraphName(const FString& NodeType);
 // pinSubType, container and a map's valueType on a pin descriptor (McpBPGraphQueries.cpp).
 void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPinType& PinType);
+// One pin as JSON for every graph read: pinName, direction, pinType and its type fields, linkedTo (each far node's id,
+// pin and title) and the default fields (McpBPGraphQueries.cpp).
+TSharedPtr<FJsonObject> MakePinObject(UEdGraphPin* Pin);
 // defaultValue / defaultTextValue / defaultObjectPath, only on a visible input nothing is wired to.
 void AddPinDefaultFields(const TSharedPtr<FJsonObject>& PinObject, const UEdGraphPin& Pin);
 

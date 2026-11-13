@@ -17,7 +17,6 @@
 #include "Engine/SkyLight.h"
 #include "Engine/SpotLight.h"
 #include "Engine/World.h"
-#include "Kismet/GameplayStatics.h"
 #include "RenderingThread.h"
 
 namespace McpLightingHandlers
@@ -42,11 +41,11 @@ bool HandleSpawnLight(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    // lightClass may name any light class; lightType/type must be one of the engine lights.
+    // lightClass may name any light class; lightType must be one of the engine lights.
     FString LightClassStr = GetJsonStringField(Payload, TEXT("lightClass"));
     if (LightClassStr.IsEmpty())
     {
-        LightClassStr = McpGetFirstStringField(Payload, {TEXT("lightType"), TEXT("type")});
+        LightClassStr = GetJsonStringField(Payload, TEXT("lightType"));
         if (LightClassStr.IsEmpty())
         {
             Subsystem.SendAutomationError(
@@ -98,7 +97,7 @@ bool HandleSpawnLight(
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
-    if (!World || !World->IsValidLowLevel())
+    if (!World)
     {
         Subsystem.SendAutomationError(
             RequestingSocket, RequestId, TEXT("No valid world available for spawning light"), TEXT("NO_WORLD"));
@@ -110,55 +109,44 @@ bool HandleSpawnLight(
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Spawn Light")), EMcpMutationDurability::EditorStateOnly,
                                             TArray<UObject*>());
     FTransform SpawnTransform(Rotation, Location);
-    AActor* NewLight = World->SpawnActorDeferred<AActor>(
-        LightClass, SpawnTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AActor* NewLight = World->SpawnActor<AActor>(LightClass, SpawnTransform, SpawnParams);
     if (!NewLight)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn light actor"), TEXT("SPAWN_FAILED"));
         return true;
     }
-    UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
     NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
     const FString Name = GetJsonStringField(Payload, TEXT("name"));
     NewLight->SetActorLabel(Name.IsEmpty() ? LightClass->GetName() : Name);
 
     // What was written, for the reply: the settings below and in `properties` each say here that they took.
     FLightPropertyReport Report;
+    // The top-level intensity and color, which ApplyLightProperties (it reads only `properties`) would drop; a
+    // properties.color below still wins. A sky light's component is no ULightComponent: both kinds take them.
+    const auto ApplyTopLevel = [&Payload, &Report](auto* Component)
+    {
+        double TopLevelIntensity = 0.0;
+        if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
+        {
+            Component->SetIntensity(static_cast<float>(TopLevelIntensity));
+            Report.Applied.AddUnique(TEXT("intensity"));
+        }
+        if (Payload->HasField(TEXT("color")))
+        {
+            Component->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
+            Report.Applied.AddUnique(TEXT("color"));
+        }
+    };
     if (ULightComponent* BaseLightComp = NewLight->FindComponentByClass<ULightComponent>())
     {
         BaseLightComp->SetMobility(EComponentMobility::Movable);
-
-        // ApplyLightProperties below only reads the `properties`
-        // sub-object, so a documented top-level intensity would otherwise be
-        // silently dropped and the component keeps the engine default. Mirror
-        // spawn_sky_light / the Effect create_dynamic_light path.
-        double TopLevelIntensity = 0.0;
-        if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
-        {
-            BaseLightComp->SetIntensity(static_cast<float>(TopLevelIntensity));
-            Report.Applied.AddUnique(TEXT("intensity"));
-        }
-        // A properties.color below still wins.
-        if (Payload->HasField(TEXT("color")))
-        {
-            BaseLightComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
-            Report.Applied.AddUnique(TEXT("color"));
-        }
+        ApplyTopLevel(BaseLightComp);
     }
-    // A sky light's component is no ULightComponent, so intensity and color were dropped for lightType sky.
     else if (USkyLightComponent* SkyComp = NewLight->FindComponentByClass<USkyLightComponent>())
     {
-        double TopLevelIntensity = 0.0;
-        if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
-        {
-            SkyComp->SetIntensity(static_cast<float>(TopLevelIntensity));
-            Report.Applied.AddUnique(TEXT("intensity"));
-        }
-        if (Payload->HasField(TEXT("color")))
-        {
-            SkyComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
-            Report.Applied.AddUnique(TEXT("color"));
-        }
+        ApplyTopLevel(SkyComp);
     }
 
     const TSharedPtr<FJsonObject>* Props;
@@ -169,12 +157,8 @@ bool HandleSpawnLight(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    // Report BOTH identities. The label is the editor-facing name set above; the
-    // object name is what FindObject / set_transform / get_transform resolve
-    // against. Previously only the label was returned under "actorName", so
-    // callers that fed it back into name-based APIs could miss the actor.
+    // Both identities: actorName, the label unless another actor shares it, and the object name FindObject resolves.
     Resp->SetStringField(TEXT("actorName"), McpActorRef(NewLight));
-    Resp->SetStringField(TEXT("actorLabel"), NewLight->GetActorLabel());
     Resp->SetStringField(TEXT("objectName"), NewLight->GetName());
     // Which settings took, which were refused and why, which were written with another value: a light spawned with
     // a setting dropped on the floor answered "Light spawned" and nothing else.

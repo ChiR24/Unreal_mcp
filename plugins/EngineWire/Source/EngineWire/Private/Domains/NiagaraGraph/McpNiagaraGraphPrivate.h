@@ -16,6 +16,8 @@ class FMcpBridgeWebSocket;
 
 namespace McpNiagaraGraphHandlers
 {
+// The node NodeRef names in TargetGraph: its GUID, object name or list title; null when none does.
+UEdGraphNode* FindNodeByIdNameOrTitle(UNiagaraGraph* TargetGraph, const FString& NodeRef);
 // A graph edit persists: dirty the system, then save it unless the caller sent save:false.
 // Dirtying alone let every module add, removal and wire vanish at the next editor start.
 inline void SaveNiagaraGraphEdit(UNiagaraSystem* System, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)

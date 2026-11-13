@@ -27,18 +27,14 @@ TSharedPtr<FJsonObject> BuildNodeResult(UPCGGraph* Graph, UPCGNode* Node, const 
     if (Node)
     {
         Result->SetStringField(TEXT("nodeId"), Node->GetName());
-        Result->SetStringField(TEXT("nodeName"), Node->GetName());
         Result->SetStringField(TEXT("title"), GetNodeTitleString(Node));
         if (UPCGSettings* Settings = Node->GetSettings())
         {
             Result->SetStringField(TEXT("nodeType"), Settings->GetClass()->GetName());
         }
-        McpHandlerUtils::AddVerification(Result, Node);
     }
-    else
-    {
-        McpHandlerUtils::AddVerification(Result, Graph);
-    }
+    // The asset the call changed is the graph, whatever node it touched.
+    McpHandlerUtils::AddVerification(Result, Graph);
     return Result;
 }
 

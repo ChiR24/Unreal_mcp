@@ -56,13 +56,10 @@ bool HandleRigMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
     // so re-read build readiness rather than claiming the rig succeeded.
     const bool bCanBuild = QueryCanBuild(Subsystem, Character, false);
 
-    McpSafeAssetSave(Character);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
-    Result->SetStringField(TEXT("rigType"), RigType);
+    Result->SetBoolField(TEXT("saved"), McpSafeAssetSave(Character));
+    Result->SetStringField(TEXT("characterPath"), Character->GetOutermost()->GetName());
     Result->SetBoolField(TEXT("canBuild"), bCanBuild);
-    Result->SetBoolField(TEXT("blocking"), bBlocking);
     if (!bCanBuild && bBlocking)
     {
         Result->SetStringField(TEXT("detail"),
@@ -153,10 +150,7 @@ bool HandleBuildMetaHuman(UEngineWireSubsystem* Self, const FString& RequestId,
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
-    Result->SetStringField(TEXT("pipelineType"), PipelineType);
-    Result->SetStringField(TEXT("pipelineQuality"), Quality);
-    if (!BuildPath.IsEmpty()) { Result->SetStringField(TEXT("buildPath"), BuildPath); }
+    Result->SetStringField(TEXT("characterPath"), Character->GetOutermost()->GetName());
     McpHandlerUtils::AddVerification(Result, Character);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("MetaHuman assembled"), Result);
     return true;

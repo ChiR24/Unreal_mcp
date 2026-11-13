@@ -48,7 +48,7 @@ void AddPinDefaultFields(const TSharedPtr<FJsonObject>& PinObject, const UEdGrap
     }
 }
 
-static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
+TSharedPtr<FJsonObject> MakePinObject(UEdGraphPin* Pin)
 {
     TSharedPtr<FJsonObject> PinObject =
         McpHandlerUtils::CreateResultObject();
@@ -56,11 +56,11 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
         TEXT("pinName"),
         Pin->PinName.ToString());
     PinObject->SetStringField(
-        TEXT("pinType"),
-        Pin->PinType.PinCategory.ToString());
-    PinObject->SetStringField(
         TEXT("direction"),
         Pin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output"));
+    PinObject->SetStringField(
+        TEXT("pinType"),
+        Pin->PinType.PinCategory.ToString());
     AddPinTypeFields(PinObject, Pin->PinType);
 
     TArray<TSharedPtr<FJsonValue>> LinkedTo;
@@ -84,11 +84,7 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
         }
     }
     PinObject->SetArrayField(TEXT("linkedTo"), LinkedTo);
-    // Report the pin literal here too, exactly as the single-node pin view
-    // does. Without it this view answered with the wiring only, so a caller
-    // reading a whole graph could not tell a pin holding "L_Hub" from an
-    // empty one, and the absence of the field read as "no value" -- which
-    // sent a live debugging session down the wrong branch entirely.
+    // The pin literal: without it a caller reading a whole graph could not tell a pin holding "L_Hub" from an empty one.
     AddPinDefaultFields(PinObject, *Pin);
     return PinObject;
 }
@@ -227,7 +223,7 @@ static bool GetGraphDetails(FActionContext& Context)
                 if (Pin)
                 {
                     Pins.Add(
-                        MakeShared<FJsonValueObject>(MakePinSummary(Pin)));
+                        MakeShared<FJsonValueObject>(MakePinObject(Pin)));
                 }
             }
             NodeObject->SetArrayField(TEXT("pins"), Pins);

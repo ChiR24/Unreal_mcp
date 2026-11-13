@@ -178,7 +178,7 @@ const realWorldCoverageCases = [
     arguments: { action: 'create_pcg_subgraph', subgraphPath: REAL_SUBGRAPH_PATH, parentGraphPath: REAL_GRAPH_PATH, nodeName: `PCG_RW_SubgraphNode_${ts}`, overwrite: true, save: true },
     expected: pcgExpected,
     assertions: [
-      { path: 'structuredContent.result.subgraphPath', equals: REAL_SUBGRAPH_PATH, label: 'subgraph created at requested path' },
+      { path: 'structuredContent.result.graphPath', equals: REAL_SUBGRAPH_PATH, label: 'subgraph created at requested path' },
       { path: 'structuredContent.result.parentGraphPath', equals: REAL_GRAPH_PATH, label: 'subgraph node attached to parent graph' },
       { path: 'structuredContent.result.parentSaved', equals: true, label: 'parent graph saved after subgraph attachment' }
     ]

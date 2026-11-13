@@ -36,8 +36,8 @@ bool HandleSimplifyMesh(UEngineWireSubsystem* Self, const FString& RequestId,
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
-    Result->SetNumberField(TEXT("simplifiedTriangles"), TriCountAfter);
+    Result->SetNumberField(TEXT("trianglesBefore"), TriCountBefore);
+    Result->SetNumberField(TEXT("trianglesAfter"), TriCountAfter);
     Result->SetNumberField(TEXT("reductionPercent"), TriCountBefore > 0 ? (1.0 - ((double)TriCountAfter / (double)TriCountBefore)) * 100.0 : 0.0);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh simplified"), Result);
@@ -83,9 +83,6 @@ bool HandleSubdivide(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("level"), Iterations);
     Result->SetNumberField(TEXT("trianglesBefore"), TriCountBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TriCountAfter);
-    Result->SetNumberField(TEXT("iterations"), Iterations);
-    Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
-    Result->SetNumberField(TEXT("subdividedTriangles"), TriCountAfter);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh subdivided"), Result);
     return true;

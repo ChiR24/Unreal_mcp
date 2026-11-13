@@ -167,21 +167,7 @@ bool HandleInspectObjectAction(
         Resp->SetBoolField(TEXT("isHidden"), Actor->IsHidden());
         Resp->SetBoolField(TEXT("isSelected"), Actor->IsSelected());
 
-        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
-        const FTransform &Transform = Actor->GetActorTransform();
-
-        TransformObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
-
-        TSharedPtr<FJsonObject> RotationObj = McpHandlerUtils::CreateResultObject();
-        FRotator Rotator = Transform.GetRotation().Rotator();
-        RotationObj->SetNumberField(TEXT("pitch"), Rotator.Pitch);
-        RotationObj->SetNumberField(TEXT("yaw"), Rotator.Yaw);
-        RotationObj->SetNumberField(TEXT("roll"), Rotator.Roll);
-        TransformObj->SetObjectField(TEXT("rotation"), RotationObj);
-
-        TransformObj->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
-
-        Resp->SetObjectField(TEXT("transform"), TransformObj);
+        Resp->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(Actor->GetActorTransform()));
 
         TArray<TSharedPtr<FJsonValue>> ComponentsArray;
         TInlineComponentArray<UActorComponent *> Components;

@@ -7,47 +7,6 @@
 
 namespace McpBlueprintGraphHandlers
 {
-static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
-{
-    TSharedPtr<FJsonObject> PinObject =
-        McpHandlerUtils::CreateResultObject();
-    PinObject->SetStringField(
-        TEXT("pinName"),
-        Pin->PinName.ToString());
-    PinObject->SetStringField(
-        TEXT("direction"),
-        Pin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output"));
-    PinObject->SetStringField(
-        TEXT("pinType"),
-        Pin->PinType.PinCategory.ToString());
-
-    AddPinTypeFields(PinObject, Pin->PinType);
-
-    TArray<TSharedPtr<FJsonValue>> LinkedTo;
-    for (UEdGraphPin* LinkedPin : Pin->LinkedTo)
-    {
-        if (LinkedPin && LinkedPin->GetOwningNode())
-        {
-            TSharedPtr<FJsonObject> Link =
-                McpHandlerUtils::CreateResultObject();
-            Link->SetStringField(
-                TEXT("nodeId"),
-                LinkedPin->GetOwningNode()->NodeGuid.ToString());
-            Link->SetStringField(
-                TEXT("pinName"),
-                LinkedPin->PinName.ToString());
-            // The far node's title, so a chain reads without a call per hop.
-            Link->SetStringField(
-                TEXT("nodeTitle"),
-                LinkedPin->GetOwningNode()->GetNodeTitle(ENodeTitleType::ListView).ToString());
-            LinkedTo.Add(MakeShared<FJsonValueObject>(Link));
-        }
-    }
-    PinObject->SetArrayField(TEXT("linkedTo"), LinkedTo);
-    AddPinDefaultFields(PinObject, *Pin);
-    return PinObject;
-}
-
 // followExec: the nodes the exec wires leaving Start reach, depth-first (a Branch's
 // then side before its else), each with its inputs as a value or "<- Title.Pin".
 // Reading what an event does took one pin call per hop before.
@@ -170,7 +129,7 @@ static bool GetNodeDetails(FActionContext& Context)
     {
         if (Pin)
         {
-            Pins.Add(MakeShared<FJsonValueObject>(MakeDetailedPin(Pin)));
+            Pins.Add(MakeShared<FJsonValueObject>(MakePinObject(Pin)));
         }
     }
     Result->SetArrayField(TEXT("pins"), Pins);
@@ -229,7 +188,7 @@ static bool GetPinDetails(FActionContext& Context)
     {
         if (Pin)
         {
-            Pins.Add(MakeShared<FJsonValueObject>(MakeDetailedPin(Pin)));
+            Pins.Add(MakeShared<FJsonValueObject>(MakePinObject(Pin)));
         }
     }
     Result->SetArrayField(TEXT("pins"), Pins);

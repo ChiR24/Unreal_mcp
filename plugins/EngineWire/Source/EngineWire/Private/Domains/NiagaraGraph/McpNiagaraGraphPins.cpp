@@ -105,6 +105,7 @@ bool TryAutoConnectPins(
         TEXT("PIN_NOT_FOUND"));
     return true;
 }
+} // namespace
 
 UEdGraphNode* FindNodeByIdNameOrTitle(UNiagaraGraph* TargetGraph, const FString& NodeRef)
 {
@@ -128,11 +129,6 @@ UEdGraphNode* FindNodeByIdNameOrTitle(UNiagaraGraph* TargetGraph, const FString&
 
 UEdGraphPin* FindPinByNameOrDisplayName(UEdGraphNode* Node, const FString& PinName)
 {
-    if (!Node)
-    {
-        return nullptr;
-    }
-
     if (UEdGraphPin* Pin = Node->FindPin(FName(*PinName)))
     {
         return Pin;
@@ -140,14 +136,12 @@ UEdGraphPin* FindPinByNameOrDisplayName(UEdGraphNode* Node, const FString& PinNa
 
     for (UEdGraphPin* Pin : Node->Pins)
     {
-        if (Pin && (Pin->PinName.ToString() == PinName ||
-            Pin->GetDisplayName().ToString() == PinName))
+        if (Pin && Pin->GetDisplayName().ToString() == PinName)
         {
             return Pin;
         }
     }
     return nullptr;
-}
 }
 
 bool HandleConnectPins(
@@ -207,10 +201,10 @@ bool HandleConnectPins(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     SaveNiagaraGraphEdit(System, Payload, Result);
     McpHandlerUtils::AddVerification(Result, System);
-    Result->SetStringField(TEXT("fromNode"), FromNodeId);
-    Result->SetStringField(TEXT("fromPin"), FromPinName);
-    Result->SetStringField(TEXT("toNode"), ToNodeId);
-    Result->SetStringField(TEXT("toPin"), ToPinName);
+    Result->SetStringField(TEXT("fromNode"), FromNode->NodeGuid.ToString());
+    Result->SetStringField(TEXT("fromPin"), FromPin->PinName.ToString());
+    Result->SetStringField(TEXT("toNode"), ToNode->NodeGuid.ToString());
+    Result->SetStringField(TEXT("toPin"), ToPin->PinName.ToString());
     Result->SetBoolField(TEXT("connected"), true);
 
     Bridge->SendAutomationResponse(Socket, RequestId, true,

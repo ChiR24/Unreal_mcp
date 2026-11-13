@@ -68,22 +68,10 @@ bool HandleWidgetAuthoringAdvancedStyling(
         double FontSize = 0.0;
         const bool bSize = Payload->TryGetNumberField(TEXT("fontSize"), FontSize) && FontSize > 0.0;
 
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
             return true;
         }
 
@@ -202,22 +190,10 @@ bool HandleWidgetAuthoringAdvancedStyling(
         float Right = GetJsonNumberField(Payload, TEXT("right"), 0.0f);
         float Bottom = GetJsonNumberField(Payload, TEXT("bottom"), 0.0f);
 
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* TargetWidget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!TargetWidget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
             return true;
         }
 

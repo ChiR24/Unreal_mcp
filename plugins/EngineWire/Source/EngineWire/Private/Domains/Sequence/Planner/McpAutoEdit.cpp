@@ -124,6 +124,13 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         return true;
     }
     Result->SetBoolField(TEXT("dryRun"), bDryRun);
+    // The range is judged in at most 2400 segments; the last shot runs on to the playback end unjudged.
+    if (Plan.Unjudged > 0.0)
+    {
+        Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(
+            TEXT("The last %.1f s of the range were not judged (2400 segments of %g s); the last shot runs on to the end."),
+            Plan.Unjudged, Plan.SegmentSeconds)}));
+    }
     Bridge.SendAutomationResponse(Socket, RequestId, true, EditMessage(Cameras, Plan, Edit, bDryRun), Result);
     return true;
 }

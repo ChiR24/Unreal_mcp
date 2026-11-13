@@ -91,14 +91,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     bool bSaved = false;
     FinalizeTemplateEdit(Blueprint, Defaults, Result, bCompiled, bSaved);
 
-    // An inherited component has no SCS node of its own, so verifying only
-    // through the node lookup would report failure for a write that landed. Read
-    // the template back instead, and attach node verification when there is one.
+    // An inherited or native component has no SCS node of its own: the template is found again through the
+    // resolver after the compile, as set_property does (the one written before it, for a native part the previous
+    // class default's component, proves nothing), and node verification is attached when there is a node.
     USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
     USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
-    USceneComponent *VerifiedSceneComp =
-        VerifiedNode ? Cast<USceneComponent>(VerifiedNode->ComponentTemplate)
-                     : SceneComp;
+    USceneComponent *VerifiedSceneComp = Cast<USceneComponent>(McpPropertyCdoComponents::FindCdoComponent(
+        Blueprint, Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr,
+        ComponentName, /*bCreateInheritedOverride=*/false));
     if (!VerifiedSceneComp ||
         !VerifiedSceneComp->GetRelativeTransform().Equals(NewTransform)) {
       Result->SetBoolField(TEXT("success"), false);

@@ -207,8 +207,7 @@ TSharedPtr<FJsonObject> InstancingGroups(UWorld* World)
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("mesh"), First->GetStaticMesh()->GetPathName());
-        Row->SetStringField(TEXT("mobility"), First->Mobility == EComponentMobility::Movable ? TEXT("Movable")
-            : First->Mobility == EComponentMobility::Stationary ? TEXT("Stationary") : TEXT("Static"));
+        Row->SetStringField(TEXT("mobility"), StaticEnum<EComponentMobility::Type>()->GetNameStringByValue(First->Mobility.GetValue()));
         Row->SetNumberField(TEXT("count"), Group.Value.Num());
         Row->SetArrayField(TEXT("actors"), Names);
         Rows.Add(MakeShared<FJsonValueObject>(Row));
@@ -216,7 +215,10 @@ TSharedPtr<FJsonObject> InstancingGroups(UWorld* World)
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     Out->SetArrayField(TEXT("groups"), Rows);
     Out->SetNumberField(TEXT("actors"), Copies);
-    Out->SetStringField(TEXT("note"), TEXT("Loaded actors only: a World Partition level counts the cells it has loaded."));
+    if (World->IsPartitionedWorld())
+    {
+        Out->SetStringField(TEXT("note"), TEXT("Loaded actors only: a World Partition level counts the cells it has loaded."));
+    }
     return Out;
 }
 } // namespace McpPerception

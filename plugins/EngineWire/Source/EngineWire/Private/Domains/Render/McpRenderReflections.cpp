@@ -163,7 +163,9 @@ bool HandleRenderReflectionAction(
         UReflectionCaptureComponent* Capture = Actor->FindComponentByClass<UReflectionCaptureComponent>();
         if (!Capture)
         {
-            return false;
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s has no reflection capture component."), *Actor->GetActorLabel()), TEXT("COMPONENT_NOT_FOUND"));
+            return true;
         }
         // No captureOffset, or one that is no vector, answered "configured" with nothing changed. A component left
         // out of {x, y, z} keeps its value.
@@ -193,7 +195,9 @@ bool HandleRenderReflectionAction(
         UReflectionCaptureComponent* Capture = Actor->FindComponentByClass<UReflectionCaptureComponent>();
         if (!Capture)
         {
-            return false;
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s has no reflection capture component."), *Actor->GetActorLabel()), TEXT("COMPONENT_NOT_FOUND"));
+            return true;
         }
         Capture->MarkDirtyForRecapture();
         if (UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld())

@@ -61,7 +61,6 @@ bool HandleCreatePCGSubgraph(UEngineWireSubsystem* Bridge, const FString& Reques
     }
 
     TSharedPtr<FJsonObject> Result = BuildGraphResult(Subgraph, SubgraphPath, bCreated, bSubgraphSaved);
-    Result->SetStringField(TEXT("subgraphPath"), SubgraphPath);
 
     if (ParentGraph)
     {

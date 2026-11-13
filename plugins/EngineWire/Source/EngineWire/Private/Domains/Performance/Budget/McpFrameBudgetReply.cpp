@@ -5,6 +5,7 @@
 #include "Domains/Performance/Budget/McpFrameBudget.h"
 
 #include "Components/PrimitiveComponent.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Components/LightComponent.h"
 #include "EditorViewportClient.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -28,7 +29,7 @@ TSharedPtr<FJsonObject> KnobRow(const FKnob& Knob, bool bChosen)
         const AActor* Owner = Component ? Component->GetOwner() : nullptr;
         if (Owner && Names.Num() < NamesPerKnob)
         {
-            Names.Add(MakeShared<FJsonValueString>(Owner->GetActorLabel()));
+            Names.Add(MakeShared<FJsonValueString>(McpActorRef(Owner)));
         }
     };
     for (const TWeakObjectPtr<ULightComponent>& Light : Knob.Lights)

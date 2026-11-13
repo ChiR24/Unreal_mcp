@@ -187,6 +187,7 @@ bool HandlePlaceDecals(UEngineWireSubsystem& Bridge, const FString& RequestId, c
     for (TActorIterator<AActor> It(World); It; ++It) Taken.Add(It->GetActorLabel());
     int32 Counter = 0;
     TArray<TSharedPtr<FJsonValue>> Placed, Missed;
+    TArray<FString> Spawned;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     {
         TOptional<FMcpScopedEditorTransaction> Transaction;
@@ -235,6 +236,7 @@ bool HandlePlaceDecals(UEngineWireSubsystem& Bridge, const FString& RequestId, c
                 Decal->Tags.Add(FName(TEXT("mcp.decal")));
                 Decal->Tags.Add(FName(TEXT("mcp.placement.ok")));
                 Name = Decal->GetActorLabel();
+                Spawned.Add(Name);
             }
             Row->SetStringField(TEXT("name"), Name);
             Row->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Spot.Location));
@@ -245,6 +247,10 @@ bool HandlePlaceDecals(UEngineWireSubsystem& Bridge, const FString& RequestId, c
         if (Transaction.IsSet() && Placed.Num() > 0) Transaction->DescribeInto(Result);
     }
     Result->SetArrayField(TEXT("placed"), Placed);
+    if (!bDryRun)
+    {
+        Result->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Spawned));
+    }
     Result->SetArrayField(TEXT("missed"), Missed);
     Result->SetNumberField(TEXT("placedCount"), Placed.Num());
     Result->SetBoolField(TEXT("dryRun"), bDryRun);

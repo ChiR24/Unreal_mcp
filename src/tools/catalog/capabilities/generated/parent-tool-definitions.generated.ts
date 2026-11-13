@@ -21524,15 +21524,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Boolean parameter."
         },
-        "pipelineType": {
-          "type": "string",
-          "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
-          "enum": [
-            "Cinematic",
-            "Optimized",
-            "UEFN"
-          ]
-        },
         "playerViewState": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -27513,7 +27504,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
+          "description": "currentLevel, persistentLevel, actorCount (valid actors), sublevelCount, streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
         },
         "literalNodeId": {
           "type": "string",
@@ -28345,7 +28336,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_node_settings",
             "set_partition_grid_size"
           ],
-          "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor's partition grid (at least 400), scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it."
+          "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, assetName, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives graphPath (the subgraph's), created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor's partition grid (at least 400), scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it."
         },
         "force": {
           "type": "boolean",
@@ -28510,6 +28501,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "assetName": {
+          "type": "string",
+          "description": "The asset name."
+        },
         "created": {
           "type": "boolean",
           "description": "False when overwrite handed back a graph already there."
@@ -28530,10 +28525,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
-        },
-        "name": {
-          "type": "string",
-          "description": "The asset name."
         },
         "nodeId": {
           "type": "string",
@@ -29516,7 +29507,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "minimum": 0.1,
           "maximum": 5,
-          "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps."
+          "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps. At most 2400 steps are judged; past them the last shot runs on to the end, and a warning says how long that is."
         },
         "sensorHeight": {
           "type": "number",

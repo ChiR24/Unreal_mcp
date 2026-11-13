@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f5cfb27d3526e1ed",
+  "catalogRevision": "caa9b5d747f71b8e",
   "recordCount": 489,
   "records": [
     {
@@ -22392,7 +22392,7 @@
                 "set_property",
                 "set_transform"
               ],
-              "description": "Which edit scs variant to run.\nadd_scs_component: Add a component named componentName of componentClass (a component class name such as StaticMeshComponent, or its /Script path) to a Blueprint, under parentComponent (attachTo): its own part, a parent Blueprint's, or the native root, by default the root. meshPath and materialPath give a mesh component its mesh and first material and are refused, adding nothing, when they do not load or the class shows none; location, rotation, scale and properties set the template, and a property that does not take fails the call. A taken name is refused. The Blueprint compiles and saves unless save is false (compiled, saved); the reply names the parent the component got, and mesh_applied and material_applied.\nadd_component: Add a component to a Blueprint (the same SCS template edit=add_scs_component adds), optionally attached, placed, meshed and configured.\nmodify: Modify an existing SCS component template node (properties or transform).\nreparent: Reparent an SCS component node to a new parent node in the SCS tree.\nset_property: Set a single property on an SCS-owned component template; placed actors that still had the old value take the new one (instancesUpdated), one changed by hand keeps its own. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_transform: Set the transform (location, rotation, scale) of an SCS-owned component template. Placed actors that still had the old transform take the new one (instancesUpdated); an actor whose component was changed by hand keeps its own. instancesUpdated counts copies in loaded levels only: a copy in a level that is not loaded keeps the transform saved with it, so move it with control_actor.edit_component once its level is open."
+              "description": "Which edit scs variant to run.\nadd_scs_component: Add a component named componentName of componentClass (a component class name such as StaticMeshComponent, or its /Script path) to a Blueprint, under parentComponent (attachTo): its own part, a parent Blueprint's, or the native root, by default the root. meshPath and materialPath give a mesh component its mesh and first material and are refused, adding nothing, when they do not load or the class shows none; location, rotation, scale and properties set the template, and a property that does not take fails the call. A taken name is refused. The Blueprint compiles and saves unless save is false (compiled, saved); the reply names the parent the component got, and meshApplied and materialApplied.\nadd_component: Add a component to a Blueprint (the same SCS template edit=add_scs_component adds), optionally attached, placed, meshed and configured.\nmodify: Modify an existing SCS component template node (properties or transform).\nreparent: Reparent an SCS component node to a new parent node in the SCS tree.\nset_property: Set a single property on an SCS-owned component template; placed actors that still had the old value take the new one (instancesUpdated), one changed by hand keeps its own. For RelativeScale3D/RelativeLocation, note that a child inherits its parent's scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child's own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.\nset_transform: Set the transform (location, rotation, scale) of an SCS-owned component template. Placed actors that still had the old transform take the new one (instancesUpdated); an actor whose component was changed by hand keeps its own. instancesUpdated counts copies in loaded levels only: a copy in a level that is not loaded keeps the transform saved with it, so move it with control_actor.edit_component once its level is open."
             }
           },
           "required": [
@@ -22652,8 +22652,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5e5fc9d885ef9f73d8565d124b45a01defaa166146c74fa1f49fad14a7a8f879",
-        "content": "4c31db031914b9739f28ab1a9212aa8f5f27235c9987cdfefbce8f52b9203243"
+        "schema": "ec8a2f2601528a88d53212e4c81505ba8d87df601b504a5219a2075d9c129fbe",
+        "content": "746a500e1d17bd72fdff69d271f77d1c6e39478a58d41545cfc046979540a425"
       }
     },
     {
@@ -34674,7 +34674,6 @@
             "message": "Light spawned",
             "details": {
               "actorName": "StreetLamp",
-              "actorLabel": "StreetLamp",
               "objectName": "SpotLight_0",
               "applied": [
                 "intensity",
@@ -34720,7 +34719,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
-        "content": "fd2c8bd9f4bf3a1991fb6823c234477ea869ab11efc666fb72059c088599b1a9"
+        "content": "aa4a021508707468bf18e3e0c2f755d4665f43a8a78b0d8dffaa7d2a247ba3ad"
       }
     },
     {
@@ -38282,7 +38281,7 @@
           "light classes",
           "class names"
         ],
-        "summary": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.",
+        "summary": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight, SkyLight and any other loaded light class, with a count.",
         "whenToUse": [
           "Available light types must be enumerated."
         ],
@@ -38344,7 +38343,7 @@
       },
       "examples": [
         {
-          "title": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.",
+          "title": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight, SkyLight and any other loaded light class, with a count.",
           "input": {
             "action": "list_light_types"
           },
@@ -38387,7 +38386,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7ec9ac0fa423e13243d7c724e8c184e4c67d65a0eefe70eafa4035cc0be75369",
-        "content": "3c148f930e878246108feb95d5121020ff755cf52f3c2c66874bf9399cbc33c2"
+        "content": "a2cab716f6b25e0958ea847769aeec10fb4c8988a662cd426d4f98ccabd6e5db"
       }
     },
     {
@@ -72901,15 +72900,6 @@
             "characterPath": {
               "type": "string",
               "description": "Canonical /Game path of a MetaHuman Character asset."
-            },
-            "pipelineType": {
-              "type": "string",
-              "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
-              "enum": [
-                "Cinematic",
-                "Optimized",
-                "UEFN"
-              ]
             }
           },
           "required": [
@@ -72931,8 +72921,7 @@
           "output": {
             "success": true,
             "message": "MetaHuman assembled",
-            "characterPath": "/Game/MetaHumans/MH_Neo",
-            "pipelineType": "Cinematic"
+            "characterPath": "/Game/MetaHumans/MH_Neo"
           }
         }
       ],
@@ -72963,8 +72952,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7a63e0df0284df744bac96aa9fc376d67efa1f617a4156edcfcf78610f43af2b",
-        "content": "6584481b0e88aa42a7407a839a91b17772f153456d897b24cae996233ae1d65b"
+        "schema": "d97b51e03d8831d5a6a5de468de49bb8b10b7fa0134a6e2c53096d80cdaf7503",
+        "content": "61f8020e069056be3552bac4beb302f019c4a75ee5be456e57d1c6d2f487ece2"
       }
     },
     {
@@ -95231,7 +95220,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
+              "description": "currentLevel, persistentLevel, actorCount (valid actors), sublevelCount, streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
             }
           },
           "required": [
@@ -95254,7 +95243,6 @@
               "persistentLevel": "/Game/Maps/L_Main",
               "actorCount": 412,
               "sublevelCount": 0,
-              "sublevels": [],
               "streamingLevels": [],
               "worldPartitionEnabled": false,
               "levelInstances": [],
@@ -95290,8 +95278,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b03bbc9cec1beb418aa156bea186d8497bb6d3e31c37e68f66d4d7fdd35f070b",
-        "content": "66fbe5d3692b2f700351e66e2977f4c373de7d64d89d0e3c5dfaa1416701e3c3"
+        "schema": "b880008a24f7b3c99c48a0149c34a1eac704d0701f2256e3cfa45b128833088a",
+        "content": "e447cbdd6a7ee5d9bd842044decf0cc876725f4da207773aca3b9afc3e460924"
       }
     },
     {
@@ -101066,7 +101054,7 @@
                 "set_node_settings",
                 "set_partition_grid_size"
               ],
-              "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, name, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives subgraphPath, created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor's partition grid (at least 400), scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it."
+              "description": "Which edit pcg graph variant to run.\ncreate: Create a PCG graph asset at graphPath (or assetPath, or name in path, default /Game/PCG), saved unless save is false. A PCG graph already at the path is refused (ASSET_ALREADY_EXISTS) unless overwrite is true, which returns that graph unchanged (created false); another kind of asset there is refused. The reply gives graphPath, assetName, created and saved. Needs the PCG plugin.\ncreate_subgraph: Create a PCG graph at subgraphPath to run inside other graphs (the same rules as edit=create: one already there is refused unless overwrite is true, which reuses it), and with parentGraphPath add a Subgraph node running it to that graph, titled nodeName and placed at x, y. The reply gives graphPath (the subgraph's), created and saved, and with a parent also parentGraphPath, nodeId (the new node, for edit=connect_pins) and parentSaved. A parent that does not load is ASSET_NOT_FOUND. Saved unless save is false.\nconnect_pins: Wire sourcePin (or outputName) of sourceNodeId to targetPin (or inputName) of targetNodeId in a PCG graph (graphPath or assetPath). A node is found by its nodeId (object name), its title, its index in the graph, or input and output for the graph's own ends (NODE_NOT_FOUND). A pin left out is the node's Out or In pin, else its first; a label it lacks is PIN_NOT_FOUND listing the labels. An edge already there is kept, not doubled. The reply gives both node ids, both pin labels and saved; saved unless save is false.\nset_node_settings: Change a node of a PCG graph, found by nodeId or nodeName (an object name, title, index, or input and output; NODE_NOT_FOUND): settings sets properties by name (INVALID_SETTINGS for one it lacks), texturePath, meshPath and actorClass set the texture, mesh or spawned class of nodes that take them (each checked to load), title renames it and x, y move it. An edit that changes nothing, or sends only a meshPath or class the node has no slot for, is refused. The reply gives nodeId, title, nodeType, settingsApplied and saved; saved unless save is false.\nset_partition_grid_size: Set the size of the cells partitioned PCG generates in (gridSize, a whole number of centimetres above 0): scope world (the default) sets the PCG world actor's partition grid (at least 400), scope component one PCG component's generation grid (actorName, componentName or componentPath; COMPONENT_NOT_FOUND). The reply gives previousGridSize and gridSize. The level is saved only with save true (default false), every other unsaved change in it with it."
             }
           },
           "required": [
@@ -101096,7 +101084,7 @@
               "type": "string",
               "description": "The PCG graph asset path."
             },
-            "name": {
+            "assetName": {
               "type": "string",
               "description": "The asset name."
             },
@@ -101311,8 +101299,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5bd851a0683e33631a018cfd3637ac4c92fe2a521c5745a2e7d8bf1858887a97",
-        "content": "328fea23beeb043dfb7001c6abfc83f39cdb03673df696b10d89e032d7bfde0c"
+        "schema": "cf846d852093dbfc4cab6789943f42d347ddeecba11858c473cf58a1b3c30fda",
+        "content": "9710952e7adbf22212a8ef29092268a189f24db48be7b531885c8004cc441898"
       }
     },
     {
@@ -107023,6 +107011,11 @@
                 "bindingGuid"
               ]
             },
+            "add_level_visibility_track": {
+              "required": [
+                "levelNames"
+              ]
+            },
             "add_shot_track": {
               "oneOf": [
                 "shotSequencePath",
@@ -107040,7 +107033,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60fdb19faaecbba1ecc715964dc06e6be7eb8a86c71a197f764bced9d5bcfb70",
-        "content": "e284854e1748dc9766f0e51db898ee7fc72c0020941bc7432e1272a7d4112e25"
+        "content": "60be6aa556dae516e156073bdc59127643ce3bf29e09dee8a41ba36fd1b954b9"
       }
     },
     {
@@ -111486,7 +111479,7 @@
               "type": "number",
               "minimum": 0.1,
               "maximum": 5,
-              "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps."
+              "description": "How finely the range is judged, in seconds (default 0.5): cuts fall on these steps. At most 2400 steps are judged; past them the last shot runs on to the end, and a warning says how long that is."
             },
             "minShotSeconds": {
               "type": "number",
@@ -111650,8 +111643,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b6e8584d6017a1e9a5bd1f581f19029537597c00ba54fec082fb00a5c7e19eec",
-        "content": "d882bf02848b570ffcac8b6ebfa2f700b4db0c1afa39cc4d22dc55f360fdeab3"
+        "schema": "eb05775850d7672037ce50111aa7ad03c61e4dab198d8bcf10c4b2a8be137630",
+        "content": "e092afa953ae97043b8f26c3366025b84acb90b590b66c00d4324a524edb91eb"
       }
     },
     {

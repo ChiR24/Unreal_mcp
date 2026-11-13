@@ -2,6 +2,8 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "EngineUtils.h"
+#include "Algo/Count.h"
+#include "Engine/Level.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -46,6 +48,11 @@ AActor* FindActorByNameInWorldForMcp(UWorld* World, const FString& Target, bool 
 
 namespace McpHandlerUtils
 {
+
+int32 CountValidActors(const ULevel* Level)
+{
+    return Level ? static_cast<int32>(Algo::CountIf(Level->Actors, [](const AActor* Actor) { return IsValid(Actor); })) : 0;
+}
 
 UWorld* GetEditorWorld()
 {

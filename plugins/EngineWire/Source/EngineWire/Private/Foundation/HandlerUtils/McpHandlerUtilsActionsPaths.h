@@ -10,6 +10,7 @@
 
 class FMcpBridgeWebSocket;
 class AActor;
+class ULevel;
 class UActorComponent;
 
 namespace McpHandlerUtils
@@ -53,6 +54,8 @@ ENGINEWIRE_API UWorld* GetPlayOrEditorWorld();
 // Label, name or path (case-insensitive) in the PIE world, else the editor world; while PIE runs, also a role
 // ResolveRuntimeRole names (PlayerPawn, PlayerController, GameMode ...).
 ENGINEWIRE_API AActor* FindActorByName(const FString& ActorName);
+// The actors Level holds, without the empty slots a Blueprint recompile leaves in its Actors list; 0 for no level.
+ENGINEWIRE_API int32 CountValidActors(const ULevel* Level);
 // A mesh component's staticMesh path and the material drawn in each slot (materials).
 ENGINEWIRE_API void AddMeshAssetFields(const UActorComponent* Component, const TSharedPtr<FJsonObject>& Entry);
 ENGINEWIRE_API UObject* ResolveObjectFromPath(

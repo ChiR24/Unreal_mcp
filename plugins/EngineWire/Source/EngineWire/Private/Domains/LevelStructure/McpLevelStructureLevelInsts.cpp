@@ -156,14 +156,7 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
         return true;
     }
 
-    int32 ChildActors = 0;
-    if (const ULevel* Loaded = Instance->GetLoadedLevel())
-    {
-        for (const AActor* Actor : Loaded->Actors)
-        {
-            ChildActors += Actor ? 1 : 0;
-        }
-    }
+    const int32 ChildActors = McpHandlerUtils::CountValidActors(Instance->GetLoadedLevel());
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), Instance->GetName());
     Result->SetStringField(TEXT("actorLabel"), Instance->GetActorLabel());

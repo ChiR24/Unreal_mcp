@@ -26,20 +26,6 @@ namespace McpPerformanceHandlers
 {
 namespace
 {
-bool RequireEditor(
-    const FPerformanceActionContext& Context,
-    const FString& Message = TEXT("Editor not available"),
-    const FString& ErrorCode = TEXT("NO_EDITOR"))
-{
-    if (GEditor)
-    {
-        return true;
-    }
-    Context.Bridge.SendAutomationError(
-        Context.RequestingSocket, Context.RequestId, Message, ErrorCode);
-    return false;
-}
-
 // 'stat X' only toggles, so enabled:false used to switch an overlay ON when it was off. Read the
 // viewport's state (engine stats and stat groups both report through IsStatEnabled) and exec only
 // when it differs, which gives set semantics.
@@ -82,10 +68,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
 
     if (Context.Lower == TEXT("start_profiling"))
     {
-        if (!RequireEditor(Context))
-        {
-            return true;
-        }
         double Duration = 0.0;
         Context.Payload->TryGetNumberField(TEXT("duration"), Duration);
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat startfile"));
@@ -109,11 +91,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
 
     if (Context.Lower == TEXT("stop_profiling"))
     {
-        if (!RequireEditor(Context))
-        {
-            return true;
-        }
-
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat stopfile"));
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
@@ -125,7 +102,7 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        return !RequireEditor(Context) || SetStatOverlay(Context, TEXT("FPS"), bEnabled);
+        return SetStatOverlay(Context, TEXT("FPS"), bEnabled);
     }
 
     if (Context.Lower == TEXT("show_stats"))
@@ -140,11 +117,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
                      "fps, gpu, gfx, engine, game, threading, or any other "
                      "'stat <name>' console category."),
                 TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        if (!RequireEditor(Context))
-        {
             return true;
         }
 
@@ -176,10 +148,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         {
             Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
                 FString::Printf(TEXT("type '%s' is not a benchmark type; use cpu, gpu or all."), *BenchmarkType), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        if (!RequireEditor(Context))
-        {
             return true;
         }
         const ERequestOrigin ResponseOrigin = Context.ResponseOrigin;
@@ -235,8 +203,14 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
                 if (bGpu)
                 {
                     Resp->SetNumberField(TEXT("gpuMs"), Samples->GpuMs / Frames);
+                    // GPU timing off reads 0, which fit_frame_budget refuses; a benchmark still answers, and says so.
+                    if (Samples->GpuMs <= 0.0)
+                    {
+                        Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString(TEXT(
+                            "The GPU's frame time reads 0 here, so gpuMs measured nothing: turn GPU timing on "
+                            "(system_control enable_gpu_timing) and call again."))}));
+                    }
                 }
-                Resp->SetStringField(TEXT("status"), TEXT("completed"));
                 Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                     FString::Printf(TEXT("Benchmark completed: %d frames over %.1fs"), Samples->Frames, Samples->Elapsed),
                     Resp, FString(), ResponseOrigin);
@@ -250,10 +224,6 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
 
-        if (!RequireEditor(Context))
-        {
-            return true;
-        }
         // Set as the console does and read back; a code-priority Set lost to any console set without a word. The variable
         // gates GPU timing up to UE 5.7; UE 5.8 times the GPU always and has none.
         IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUStatsEnabled"));

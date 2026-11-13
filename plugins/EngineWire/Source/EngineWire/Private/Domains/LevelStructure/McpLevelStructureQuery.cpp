@@ -10,7 +10,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "WorldPartition/DataLayer/DataLayerSubsystem.h"
 #if __has_include("WorldPartition/DataLayer/DataLayerManager.h")
 #include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
@@ -38,15 +37,13 @@ bool HandleGetLevelStructureInfo(
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 
     TSharedPtr<FJsonObject> InfoJson = McpHandlerUtils::CreateResultObject();
     InfoJson->SetStringField(TEXT("currentLevel"), World->GetMapName());
 
-    TArray<TSharedPtr<FJsonValue>> SublevelsArray;
     const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
     InfoJson->SetNumberField(TEXT("sublevelCount"), StreamingLevels.Num());
 
@@ -56,7 +53,6 @@ bool HandleGetLevelStructureInfo(
     {
         if (!StreamingLevel) { continue; }
         const FString PackageName = StreamingLevel->GetWorldAssetPackageName();
-        SublevelsArray.Add(MakeShared<FJsonValueString>(PackageName));
         TSharedPtr<FJsonObject> LevelJson = McpHandlerUtils::CreateResultObject();
         LevelJson->SetStringField(TEXT("name"), FPackageName::GetShortName(PackageName));
         LevelJson->SetStringField(TEXT("packageName"), PackageName);
@@ -66,13 +62,12 @@ bool HandleGetLevelStructureInfo(
         LevelJson->SetBoolField(TEXT("shouldBeVisible"), StreamingLevel->ShouldBeVisible());
         LevelJson->SetStringField(TEXT("streamingClass"), StreamingLevel->GetClass()->GetName());
         LevelJson->SetBoolField(TEXT("alwaysLoaded"), StreamingLevel->IsA(ULevelStreamingAlwaysLoaded::StaticClass()));
-        LevelJson->SetNumberField(TEXT("actorCount"), StreamingLevel->GetLoadedLevel() ? StreamingLevel->GetLoadedLevel()->Actors.Num() : 0);
+        LevelJson->SetNumberField(TEXT("actorCount"), McpHandlerUtils::CountValidActors(StreamingLevel->GetLoadedLevel()));
         StreamingArray.Add(MakeShared<FJsonValueObject>(LevelJson));
     }
-    InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
     InfoJson->SetArrayField(TEXT("streamingLevels"), StreamingArray);
     InfoJson->SetStringField(TEXT("persistentLevel"), World->GetOutermost()->GetName());
-    InfoJson->SetNumberField(TEXT("actorCount"), World->PersistentLevel ? World->PersistentLevel->Actors.Num() : 0);
+    InfoJson->SetNumberField(TEXT("actorCount"), McpHandlerUtils::CountValidActors(World->PersistentLevel));
 
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     InfoJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);

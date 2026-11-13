@@ -28,6 +28,7 @@ TArray<FColor> Shade(const TArray<FLinearColor>& Normals, const TArray<FLinearCo
 TArray<FColor> Compose(const FString& Title, const TArray<FTile>& Tiles, int32 TileSize, int32& OutWidth, int32& OutHeight);
 
 /** A composed sheet handed back on Result: width, height, the PNG as imageBase64 when it fits a reply (3 MB), and file,
- *  the PNG written as Saved/Captures/<Stem>_<time>.png, unless bKeepFile is false and the reply carries it. */
-void Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FString& Stem, bool bKeepFile, const TSharedPtr<FJsonObject>& Result);
+ *  the PNG written as Saved/Captures/<Stem>_<time>.png, unless bKeepFile is false and the reply carries it. A write
+ *  that fails is a warning naming the path; false when the picture is neither in the reply nor on disk. */
+bool Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FString& Stem, bool bKeepFile, const TSharedPtr<FJsonObject>& Result);
 } // namespace McpPerception::Sheet

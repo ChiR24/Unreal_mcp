@@ -9,6 +9,7 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "Foundation/Viewport/McpEditorScreenshotSupport.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "EditorViewportClient.h"
 #include "GameFramework/Actor.h"
 #include "HAL/PlatformTime.h"
@@ -172,7 +173,7 @@ TSharedPtr<FJsonObject> PbrAsRendered(FEditorViewportClient& Client, const FFram
         if (!Skip.IsEmpty())
         {
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-            Row->SetStringField(TEXT("actorName"), Pair.Key->GetActorLabel());
+            Row->SetStringField(TEXT("actorName"), McpActorRef(Pair.Key));
             Row->SetStringField(TEXT("reason"), Skip);
             Skipped.Add(MakeShared<FJsonValueObject>(Row));
             continue;
@@ -188,7 +189,7 @@ TSharedPtr<FJsonObject> PbrAsRendered(FEditorViewportClient& Client, const FFram
             Blues.Add(Colour.B);
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actorName"), Pair.Key->GetActorLabel());
+        Row->SetStringField(TEXT("actorName"), McpActorRef(Pair.Key));
         Row->SetNumberField(TEXT("share"), McpRoundTo(double(Cells.Base.Num()) / (Frame.Width * Frame.Height), 1000.0));
         TArray<TSharedPtr<FJsonValue>> Median;
         for (const TArray<uint8>* Channel : {&Reds, &Greens, &Blues})

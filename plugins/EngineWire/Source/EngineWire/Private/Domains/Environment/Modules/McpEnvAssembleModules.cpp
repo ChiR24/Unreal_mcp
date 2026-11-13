@@ -151,7 +151,7 @@ bool HandleAssembleModules(UEngineWireSubsystem& Bridge, const FString& RequestI
             Bridge.SendAutomationError(Socket, RequestId, TEXT("The layout was found but its actor could not be spawned."), TEXT("SPAWN_FAILED"));
             return true;
         }
-        Result->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+        Result->SetStringField(TEXT("actorName"), McpActorRef(Actor));
         McpHandlerUtils::AddVerification(Result, Actor);
         Transaction.DescribeInto(Result);
     }

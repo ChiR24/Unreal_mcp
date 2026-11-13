@@ -8,6 +8,7 @@
 #include "Dom/JsonObject.h"
 #include "Domains/Perception/McpPerception.h"
 #include "Foundation/Viewport/McpEditorScreenshotSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Texture/McpTextRaster.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"
@@ -158,7 +159,7 @@ TArray<FColor> Compose(const FString& Title, const TArray<FTile>& Tiles, int32 T
     return Sheet;
 }
 
-void Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FString& Stem, bool bKeepFile, const TSharedPtr<FJsonObject>& Result)
+bool Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FString& Stem, bool bKeepFile, const TSharedPtr<FJsonObject>& Result)
 {
     TArray64<uint8> Png;
     FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Png);
@@ -172,6 +173,10 @@ void Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FStr
         {
             Result->SetStringField(TEXT("file"), File);
         }
+        else
+        {
+            Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(TEXT("The sheet could not be written to %s."), *File)}));
+        }
     }
     Result->SetNumberField(TEXT("width"), Width);
     Result->SetNumberField(TEXT("height"), Height);
@@ -180,5 +185,6 @@ void Deliver(const TArray<FColor>& Pixels, int32 Width, int32 Height, const FStr
         Result->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
         Result->SetStringField(TEXT("mimeType"), TEXT("image/png"));
     }
+    return bInReply || Result->HasField(TEXT("file"));
 }
 } // namespace McpPerception::Sheet

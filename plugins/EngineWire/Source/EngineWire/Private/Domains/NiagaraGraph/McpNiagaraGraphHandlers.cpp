@@ -63,35 +63,18 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     }
     else
     {
-        // Emitter script - find by name
-        for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+        FNiagaraEmitterHandle* Handle = McpNiagaraAuthoringHandlers::FindEmitterHandle(System, EmitterName);
+        if (!Handle)
         {
-            if (Handle.GetName() == FName(*EmitterName))
-            {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
-                if (Emitter)
-                {
-                    const auto* EmitterData = Emitter->GetLatestEmitterData();
-                    if (!EmitterData)
-                    {
-                        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Emitter data not available."), TEXT("EMITTER_DATA_MISSING"));
-                        return true;
-                    }
-
-                    TargetScript = bUpdateScript ? EmitterData->UpdateScriptProps.Script : EmitterData->SpawnScriptProps.Script;
-                }
-#else
-                // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-                UNiagaraEmitter* Emitter = Handle.GetInstance();
-                if (Emitter)
-                {
-                    TargetScript = bUpdateScript ? Emitter->UpdateScriptProps.Script : Emitter->SpawnScriptProps.Script;
-                }
-#endif
-                break;
-            }
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Emitter '%s' not found in Niagara system '%s' "
+                "(its emitters: [%s]); pass one of them as 'emitterName'. Nothing was changed."), *EmitterName, *System->GetPathName(),
+                *McpNiagaraAuthoringHandlers::ListEmitterNames(System)), TEXT("EMITTER_NOT_FOUND"));
+            return true;
+        }
+        // The scripts of the version the handle uses.
+        if (MCP_NIAGARA_EMITTER_DATA_TYPE* Data = MCP_GET_EMITTER_DATA(*Handle))
+        {
+            TargetScript = bUpdateScript ? Data->UpdateScriptProps.Script : Data->SpawnScriptProps.Script;
         }
     }
 
@@ -183,6 +166,10 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         TArray<TSharedPtr<FJsonValue>> StackWarnings;
         McpNiagaraAuthoringHandlers::CollectNiagaraSystemStackIssues(System, StackErrors, StackWarnings);
         Result->SetArrayField(TEXT("stackErrors"), StackErrors);
+        if (StackWarnings.Num() > 0)
+        {
+            Result->SetArrayField(TEXT("warnings"), StackWarnings);
+        }
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
             TEXT("Module node added."), Result);
@@ -206,18 +193,10 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);
 
-        UEdGraphNode* TargetNode = nullptr;
-        for (UEdGraphNode* Node : TargetGraph->Nodes)
-        {
-            if (Node->NodeGuid.ToString() == NodeId)
-            {
-                TargetNode = Node;
-                break;
-            }
-        }
-
+        UEdGraphNode* TargetNode = McpNiagaraGraphHandlers::FindNodeByIdNameOrTitle(TargetGraph, NodeId);
         if (TargetNode)
         {
+            const FString RemovedGuid = TargetNode->NodeGuid.ToString();
             FString RemovalError;
             if (!McpNiagaraGraphHandlers::RemoveNiagaraGraphNodeSafely(
                     TargetGraph, TargetNode, RemovalError))
@@ -230,7 +209,7 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             McpNiagaraGraphHandlers::SaveNiagaraGraphEdit(System, Payload, Result);
             McpHandlerUtils::AddVerification(Result, System);
-            Result->SetStringField(TEXT("nodeId"), NodeId);
+            Result->SetStringField(TEXT("nodeId"), RemovedGuid);
             Result->SetBoolField(TEXT("removed"), true);
 
             SendAutomationResponse(RequestingSocket, RequestId, true,

@@ -16,14 +16,8 @@
 #include "Misc/EngineVersionComparison.h"
 
 
-// Asset Tools & Registry
+// Asset Registry
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "IAssetTools.h"
-
-// Graph
-#include "EdGraph/EdGraph.h"
-#include "EdGraph/EdGraphSchema.h"
 
 // Material Core
 #include "Materials/Material.h"
@@ -61,11 +55,6 @@
 #include "Materials/MaterialExpressionPower.h"
 #include "Materials/MaterialExpressionReflectionVectorWS.h"
 
-// UE 5.1+ MaterialExpressionRotator
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#include "Materials/MaterialExpressionRotator.h"
-#endif
-
 // Material Expressions (Parameters)
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionStaticSwitchParameter.h"
@@ -79,9 +68,6 @@
 #include "Materials/MaterialExpressionVertexNormalWS.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
 #include "Materials/MaterialExpressionComponentMask.h"
-#include "Materials/MaterialExpressionDotProduct.h"
-#include "Materials/MaterialExpressionCrossProduct.h"
-#include "Materials/MaterialExpressionDesaturation.h"
 
 // Factories
 #include "Factories/MaterialFactoryNew.h"
@@ -229,32 +215,7 @@ inline bool SanitizeMaterialPathOrReply(UEngineWireSubsystem* Bridge, const FStr
   return true;
 }
 
-// Helper macro for expression creation - validates path BEFORE loading
-#define LOAD_MATERIAL_OR_RETURN()                                              \
-  FString AssetPath;                                                           \
-  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
-       AssetPath.IsEmpty()) &&                                                 \
-      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
-       AssetPath.IsEmpty())) {                                                 \
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
-                        TEXT("INVALID_ARGUMENT"));                             \
-    return true;                                                               \
-  }                                                                            \
-  if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))  \
-    return true;                                              \
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);            \
-  if (!Material) {                                                             \
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),   \
-                        TEXT("ASSET_NOT_FOUND"));                              \
-    return true;                                                               \
-  }                                                                            \
-  float X = 0.0f, Y = 0.0f;                                                    \
-  if (!Payload->TryGetNumberField(TEXT("x"), X))                               \
-    Payload->TryGetNumberField(TEXT("posX"), X);                               \
-  if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
-    Payload->TryGetNumberField(TEXT("posY"), Y)
-
-// MF-aware variant of LOAD_MATERIAL_OR_RETURN.
+// The payload's material or material function (assetPath, else materialPath) loaded after the path check.
 // Declares Material*, Function*, HostOuter (whichever is non-null), and X/Y.
 // Exactly one of {Material, Function} will be non-null on success.
 #define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN()                                  \

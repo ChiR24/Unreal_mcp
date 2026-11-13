@@ -183,7 +183,13 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     bool bKeepFile = true;
     Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
-    Sheet::Deliver(Pixels, Width, Height, TEXT("ContactSheet_") + FPaths::MakeValidFileName(Subject->GetActorLabel()), bKeepFile, Result);
+    if (!Sheet::Deliver(Pixels, Width, Height, TEXT("ContactSheet_") + FPaths::MakeValidFileName(Subject->GetActorLabel()), bKeepFile, Result))
+    {
+        // Too large for the reply and not written: no picture anywhere.
+        Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("The %d x %d contact sheet is too large for the "
+            "reply and could not be written to Saved/Captures."), Width, Height), TEXT("WRITE_FAILED"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Size = MakeShared<FJsonObject>();
     Size->SetNumberField(TEXT("x"), FMath::RoundToDouble(2.0 * Extent.X));
     Size->SetNumberField(TEXT("y"), FMath::RoundToDouble(2.0 * Extent.Y));

@@ -78,6 +78,26 @@ bool HandleAddLevelVisibilityTrack(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
+  // Refused before anything is added: any text but hidden showed the levels, and no levels made a section that
+  // shows and hides nothing.
+  const FString Visibility = GetString(Params, TEXT("visibility"));
+  const bool bHidden = Visibility.Equals(TEXT("hidden"), ESearchCase::IgnoreCase);
+  TArray<FName> LevelNames;
+  const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
+  if (Params->TryGetArrayField(TEXT("levelNames"), Names) && Names) {
+    for (const TSharedPtr<FJsonValue> &Name : *Names) {
+      LevelNames.Add(FName(*Name->AsString()));
+    }
+  }
+  if ((!bHidden && !Visibility.IsEmpty() && !Visibility.Equals(TEXT("visible"), ESearchCase::IgnoreCase)) ||
+      LevelNames.Num() == 0) {
+    OutResult = MakeResult(false, TEXT("add_level_visibility_track"),
+                           LevelNames.Num() == 0
+                               ? FString(TEXT("levelNames is required: the levels the track shows or hides."))
+                               : FString::Printf(TEXT("visibility '%s' is neither visible nor hidden."), *Visibility),
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   UMovieScene *MovieScene = Sequence->GetMovieScene();
   UMovieSceneLevelVisibilityTrack *Track =
       MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneLevelVisibilityTrack);
@@ -94,17 +114,7 @@ bool HandleAddLevelVisibilityTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   SetSectionRange(MovieScene, Section, Params, 100);
-  const FString Visibility = GetString(Params, TEXT("visibility"));
-  Section->SetVisibility(Visibility.Equals(TEXT("hidden"), ESearchCase::IgnoreCase)
-                             ? ELevelVisibility::Hidden
-                             : ELevelVisibility::Visible);
-  TArray<FName> LevelNames;
-  const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
-  if (Params->TryGetArrayField(TEXT("levelNames"), Names) && Names) {
-    for (const TSharedPtr<FJsonValue> &Name : *Names) {
-      LevelNames.Add(FName(*Name->AsString()));
-    }
-  }
+  Section->SetVisibility(bHidden ? ELevelVisibility::Hidden : ELevelVisibility::Visible);
   Section->SetLevelNames(LevelNames);
   MovieScene->Modify();
   Sequence->MarkPackageDirty();

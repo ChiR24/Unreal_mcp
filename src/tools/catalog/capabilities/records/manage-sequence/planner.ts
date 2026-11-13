@@ -134,7 +134,7 @@ export const PLANNER_RECORDS: readonly CapabilityRecordSource[] = [
       sequencePath: { type: 'string', description: 'The Level Sequence to cut; its playback range is the range edited.' },
       cameras: { type: 'array', minItems: 2, maxItems: 12, items: { type: 'string' }, description: 'The camera actors to cut between (2-12), by name; where the sequence moves one, it is judged where the sequence has it.' },
       subjects: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string' }, description: 'The actors the cut serves (1-4), most important first: the first must be seen at every moment (NO_CUT otherwise), and the line between the first two is the one cuts should not cross.' },
-      segmentSeconds: { type: 'number', minimum: 0.1, maximum: 5, description: 'How finely the range is judged, in seconds (default 0.5): cuts fall on these steps.' },
+      segmentSeconds: { type: 'number', minimum: 0.1, maximum: 5, description: 'How finely the range is judged, in seconds (default 0.5): cuts fall on these steps. At most 2400 steps are judged; past them the last shot runs on to the end, and a warning says how long that is.' },
       minShotSeconds: { type: 'number', minimum: 0.1, maximum: 120, description: 'Shortest shot, in seconds (default 1.5; at least segmentSeconds).' },
       maxShotSeconds: { type: 'number', minimum: 0.1, maximum: 600, description: 'Longest shot, in seconds (default 8; at least minShotSeconds).' },
       dryRun: { type: 'boolean', description: 'Find the edit and answer without writing it (default false).' },

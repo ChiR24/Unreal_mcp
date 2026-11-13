@@ -25,8 +25,6 @@ constexpr int32 LayoutMaxNames = 50;      // names in chokes, deadEnds and unrea
 constexpr int32 LayoutSummaryNames = 8;   // dead ends the summary names
 
 
-double LayoutRound(double Value, double Step) { return FMath::RoundToDouble(Value / Step) * Step; }
-
 FString LayoutName(const FLayout& Layout, int32 Space)
 {
     int32 Rooms = 0;
@@ -143,11 +141,11 @@ FString WriteReply(UWorld* World, const FGraph& Graph, const FLayout& Layout, co
         Row->SetStringField(TEXT("name"), LayoutName(Layout, Space));
         Row->SetStringField(TEXT("kind"), Each.bRoom ? TEXT("room") : TEXT("corridor"));
         Row->SetArrayField(TEXT("center"), McpHandlerUtils::RoundedVectorToJsonArray(Each.Center, 1.0));
-        Row->SetNumberField(TEXT("areaM2"), LayoutRound(SpaceArea, 0.1));
+        Row->SetNumberField(TEXT("areaM2"), McpRoundTo(SpaceArea, 10.0));
         Row->SetNumberField(TEXT("widthCm"), FMath::RoundToDouble((2 * Each.Height + 1) * Cell));
         Row->SetArrayField(TEXT("neighbours"), LayoutNames(Layout, Each.Neighbours));
         Row->SetBoolField(TEXT("deadEnd"), Each.Neighbours.Num() == 1);
-        Row->SetNumberField(TEXT("passThroughShare"), LayoutRound(Each.PassShare, 0.001));
+        Row->SetNumberField(TEXT("passThroughShare"), McpRoundTo(Each.PassShare, 1000.0));
         Row->SetNumberField(TEXT("sightlineCm"), FMath::RoundToDouble(LayoutSight(World, Graph.Points[Each.Deepest])));
         if (StartNode != INDEX_NONE)
         {
@@ -181,7 +179,7 @@ FString WriteReply(UWorld* World, const FGraph& Graph, const FLayout& Layout, co
         Row->SetArrayField(TEXT("between"), LayoutNames(Layout, {Door.A, Door.B}));
         Row->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Door.Location, 1.0));
         Row->SetNumberField(TEXT("widthCm"), FMath::RoundToDouble(Door.WidthCells * Cell));
-        Row->SetNumberField(TEXT("share"), LayoutRound(Door.Share, 0.001));
+        Row->SetNumberField(TEXT("share"), McpRoundTo(Door.Share, 1000.0));
         DoorRows.Add(MakeShared<FJsonValueObject>(Row));
     }
 

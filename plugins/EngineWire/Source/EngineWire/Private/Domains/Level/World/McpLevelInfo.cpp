@@ -2,7 +2,6 @@
 #include "Domains/Level/Lifecycle/McpLevelDirtyPackageLoad.h"
 #include "Domains/Level/World/McpLevelWorldAccess.h"
 
-#include "Algo/Count.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -80,7 +79,7 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
       Result->SetStringField(TEXT("levelPath"), PackageName);
       Result->SetStringField(TEXT("levelName"), AssetName);
       // Valid actors only: Actors.Num() also counted the empty slots a Blueprint recompile leaves behind.
-      Result->SetNumberField(TEXT("actorCount"), static_cast<int32>(Algo::CountIf(TargetLevel->Actors, [](const AActor *A) { return IsValid(A); })));
+      Result->SetNumberField(TEXT("actorCount"), McpHandlerUtils::CountValidActors(TargetLevel));
       Result->SetBoolField(TEXT("loaded"), true);
       AddUnsavedState(Result, TargetLevel);
 

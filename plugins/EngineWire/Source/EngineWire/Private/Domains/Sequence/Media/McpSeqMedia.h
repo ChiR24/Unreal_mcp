@@ -106,6 +106,8 @@ bool SetObjectProperty(UObject *Object,
 bool SetBoolProperty(UObject *Object,
                      const FString &PropertyName,
                      bool Value);
+// The bool property's value as Object holds it; false when it has none by that name.
+bool GetBoolProperty(const UObject *Object, const FString &PropertyName);
 bool SetStringProperty(UObject *Object,
                        const FString &PropertyName,
                        const FString &Value);

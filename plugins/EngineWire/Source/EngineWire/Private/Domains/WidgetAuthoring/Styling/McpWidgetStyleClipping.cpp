@@ -33,22 +33,10 @@ bool HandleWidgetAuthoringStyleClipping(
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetSlotName(Payload);
 
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
-        if (!WidgetBP)
-        {
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidget* Widget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!Widget)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
             return true;
         }
         // Every reply names the Widget Blueprint it saved into. Neither widgetPath nor assetPath was

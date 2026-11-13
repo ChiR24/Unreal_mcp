@@ -62,6 +62,7 @@ FString ReadTiming(const TSharedPtr<FJsonObject>& Payload, ULevelSequence& Seque
     Plan.End = MovieScene->GetPlaybackRange().GetUpperBoundValue();
     const double Seconds = Plan.Ticks.AsSeconds(FFrameTime(Plan.End - Plan.Start));
     Plan.Segments = FMath::Min(FMath::CeilToInt(Seconds / Plan.SegmentSeconds), EditMostSegments);
+    Plan.Unjudged = FMath::Max(0.0, Seconds - Plan.Segments * Plan.SegmentSeconds);
     if (Plan.Segments < 1)
     {
         return TEXT("The sequence's playback range is empty.");

@@ -56,7 +56,7 @@ ULevelSequence *LoadSequence(const TSharedPtr<FJsonObject> &Params,
       LoadObject<ULevelSequence>(nullptr, *WritablePath);
   if (!Sequence || !Sequence->GetMovieScene()) {
     OutResult = MakeResult(false, TEXT("cinematics"),
-                           TEXT("Valid sequencePath is required"),
+                           FString::Printf(TEXT("%s is no Level Sequence: it does not load as one."), *SeqPath),
                            TEXT("INVALID_SEQUENCE"));
     return nullptr;
   }
@@ -180,8 +180,19 @@ bool LoadSequenceAndBinding(const TSharedPtr<FJsonObject> &Params, const TCHAR *
   OutGuid = ResolveRequestBinding(Params, OutSequence, New);
   if (OutGuid.IsValid())
     return true;
-  OutResult = MakeResult(false, Action, TEXT("actorName or bindingGuid is required"),
-                         TEXT("INVALID_ARGUMENT"));
+  // Which of the two failed: a bindingGuid that parsed would have been taken, so one sent is no GUID.
+  const FString GuidText = GetString(Params, TEXT("bindingGuid"), nullptr);
+  FString ActorName = GetString(Params, TEXT("actorName"), TEXT("cameraName"));
+  if (ActorName.IsEmpty())
+    ActorName = GetString(Params, TEXT("actorPath"), nullptr);
+  OutResult = !GuidText.IsEmpty()
+      ? MakeResult(false, Action, FString::Printf(TEXT("bindingGuid '%s' is not a GUID."), *GuidText), TEXT("INVALID_ARGUMENT"))
+      : ActorName.IsEmpty()
+      ? MakeResult(false, Action, TEXT("actorName or bindingGuid is required"), TEXT("INVALID_ARGUMENT"))
+      : MakeResult(false, Action, ResolveActor(Params)
+            ? FString::Printf(TEXT("%s could not be bound to the sequence."), *ActorName)
+            : FString::Printf(TEXT("No actor %s in the level."), *ActorName),
+                   ResolveActor(Params) ? TEXT("BINDING_FAILED") : TEXT("ACTOR_NOT_FOUND"));
   return false;
 }
 

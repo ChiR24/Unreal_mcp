@@ -5,6 +5,7 @@
 #include "Domains/Performance/Budget/McpFrameBudget.h"
 
 #include "Algo/Sort.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/LocalLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -76,10 +77,11 @@ double LightReach(const ULightComponent* Light)
     return Local ? Local->AttenuationRadius : TNumericLimits<double>::Max();
 }
 
-FString OwnerLabel(const UActorComponent* Component)
+// The name a reply gives the component's actor (McpActorRef), or the component's own for a part with no owner.
+FString OwnerRef(const UActorComponent* Component)
 {
     const AActor* Owner = Component->GetOwner();
-    return Owner ? Owner->GetActorLabel() : Component->GetName();
+    return Owner ? McpActorRef(Owner) : Component->GetName();
 }
 } // namespace
 
@@ -132,7 +134,7 @@ void FindKnobs(FRun& Run, bool bShadows, bool bDistance)
     {
         FKnob& Knob = Run.Knobs.AddDefaulted_GetRef();
         Knob.Kind = TEXT("shadows");
-        Knob.What = FString::Printf(TEXT("%s casts no shadows"), *OwnerLabel(Lights[Index]));
+        Knob.What = FString::Printf(TEXT("%s casts no shadows"), *OwnerRef(Lights[Index]));
         Knob.Group = Index;
         Knob.Lights.Add(Lights[Index]);
     }

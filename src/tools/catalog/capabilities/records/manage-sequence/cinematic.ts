@@ -219,7 +219,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     { required: ['path'], example: {}, notFor: 'The fade happens during play (level start, death, level change): call PlayerCameraManager StartCameraFade from a graph (blueprint.edit_graph).' }),
   trackRecord('sequence.cinematic.add_level_visibility_track', 'add_level_visibility_track',
     'Add a level visibility track to control level streaming during cinematic.',
-    { levelNames: P.levelNames, visibility: A.visibility, ...SECTION_RANGE }),
+    { levelNames: P.levelNames, visibility: A.visibility, ...SECTION_RANGE },
+    { required: ['path', 'levelNames'], example: { levelNames: ['/Game/Maps/Sub_Rooftop'] } }),
   // MaterialTrack.cpp requires parameterName and value, and keys value at startFrame.
   trackRecord('sequence.cinematic.add_material_parameter_track', 'add_material_parameter_track',
     'Add a material parameter collection track to animate material parameters.',

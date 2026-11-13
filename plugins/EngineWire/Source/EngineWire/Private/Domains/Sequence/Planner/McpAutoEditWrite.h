@@ -17,6 +17,7 @@ namespace McpAutoEdit
 struct FEditPlan
 {
     double SegmentSeconds = 0.5;
+    double Unjudged = 0.0;            // seconds past the last segment, when the range is longer than the segment cap
     int32 Segments = 0;
     int32 MinRun = 3;
     int32 MaxRun = 16;

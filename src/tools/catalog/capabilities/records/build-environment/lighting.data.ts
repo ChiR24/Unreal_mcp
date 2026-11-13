@@ -38,7 +38,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: {
       success: true, message: 'Light spawned',
       details: {
-        actorName: 'StreetLamp', actorLabel: 'StreetLamp', objectName: 'SpotLight_0',
+        actorName: 'StreetLamp', objectName: 'SpotLight_0',
         applied: ['intensity', 'color', 'castShadows', 'outerConeAngle', 'attenuationRadius'],
       },
     },
@@ -176,7 +176,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.list_light_types', action: 'list_light_types', family: F,
     topics: ['kinds available', 'light classes', 'class names'],
-    summary: 'List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.',
+    summary: 'List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight, SkyLight and any other loaded light class, with a count.',
     whenToUse: ['Available light types must be enumerated.'],
     whenNotToUse: ['A specific light type is already known.'],
     inputProps: {},

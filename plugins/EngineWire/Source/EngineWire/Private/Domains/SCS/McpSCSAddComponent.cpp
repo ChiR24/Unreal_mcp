@@ -146,7 +146,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     return Result;
   }
   // A meshPath or materialPath that did not load, or a class that cannot show it, still added the component and
-  // answered success with mesh_applied false: an empty component the caller took for a mesh. Both refuse first.
+  // answered success with meshApplied false: an empty component the caller took for a mesh. Both refuse first.
   const bool bStaticMeshClass = CompClass->IsChildOf(UStaticMeshComponent::StaticClass());
   const bool bSkeletalMeshClass = CompClass->IsChildOf(USkeletalMeshComponent::StaticClass());
   // Both paths go through the shared canonicalizer and the registry, as every other asset path a request names.
@@ -233,8 +233,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   Result->SetStringField(
       TEXT("message"),
       FString::Printf(TEXT("Component '%s' added to SCS"), *ComponentName));
-  Result->SetStringField(TEXT("component_name"), ComponentName);
-  Result->SetStringField(TEXT("component_class"), CompClass->GetName());
+  Result->SetStringField(TEXT("componentClass"), CompClass->GetName());
   // Report the parent the engine actually attached to: a new scene component with no
   // explicit parent lands under the root node, not at "(root)".
   FString ActualParent = ParentComponentName;
@@ -252,17 +251,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
   AddSCSNodeVerification(Result, SCS, VerifiedNode);
-  Result->SetBoolField(TEXT("mesh_applied"), bMeshApplied);
-  Result->SetBoolField(TEXT("material_applied"), bMaterialApplied);
+  Result->SetBoolField(TEXT("meshApplied"), bMeshApplied);
+  Result->SetBoolField(TEXT("materialApplied"), bMaterialApplied);
   McpHandlerUtils::AddVerification(Result, Blueprint);
-  if (NewNode && NewNode->ComponentTemplate) {
-    if (USceneComponent *SceneComp =
-            Cast<USceneComponent>(NewNode->ComponentTemplate)) {
-      AddComponentVerification(Result, SceneComp);
-      // AddComponentVerification reports the template object name; keep the SCS name authoritative.
-      Result->SetStringField(TEXT("componentName"), ComponentName);
-    }
-  }
 
   return Result;
 }

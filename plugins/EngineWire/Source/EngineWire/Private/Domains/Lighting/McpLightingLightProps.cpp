@@ -80,7 +80,7 @@ void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& Prope
         if (!FMath::IsFinite(Out) || Out < Min || Out > Max)
         {
             const double Fixed = Fallback.IsSet() || !FMath::IsFinite(Out) ? Fallback.Get(Min) : FMath::Clamp(Out, Min, Max);
-            UE_LOG(LogEngineWireSubsystem, Warning, TEXT("spawn_light: Invalid %s %.2f, using %.2f"), Key, Out, Fixed);
+            UE_LOG(LogEngineWireSubsystem, Log, TEXT("spawn_light: Invalid %s %.2f, using %.2f"), Key, Out, Fixed);
             Report.Adjusted.Add(FString::Printf(TEXT("%s: %s must be %s; %s was used"), Key, *FString::SanitizeFloat(Out, 0), Range,
                                                 *FString::SanitizeFloat(Fixed, 0)));
             Out = Fixed;
@@ -105,7 +105,7 @@ void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& Prope
         {
             UE_LOG(
                 LogEngineWireSubsystem,
-                Warning,
+                Log,
                 TEXT("spawn_light: Invalid color components, using white"));
             Report.Adjusted.Add(TEXT("color: a channel was not a finite number; white was used"));
             Color = FLinearColor::White;

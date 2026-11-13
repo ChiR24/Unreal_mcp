@@ -82,6 +82,13 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 	// anywhere a human can read them.
 	UE_LOG(LogMcpFabAddReply, Warning, TEXT("Fab refused the add; page reported: %s"), *Payload);
 	if (Result.ErrorCode.IsEmpty()) { Result.ErrorCode = TEXT("FAB_REJECTED"); }
+	// A page exception arrives as its own words, not JSON (a failed fetch, an answer that is not JSON): they are the
+	// reason, where the reply named nothing.
+	if (!bJson && !Payload.IsEmpty())
+	{
+		Result.Error = FString::Printf(TEXT("Fab did not accept the listing: %s"), *Payload);
+		return Result;
+	}
 
 	// The page already reports the formats it saw; naming them turns
 	// NO_IMPORTABLE_FORMAT from "it failed somewhere" into "this

@@ -165,6 +165,10 @@ bool Handle(UEngineWireSubsystem* Bridge, const FString& RequestId, const TShare
         {
             Result->SetStringField(TEXT("imagePath"), Path);
         }
+        else
+        {
+            Summary += TEXT(" The picture was not written: the grid is too large to draw, or its encode or write failed.");
+        }
     }
     Bridge->SendAutomationResponse(Socket, RequestId, true, Summary, Result);
     return true;

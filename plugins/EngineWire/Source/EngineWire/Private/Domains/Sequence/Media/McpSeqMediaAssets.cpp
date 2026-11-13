@@ -112,8 +112,8 @@ bool HandleCreateMediaPlayer(UEngineWireSubsystem *Subsystem,
                         TEXT("MediaPlayer"), Result)) {
     return true;
   }
-  Result->SetBoolField(TEXT("looping"), bLoop);
-  Result->SetBoolField(TEXT("playOnOpen"), bAutoPlay);
+  Result->SetBoolField(TEXT("looping"), GetBoolProperty(Player, TEXT("Loop")));
+  Result->SetBoolField(TEXT("playOnOpen"), GetBoolProperty(Player, TEXT("PlayOnOpen")));
   if (Source) {
     Result->SetStringField(TEXT("mediaSourcePath"), ResolvedSourcePath);
     Result->SetBoolField(TEXT("openRequested"), true);
@@ -179,7 +179,7 @@ bool HandleCreateMediaTexture(UEngineWireSubsystem *Subsystem,
                         TEXT("MediaTexture"), Result)) {
     return true;
   }
-  Result->SetBoolField(TEXT("autoClear"), bAutoClear);
+  Result->SetBoolField(TEXT("autoClear"), GetBoolProperty(Texture, TEXT("AutoClear")));
   if (!ResolvedPlayerPath.IsEmpty()) {
     Result->SetStringField(TEXT("mediaPlayerPath"), ResolvedPlayerPath);
   }

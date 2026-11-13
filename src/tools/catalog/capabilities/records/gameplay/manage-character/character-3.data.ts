@@ -71,10 +71,10 @@ export const CHARACTER_3: readonly CapabilityRecordSource[] = [
       buildPath: C.buildPath, commonFolderPath: C.commonFolderPath, nameOverride: C.nameOverride },
     required: ['characterPath'],
     effect: 'write', behavior: { longRunning: true }, latency: 'long-running', resources: 'high',
-    outputProps: { characterPath: C.characterPath, pipelineType: C.pipelineType },
+    outputProps: { characterPath: C.characterPath },
     outputRequired: ['characterPath'],
     exampleInput: { action: 'build_metahuman', characterPath: '/Game/MetaHumans/MH_Neo', pipelineType: 'Cinematic', buildPath: '/Game/MetaHumans' },
-    exampleOutput: { success: true, message: 'MetaHuman assembled', characterPath: '/Game/MetaHumans/MH_Neo', pipelineType: 'Cinematic' } }),
+    exampleOutput: { success: true, message: 'MetaHuman assembled', characterPath: '/Game/MetaHumans/MH_Neo' } }),
 
   buildRecord({ parentTool: T, id: `${T}.export_metahuman`, action: 'export_metahuman', family: F,
     topics: ['metahuman', 'export metahuman', 'export skeletal mesh', 'export dna'],
