@@ -7,9 +7,11 @@
 namespace McpGeometryHandlers
 {
 AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                              const FTransform& Transform, const FString& GivenName, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
+                              const TSharedPtr<FJsonObject>& Payload, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
                               TSharedPtr<FJsonObject>& OutResult)
 {
+    const FTransform Transform = ReadTransformFromPayload(Payload);
+    const FString GivenName = GetJsonStringField(Payload, TEXT("name"));
     const FString Name = GivenName.IsEmpty() ? FString(DefaultName) : GivenName;
     // One undo step: control_editor undo takes the new actor back out of the level.
     const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreatePrimitive", "Create {0}"), FText::FromString(Name)),

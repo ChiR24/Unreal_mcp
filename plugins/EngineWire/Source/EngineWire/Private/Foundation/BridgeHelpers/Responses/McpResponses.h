@@ -9,6 +9,14 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 
+// Sets OutError and OutCode and returns false: a refusal in one line, from a function that hands it to its caller.
+inline bool McpRefuse(FString &OutError, FString &OutCode, const FString &Error,
+                      const TCHAR *Code = TEXT("INVALID_ARGUMENT")) {
+  OutError = Error;
+  OutCode = Code;
+  return false;
+}
+
 /**
  * Sends a standardized success response with a "data" envelope.
  *

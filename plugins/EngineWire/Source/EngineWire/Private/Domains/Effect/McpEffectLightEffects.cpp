@@ -33,15 +33,6 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     const bool bHasColor = Context.Payload->HasField(TEXT("color"));
     const FLinearColor LightColor = ExtractLinearColorField(Context.Payload, TEXT("color"), FLinearColor::White);
 
-    if (!GetEditorActorSubsystem())
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), nullptr,
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-
     UClass* ChosenClass = APointLight::StaticClass();
     UClass* ComponentClass = UPointLightComponent::StaticClass();
     const FString LowerLightType = LightType.ToLower();

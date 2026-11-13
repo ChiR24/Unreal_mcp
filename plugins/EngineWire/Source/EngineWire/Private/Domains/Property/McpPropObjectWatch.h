@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-#include "UObject/WeakObjectPtrTemplates.h"
+#include "UObject/WeakObjectPtr.h"
 
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;

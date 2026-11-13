@@ -42,9 +42,11 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Create assets / dirs / save registry | `BridgeHelpers/Assets/{McpAssetCreation,McpAssetDirs,McpAssetSaveRegistry}.h` |
 | Which packages outside a delete still use an asset (delete safety) | `BridgeHelpers/Assets/McpAssetReferencers.h` |
 | Make the package of a new asset | `BridgeHelpers/Assets/McpAssetCreation.h` `McpCreatePackageForNewAsset` (refuses an occupied path and a name the engine does not take) or `McpCreatePackageOrNull` (null where the engine's `CreatePackage` is a Fatal log: a name holding `//`); never the engine call (contract test) |
+| Make a folder and a name into a new asset's package path, refusing a bad name (`ValidateAssetCreationPath` rewrites one) | `BridgeHelpers/Assets/McpAssetCreation.h` `McpBuildValidatedAssetPath` |
 | Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
 | Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |
 | Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{McpBPAssetLoad,McpBPCompileHelpers,McpScsLookup,McpBPPaths}.h` |
+| A Blueprint's component template by name (its SCS, inherited or native), a node's effective template | `BridgeHelpers/Blueprints/McpPropCdoComponents.h` (`McpPropertyCdoComponents::FindCdoComponent`) |
 | Make a new Blueprint asset (the factory step) | `BridgeHelpers/Blueprints/McpNewBlueprint.h` `McpNewBlueprint` (the caller makes the package and refuses an existing asset first; registering, compiling and saving stay with it) |
 | The engine's StandardMacros library (ForLoop, DoOnce, Gate...): load it, find a macro, tell one apart | `BridgeHelpers/Blueprints/McpStandardMacros.h` |
 | Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{McpNestedPropPath,McpComponentLookup,McpPropApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
@@ -53,6 +55,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | An enumerator's short name for a reply | `BridgeHelpers/Reflection/McpEnumName.h` `McpEnumName(Value)` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{McpResponses,McpResponseVerify,McpOutputCapture,McpJsonFields}.h` |
 | Refuse a missing field or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
+| Refuse in one line from a function that hands its refusal to its caller (sets OutError and OutCode, returns false) | `BridgeHelpers/Responses/McpResponses.h` `McpRefuse` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
 | Show or hide a stat overlay without toggling it twice | `Render/McpViewportStats.h` `McpIsStatShown` (the viewport a Stat command lands on: the running game, else the last level viewport; Stat commands toggle) |
 | Give a spawned volume real bounds | `../Domains/Volume/McpVolumeGeometry.h` `VolumeHelpers::CreateBoxBrushForVolume` (a volume from `SpawnActor` has no brush; scaling it leaves zero bounds) |

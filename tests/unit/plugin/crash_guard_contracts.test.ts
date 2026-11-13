@@ -168,7 +168,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
 
   it('a data layer asset and a sublevel are made only under a path their package can take', () => {
     const layer = code('Domains', 'LevelStructure', 'McpLevelStructureDataLayerCreation.cpp');
-    const validated = layer.indexOf('McpBuildValidatedEnvironmentAssetPath(DataLayerAssetPath, DataLayerName, TEXT("data layer"), FullAssetPath, PathError, PathCode)');
+    const validated = layer.indexOf('McpBuildValidatedAssetPath(DataLayerAssetPath, DataLayerName, TEXT("data layer"), FullAssetPath, PathError, PathCode)');
     expect(validated).toBeGreaterThan(-1);
     expect(validated).toBeLessThan(layer.indexOf('McpCreatePackageForNewAsset(FullAssetPath'));
     expect(layer).toContain('McpSafeOperations::IsEngineContentPackage(FullAssetPath)');

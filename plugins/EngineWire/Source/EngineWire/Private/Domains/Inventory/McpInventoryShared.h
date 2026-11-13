@@ -56,6 +56,26 @@ UBlueprint* LoadInventoryBlueprintOrError(UEngineWireSubsystem& Bridge,
                                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                           const FString& BlueprintPath);
 
+// The data asset at Path as a T, or null after refusing: MISSING_PARAMETER "Missing required parameter: <Field>" for an
+// empty Path, ASSET_NOT_FOUND "<Noun> not found: <Path>" when nothing there loads as a T. It loads through UDataAsset,
+// since UPrimaryDataAsset is abstract on 5.7.
+template <typename T = UObject>
+T* LoadInventoryAssetOrError(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                             const FString& Path, const TCHAR* Field, const TCHAR* Noun)
+{
+  if (Path.IsEmpty()) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Missing required parameter: %s"), Field),
+                               TEXT("MISSING_PARAMETER"));
+    return nullptr;
+  }
+  T* Asset = Cast<T>(StaticLoadObject(UDataAsset::StaticClass(), nullptr, *Path));
+  if (!Asset) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s not found: %s"), Noun, *Path),
+                               TEXT("ASSET_NOT_FOUND"));
+  }
+  return Asset;
+}
+
 bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

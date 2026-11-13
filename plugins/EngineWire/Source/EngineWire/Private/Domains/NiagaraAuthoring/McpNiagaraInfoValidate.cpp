@@ -193,13 +193,8 @@ static bool GetNiagaraInfo(FActionContext& Context)
     }
     if (System && !Context.EmitterName.IsEmpty() && !FindEmitterHandle(System, Context.EmitterName))
     {
-        TArray<FString> Names;
-        for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
-        {
-            Names.Add(Handle.GetName().ToString());
-        }
         Context.SendError(FString::Printf(TEXT("No emitter '%s' in %s. Its emitters: %s."), *Context.EmitterName, *TargetPath,
-                                          *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
+                                          *ListEmitterNames(System)), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
     if (System && !AddPlacedUserParameters(Context, System)) return true;

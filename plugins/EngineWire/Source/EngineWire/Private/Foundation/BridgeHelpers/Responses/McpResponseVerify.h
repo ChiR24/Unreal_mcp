@@ -25,6 +25,12 @@ inline FString McpActorRef(const AActor *Actor) {
   return Label;
 }
 
+// Whether a nameFilter keeps Actor: its label or its object name holds Filter, in any case; an empty filter keeps
+// every actor. The object name too, since actors sharing a label are reported by it (McpActorRef).
+inline bool McpActorNameContains(const AActor *Actor, const FString &Filter) {
+  return Filter.IsEmpty() || Actor->GetActorLabel().Contains(Filter) || Actor->GetName().Contains(Filter);
+}
+
 static inline void AddActorVerification(TSharedPtr<FJsonObject> Response,
                                         AActor *Actor) {
   if (!Response || !Actor)

@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/Lint/McpBPLint.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/BlueprintGraph/Lint/McpBPLintRules.h"
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
@@ -77,9 +78,7 @@ bool HandleLint(const McpBlueprintGraphHandlers::FActionContext& Context)
             Wanted.Add(Rule);
         }
     }
-    double MaxFindings = 50;
-    Context.Payload->TryGetNumberField(TEXT("maxFindings"), MaxFindings);
-    const int32 Cap = FMath::Clamp(static_cast<int32>(MaxFindings), 1, 200);
+    const int32 Cap = FMath::Clamp(GetJsonIntField(Context.Payload, TEXT("maxFindings"), 50), 1, 200);
     const auto On = [&Wanted](const TCHAR* Rule) { return Wanted.Num() == 0 || Wanted.Contains(Rule); };
     TArray<FFinding> Findings;
     int32 Skipped = 0;

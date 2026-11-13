@@ -18,7 +18,7 @@ static bool CreateFrameworkClass(FActionContext& Context, UClass* DefaultParent,
 
     // An unloadable or unrelated parentClass used to fall back to the default parent and still
     // answer success; refuse it before anything is created.
-    const FString ParentClassPath = GetStringField(Context.Payload, TEXT("parentClass"));
+    const FString ParentClassPath = GetJsonStringField(Context.Payload, TEXT("parentClass"));
     UClass* ParentClass = ParentClassPath.IsEmpty() ? DefaultParent : LoadClassFromPath(ParentClassPath);
     if (!ParentClass)
     {
@@ -41,7 +41,7 @@ static bool CreateFrameworkClass(FActionContext& Context, UClass* DefaultParent,
             {TEXT("hudClass"), TEXT("HUDClass")}};
         for (const TPair<const TCHAR*, const TCHAR*>& Override : Overrides)
         {
-            const FString ClassPath = GetStringField(Context.Payload, Override.Key);
+            const FString ClassPath = GetJsonStringField(Context.Payload, Override.Key);
             if (ClassPath.IsEmpty()) continue;
             UClass* OverrideClass = LoadClassFromPath(ClassPath);
             const FClassProperty* Slot = CastField<FClassProperty>(ParentClass->FindPropertyByName(Override.Value));

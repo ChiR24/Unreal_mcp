@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
@@ -143,12 +144,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
     if (!Actor || Actor->IsHidden()) {
       continue;
     }
-    const FString Label = Actor->GetActorLabel();
-    // Actors sharing a label are reported by object name (McpActorRef), so the
-    // filter has to find them by it: 24 shelf legs labelled "Cube" read
-    // StaticMeshActor_75 in a row, and nameFilter "StaticMeshActor_75" matched 0.
-    if (!NameFilter.IsEmpty() && !Label.Contains(NameFilter) &&
-        !Actor->GetName().Contains(NameFilter)) {
+    if (!McpActorNameContains(Actor, NameFilter)) {
       continue;
     }
     ++Examined;

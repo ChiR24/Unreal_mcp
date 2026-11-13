@@ -89,10 +89,10 @@ inline constexpr float MEMORY_PRESSURE_CRITICAL = 0.90f;
 FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload);
 // A DynamicMeshActor holding DynMesh, placed, scaled and labelled, its component active; null when the spawn fails.
 AActor* SpawnDynamicMeshActorWithMesh(const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh);
-// Spawn DynMesh as a DynamicMeshActor named Name (DefaultName when Name is empty); on failure frees DynMesh, sends
-// SPAWN_FAILED and returns nullptr. On success OutResult carries {name, class}.
+// Spawn DynMesh as a DynamicMeshActor at the payload's transform, named its name (DefaultName when it gives none); on
+// failure frees DynMesh, sends SPAWN_FAILED and returns nullptr. On success OutResult carries {name, class}.
 AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                              const FTransform& Transform, const FString& Name, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
+                              const TSharedPtr<FJsonObject>& Payload, const TCHAR* DefaultName, UDynamicMesh* DynMesh,
                               TSharedPtr<FJsonObject>& OutResult);
 // Replies with the error and returns false when memory is short or the op would exceed the triangle cap.
 bool GuardMeshBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, int64 EstimatedTriangles, const TCHAR* OpName);

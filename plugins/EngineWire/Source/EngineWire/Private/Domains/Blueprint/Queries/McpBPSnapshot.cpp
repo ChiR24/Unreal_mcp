@@ -1,3 +1,5 @@
+#include "Domains/Blueprint/McpBPSnapshot.h"
+
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -6,9 +8,26 @@
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"
 
-void McpAppendBlueprintScsComponents(class UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Snapshot); // Events/McpBPSnapshotComponents.cpp
-
 namespace McpBlueprintHandlers {
+static void FEngineWire_AppendPinsJson(
+    const TArray<TSharedPtr<FUserPinInfo>> &Pins,
+    TArray<TSharedPtr<FJsonValue>> &Out) {
+  for (const TSharedPtr<FUserPinInfo> &PinInfo : Pins) {
+    if (!PinInfo.IsValid()) {
+      continue;
+    }
+    const FString PinName = PinInfo->PinName.ToString();
+    if (PinName.IsEmpty()) {
+      continue;
+    }
+    TSharedPtr<FJsonObject> PinJson = McpHandlerUtils::CreateResultObject();
+    PinJson->SetStringField(TEXT("name"), PinName);
+    PinJson->SetStringField(
+        TEXT("type"), McpBlueprintUtils::DescribePinType(PinInfo->PinType));
+    Out.Add(MakeShared<FJsonValueObject>(PinJson));
+  }
+}
+
 static void
 FEngineWire_CollectEventPins(UK2Node *Node,
                                       TArray<TSharedPtr<FJsonValue>> &Out) {

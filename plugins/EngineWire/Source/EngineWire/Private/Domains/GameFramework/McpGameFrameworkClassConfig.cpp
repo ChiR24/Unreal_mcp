@@ -32,7 +32,7 @@ static void ReportEffectiveGameMode(const TSharedPtr<FJsonObject>& Response, UBl
 
 static int32 SetOptionalClassCounted(UBlueprint* Blueprint, const FActionContext& Context, const FString& FieldName, const FName& PropertyName, FString& Error)
 {
-    const FString ClassPath = GetStringField(Context.Payload, FieldName);
+    const FString ClassPath = GetJsonStringField(Context.Payload, FieldName);
     if (ClassPath.IsEmpty()) return 0;
 
     UClass* ClassToSet = LoadClassFromPath(ClassPath);
@@ -102,7 +102,7 @@ static bool SetGameModeClass(
     {
         McpSafeAssetSave(Blueprint);
     }
-    const bool bMakeDefault = GetBoolField(Context.Payload, TEXT("makeDefault"), false);
+    const bool bMakeDefault = GetJsonBoolField(Context.Payload, TEXT("makeDefault"), false);
     if (bMakeDefault && !MakeProjectDefaultGameMode(Blueprint))
     {
         Context.SendError(FString::Printf(
@@ -161,7 +161,7 @@ static bool ConfigureGameRules(FActionContext& Context)
             TEXT("NOT_SUPPORTED"));
         return true;
     }
-    const bool bDelayedStart = GetBoolField(Context.Payload, TEXT("bDelayedStart"));
+    const bool bDelayedStart = GetJsonBoolField(Context.Payload, TEXT("bDelayedStart"));
     Prop->SetPropertyValue_InContainer(CDO, bDelayedStart);
     CDO->MarkPackageDirty();
     FinishBlueprintMutation(Blueprint, Context.bSave);
@@ -202,7 +202,7 @@ bool HandleGameModeConfigAction(FActionContext& Context)
         {
             const bool bPawn = Setter.Property == FString(TEXT("DefaultPawnClass"));
             const FString ClassPath = bPawn ? McpGetFirstStringField(Context.Payload, {TEXT("pawnClass"), TEXT("defaultPawnClass")})
-                                            : GetStringField(Context.Payload, Setter.Field);
+                                            : GetJsonStringField(Context.Payload, Setter.Field);
             // A game mode may spawn no pawn: "None", as the editor's class picker shows an empty slot, or an empty
             // pawnClass clears it. Any other class that does not load stays NOT_FOUND.
             const bool bNoPawn = bPawn && (ClassPath.Equals(TEXT("None"), ESearchCase::IgnoreCase) ||

@@ -1,6 +1,6 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
-#include "Domains/Environment/Runtime/McpEnvAssetValidate.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -126,7 +126,7 @@ bool HandleCreateDataLayer(
     // folder only when it is one an asset can take, and engine content is refused: '/Game/' used to be put in front of
     // any other root, which made '/Game//Engine/...' of an engine folder, a name CreatePackage is a Fatal log for.
     FString FullAssetPath, PathError, PathCode;
-    if (!McpEnvironmentHandlers::McpBuildValidatedEnvironmentAssetPath(DataLayerAssetPath, DataLayerName, TEXT("data layer"), FullAssetPath, PathError, PathCode))
+    if (!McpBuildValidatedAssetPath(DataLayerAssetPath, DataLayerName, TEXT("data layer"), FullAssetPath, PathError, PathCode))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, PathError, nullptr, PathCode);
         return true;

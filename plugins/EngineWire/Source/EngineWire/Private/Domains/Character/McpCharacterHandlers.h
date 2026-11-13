@@ -42,6 +42,12 @@ using FCharacterSocket = TSharedPtr<FMcpBridgeWebSocket>;
 
 UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError);
 UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
+// The Blueprint's class default object as a Character, as it is now (a compile replaces it); null for another class or
+// before the first compile.
+inline ACharacter* CharacterDefaultsOf(const UBlueprint* Blueprint)
+{
+    return Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+}
 
 // Compiles (so added variables are usable) and saves one configure_* edit.
 // Every configure call used to compile only, answer "configured", and lose the change

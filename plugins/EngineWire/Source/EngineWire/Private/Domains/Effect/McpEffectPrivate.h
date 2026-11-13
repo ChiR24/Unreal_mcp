@@ -29,10 +29,6 @@ FString NormalizeNativeSubAction(
     const TSharedPtr<FJsonObject>& Payload);
 bool IsNiagaraAuthoringSubAction(const FString& SubAction);
 bool IsNiagaraGraphSubAction(const FString& SubAction);
-FString ResolveCreateEffectSubAction(
-    const FString& Action,
-    const FString& Lower,
-    const TSharedPtr<FJsonObject>& Payload);
 
 FColor ReadColorField(
     const TSharedPtr<FJsonObject>& Payload,

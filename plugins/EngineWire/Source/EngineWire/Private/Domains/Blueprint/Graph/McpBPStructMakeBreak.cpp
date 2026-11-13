@@ -38,21 +38,10 @@ static UStruct* McpResolveStructTarget(const FString& StructPath)
 // Locate a graph by name across the Blueprint's graph collections.
 static UEdGraph* McpFindGraphByName(UBlueprint* BP, const FString& GraphName)
 {
-    auto Match = [&](const TArray<TObjectPtr<UEdGraph>>& Graphs) -> UEdGraph*
-    {
-        for (UEdGraph* G : Graphs)
-        {
-            if (G && G->GetName() == GraphName)
-            {
-                return G;
-            }
-        }
-        return nullptr;
-    };
-    if (UEdGraph* G = Match(BP->UbergraphPages)) return G;
-    if (UEdGraph* G = Match(BP->FunctionGraphs)) return G;
-    if (UEdGraph* G = Match(BP->MacroGraphs)) return G;
-    return nullptr;
+    using McpBlueprintUtils::FindGraphNamed;
+    if (UEdGraph* G = FindGraphNamed(BP->UbergraphPages, GraphName)) return G;
+    if (UEdGraph* G = FindGraphNamed(BP->FunctionGraphs, GraphName)) return G;
+    return FindGraphNamed(BP->MacroGraphs, GraphName);
 }
 
 bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)

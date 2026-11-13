@@ -115,7 +115,7 @@ bool HandleGetCharacterInfo(UEngineWireSubsystem* Self, const FString& RequestId
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetStringField(TEXT("assetName"), Blueprint->GetName());
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (CharCDO)
     {
         if (CharCDO->GetCapsuleComponent())

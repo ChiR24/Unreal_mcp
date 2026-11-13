@@ -11,10 +11,6 @@ namespace ConsoleCommandSecurity
 bool IsBlockedCommand(const FString& Command);
 }
 
-namespace McpConsoleCommandHandlers
-{
-}
-
 // McpConsoleVariables.cpp: inspect get_console_variables, each named variable's value, type, last setter and help.
 namespace McpConsoleVariables
 {

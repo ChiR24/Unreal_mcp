@@ -8,6 +8,7 @@
 // three rounds, all in one undo step. dryRun plans the first round and moves nothing.
 
 #include "Domains/ControlActor/Placement/Fix/McpPlacementFix.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 
 #include "Domains/ControlActor/McpActorSupport.h"
 
@@ -84,7 +85,7 @@ bool HandleFixPlacement(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     TArray<AActor*> Check;
     for (AActor* Actor : Candidates)
     {
-        if (!NameFilter.IsEmpty() && !Actor->GetActorLabel().Contains(NameFilter) && !Actor->GetName().Contains(NameFilter))
+        if (!McpActorNameContains(Actor, NameFilter))
         {
             continue;
         }

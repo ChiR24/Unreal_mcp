@@ -5,6 +5,7 @@
 // chases too (chaseRange) and takes over a chase the pawn has, and chase refuses a pawn that patrols.
 // McpBPAddBehaviour.cpp runs the plans.
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
@@ -30,7 +31,7 @@ bool HasBehaviourFunction(const UBlueprint *Blueprint, const TCHAR *Name) {
 }
 
 bool IsPawnBlueprint(const UBlueprint *Blueprint) {
-  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+  const UClass *Parent = McpBlueprintUtils::BlueprintClass(Blueprint);
   return Parent && Parent->IsChildOf(APawn::StaticClass());
 }
 
@@ -74,9 +75,9 @@ bool PlanChase(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
     return false;
   }
   Plan.Recipe = TEXT("Chase");
-  Plan.Values.Add(TEXT("ChaseRange"), MakeShared<FJsonValueNumber>(Range));
-  Plan.Values.Add(TEXT("StopDistance"), MakeShared<FJsonValueNumber>(Stop));
-  Plan.Values.Add(TEXT("UsePathfinding"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("usePathfinding"), true)));
+  SetNumber(Plan, TEXT("ChaseRange"), Range);
+  SetNumber(Plan, TEXT("StopDistance"), Stop);
+  SetBool(Plan, TEXT("UsePathfinding"), GetJsonBoolField(Payload, TEXT("usePathfinding"), true));
   return true;
 }
 
@@ -95,14 +96,14 @@ bool PlanPatrol(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
   }
   Plan.Recipe = TEXT("Patrol");
   Plan.Values.Add(TEXT("Points"), MakeShared<FJsonValueArray>(Points));
-  Plan.Values.Add(TEXT("WaitTime"), MakeShared<FJsonValueNumber>(Wait));
+  SetNumber(Plan, TEXT("WaitTime"), Wait);
   // A setting the caller left out keeps what the Blueprint has (a chase it had keeps its range); new, it is the default.
-  Plan.Values.Add(TEXT("ChaseRange"), MakeShared<FJsonValueNumber>(Range));
-  Plan.Values.Add(TEXT("StopDistance"), MakeShared<FJsonValueNumber>(Stop));
-  Plan.Values.Add(TEXT("UsePathfinding"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("usePathfinding"), true)));
-  Plan.Values.Add(TEXT("KeepChaseRange"), MakeShared<FJsonValueBoolean>(!Payload->HasField(TEXT("chaseRange"))));
-  Plan.Values.Add(TEXT("KeepStopDistance"), MakeShared<FJsonValueBoolean>(!Payload->HasField(TEXT("stopDistance"))));
-  Plan.Values.Add(TEXT("KeepPathfinding"), MakeShared<FJsonValueBoolean>(!Payload->HasField(TEXT("usePathfinding"))));
+  SetNumber(Plan, TEXT("ChaseRange"), Range);
+  SetNumber(Plan, TEXT("StopDistance"), Stop);
+  SetBool(Plan, TEXT("UsePathfinding"), GetJsonBoolField(Payload, TEXT("usePathfinding"), true));
+  SetBool(Plan, TEXT("KeepChaseRange"), !Payload->HasField(TEXT("chaseRange")));
+  SetBool(Plan, TEXT("KeepStopDistance"), !Payload->HasField(TEXT("stopDistance")));
+  SetBool(Plan, TEXT("KeepPathfinding"), !Payload->HasField(TEXT("usePathfinding")));
   if (HasBehaviourFunction(Blueprint, TEXT("ChaseUpdate"))) {
     Plan.Replaces.Add(TEXT("Chase"));
   }
@@ -121,8 +122,8 @@ bool PlanMovingPlatform(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
   }
   Plan.Recipe = TEXT("MovingPlatform");
   Plan.Values.Add(TEXT("Points"), MakeShared<FJsonValueArray>(Points));
-  Plan.Values.Add(TEXT("Speed"), MakeShared<FJsonValueNumber>(Speed));
-  Plan.Values.Add(TEXT("Wait"), MakeShared<FJsonValueNumber>(Wait));
+  SetNumber(Plan, TEXT("Speed"), Speed);
+  SetNumber(Plan, TEXT("Wait"), Wait);
   return true;
 }
 
@@ -139,11 +140,11 @@ bool ReadProjectile(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bl
   if (!OutError.IsEmpty()) {
     return false;
   }
-  Plan.Values.Add(TEXT("ProjectileType"), MakeShared<FJsonValueString>(McpBlueprintBehaviour::ClassVariableType(
-                                              Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass())));
-  Plan.Values.Add(TEXT("ProjectileClass"), MakeShared<FJsonValueString>(Fired->GetPathName()));
-  Plan.Values.Add(TEXT("ProjectileSpeed"), MakeShared<FJsonValueNumber>(Speed));
-  Plan.Values.Add(TEXT("FireRate"), MakeShared<FJsonValueNumber>(Rate));
+  SetString(Plan, TEXT("ProjectileType"), McpBlueprintBehaviour::ClassVariableType(
+                                              Blueprint, TEXT("ProjectileClass"), Fired, AActor::StaticClass()));
+  SetString(Plan, TEXT("ProjectileClass"), Fired->GetPathName());
+  SetNumber(Plan, TEXT("ProjectileSpeed"), Speed);
+  SetNumber(Plan, TEXT("FireRate"), Rate);
   return true;
 }
 
@@ -164,10 +165,10 @@ bool PlanExplosive(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blu
     return false;
   }
   Plan.Recipe = TEXT("Explosive");
-  Plan.Values.Add(TEXT("Damage"), MakeShared<FJsonValueNumber>(Damage));
-  Plan.Values.Add(TEXT("Radius"), MakeShared<FJsonValueNumber>(Radius));
-  Plan.Values.Add(TEXT("Effect"), MakeShared<FJsonValueString>(Effect ? Effect->GetPathName() : FString(TEXT("None"))));
-  Plan.Values.Add(TEXT("SelfClass"), MakeShared<FJsonValueString>(Self->GetPathName()));
+  SetNumber(Plan, TEXT("Damage"), Damage);
+  SetNumber(Plan, TEXT("Radius"), Radius);
+  SetString(Plan, TEXT("Effect"), Effect ? Effect->GetPathName() : FString(TEXT("None")));
+  SetString(Plan, TEXT("SelfClass"), Self->GetPathName());
   return true;
 }
 
@@ -185,9 +186,9 @@ bool PlanStomp(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepri
     return false;
   }
   Plan.Recipe = TEXT("Stomp");
-  Plan.Values.Add(TEXT("Bounce"), MakeShared<FJsonValueNumber>(Bounce));
-  Plan.Values.Add(TEXT("SideDamage"), MakeShared<FJsonValueNumber>(Side));
-  Plan.Values.Add(TEXT("Destroys"), MakeShared<FJsonValueBoolean>(!HasHealthBehaviour(Blueprint->GeneratedClass)));
+  SetNumber(Plan, TEXT("Bounce"), Bounce);
+  SetNumber(Plan, TEXT("SideDamage"), Side);
+  SetBool(Plan, TEXT("Destroys"), !HasHealthBehaviour(Blueprint->GeneratedClass));
   if (McpBlueprintBehaviour::FindOwned(Blueprint, TEXT("DamageOnTouch")).Num() > 0) {
     Plan.Replaces.Add(TEXT("DamageOnTouch"));
   }
@@ -201,7 +202,7 @@ bool PlanTurret(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluepr
     return false;
   }
   Plan.Recipe = TEXT("Turret");
-  Plan.Values.Add(TEXT("Range"), MakeShared<FJsonValueNumber>(Range));
+  SetNumber(Plan, TEXT("Range"), Range);
   return true;
 }
 } // namespace McpBlueprintHandlers

@@ -6,19 +6,9 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
   if (SubAction == TEXT("configure_item_stacking")) {
     FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
 
-    if (ItemPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: itemPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
+    UObject* ItemAsset = LoadInventoryAssetOrError(
+        Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"), TEXT("Item"));
     if (!ItemAsset) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Item not found: %s"), *ItemPath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
@@ -126,19 +116,9 @@ bool HandleInventoryItemPresentationActions(UEngineWireSubsystem& Bridge, const 
     FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
     FString IconPath = GetJsonStringField(Payload, TEXT("iconPath"));
 
-    if (ItemPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: itemPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
+    UObject* ItemAsset = LoadInventoryAssetOrError(
+        Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"), TEXT("Item"));
     if (!ItemAsset) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Item not found: %s"), *ItemPath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

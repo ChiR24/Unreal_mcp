@@ -7,33 +7,14 @@ namespace McpGeometryHandlers
 bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
-    double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    double Depth = GetJsonNumberField(Payload, TEXT("depth"), 100.0);
-
-    const TSharedPtr<FJsonObject>* DimensionsObject = nullptr;
-    if (Payload.IsValid() && Payload->TryGetObjectField(TEXT("dimensions"), DimensionsObject) && DimensionsObject && DimensionsObject->IsValid())
-    {
-        // The published schema documents `dimensions` as {x, y, z} — reading
-        // only width/height/depth meant a contract-correct call was ACCEPTED and
-        // then silently ignored, leaving the default 100-unit primitive. Nothing
-        // reported the discard, and get_actor_bounds returned no bounds, so the
-        // wrong size was undetectable through the API. Accept both spellings.
-        (*DimensionsObject)->TryGetNumberField(TEXT("width"), Width);
-        (*DimensionsObject)->TryGetNumberField(TEXT("height"), Height);
-        (*DimensionsObject)->TryGetNumberField(TEXT("depth"), Depth);
-        (*DimensionsObject)->TryGetNumberField(TEXT("x"), Width);
-        (*DimensionsObject)->TryGetNumberField(TEXT("y"), Height);
-        (*DimensionsObject)->TryGetNumberField(TEXT("z"), Depth);
-    }
-
-    const TArray<TSharedPtr<FJsonValue>>* Dimensions = nullptr;
-    if (Payload.IsValid() && Payload->TryGetArrayField(TEXT("dimensions"), Dimensions) && Dimensions && Dimensions->Num() >= 3)
-    {
-        Width = (*Dimensions)[0]->AsNumber();
-        Height = (*Dimensions)[1]->AsNumber();
-        Depth = (*Dimensions)[2]->AsNumber();
-    }
+    // dimensions {x, y, z}, key by key, over width, height and depth.
+    const FVector Size = ExtractVectorField(Payload, TEXT("dimensions"),
+                                            FVector(GetJsonNumberField(Payload, TEXT("width"), 100.0),
+                                                    GetJsonNumberField(Payload, TEXT("height"), 100.0),
+                                                    GetJsonNumberField(Payload, TEXT("depth"), 100.0)));
+    double Width = Size.X;
+    double Height = Size.Y;
+    double Depth = Size.Z;
 
     if (Width <= 0.0 || Height <= 0.0 || Depth <= 0.0)
     {
@@ -76,7 +57,7 @@ bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
     // Spawn actor with dynamic mesh component. Use direct world spawning so
     // headless/NullRHI automation does not enter viewport hit-proxy placement.
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedBox"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedBox"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -114,7 +95,7 @@ bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSphere"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedSphere"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -149,7 +130,7 @@ bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCylinder"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedCylinder"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -190,7 +171,7 @@ bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCone"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedCone"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -228,7 +209,7 @@ bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedCapsule"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedCapsule"), DynMesh, Result);
     if (!NewActor)
     {
         return true;

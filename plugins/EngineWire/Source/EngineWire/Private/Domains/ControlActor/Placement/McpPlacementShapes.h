@@ -14,6 +14,9 @@ bool McpBlocksSolids(const UPrimitiveComponent *Comp);
 /** Has a body in the physics scene; an instanced mesh keeps one per instance. */
 bool McpHasBody(const UPrimitiveComponent *Comp);
 
+/** A solid body: collision on, a body in the physics scene, and a solid channel it blocks. */
+bool McpIsSolidBody(const UPrimitiveComponent *Comp);
+
 /**
  * True when every colliding component pair of the two actors was checked on its
  * real collision and none touch. A pair that cannot be checked keeps the

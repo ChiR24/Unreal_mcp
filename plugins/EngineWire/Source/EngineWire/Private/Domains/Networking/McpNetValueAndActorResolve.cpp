@@ -1,4 +1,5 @@
 #include "Domains/Networking/McpNetPrivate.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Kismet2/Kismet2NameValidators.h"
 
@@ -65,14 +66,7 @@ UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
 
 UEdGraph* FindFunctionGraph(UBlueprint* Blueprint, const FName Name)
 {
-    for (UEdGraph* Graph : Blueprint->FunctionGraphs)
-    {
-        if (Graph && Graph->GetFName() == Name)
-        {
-            return Graph;
-        }
-    }
-    return nullptr;
+    return McpBlueprintUtils::FindGraphNamed(Blueprint->FunctionGraphs, Name.ToString());
 }
 
 bool CheckFreeMemberNameOrReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Name, const TCHAR* Field)
@@ -103,6 +97,4 @@ void ReplyInvalidEnum(FNetworkingActionContext& Context, const TCHAR* Field, con
         TEXT("INVALID_ARGUMENT"));
 }
 
-FString NetRoleToString(ENetRole Role) { return StaticEnum<ENetRole>()->GetNameStringByValue(Role); }
-FString NetDormancyToString(ENetDormancy Dormancy) { return StaticEnum<ENetDormancy>()->GetNameStringByValue(Dormancy); }
 }

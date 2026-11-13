@@ -17,7 +17,7 @@ static void AddActorNetworkingInfo(TSharedPtr<FJsonObject>& NetworkingInfo, AAct
     NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->NetCullDistanceSquared);
 #endif
     NetworkingInfo->SetNumberField(TEXT("netPriority"), Actor->NetPriority);
-    NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(Actor->NetDormancy));
+    NetworkingInfo->SetStringField(TEXT("netDormancy"), McpEnumName<ENetDormancy>(Actor->NetDormancy));
 }
 
 bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
@@ -57,8 +57,8 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
         }
 
         AddActorNetworkingInfo(NetworkingInfo, Actor);
-        NetworkingInfo->SetStringField(TEXT("role"), NetRoleToString(Actor->GetLocalRole()));
-        NetworkingInfo->SetStringField(TEXT("remoteRole"), NetRoleToString(Actor->GetRemoteRole()));
+        NetworkingInfo->SetStringField(TEXT("role"), McpEnumName<ENetRole>(Actor->GetLocalRole()));
+        NetworkingInfo->SetStringField(TEXT("remoteRole"), McpEnumName<ENetRole>(Actor->GetRemoteRole()));
         NetworkingInfo->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
     }
     else

@@ -1,4 +1,4 @@
-#include "Domains/Environment/Runtime/McpEnvAssetValidate.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
 
@@ -32,7 +32,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     UFoliageType *FoliageType = McpLoadFoliageTypeFromPayload(Payload, FoliagePath);
     if (!FoliageType)
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode, TEXT("Foliage type asset not found"), TEXT("ASSET_NOT_FOUND"));
+        return McpRefuse(OutMessage, OutErrorCode, TEXT("Foliage type asset not found"), TEXT("ASSET_NOT_FOUND"));
     }
     FoliageType->Modify();
 
@@ -50,7 +50,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
         if (!Instanced || !Mesh)
         {
-            return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            return McpRefuse(OutMessage, OutErrorCode,
                 Instanced ? FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath)
                           : FString(TEXT("This foliage type does not take a static mesh")),
                 Instanced ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
@@ -81,7 +81,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         MaxScale = bHasMax ? MaxScale : FoliageType->ScaleX.Max;
         if (MinScale <= 0.0 || MaxScale < MinScale)
         {
-            return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            return McpRefuse(OutMessage, OutErrorCode,
                 TEXT("minScale must be positive and no greater than maxScale"), TEXT("INVALID_ARGUMENT"));
         }
         FoliageType->Scaling = EFoliageScaling::Uniform;
@@ -134,20 +134,20 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     McpEnvironmentHandlers::McpApplyPayloadSettings(FoliageType, ReflectPayload, Applied, Failed);
     if (Failed.Num() > 0)
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             FString::Printf(TEXT("Could not apply: %s"), *FString::Join(Failed, TEXT("; "))), TEXT("CONFIGURATION_FAILED"));
     }
     // A call that set nothing used to save the untouched type and answer "configured".
     if (Applied.Num() == 0)
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             TEXT("Nothing to set: send meshPath, density, minScale, maxScale, alignToNormal, randomYaw, collisionEnabled, cullDistance or settings."), TEXT("INVALID_ARGUMENT"));
     }
     FoliageType->PostEditChange();
     FoliageType->MarkPackageDirty();
     if (!McpSafeAssetSave(FoliageType))
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             TEXT("Failed to save foliage type"), TEXT("SAVE_FAILED"));
     }
 

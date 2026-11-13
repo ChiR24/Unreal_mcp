@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Domains/Landscape/McpLandscapeShared.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -64,50 +65,12 @@ bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& Reques
     }
 
     FString CreateError, CreateCode;
-    UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
-    if (!Package) {
+    ULandscapeLayerInfoObject* LayerInfo =
+        McpLandscapeHandlers::McpNewLandscapeLayerInfo(PackagePath, LayerName, Payload, PhysMat, CreateError, CreateCode);
+    if (!LayerInfo) {
       Bridge->SendAutomationError(Socket, RequestId, CreateError, CreateCode);
       return true;
     }
-
-    ULandscapeLayerInfoObject* LayerInfo = NewObject<ULandscapeLayerInfoObject>(
-        Package, FName(*LayerName), RF_Public | RF_Standalone);
-
-    if (!LayerInfo) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create layer info."), TEXT("CREATION_ERROR"));
-      return true;
-    }
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-    LayerInfo->LayerName = FName(*LayerName);
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-    double Hardness = 0.5;
-    if (Payload->TryGetNumberField(TEXT("hardness"), Hardness)) {
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-      LayerInfo->Hardness = static_cast<float>(Hardness);
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-    }
-
-    if (PhysMat) {
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-      LayerInfo->PhysMaterial = PhysMat;
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-    }
-
-    // Set blend method if specified (replaces bNoWeightBlend)
-    bool bNoWeightBlend = false;
-    if (Payload->TryGetBoolField(TEXT("noWeightBlend"), bNoWeightBlend)) {
-#if ENGINE_MINOR_VERSION >= 7
-      // UE 5.7+: Use SetBlendMethod with ELandscapeTargetLayerBlendMethod
-      LayerInfo->SetBlendMethod(bNoWeightBlend ? ELandscapeTargetLayerBlendMethod::None : ELandscapeTargetLayerBlendMethod::FinalWeightBlending, false);
-#else
-      // UE 5.0-5.6: Use direct bNoWeightBlend property
-      LayerInfo->bNoWeightBlend = bNoWeightBlend;
-#endif
-    }
-
-    FAssetRegistryModule::AssetCreated(LayerInfo);
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);

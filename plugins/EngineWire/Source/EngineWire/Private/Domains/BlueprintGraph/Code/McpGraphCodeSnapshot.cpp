@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 
 #include "BlueprintActionDatabase.h"
@@ -122,7 +123,7 @@ bool IsSelfTarget(const UBlueprint* Blueprint, const UEdGraphPin* Pin)
     {
         return false;
     }
-    const UClass* Self = Blueprint->GeneratedClass ? Blueprint->GeneratedClass : Blueprint->ParentClass;
+    const UClass* Self = McpBlueprintUtils::BlueprintClass(Blueprint);
     const UClass* Target = Cast<UClass>(Pin->PinType.PinSubCategoryObject.Get());
     return Pin->PinType.PinSubCategory == UEdGraphSchema_K2::PSC_Self || (Self && Target && (Self->IsChildOf(Target) || Self->ImplementsInterface(Target)));
 }

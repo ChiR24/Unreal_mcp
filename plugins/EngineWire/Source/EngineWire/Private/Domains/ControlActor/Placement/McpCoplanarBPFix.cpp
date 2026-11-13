@@ -9,10 +9,11 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Dom/JsonObject.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
+#include "UObject/Package.h"
 
 namespace McpCoplanar
 {

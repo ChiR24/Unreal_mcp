@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 
 #include "Components/ActorComponent.h"
 #include "Engine/Blueprint.h"

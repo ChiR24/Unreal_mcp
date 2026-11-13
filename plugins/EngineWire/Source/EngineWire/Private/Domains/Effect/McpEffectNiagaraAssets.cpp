@@ -16,18 +16,6 @@ bool CreateNiagaraEffectFromPayload(
     const FString& DefaultSystemPath,
     const TSharedPtr<FJsonObject>& ExtraFields)
 {
-    if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("EditorActorSubsystem not available"));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), Response,
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-
     // An explicit (non-empty) systemPath or alias wins over the caller-supplied default;
     // an empty payload field no longer clobbers the default the way TryGetStringField did.
     const FString PayloadSystemPath = ReadNiagaraSystemPathField(Context.Payload);

@@ -103,7 +103,7 @@ AActor *FindBodilessSupport(UWorld *World, AActor *Actor, const FBox &ActorBox, 
     bool bSolid = false;
     TInlineComponentArray<UPrimitiveComponent *> Parts(Other);
     for (const UPrimitiveComponent *Part : Parts) {
-      bSolid |= Part->IsCollisionEnabled() && McpHasBody(Part) && McpBlocksSolids(Part);
+      bSolid |= McpIsSolidBody(Part);
     }
     if (bUnder && !bSolid) {
       return Other;

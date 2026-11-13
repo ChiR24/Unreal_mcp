@@ -2,6 +2,7 @@
 // blueprint snapshot (manage_blueprint.get_blueprint). The snapshot reported only
 // scsNodeCount; clients also need the components themselves (name, class, parent).
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/Blueprint/McpBPSnapshot.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 

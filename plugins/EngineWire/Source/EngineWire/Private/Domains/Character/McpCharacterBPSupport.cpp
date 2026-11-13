@@ -53,7 +53,7 @@ UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& Re
     }
     // Every character action edits the Character defaults: on another Blueprint the movement, jump, rotation, mesh
     // and camera edits wrote nothing, then compiled, saved and answered "configured".
-    const ACharacter* CharacterDefaults = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    const ACharacter* CharacterDefaults = CharacterDefaultsOf(Blueprint);
     if (!CharacterDefaults || !CharacterDefaults->GetCharacterMovement())
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is not a Character Blueprint with a CharacterMovement "

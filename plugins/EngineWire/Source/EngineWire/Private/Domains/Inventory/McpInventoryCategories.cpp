@@ -47,18 +47,13 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
       return true;
     }
 
-    // Load both assets (use UDataAsset base class for loading - UPrimaryDataAsset is abstract in UE5.7)
-    UObject* ItemObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
-    UObject* CategoryObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *CategoryPath);
-
+    UObject* ItemObj = LoadInventoryAssetOrError(
+        Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"), TEXT("Item"));
     if (!ItemObj) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Item not found: %s"), *ItemPath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
     // The category path used to be stored without a look, so a typo saved a category that does not exist.
+    UObject* CategoryObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *CategoryPath);
     if (!CategoryObj) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
           FString::Printf(TEXT("Category not found: %s (create it with create_inventory_asset kind=item_category); nothing was changed."), *CategoryPath),

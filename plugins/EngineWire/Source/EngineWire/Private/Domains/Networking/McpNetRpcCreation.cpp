@@ -86,11 +86,6 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
 
     Blueprint->Modify();
     UEdGraph* NewGraph = FBlueprintEditorUtils::CreateNewGraph(Blueprint, FName(*FunctionName), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
-    if (!NewGraph)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Failed to create function graph"), TEXT("CREATE_FAILED"));
-        return true;
-    }
     // User-created, as the editor's own new functions: an editable entry (so parameters can be added there later)
     // and the public, callable, overridable flags. Without it the function had none of them.
     FBlueprintEditorUtils::AddFunctionGraph<UFunction>(Blueprint, NewGraph, true, static_cast<UFunction*>(nullptr));

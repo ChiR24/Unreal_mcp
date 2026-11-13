@@ -48,7 +48,7 @@ bool ValidateCommonFields(FActionContext& Context)
         return false;
     }
 
-    Context.SubAction = GetStringField(Context.Payload, TEXT("subAction"));
+    Context.SubAction = GetJsonStringField(Context.Payload, TEXT("subAction"));
     if (Context.SubAction.IsEmpty())
     {
         Context.SendError(TEXT("Missing 'subAction' in payload."), TEXT("INVALID_ARGUMENT"));
@@ -57,11 +57,11 @@ bool ValidateCommonFields(FActionContext& Context)
 
     UE_LOG(LogMcpGameFrameworkHandlers, Log, TEXT("HandleManageGameFrameworkAction: subAction=%s"), *Context.SubAction);
 
-    Context.Name = GetStringField(Context.Payload, TEXT("name"));
-    Context.Path = GetStringField(Context.Payload, TEXT("path"), TEXT("/Game"));
+    Context.Name = GetJsonStringField(Context.Payload, TEXT("name"));
+    Context.Path = GetJsonStringField(Context.Payload, TEXT("path"), TEXT("/Game"));
     // Every Game Framework action authors a Blueprint asset; an edit that is not saved is lost
     // on the next editor restart, so saving is the default.
-    Context.bSave = GetBoolField(Context.Payload, TEXT("save"), true);
+    Context.bSave = GetJsonBoolField(Context.Payload, TEXT("save"), true);
 
     FString SanitizedPath = SanitizeProjectRelativePath(Context.Path);
     if (SanitizedPath.IsEmpty() && !Context.Path.IsEmpty())
@@ -76,10 +76,10 @@ bool ValidateCommonFields(FActionContext& Context)
         Context.Path = SanitizedPath;
     }
 
-    Context.GameModeBlueprint = GetStringField(Context.Payload, TEXT("gameModeBlueprint"));
+    Context.GameModeBlueprint = GetJsonStringField(Context.Payload, TEXT("gameModeBlueprint"));
     if (Context.GameModeBlueprint.IsEmpty())
     {
-        Context.GameModeBlueprint = GetStringField(Context.Payload, TEXT("blueprintPath"));
+        Context.GameModeBlueprint = GetJsonStringField(Context.Payload, TEXT("blueprintPath"));
     }
 
     if (!Context.GameModeBlueprint.IsEmpty())
@@ -104,26 +104,6 @@ bool RequireGameModePath(FActionContext& Context)
     if (!Context.GameModeBlueprint.IsEmpty()) return true;
     Context.SendError(TEXT("Missing 'gameModeBlueprint'."), TEXT("INVALID_ARGUMENT"));
     return false;
-}
-
-FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default)
-{
-    return Payload.IsValid() && Payload->HasField(FieldName) ? GetJsonStringField(Payload, FieldName) : Default;
-}
-
-double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default)
-{
-    return Payload.IsValid() && Payload->HasField(FieldName) ? GetJsonNumberField(Payload, FieldName) : Default;
-}
-
-bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default)
-{
-    return Payload.IsValid() && Payload->HasField(FieldName) ? GetJsonBoolField(Payload, FieldName) : Default;
-}
-
-const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
-{
-    return Payload.IsValid() && Payload->HasTypedField<EJson::Array>(FieldName) ? &Payload->GetArrayField(FieldName) : nullptr;
 }
 
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)

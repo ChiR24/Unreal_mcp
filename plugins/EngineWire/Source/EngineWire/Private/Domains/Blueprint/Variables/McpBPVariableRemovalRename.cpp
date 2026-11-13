@@ -125,13 +125,7 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     }
 
     const FName OldVarName(*OldName);
-    bool bFound = false;
-    for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
-      if (Var.VarName == OldVarName) {
-        bFound = true;
-        break;
-      }
-    }
+    const bool bFound = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, OldVarName) != INDEX_NONE;
     // A component is a member variable too (the My Blueprint panel renames both); its graph
     // getters follow the rename.
     USCS_Node *Component = (!bFound && Blueprint->SimpleConstructionScript)

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SplineMeshComponent.h"
@@ -118,10 +119,7 @@ TArray<FMcpCoplanarPiece> CollectPieces(UWorld* World, const FString& NameFilter
             continue;
         }
         ++Owner;
-        // Also the object name: actors sharing a label are reported by it.
-        const bool bNamed = Focus ? Focus->Contains(Actor)
-                                  : NameFilter.IsEmpty() || Actor->GetActorLabel().Contains(NameFilter) ||
-                                        Actor->GetName().Contains(NameFilter);
+        const bool bNamed = Focus ? Focus->Contains(Actor) : McpActorNameContains(Actor, NameFilter);
         TArray<UStaticMeshComponent*> Components;
         Actor->GetComponents<UStaticMeshComponent>(Components);
         const int32 First = Pieces.Num();

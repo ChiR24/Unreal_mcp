@@ -127,12 +127,9 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
       return true;
     }
 
-    UObject* RecipeAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *RecipePath);
+    UObject* RecipeAsset = LoadInventoryAssetOrError(
+        Bridge, RequestId, RequestingSocket, RecipePath, TEXT("recipePath"), TEXT("Recipe"));
     if (!RecipeAsset) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Recipe not found: %s"), *RecipePath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

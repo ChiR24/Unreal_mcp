@@ -31,8 +31,6 @@ struct FMcpRigEdit
 };
 // Adds {Field: Name} (with Extra's fields) to what the edits made.
 void McpNoteRigMade(FMcpRigEdit& Edit, const TCHAR* Field, const FString& Name, const TSharedPtr<FJsonObject>& Extra = nullptr);
-// Sets OutError and OutCode, and returns false.
-bool McpRefuseRigEdit(FString& OutError, FString& OutCode, const FString& Error, const TCHAR* Code);
 // import_bones, add_bone, add_null, add_control and remove_element.
 bool McpEditRigHierarchy(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJsonObject>& Step, FString& OutError, FString& OutCode);
 #endif

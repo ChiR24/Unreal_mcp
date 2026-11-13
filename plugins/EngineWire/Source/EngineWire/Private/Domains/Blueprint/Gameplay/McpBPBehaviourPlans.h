@@ -17,6 +17,17 @@ struct FBehaviourPlan {
   FString ErrorCode = TEXT("INVALID_ARGUMENT"); // what a refused plan answers
 };
 
+// A placeholder value of Plan.
+inline void SetNumber(FBehaviourPlan &Plan, const TCHAR *Name, double Value) {
+  Plan.Values.Add(Name, MakeShared<FJsonValueNumber>(Value));
+}
+inline void SetString(FBehaviourPlan &Plan, const TCHAR *Name, const FString &Value) {
+  Plan.Values.Add(Name, MakeShared<FJsonValueString>(Value));
+}
+inline void SetBool(FBehaviourPlan &Plan, const TCHAR *Name, bool Value) {
+  Plan.Values.Add(Name, MakeShared<FJsonValueBoolean>(Value));
+}
+
 // The recipe and its values for an add_<behaviour> action, checked against what the Blueprint is; false with
 // OutError otherwise.
 bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint,

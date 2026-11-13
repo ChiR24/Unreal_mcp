@@ -8,7 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Components/SceneComponent.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -85,23 +85,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     Defaults.Capture(TEXT("RelativeScale3D"));
     SceneComp->Modify();
     SceneComp->SetRelativeTransform(NewTransform);
-    TArray<FString> UpdatedInstances;
-    Defaults.Propagate(&UpdatedInstances);
-
     bool bCompiled = false;
     bool bSaved = false;
-    FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
-    // The recompile re-creates the placed actors; one that still shows the old
-    // value takes the new one now.
-    TArray<FString> UpdatedAgain;
-    Defaults.Propagate(&UpdatedAgain);
-    for (const FString &Path : UpdatedAgain) {
-      UpdatedInstances.AddUnique(Path);
-    }
-    if (UpdatedInstances.Num() > 0) {
-      Result->SetNumberField(TEXT("instancesUpdated"), UpdatedInstances.Num());
-      Result->SetArrayField(TEXT("updatedInstances"), McpScsPropagate::ToJsonStrings(UpdatedInstances));
-    }
+    FinalizeTemplateEdit(Blueprint, Defaults, Result, bCompiled, bSaved);
 
     // An inherited component has no SCS node of its own, so verifying only
     // through the node lookup would report failure for a write that landed. Read

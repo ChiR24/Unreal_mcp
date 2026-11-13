@@ -45,15 +45,10 @@ FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View)
             }
             const FLinearColor Shown = Sum / float(Frame.Block * Frame.Block);
             const FColor& Id = View.Ids[(Y * Frame.Block + Frame.Block / 2) * View.Size.X + X * Frame.Block + Frame.Block / 2];
-            const uint32 Key = McpViewIdKey(Id);
-            const FMcpViewProxy* Proxy = Proxies.Find(Key);
-            if (!Proxy)
-            {
-                Proxy = &Proxies.Add(Key, McpViewProxyOf(Id));
-            }
+            const FMcpViewProxy Proxy = McpViewProxyAt(Proxies, Id);
             Frame.Color.Add(Shown);
             Frame.Lab.Add(OkLab(Shown));
-            Frame.Actor.Add(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr);
+            Frame.Actor.Add(Proxy.Kind == EMcpViewKind::Actor ? Proxy.Actor : nullptr);
         }
     }
     return Frame;

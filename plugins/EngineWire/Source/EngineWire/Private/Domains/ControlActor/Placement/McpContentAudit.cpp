@@ -192,7 +192,7 @@ void MergeContent(UWorld* World, const FString& NameFilter, TArray<FMcpPlacement
         {
             Originals.Add(Key, Actor);
         }
-        if (!NameFilter.IsEmpty() && !Actor->GetActorLabel().Contains(NameFilter) && !Actor->GetName().Contains(NameFilter))
+        if (!McpActorNameContains(Actor, NameFilter))
         {
             continue;
         }

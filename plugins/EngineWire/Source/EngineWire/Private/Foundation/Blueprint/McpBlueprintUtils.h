@@ -26,6 +26,12 @@ T* FirstNodeOfClass(const UEdGraph* Graph)
     return Nodes.Num() > 0 ? Nodes[0] : nullptr;
 }
 
+// The class a Blueprint makes: its generated class once compiled, else its parent class.
+inline const UClass* BlueprintClass(const UBlueprint* Blueprint)
+{
+    return Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+}
+
 // The graph of Graphs (a Blueprint's FunctionGraphs, DelegateSignatureGraphs...) named Name, in any case; null when none is.
 inline UEdGraph* FindGraphNamed(const TArray<TObjectPtr<UEdGraph>>& Graphs, const FString& Name)
 {

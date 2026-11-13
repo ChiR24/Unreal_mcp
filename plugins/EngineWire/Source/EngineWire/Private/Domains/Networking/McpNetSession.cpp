@@ -50,7 +50,7 @@ bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
     for (const FNetDriverSetting& Setting : Settings)
     {
         if (!Context.Payload->HasField(Setting.Field)) continue;
-        const int32 Value = static_cast<int32>(GetJsonNumberField(Context.Payload, Setting.Field, 0.0));
+        const int32 Value = GetJsonIntField(Context.Payload, Setting.Field, 0);
         FIntProperty* Property = FindFProperty<FIntProperty>(DriverClass, Setting.Property);
         if (!Property || Value <= 0)
         {
@@ -154,7 +154,7 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
 
     const bool bReplicates = CDO->GetIsReplicated();
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("role"), NetRoleToString(NetRole));
+    ResultJson->SetStringField(TEXT("role"), McpEnumName<ENetRole>(NetRole));
     ResultJson->SetBoolField(TEXT("replicates"), bReplicates);
     ResultJson->SetStringField(TEXT("message"), NetRole == ROLE_None
         ? FString(TEXT("Replication turned off: clients never receive this actor (ROLE_None)."))

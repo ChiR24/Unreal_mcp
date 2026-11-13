@@ -2,6 +2,31 @@
 
 namespace McpCharacterHandlers
 {
+namespace
+{
+// The jump fields configure_jump and configure_movement_speeds take, each written only when sent.
+void ApplyJumpFields(const TSharedPtr<FJsonObject>& Payload, ACharacter* CharCDO, UCharacterMovementComponent* Movement)
+{
+    if (Payload->HasField(TEXT("jumpHeight"))) Movement->JumpZVelocity = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHeight"), 600.0));
+    if (Payload->HasField(TEXT("airControl"))) Movement->AirControl = static_cast<float>(GetJsonNumberField(Payload, TEXT("airControl"), 0.35));
+    if (Payload->HasField(TEXT("gravityScale"))) Movement->GravityScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("gravityScale"), 1.0));
+    if (Payload->HasField(TEXT("fallingLateralFriction"))) Movement->FallingLateralFriction = static_cast<float>(GetJsonNumberField(Payload, TEXT("fallingLateralFriction"), 0.0));
+    if (Payload->HasField(TEXT("maxJumpCount"))) CharCDO->JumpMaxCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxJumpCount"), 1));
+    if (Payload->HasField(TEXT("jumpHoldTime"))) CharCDO->JumpMaxHoldTime = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHoldTime"), 0.0));
+}
+
+// The jump fields as the class defaults now hold them.
+void ReportJumpFields(const TSharedPtr<FJsonObject>& Result, const ACharacter* CharCDO, const UCharacterMovementComponent* Applied)
+{
+    Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
+    Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
+    Result->SetNumberField(TEXT("gravityScale"), Applied->GravityScale);
+    Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
+    Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
+    Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+}
+} // namespace
+
 bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
@@ -14,7 +39,7 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
     bool bHasAppliedWalkSpeed = false;
     bool bRunSpeedApplied = false;
     double AppliedWalkSpeed = 0.0;
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
         UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -37,12 +62,7 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
         // alongside the movement speeds. Previously they were accepted and silently
         // dropped here (only configure_jump applied them), so a batch call looked
         // successful while jumpZVelocity stayed at the default.
-        if (Payload->HasField(TEXT("jumpHeight"))) Movement->JumpZVelocity = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHeight"), 420.0));
-        if (Payload->HasField(TEXT("airControl"))) Movement->AirControl = static_cast<float>(GetJsonNumberField(Payload, TEXT("airControl"), 0.05));
-        if (Payload->HasField(TEXT("gravityScale"))) Movement->GravityScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("gravityScale"), 1.0));
-        if (Payload->HasField(TEXT("fallingLateralFriction"))) Movement->FallingLateralFriction = static_cast<float>(GetJsonNumberField(Payload, TEXT("fallingLateralFriction"), 0.0));
-        if (Payload->HasField(TEXT("maxJumpCount"))) CharCDO->JumpMaxCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxJumpCount"), 1));
-        if (Payload->HasField(TEXT("jumpHoldTime"))) CharCDO->JumpMaxHoldTime = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHoldTime"), 0.0));
+        ApplyJumpFields(Payload, CharCDO, Movement);
         AppliedWalkSpeed = Movement->MaxWalkSpeed;
         bHasAppliedWalkSpeed = true;
     }
@@ -55,12 +75,7 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
     {
         // Echo the values now on the CDO.
         const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
-        Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
-        Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
-        Result->SetNumberField(TEXT("gravityScale"), Applied->GravityScale);
-        Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
-        Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
-        Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+        ReportJumpFields(Result, CharCDO, Applied);
         // crouch/swim/fly/accel/braking/friction were applied above but never
         // echoed, so a caller batching them could not tell them apart from the
         // ones this action ignores. Report every speed it writes.
@@ -101,16 +116,11 @@ bool HandleConfigureJump(UEngineWireSubsystem* Self, const FString& RequestId, c
         return true;
     }
 
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
         UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
-        if (Payload->HasField(TEXT("jumpHeight"))) Movement->JumpZVelocity = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHeight"), 600.0));
-        if (Payload->HasField(TEXT("airControl"))) Movement->AirControl = static_cast<float>(GetJsonNumberField(Payload, TEXT("airControl"), 0.35));
-        if (Payload->HasField(TEXT("gravityScale"))) Movement->GravityScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("gravityScale"), 1.0));
-        if (Payload->HasField(TEXT("fallingLateralFriction"))) Movement->FallingLateralFriction = static_cast<float>(GetJsonNumberField(Payload, TEXT("fallingLateralFriction"), 0.0));
-        if (Payload->HasField(TEXT("maxJumpCount"))) CharCDO->JumpMaxCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxJumpCount"), 1));
-        if (Payload->HasField(TEXT("jumpHoldTime"))) CharCDO->JumpMaxHoldTime = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHoldTime"), 0.0));
+        ApplyJumpFields(Payload, CharCDO, Movement);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
@@ -121,12 +131,7 @@ bool HandleConfigureJump(UEngineWireSubsystem* Self, const FString& RequestId, c
     {
         // Echo the values now on the CDO.
         const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
-        Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
-        Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
-        Result->SetNumberField(TEXT("gravityScale"), Applied->GravityScale);
-        Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
-        Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
-        Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+        ReportJumpFields(Result, CharCDO, Applied);
     }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Jump configured"), Result);
@@ -142,7 +147,7 @@ bool HandleConfigureRotation(UEngineWireSubsystem* Self, const FString& RequestI
         return true;
     }
 
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
         UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
@@ -182,7 +187,7 @@ bool HandleConfigureNavMovement(UEngineWireSubsystem* Self, const FString& Reque
         return true;
     }
 
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (CharCDO && CharCDO->GetCharacterMovement())
     {
         UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();

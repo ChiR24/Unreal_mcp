@@ -57,26 +57,8 @@ bool McpBlueprintAddEventCustom(
   // added again gained each one a second time under a suffixed name.
   if (CustomEventNode && Params.Num() > 0) {
     CustomEventNode->Modify();
-    for (const TSharedPtr<FJsonValue> &ParamVal : Params) {
-      if (!ParamVal.IsValid() || ParamVal->Type != EJson::Object)
-        continue;
-      const TSharedPtr<FJsonObject> ParamObj = ParamVal->AsObject();
-      if (!ParamObj.IsValid())
-        continue;
-      FString ParamName;
-      ParamObj->TryGetStringField(TEXT("name"), ParamName);
-      FString ParamType;
-      ParamObj->TryGetStringField(TEXT("type"), ParamType);
-      const FName PinName(*ParamName.TrimStartAndEnd());
-      if (CustomEventNode->UserDefinedPins.ContainsByPredicate(
-              [&PinName](const TSharedPtr<FUserPinInfo> &Pin) { return Pin.IsValid() && Pin->PinName == PinName; })) {
-        continue;
-      }
-      // Default to Output for CustomEvent parameters (they appear as output
-      // pins on the node).
-      FEngineWire_AddUserDefinedPin(CustomEventNode, ParamName,
-                                             ParamType, EGPD_Output);
-    }
+    // A custom event's parameters are output pins on the node.
+    FEngineWire_AddUserPins(CustomEventNode, Params, EGPD_Output, /*bSkipExisting=*/true);
 
     CustomEventNode->ReconstructNode();
   }

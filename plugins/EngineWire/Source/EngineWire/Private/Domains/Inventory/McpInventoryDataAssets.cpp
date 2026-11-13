@@ -40,22 +40,9 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
   if (SubAction == TEXT("set_item_properties")) {
     FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
 
-    if (ItemPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: itemPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    // Load the item asset and set properties (use UDataAsset base class for loading)
-    UObject* Asset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
-    UDataAsset* ItemAsset = Cast<UDataAsset>(Asset);
-
+    UDataAsset* ItemAsset = LoadInventoryAssetOrError<UDataAsset>(
+        Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"), TEXT("Item data asset"));
     if (!ItemAsset) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Item data asset not found: %s"), *ItemPath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

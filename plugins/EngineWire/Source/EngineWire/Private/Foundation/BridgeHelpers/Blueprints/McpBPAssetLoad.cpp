@@ -1,5 +1,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Engine/Level.h"
 #include "Engine/LevelScriptBlueprint.h"
 #include "Engine/World.h"
@@ -27,4 +28,16 @@ bool McpResolveLevelBlueprint(const FString &PackagePath, const TArray<FAssetDat
     return true;
   }
   return false;
+}
+
+FString McpBlueprintVariableDefault(const UBlueprint *Blueprint, const FBPVariableDescription &Variable) {
+  UClass *GeneratedClass = Blueprint->GeneratedClass;
+  UObject *CDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+  FProperty *Property = GeneratedClass ? GeneratedClass->FindPropertyByName(Variable.VarName) : nullptr;
+  if (!Property || !CDO) {
+    return Variable.DefaultValue;
+  }
+  FString Text;
+  MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
+  return Text;
 }

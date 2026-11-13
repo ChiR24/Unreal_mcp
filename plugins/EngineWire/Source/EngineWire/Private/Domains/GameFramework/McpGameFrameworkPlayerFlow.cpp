@@ -16,7 +16,7 @@ static bool SetRespawnRules(FActionContext& Context)
     UBlueprint* Blueprint = LoadRequiredGameMode(Context);
     if (!Blueprint) return true;
 
-    const double RespawnDelay = GetNumberField(Context.Payload, TEXT("respawnDelay"), 0.0);
+    const double RespawnDelay = GetJsonNumberField(Context.Payload, TEXT("respawnDelay"), 0.0);
     // MinRespawnDelay lives on AGameMode; a GameModeBase child has no respawn rule to set.
     AGameMode* GameModeCDO = Blueprint->GeneratedClass ? Cast<AGameMode>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
     if (!GameModeCDO)
@@ -44,7 +44,7 @@ static bool SetRespawnRules(FActionContext& Context)
 static bool ConfigureSpectating(FActionContext& Context)
 {
     if (!RequireGameModePath(Context)) return true;
-    const FString SpectatorClassPath = GetStringField(Context.Payload, TEXT("spectatorClass"));
+    const FString SpectatorClassPath = GetJsonStringField(Context.Payload, TEXT("spectatorClass"));
     if (SpectatorClassPath.IsEmpty())
     {
         Context.SendError(TEXT("Missing 'spectatorClass' (a SpectatorPawn class path)."), TEXT("INVALID_ARGUMENT"));
@@ -78,11 +78,11 @@ static bool ConfigureSpectating(FActionContext& Context)
 // FindPlayerStart reads it. An undoable level edit, not saved: the level stays modified.
 static bool ConfigurePlayerStart(FActionContext& Context)
 {
-    const FString StartName = GetStringField(Context.Payload, TEXT("playerStartName")).TrimStartAndEnd();
-    FString Tag = GetStringField(Context.Payload, TEXT("playerStartTag")).TrimStartAndEnd();
+    const FString StartName = GetJsonStringField(Context.Payload, TEXT("playerStartName")).TrimStartAndEnd();
+    FString Tag = GetJsonStringField(Context.Payload, TEXT("playerStartTag")).TrimStartAndEnd();
     if (Context.Payload->HasField(TEXT("teamIndex")))
     {
-        const double TeamIndex = GetNumberField(Context.Payload, TEXT("teamIndex"));
+        const double TeamIndex = GetJsonNumberField(Context.Payload, TEXT("teamIndex"));
         if (!Tag.IsEmpty() || TeamIndex < 1.0 || TeamIndex != FMath::FloorToDouble(TeamIndex))
         {
             Context.SendError(TEXT("teamIndex is a whole number from 1 (it sets the tag Team1, Team2, ...); pass it or playerStartTag, not both. Nothing was changed."),

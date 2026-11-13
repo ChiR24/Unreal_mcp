@@ -49,11 +49,9 @@ bool McpNearerCovers(AActor *Actor, const FEditorViewportClient &Client, const F
     {
         for (int32 X = FMath::FloorToInt(Box.Min.X); X < FMath::Min(FMath::CeilToInt(Box.Max.X), Size.X); X += McpViewStride)
         {
-            const FColor &Id = Ids[Y * Size.X + X];
-            const FMcpViewProxy *Proxy = Proxies.Find(McpViewIdKey(Id));
-            Proxy = Proxy ? Proxy : &Proxies.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
+            const FMcpViewProxy Proxy = McpViewProxyAt(Proxies, Ids[Y * Size.X + X]);
             ++Total;
-            Covers.FindOrAdd(Proxy->Kind == EMcpViewKind::Actor ? Proxy->Actor : nullptr) += 1;
+            Covers.FindOrAdd(Proxy.Kind == EMcpViewKind::Actor ? Proxy.Actor : nullptr) += 1;
         }
     }
     Covers.Remove(nullptr);

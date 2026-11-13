@@ -151,7 +151,7 @@ bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, cons
     DynMesh->ProcessMesh([&bClosed](const UE::Geometry::FDynamicMesh3& Mesh) { bClosed = Mesh.IsClosed(); });
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedRoof"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedRoof"), DynMesh, Result);
     if (!NewActor)
     {
         return true;

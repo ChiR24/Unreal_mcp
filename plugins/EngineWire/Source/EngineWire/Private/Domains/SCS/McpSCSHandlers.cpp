@@ -1,4 +1,5 @@
 #include "Domains/SCS/McpSCSHandlers.h"
+#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -71,6 +72,23 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
            TEXT("McpSafeAssetSave reported failure for '%s' after SCS "
                 "change"),
            *Blueprint->GetPathName());
+  }
+}
+
+void FSCSHandlers::FinalizeTemplateEdit(UBlueprint *Blueprint, const McpScsPropagate::FDefaults &Defaults,
+                                        const TSharedPtr<FJsonObject> &Result, bool &bOutCompiled, bool &bOutSaved) {
+  TArray<FString> UpdatedInstances;
+  Defaults.Propagate(&UpdatedInstances);
+  FinalizeBlueprintSCSChange(Blueprint, bOutCompiled, bOutSaved);
+  // The recompile re-creates the placed actors; one that still shows the old value takes the new one now.
+  TArray<FString> UpdatedAgain;
+  Defaults.Propagate(&UpdatedAgain);
+  for (const FString &Path : UpdatedAgain) {
+    UpdatedInstances.AddUnique(Path);
+  }
+  if (UpdatedInstances.Num() > 0) {
+    Result->SetNumberField(TEXT("instancesUpdated"), UpdatedInstances.Num());
+    Result->SetArrayField(TEXT("updatedInstances"), McpScsPropagate::ToJsonStrings(UpdatedInstances));
   }
 }
 

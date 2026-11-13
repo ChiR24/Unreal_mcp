@@ -45,7 +45,7 @@ bool HandleCreatePipe(UEngineWireSubsystem* Self, const FString& RequestId,
         EGeometryScriptBooleanOperation::Subtract, BoolOptions, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedPipe"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedPipe"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -78,7 +78,7 @@ bool HandleCreateRamp(UEngineWireSubsystem* Self, const FString& RequestId,
         EGeometryScriptPrimitiveOriginMode::Base, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedRamp"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedRamp"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -132,7 +132,7 @@ bool HandleRevolve(UEngineWireSubsystem* Self, const FString& RequestId,
         DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, ProfilePoints, RevolveOptions, Steps, bCap, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedRevolve"), DynMesh, Result)) return true;
+    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedRevolve"), DynMesh, Result)) return true;
     Result->SetNumberField(TEXT("steps"), Steps);
     Result->SetNumberField(TEXT("profilePoints"), ProfilePoints.Num());
     Result->SetNumberField(TEXT("angle"), RevolveOptions.RevolveDegrees);

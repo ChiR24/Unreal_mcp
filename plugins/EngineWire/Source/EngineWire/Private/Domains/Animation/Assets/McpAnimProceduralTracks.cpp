@@ -1,4 +1,5 @@
 #include "Domains/Animation/Assets/McpAnimProceduralTracks.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -199,9 +200,7 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
           continue;
         }
 
-        double FrameNumberValue = 0.0;
-        FrameObject->TryGetNumberField(TEXT("frame"), FrameNumberValue);
-        const int32 FrameIndex = static_cast<int32>(FrameNumberValue);
+        const int32 FrameIndex = GetJsonIntField(FrameObject, TEXT("frame"), 0);
         if (FrameIndex < 0 || FrameIndex >= NumKeys) {
           continue;
         }

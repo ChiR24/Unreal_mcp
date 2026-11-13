@@ -1,4 +1,4 @@
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 

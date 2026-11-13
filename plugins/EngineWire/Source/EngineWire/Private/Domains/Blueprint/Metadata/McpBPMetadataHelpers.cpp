@@ -44,6 +44,27 @@ FEngineWire_AddUserDefinedPin(UK2Node *Node, const FString &PinName,
   }
 }
 
+void FEngineWire_AddUserPins(UK2Node_EditablePinBase *Node, const TArray<TSharedPtr<FJsonValue>> &Params,
+                             EEdGraphPinDirection Direction, bool bSkipExisting) {
+  for (const TSharedPtr<FJsonValue> &Value : Params) {
+    if (!Value.IsValid() || Value->Type != EJson::Object)
+      continue;
+    const TSharedPtr<FJsonObject> Obj = Value->AsObject();
+    if (!Obj.IsValid())
+      continue;
+    FString ParamName;
+    Obj->TryGetStringField(TEXT("name"), ParamName);
+    FString ParamType;
+    Obj->TryGetStringField(TEXT("type"), ParamType);
+    const FName PinName(*ParamName.TrimStartAndEnd());
+    if (bSkipExisting && Node && Node->UserDefinedPins.ContainsByPredicate(
+            [&PinName](const TSharedPtr<FUserPinInfo> &Pin) { return Pin.IsValid() && Pin->PinName == PinName; })) {
+      continue;
+    }
+    FEngineWire_AddUserDefinedPin(Node, ParamName, ParamType, Direction);
+  }
+}
+
 UFunction *
 FEngineWire_ResolveFunction(UBlueprint *Blueprint,
                                      const FString &FunctionName) {

@@ -81,16 +81,7 @@ bool PluginCreateDropReference(const FString& PluginName, bool& bOutDropped, FSt
 	}
 	FProjectDescriptor Descriptor = *Current;
 	Descriptor.Plugins.RemoveAll([&PluginName](const FPluginReferenceDescriptor& Each) { return Each.Name == PluginName; });
-	const FString ProjectFile = FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath());
-	FText FailReason;
-	FProjectDescriptor Written;
-	if (!Descriptor.Save(ProjectFile, FailReason) || !Written.Load(ProjectFile, FailReason))
-	{
-		OutError = FailReason.ToString();
-		return false;
-	}
-	IProjectManager::Get().LoadProjectFile(ProjectFile);
-	return true;
+	return McpSystemControlHandlers::McpSaveProjectDescriptor(Descriptor, OutError);
 }
 } // namespace
 

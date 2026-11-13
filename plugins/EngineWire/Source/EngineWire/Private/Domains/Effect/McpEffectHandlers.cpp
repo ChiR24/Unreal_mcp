@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -8,26 +9,10 @@ bool UEngineWireSubsystem::HandleEffectAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // Action is the table's "manage_effect" or a name this function re-enters itself with (create_effect,
+    // spawn_niagara, list_debug_shapes, clear_debug_shapes).
     const FString Lower = Action.ToLower();
-    const bool bIsCreateEffect =
-        Lower.Equals(TEXT("create_effect")) || Lower.StartsWith(TEXT("create_effect"));
-    const bool bIsNiagaraModule =
-        Lower.StartsWith(TEXT("add_")) ||
-        Lower.StartsWith(TEXT("set_parameter")) ||
-        Lower.StartsWith(TEXT("bind_parameter")) ||
-        Lower.StartsWith(TEXT("enable_gpu_simulation")) ||
-        Lower.StartsWith(TEXT("configure_event"));
-    const bool bIsSpawnNiagara = Lower.Equals(TEXT("spawn_niagara"));
-
-    if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
-        !Lower.Equals(TEXT("manage_effect")) &&
-        !Lower.Equals(TEXT("set_niagara_parameter")) &&
-        !Lower.Equals(TEXT("activate_effect")) &&
-        !Lower.Equals(TEXT("list_debug_shapes")) &&
-        !Lower.Equals(TEXT("clear_debug_shapes")))
-    {
-        return false;
-    }
+    const bool bIsCreateEffect = Lower.Equals(TEXT("create_effect"));
 
     TSharedPtr<FJsonObject> LocalPayload =
         Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
@@ -74,18 +59,6 @@ bool UEngineWireSubsystem::HandleEffectAction(
             RequestId, TEXT("manage_niagara_graph"), LocalPayload, RequestingSocket);
     }
 
-    // `activate_effect` is the CANONICAL action name, but the lifecycle handler is
-    // keyed on the internal `activate_niagara` spelling, so a top-level canonical
-    // call passed the gate and then fell through to UNKNOWN_ACTION. Re-dispatch it
-    // through create_effect exactly as manage_effect does below, which reuses
-    // HandleNiagaraLifecycleAction instead of adding a second lifecycle path.
-    if (Lower.Equals(TEXT("activate_effect")))
-    {
-        LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
-        return HandleEffectAction(
-            RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
-    }
-
     if (Lower.Equals(TEXT("manage_effect")) && !NativeSubAction.IsEmpty())
     {
         // Catalogued lifecycle aliases: the Niagara lifecycle handler knows
@@ -124,10 +97,9 @@ bool UEngineWireSubsystem::HandleEffectAction(
         return true;
     }
 
-    if (bIsCreateEffect || Lower.Equals(TEXT("create_niagara_system")))
+    if (bIsCreateEffect)
     {
-        const FString LowerSub =
-            McpEffectHandlers::ResolveCreateEffectSubAction(Action, Lower, LocalPayload);
+        const FString LowerSub = McpConsolidatedActions::GetPayloadSubAction(LocalPayload);
         if (McpEffectHandlers::HandleCreateEffectSubAction(Context, LowerSub))
         {
             return true;

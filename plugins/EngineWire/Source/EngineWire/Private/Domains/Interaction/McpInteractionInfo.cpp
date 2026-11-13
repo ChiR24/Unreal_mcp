@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 namespace
@@ -54,14 +55,7 @@ void AddBlueprintStateInfo(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>&
 
     for (const FBPVariableDescription& Var : Blueprint->NewVariables)
     {
-        FProperty* Property = GeneratedClass ? GeneratedClass->FindPropertyByName(Var.VarName) : nullptr;
-        FString Text = Var.DefaultValue;
-        if (Property && CDO)
-        {
-            Text.Reset();
-            MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
-        }
-        Emit(Var.VarName.ToString(), Text);
+        Emit(Var.VarName.ToString(), McpBlueprintVariableDefault(Blueprint, Var));
     }
     if (GeneratedClass && CDO)
     {

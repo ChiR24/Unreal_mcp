@@ -13,7 +13,7 @@ namespace McpCharacterHandlers
 bool HandleFirstPersonCamera(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                              FCharacterSocket Socket, UBlueprint* Blueprint)
 {
-    ACharacter* Character = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* Character = CharacterDefaultsOf(Blueprint);
     USimpleConstructionScript* Scs = Blueprint->SimpleConstructionScript;
     if (!Character || !Scs)
     {

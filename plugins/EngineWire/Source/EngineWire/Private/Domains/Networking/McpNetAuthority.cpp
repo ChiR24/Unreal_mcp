@@ -131,7 +131,7 @@ bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
 
     Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
-    Context.ResultJson->SetStringField(TEXT("role"), NetRoleToString(Actor->GetLocalRole()));
+    Context.ResultJson->SetStringField(TEXT("role"), McpEnumName<ENetRole>(Actor->GetLocalRole()));
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Authority checked"), Context.ResultJson);
     return true;
 }

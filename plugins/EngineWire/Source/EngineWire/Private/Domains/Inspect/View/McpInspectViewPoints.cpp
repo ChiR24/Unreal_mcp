@@ -45,12 +45,9 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
     const FVector Camera = Client.GetViewLocation();
     UWorld *World = Client.GetWorld();
     const FCollisionQueryParams Params(FName(TEXT("McpViewPoint")), true);
-    // A pointer into Proxies lasts only until the next lookup adds to it.
-    const auto ProxyAt = [&Ids, &Size, &Proxies](int32 PixelX, int32 PixelY) -> const FMcpViewProxy *
+    const auto ProxyAt = [&Ids, &Size, &Proxies](int32 PixelX, int32 PixelY)
     {
-        const FColor &Id = Ids[PixelY * Size.X + PixelX];
-        const FMcpViewProxy *Found = Proxies.Find(McpViewIdKey(Id));
-        return Found ? Found : &Proxies.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
+        return McpViewProxyAt(Proxies, Ids[PixelY * Size.X + PixelX]);
     };
     for (const TSharedPtr<FJsonValue> &Value : Points)
     {
@@ -70,7 +67,7 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
         // pole, past an edge) moves to the nearest pixel within that many where one is drawn.
         int32 PixelX = FMath::Min(int32(X * Size.X), Size.X - 1);
         int32 PixelY = FMath::Min(int32(Y * Size.Y), Size.Y - 1);
-        int32 Nearest = ProxyAt(PixelX, PixelY)->Kind == EMcpViewKind::Actor ? 0 : MAX_int32;
+        int32 Nearest = ProxyAt(PixelX, PixelY).Kind == EMcpViewKind::Actor ? 0 : MAX_int32;
         const int32 FromX = PixelX, FromY = PixelY;
         for (int32 DY = -Tolerance; DY <= Tolerance && Nearest > 0; ++DY)
         {
@@ -78,7 +75,7 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
             {
                 const int32 CandidateX = FromX + DX, CandidateY = FromY + DY;
                 if (DX * DX + DY * DY < FMath::Min(Nearest, Tolerance * Tolerance + 1) && CandidateX >= 0 && CandidateY >= 0 &&
-                    CandidateX < Size.X && CandidateY < Size.Y && ProxyAt(CandidateX, CandidateY)->Kind == EMcpViewKind::Actor)
+                    CandidateX < Size.X && CandidateY < Size.Y && ProxyAt(CandidateX, CandidateY).Kind == EMcpViewKind::Actor)
                 {
                     Nearest = DX * DX + DY * DY;
                     PixelX = CandidateX;
@@ -95,12 +92,12 @@ bool McpDescribeViewPoints(const FEditorViewportClient &Client, const FIntPoint 
             Snapped->SetNumberField(TEXT("y"), McpRoundTo(Y, 10000.0));
             Row->SetObjectField(TEXT("snappedTo"), Snapped);
         }
-        const FMcpViewProxy *Proxy = ProxyAt(PixelX, PixelY);
-        Row->SetStringField(TEXT("drawn"), Proxy->Kind == EMcpViewKind::Actor ? TEXT("actor")
-            : Proxy->Kind == EMcpViewKind::Other ? TEXT("editor") : TEXT("background"));
-        if (Proxy->Kind == EMcpViewKind::Actor)
+        const FMcpViewProxy Proxy = ProxyAt(PixelX, PixelY);
+        Row->SetStringField(TEXT("drawn"), Proxy.Kind == EMcpViewKind::Actor ? TEXT("actor")
+            : Proxy.Kind == EMcpViewKind::Other ? TEXT("editor") : TEXT("background"));
+        if (Proxy.Kind == EMcpViewKind::Actor)
         {
-            Row->SetStringField(TEXT("actorName"), Proxy->Actor->GetActorLabel());
+            Row->SetStringField(TEXT("actorName"), Proxy.Actor->GetActorLabel());
         }
         // Where that is in the world: the line from the camera through it, against Visibility collision.
         const FVector Direction = (Axes.GetScaledAxis(EAxis::X) + Axes.GetScaledAxis(EAxis::Y) * ((2.0 * X - 1.0) * TanX) +

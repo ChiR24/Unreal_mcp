@@ -223,11 +223,9 @@ FNiagaraEmitterHandle* FindTargetEmitter(FActionContext& Context, UNiagaraSystem
     }
     if (!Handle)
     {
-        TArray<FString> Names;
-        for (const FNiagaraEmitterHandle& Candidate : Handles) { Names.Add(Candidate.GetName().ToString()); }
         OutError = FString::Printf(TEXT("%s Niagara system '%s' (its emitters: [%s]); pass one of them as 'emitterName'. Nothing was changed."),
             Context.EmitterName.IsEmpty() ? TEXT("No 'emitterName' given, and it is needed for") : *FString::Printf(TEXT("Emitter '%s' not found in"), *Context.EmitterName),
-            *System->GetPathName(), *FString::Join(Names, TEXT(", ")));
+            *System->GetPathName(), *ListEmitterNames(System));
         return nullptr;
     }
     // Name what the call acts on, so the caller can check the change landed where it asked.

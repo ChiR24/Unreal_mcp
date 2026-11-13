@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/Gameplay/McpBPBehaviourPlans.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 // The add_behaviour plans: which recipe each behaviour writes, its placeholder values, and the checks a call must pass
 // before anything is authored (McpBPAddBehaviour.cpp runs the plan).
@@ -13,17 +14,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
-namespace {
-void SetNumber(FBehaviourPlan &Plan, const TCHAR *Name, double Value) {
-  Plan.Values.Add(Name, MakeShared<FJsonValueNumber>(Value));
-}
-
-void SetString(FBehaviourPlan &Plan, const TCHAR *Name, const FString &Value) {
-  Plan.Values.Add(Name, MakeShared<FJsonValueString>(Value));
-}
-
-} // namespace
-
 bool ReadSound(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan, FString &OutError) {
   const FString SoundPath = GetJsonStringField(Payload, TEXT("soundPath")).TrimStartAndEnd();
   USoundBase *Sound = SoundPath.IsEmpty() ? nullptr : Cast<USoundBase>(McpLoadAsset(SoundPath));
@@ -64,7 +54,7 @@ bool PlanCountingPickup(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &
 
 // A pawn that shoots the projectileClass actor on a key press (recipe Character/Shoot).
 bool PlanShoot(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
-  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+  const UClass *Parent = McpBlueprintUtils::BlueprintClass(Blueprint);
   OutError = !Parent || !Parent->IsChildOf(APawn::StaticClass()) ? FString(TEXT("Shooting needs a Pawn or Character Blueprint"))
                                                                  : FString();
   if (!OutError.IsEmpty() || !ReadProjectile(Payload, Blueprint, 300.0, Plan, OutError)) {
@@ -86,7 +76,7 @@ bool PlanLaunchPad(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Plan,
   }
   Plan.Recipe = TEXT("LaunchPad");
   SetString(Plan, TEXT("Velocity"), FString::Printf(TEXT("(X=%f,Y=%f,Z=%f)"), Launch.X, Launch.Y, Launch.Z));
-  Plan.Values.Add(TEXT("OverrideXY"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("overrideXY"), false)));
+  SetBool(Plan, TEXT("OverrideXY"), GetJsonBoolField(Payload, TEXT("overrideXY"), false));
   OutError = Launch.IsNearlyZero() ? FString(TEXT("launchVelocity must not be zero")) : FString();
   return OutError.IsEmpty();
 }
@@ -156,7 +146,7 @@ bool PlanSpawner(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Bluep
 
 // A Character launched along its facing on a key press (recipe Character/Dash), at most once per cooldown.
 bool PlanDash(const TSharedPtr<FJsonObject> &Payload, const UBlueprint *Blueprint, FBehaviourPlan &Plan, FString &OutError) {
-  const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+  const UClass *Parent = McpBlueprintUtils::BlueprintClass(Blueprint);
   const double Speed = GetJsonNumberField(Payload, TEXT("dashSpeed"), 1500.0);
   const double Cooldown = GetJsonNumberField(Payload, TEXT("cooldown"), 1.0);
   OutError = !Parent || !Parent->IsChildOf(ACharacter::StaticClass()) ? FString(TEXT("Dashing needs a Character Blueprint (it is launched)"))
@@ -183,7 +173,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     Plan.Recipe = TEXT("Health");
     SetNumber(Plan, TEXT("MaxHealth"), MaxHealth);
     SetNumber(Plan, TEXT("Invulnerable"), Invulnerable);
-    Plan.Values.Add(TEXT("DestroyOnDeath"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("destroyOnDeath"))));
+    SetBool(Plan, TEXT("DestroyOnDeath"), GetJsonBoolField(Payload, TEXT("destroyOnDeath")));
     OutError = MaxHealth > 0.0 && Invulnerable >= 0.0 ? FString()
                                                       : FString(TEXT("maxHealth must be above 0 and invulnerableTime 0 or more"));
   } else if (Action == TEXT("add_damage_on_touch")) {
@@ -198,7 +188,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
     const double Seconds = FMath::FloorToDouble(GetJsonNumberField(Payload, TEXT("seconds"), 60.0));
     Plan.Recipe = TEXT("Countdown");
     SetNumber(Plan, TEXT("Seconds"), Seconds);
-    Plan.Values.Add(TEXT("Kill"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("killAtZero"), true)));
+    SetBool(Plan, TEXT("Kill"), GetJsonBoolField(Payload, TEXT("killAtZero"), true));
     OutError = Seconds >= 1.0 ? FString() : FString(TEXT("seconds must be 1 or more"));
   } else if (Action == TEXT("add_falling_platform")) {
     const double Delay = GetJsonNumberField(Payload, TEXT("fallDelay"), 0.5);
@@ -248,7 +238,7 @@ bool PlanBehaviour(const FString &Action, const TSharedPtr<FJsonObject> &Payload
   } else if (Action == TEXT("add_sequence_trigger")) {
     return PlanSequenceTrigger(Payload, Plan, OutError);
   } else {
-    const UClass *Parent = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+    const UClass *Parent = McpBlueprintUtils::BlueprintClass(Blueprint);
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 1000.0);
     Plan.Domain = TEXT("Character");
     Plan.Recipe = TEXT("Sprint");

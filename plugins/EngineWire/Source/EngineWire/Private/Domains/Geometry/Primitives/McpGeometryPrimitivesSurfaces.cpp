@@ -23,7 +23,7 @@ bool HandleCreateTorus(UEngineWireSubsystem* Self, const FString& RequestId,
         EGeometryScriptPrimitiveOriginMode::Center, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), bArch ? TEXT("GeneratedArch") : TEXT("GeneratedTorus"), DynMesh, Result)) return true;
+    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, bArch ? TEXT("GeneratedArch") : TEXT("GeneratedTorus"), DynMesh, Result)) return true;
     Result->SetNumberField(TEXT("majorRadius"), MajorRadius);
     Result->SetNumberField(TEXT("angle"), RevolveOptions.RevolveDegrees);
     Self->SendAutomationResponse(Socket, RequestId, true, bArch ? TEXT("Arch created") : TEXT("Torus mesh created"), Result);
@@ -51,7 +51,7 @@ bool HandleCreatePlane(UEngineWireSubsystem* Self, const FString& RequestId,
     );
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedPlane"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedPlane"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -83,7 +83,7 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
         DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, Radius, Segments, 1, 0.0f, 360.0f, HoleRadius, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc"), DynMesh, Result);
     if (!NewActor) return true;
     Result->SetNumberField(TEXT("outerRadius"), Radius);
     Result->SetNumberField(TEXT("innerRadius"), HoleRadius);
@@ -118,7 +118,7 @@ bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, StepDepth, NumSteps, bFloating, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedStairs"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedStairs"), DynMesh, Result);
     if (!NewActor)
     {
         return true;
@@ -152,7 +152,7 @@ bool HandleCreateSpiralStairs(UEngineWireSubsystem* Self, const FString& Request
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, InnerRadius, CurveAngle, NumSteps, bFloating, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSpiralStairs"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedSpiralStairs"), DynMesh, Result);
     if (!NewActor)
     {
         return true;

@@ -7,6 +7,7 @@
 
 class FJsonValue;
 class ULandscapeLayerInfoObject;
+class UPhysicalMaterial;
 class ULandscapeSplineControlPoint;
 class ULandscapeSplineSegment;
 class ULandscapeSplinesComponent;
@@ -20,6 +21,12 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
                                  FString &OutMessage, FString &OutErrorCode);
 // Names a layer info object's layer: SetLayerName from 5.7, the LayerName field before it.
 void SetLayerInfoName(ULandscapeLayerInfoObject *LayerInfo, FName LayerName);
+// A new layer info object named LayerName at PackagePath (a path its caller validated), with Payload's hardness and
+// noWeightBlend and PhysicalMaterial (null for none), announced to the asset registry and not saved; null with
+// McpCreatePackageForNewAsset's refusal in OutError and OutCode when the package cannot be made.
+ULandscapeLayerInfoObject *McpNewLandscapeLayerInfo(const FString &PackagePath, const FString &LayerName,
+                                                    const TSharedPtr<FJsonObject> &Payload, UPhysicalMaterial *PhysicalMaterial,
+                                                    FString &OutError, FString &OutCode);
 bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                   FString &OutMessage, FString &OutErrorCode);
 bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,

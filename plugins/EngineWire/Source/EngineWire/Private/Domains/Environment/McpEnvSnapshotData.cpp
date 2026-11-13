@@ -13,31 +13,16 @@ bool MatchesSnapshotActorPath(const AActor *Actor, const FString &ActorPath)
         Actor->GetPackage()->GetName().Equals(ActorPath, ESearchCase::CaseSensitive);
 }
 
-ADirectionalLight *FindSnapshotDirectionalLight(const FString &ActorPath = FString())
+// The first light of class TLight in the editor world whose path or package is ActorPath (any one when empty).
+template <typename TLight>
+TLight *FindSnapshotLight(const FString &ActorPath = FString())
 {
     UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         return nullptr;
     }
-    for (TActorIterator<ADirectionalLight> It(World); It; ++It)
-    {
-        if (IsValid(*It) && MatchesSnapshotActorPath(*It, ActorPath))
-        {
-            return *It;
-        }
-    }
-    return nullptr;
-}
-
-ASkyLight *FindSnapshotSkyLight(const FString &ActorPath = FString())
-{
-    UWorld *World = McpHandlerUtils::GetEditorWorld();
-    if (!World)
-    {
-        return nullptr;
-    }
-    for (TActorIterator<ASkyLight> It(World); It; ++It)
+    for (TActorIterator<TLight> It(World); It; ++It)
     {
         if (IsValid(*It) && MatchesSnapshotActorPath(*It, ActorPath))
         {
@@ -61,6 +46,12 @@ FRotator RotationFromTimeOfDay(const double TimeOfDay)
 {
     const double WrappedTime = FMath::Fmod(TimeOfDay, 24.0);
     return FRotator(WrappedTime / 24.0 * 360.0 - 90.0, 0.0, 0.0);
+}
+
+// The time of day, 0 to 24, a sun pitch stands for: RotationFromTimeOfDay the other way.
+double TimeOfDayFromPitch(const double Pitch)
+{
+    return FMath::Fmod(Pitch + 450.0, 360.0) / 360.0 * 24.0;
 }
 
 }
@@ -120,8 +111,7 @@ bool McpParseEnvironmentSnapshotLighting(
         bValidRotation = true;
     }
 
-    const double RotationTimeOfDay =
-        FMath::Fmod(static_cast<double>(Rotation.Pitch) + 450.0, 360.0) / 360.0 * 24.0;
+    const double RotationTimeOfDay = TimeOfDayFromPitch(Rotation.Pitch);
     const double TimeDifference = FMath::Abs(TimeOfDay - RotationTimeOfDay);
     const bool bConsistentTime =
         TimeDifference <= 0.01 || FMath::Abs(TimeDifference - 24.0) <= 0.01;
@@ -143,8 +133,8 @@ bool McpCaptureEnvironmentSnapshot(
     FString &OutMessage, FString &OutErrorCode)
 {
     ADirectionalLight *SunActor =
-        FindSnapshotDirectionalLight(DirectionalLightActorPath);
-    ASkyLight *SkyActor = FindSnapshotSkyLight(SkyLightActorPath);
+        FindSnapshotLight<ADirectionalLight>(DirectionalLightActorPath);
+    ASkyLight *SkyActor = FindSnapshotLight<ASkyLight>(SkyLightActorPath);
     if (!SunActor || !SkyActor)
     {
         OutMessage = !SunActor ? TEXT("No directional light found for environment snapshot")
@@ -164,8 +154,7 @@ bool McpCaptureEnvironmentSnapshot(
     }
 
     const FRotator Rotation = SunActor->GetActorRotation();
-    const double TimeOfDay =
-        FMath::Fmod(static_cast<double>(Rotation.Pitch) + 450.0, 360.0) / 360.0 * 24.0;
+    const double TimeOfDay = TimeOfDayFromPitch(Rotation.Pitch);
     Snapshot->SetNumberField(TEXT("version"), 1);
     Snapshot->SetNumberField(TEXT("timeOfDay"), TimeOfDay);
     Snapshot->SetObjectField(TEXT("directionalLightRotation"), McpHandlerUtils::RotatorToJson(Rotation));
@@ -202,8 +191,8 @@ bool McpApplyEnvironmentSnapshot(
     FString SkyActorPath;
     Snapshot->TryGetStringField(TEXT("directionalLightActorPath"), SunActorPath);
     Snapshot->TryGetStringField(TEXT("skyLightActorPath"), SkyActorPath);
-    ADirectionalLight *SunActor = FindSnapshotDirectionalLight(SunActorPath);
-    ASkyLight *SkyActor = FindSnapshotSkyLight(SkyActorPath);
+    ADirectionalLight *SunActor = FindSnapshotLight<ADirectionalLight>(SunActorPath);
+    ASkyLight *SkyActor = FindSnapshotLight<ASkyLight>(SkyActorPath);
     UDirectionalLightComponent *SunComponent =
         SunActor ? Cast<UDirectionalLightComponent>(SunActor->GetLightComponent()) : nullptr;
     USkyLightComponent *SkyComponent = SkyActor ? SkyActor->GetLightComponent() : nullptr;

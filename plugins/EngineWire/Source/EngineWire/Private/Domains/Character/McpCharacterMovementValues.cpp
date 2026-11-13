@@ -33,7 +33,7 @@ static bool HandleMovementScalar(
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s cannot be negative. Nothing was changed."), InputField), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     if (!CharCDO || !CharCDO->GetCharacterMovement())
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -45,7 +45,7 @@ static bool HandleMovementScalar(
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     // The value the recompiled class holds (compiling reinstances the default object), not the one asked for.
-    const ACharacter* Compiled = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    const ACharacter* Compiled = CharacterDefaultsOf(Blueprint);
     const UCharacterMovementComponent* Movement = Compiled ? Compiled->GetCharacterMovement() : nullptr;
     if (!Movement || !FMath::IsNearlyEqual(Movement->*Property, static_cast<float>(Value)))
     {
@@ -96,7 +96,7 @@ bool HandleConfigureCrouch(UEngineWireSubsystem* Self, const FString& RequestId,
 
     // Each field changes only when sent: setting canCrouch alone used to reset
     // the crouch speed to 300 and the crouched half-height to 44.
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     UCharacterMovementComponent* Movement = CharCDO ? CharCDO->GetCharacterMovement() : nullptr;
     if (!Movement)
     {

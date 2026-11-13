@@ -168,6 +168,10 @@ bool McpCaptureEnvironmentSnapshot(
     FString &OutMessage, FString &OutErrorCode);
 bool McpApplyEnvironmentSnapshot(const TSharedPtr<FJsonObject> &Snapshot, TSharedPtr<FJsonObject> Resp,
                                         FString &OutMessage, FString &OutErrorCode);
+// A snapshot file's path (McpEnvSnapshotPaths.cpp).
+bool McpResolveEnvironmentSnapshotPath(
+    const TSharedPtr<FJsonObject> &Payload, FString &OutAbsolutePath,
+    FString &OutRelativePath, FString &OutError);
 
 bool HandleBuildEnvironmentEditorAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,

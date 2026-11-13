@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -96,15 +97,8 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     if (UMaterialExpressionVectorParameter *VectorParam =
             Cast<UMaterialExpressionVectorParameter>(NewExpression)) {
       VectorParam->ParameterName = FName(*Name);
-      const TSharedPtr<FJsonObject> *VecObj;
-      if (Payload->TryGetObjectField(TEXT("value"), VecObj)) {
-        double R = 0, G = 0, B = 0, A = 1;
-        (*VecObj)->TryGetNumberField(TEXT("r"), R);
-        (*VecObj)->TryGetNumberField(TEXT("g"), G);
-        (*VecObj)->TryGetNumberField(TEXT("b"), B);
-        (*VecObj)->TryGetNumberField(TEXT("a"), A);
-        VectorParam->DefaultValue =
-            FLinearColor((float)R, (float)G, (float)B, (float)A);
+      if (Payload->HasTypedField<EJson::Object>(TEXT("value"))) {
+        VectorParam->DefaultValue = ExtractLinearColorField(Payload, TEXT("value"), FLinearColor(0, 0, 0, 1));
       }
     }
   } else if (Type == TEXT("texture")) {

@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Components/StaticMeshComponent.h"
@@ -8,7 +9,7 @@
 #include "Materials/MaterialInterface.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 
 #include "Domains/Blueprint/McpBPSnapshot.h"
 
@@ -150,12 +151,6 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprin
     {
         return Variables;
     }
-    // A variable's real default lives on the Class Default Object. FBPVariableDescription::DefaultValue is a
-    // legacy string that stays empty for every variable whose value was written to the CDO -- which is what the
-    // Blueprint variable-default, weapon, socket and inventory authoring paths all do. Reporting the legacy
-    // field alone made those variables read back as having no default at all, contradicting the writer that set
-    // them (observed as baseDamage/FireRate/Range/Spread reading empty after create_weapon_blueprint set them).
-    UObject *CDO = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
     for (const FBPVariableDescription &Variable : Blueprint->NewVariables)
     {
         TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -163,15 +158,8 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprin
         Entry->SetStringField(TEXT("type"), UEdGraphSchema_K2::TypeToText(Variable.VarType).ToString());
         Entry->SetStringField(TEXT("category"), Variable.Category.ToString());
 
-        FString DefaultText;
-        if (CDO)
-        {
-            if (FProperty *Property = CDO->GetClass()->FindPropertyByName(Variable.VarName))
-            {
-                MCP_PROPERTY_EXPORT_TEXT(Property, DefaultText, Property->ContainerPtrToValuePtr<void>(CDO),
-                                         nullptr, CDO, PPF_None);
-            }
-        }
+        // The default lives on the class default object (the legacy DefaultValue reads empty for what the writers set).
+        FString DefaultText = McpBlueprintVariableDefault(Blueprint, Variable);
         if (DefaultText.IsEmpty())
         {
             DefaultText = Variable.DefaultValue;

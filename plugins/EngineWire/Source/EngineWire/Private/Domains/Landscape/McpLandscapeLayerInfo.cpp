@@ -1,4 +1,5 @@
-#include "Domains/Environment/Runtime/McpEnvAssetValidate.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "Domains/Environment/McpEnvShared.h"
 #include "Domains/Landscape/McpLandscapeShared.h"
 
@@ -15,49 +16,16 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
 }
 
-bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
-                                        FString &OutMessage, FString &OutErrorCode)
+ULandscapeLayerInfoObject *McpNewLandscapeLayerInfo(const FString &PackagePath, const FString &LayerName,
+                                                    const TSharedPtr<FJsonObject> &Payload, UPhysicalMaterial *PhysicalMaterial,
+                                                    FString &OutError, FString &OutCode)
 {
-    FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName"), TEXT("name")});
-    if (LayerName.IsEmpty())
-    {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
-            TEXT("layerName or name required for create_landscape_layer_info"), TEXT("INVALID_ARGUMENT"));
-    }
-
-    FString Path = McpGetFirstStringField(Payload, {TEXT("path"), TEXT("layerInfoPath")});
-    if (Path.IsEmpty())
-    {
-        Path = TEXT("/Game/Landscape");
-    }
-    FString PackagePath;
-    if (!McpEnvironmentHandlers::McpBuildValidatedEnvironmentAssetPath(Path, LayerName, TEXT("layer info"),
-                                               PackagePath, OutMessage, OutErrorCode))
-    {
-        return false;
-    }
-    // A physical material that does not load fails the call; it used to be dropped behind a success.
-    const FString PhysicalMaterialPath = GetJsonStringField(Payload, TEXT("physicalMaterialPath"));
-    UPhysicalMaterial *PhysicalMaterial = PhysicalMaterialPath.IsEmpty() ? nullptr : LoadObject<UPhysicalMaterial>(nullptr, *PhysicalMaterialPath);
-    if (!PhysicalMaterialPath.IsEmpty() && !PhysicalMaterial)
-    {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
-            FString::Printf(TEXT("Physical material not found: %s"), *PhysicalMaterialPath), TEXT("ASSET_NOT_FOUND"));
-    }
-
-    FString CreateError, CreateCode;
-    UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
+    UPackage* Package = McpCreatePackageForNewAsset(PackagePath, OutError, OutCode);
     if (!Package)
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode, CreateError, *CreateCode);
+        return nullptr;
     }
     ULandscapeLayerInfoObject *LayerInfo = NewObject<ULandscapeLayerInfoObject>(Package, FName(*LayerName), RF_Public | RF_Standalone);
-    if (!LayerInfo)
-    {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
-            TEXT("Failed to create landscape layer info"), TEXT("CREATION_FAILED"));
-    }
-
     SetLayerInfoName(LayerInfo, FName(*LayerName));
 
     double Hardness = 0.0;
@@ -86,10 +54,50 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
     FAssetRegistryModule::AssetCreated(LayerInfo);
+    return LayerInfo;
+}
+
+bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
+                                        FString &OutMessage, FString &OutErrorCode)
+{
+    FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName"), TEXT("name")});
+    if (LayerName.IsEmpty())
+    {
+        return McpRefuse(OutMessage, OutErrorCode,
+            TEXT("layerName or name required for create_landscape_layer_info"), TEXT("INVALID_ARGUMENT"));
+    }
+
+    FString Path = McpGetFirstStringField(Payload, {TEXT("path"), TEXT("layerInfoPath")});
+    if (Path.IsEmpty())
+    {
+        Path = TEXT("/Game/Landscape");
+    }
+    FString PackagePath;
+    if (!McpBuildValidatedAssetPath(Path, LayerName, TEXT("layer info"),
+                                    PackagePath, OutMessage, OutErrorCode))
+    {
+        return false;
+    }
+    // A physical material that does not load fails the call; it used to be dropped behind a success.
+    const FString PhysicalMaterialPath = GetJsonStringField(Payload, TEXT("physicalMaterialPath"));
+    UPhysicalMaterial *PhysicalMaterial = PhysicalMaterialPath.IsEmpty() ? nullptr : LoadObject<UPhysicalMaterial>(nullptr, *PhysicalMaterialPath);
+    if (!PhysicalMaterialPath.IsEmpty() && !PhysicalMaterial)
+    {
+        return McpRefuse(OutMessage, OutErrorCode,
+            FString::Printf(TEXT("Physical material not found: %s"), *PhysicalMaterialPath), TEXT("ASSET_NOT_FOUND"));
+    }
+
+    FString CreateError, CreateCode;
+    ULandscapeLayerInfoObject *LayerInfo =
+        McpNewLandscapeLayerInfo(PackagePath, LayerName, Payload, PhysicalMaterial, CreateError, CreateCode);
+    if (!LayerInfo)
+    {
+        return McpRefuse(OutMessage, OutErrorCode, CreateError, *CreateCode);
+    }
     LayerInfo->MarkPackageDirty();
     if (!McpSafeAssetSave(LayerInfo))
     {
-        return McpEnvironmentHandlers::McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             TEXT("Failed to save landscape layer info"), TEXT("SAVE_FAILED"));
     }
 

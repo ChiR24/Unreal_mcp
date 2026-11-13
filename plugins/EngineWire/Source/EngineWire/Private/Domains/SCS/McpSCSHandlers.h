@@ -4,6 +4,7 @@
 #include "Dom/JsonObject.h"
 
 class UBlueprint;
+namespace McpScsPropagate { struct FDefaults; }
 
 class FSCSHandlers {
 public:
@@ -11,6 +12,11 @@ public:
   static bool bSaveScsChanges;
   static void FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                          bool &bOutCompiled, bool &bOutSaved);
+  // FinalizeBlueprintSCSChange for a template edit Defaults captured: the new defaults pushed to placed copies before
+  // and after the compile (which re-creates them), and the copies that took them written to Result as instancesUpdated
+  // and updatedInstances when there are any.
+  static void FinalizeTemplateEdit(UBlueprint *Blueprint, const McpScsPropagate::FDefaults &Defaults,
+                                   const TSharedPtr<FJsonObject> &Result, bool &bOutCompiled, bool &bOutSaved);
 
   static TSharedPtr<FJsonObject>
   AddSCSComponent(const FString &BlueprintPath, const FString &ComponentClass,

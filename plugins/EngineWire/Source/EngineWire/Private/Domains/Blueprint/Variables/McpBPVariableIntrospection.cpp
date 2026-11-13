@@ -8,25 +8,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
-void FEngineWire_AppendPinsJson(
-    const TArray<TSharedPtr<FUserPinInfo>> &Pins,
-    TArray<TSharedPtr<FJsonValue>> &Out) {
-  for (const TSharedPtr<FUserPinInfo> &PinInfo : Pins) {
-    if (!PinInfo.IsValid()) {
-      continue;
-    }
-    const FString PinName = PinInfo->PinName.ToString();
-    if (PinName.IsEmpty()) {
-      continue;
-    }
-    TSharedPtr<FJsonObject> PinJson = McpHandlerUtils::CreateResultObject();
-    PinJson->SetStringField(TEXT("name"), PinName);
-    PinJson->SetStringField(
-        TEXT("type"), McpBlueprintUtils::DescribePinType(PinInfo->PinType));
-    Out.Add(MakeShared<FJsonValueObject>(PinJson));
-  }
-}
-
 static bool FEngineWire_CollectVariableMetadata(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
     TSharedPtr<FJsonObject> &OutMetadata) {

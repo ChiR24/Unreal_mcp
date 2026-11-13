@@ -17,6 +17,11 @@
 bool McpResolveLevelBlueprint(const FString &PackagePath, const TArray<FAssetData> &Assets,
                               UBlueprint *&OutBlueprint, FString &OutError);
 
+// A Blueprint variable's default as text: exported from the class default object when the generated class has the
+// variable (where the variable-default, weapon, socket and inventory writers put it; the description's DefaultValue
+// stays empty for those), else that legacy DefaultValue.
+FString McpBlueprintVariableDefault(const UBlueprint *Blueprint, const FBPVariableDescription &Variable);
+
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
 /**
  * Locate and load a Blueprint asset from a variety of request formats and

@@ -1,5 +1,3 @@
-#include "Domains/Environment/McpEnvSnapshotPaths.h"
-
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Environment/McpEnvShared.h"

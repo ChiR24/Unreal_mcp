@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "ObjectTools.h"
 
 static inline bool IsValidAssetPath(const FString &Path) {
@@ -79,6 +80,54 @@ static inline bool ValidateAssetCreationPath(
     return false;
   }
 
+  return true;
+}
+
+// The package path of a new asset named AssetName in the folder RequestedPath (which may already end in the name), or
+// false with OutMessage and OutErrorCode: SECURITY_VIOLATION for a folder outside the project's content, INVALID_ARGUMENT
+// for a name with spaces at either end, a separator or "..", one that is not an object name, or a path that is not a
+// package name. AssetLabel names the asset in the refusals ("color curve"). ValidateAssetCreationPath rewrites a bad
+// name instead; this refuses it.
+inline bool McpBuildValidatedAssetPath(const FString &RequestedPath, const FString &AssetName, const TCHAR *AssetLabel,
+                                       FString &OutPackagePath, FString &OutMessage, FString &OutErrorCode)
+{
+  const FString SafePath = SanitizeProjectRelativePath(RequestedPath);
+  if (SafePath.IsEmpty())
+  {
+    return McpRefuse(OutMessage, OutErrorCode,
+        McpPathRefusalMessage(AssetLabel, RequestedPath), TEXT("SECURITY_VIOLATION"));
+  }
+
+  const FString TrimmedName = AssetName.TrimStartAndEnd();
+  if (TrimmedName.IsEmpty() || TrimmedName != AssetName)
+  {
+    return McpRefuse(OutMessage, OutErrorCode,
+        FString::Printf(TEXT("Invalid %s name '%s': leading or trailing whitespace is not allowed"), AssetLabel, *AssetName), TEXT("INVALID_ARGUMENT"));
+  }
+  if (AssetName.Contains(TEXT("..")) || AssetName.Contains(TEXT("/")) || AssetName.Contains(TEXT("\\")))
+  {
+    return McpRefuse(OutMessage, OutErrorCode,
+        FString::Printf(TEXT("Invalid %s name '%s': path separators and traversal sequences are not allowed"), AssetLabel, *AssetName), TEXT("INVALID_ARGUMENT"));
+  }
+
+  FText ObjectNameReason;
+  if (!FName(*AssetName).IsValidObjectName(ObjectNameReason))
+  {
+    return McpRefuse(OutMessage, OutErrorCode,
+        FString::Printf(TEXT("Invalid %s name '%s': %s"), AssetLabel, *AssetName, *ObjectNameReason.ToString()), TEXT("INVALID_ARGUMENT"));
+  }
+
+  OutPackagePath = SafePath;
+  if (!FPaths::GetBaseFilename(OutPackagePath).Equals(AssetName, ESearchCase::IgnoreCase))
+  {
+    OutPackagePath = SafePath / AssetName;
+  }
+  FText PackageValidationReason;
+  if (!FPackageName::IsValidLongPackageName(OutPackagePath, true, &PackageValidationReason))
+  {
+    return McpRefuse(OutMessage, OutErrorCode,
+        FString::Printf(TEXT("Invalid %s package path '%s': %s"), AssetLabel, *OutPackagePath, *PackageValidationReason.ToString()), TEXT("INVALID_ARGUMENT"));
+  }
   return true;
 }
 

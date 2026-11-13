@@ -1,4 +1,5 @@
 #include "Domains/AnimationAuthoring/ControlRig/McpControlRigGraph.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 
 #if MCP_HAS_CONTROLRIG_BLUEPRINT
 #include "Rigs/RigHierarchy.h"
@@ -35,7 +36,7 @@ bool McpEditRigHierarchy(FMcpRigEdit& Edit, const FString& Kind, const TSharedPt
         USkeleton* Skeleton = !SkeletonPath.IsEmpty() ? LoadSkeletonFromPathAnim(SkeletonPath) : Preview ? Preview->GetSkeleton() : nullptr;
         if (!Skeleton)
         {
-            return McpRefuseRigEdit(OutError, OutCode, TEXT("No skeleton to import: give skeletonPath, or give the rig a preview mesh."), TEXT("SKELETON_NOT_FOUND"));
+            return McpRefuse(OutError, OutCode, TEXT("No skeleton to import: give skeletonPath, or give the rig a preview mesh."), TEXT("SKELETON_NOT_FOUND"));
         }
         // ImportBones answers only the bones it added; bones the rig already had are matched in place.
         Edit.Hierarchy->ImportBones(Skeleton, NAME_None, true, true, false, true);
@@ -47,19 +48,19 @@ bool McpEditRigHierarchy(FMcpRigEdit& Edit, const FString& Kind, const TSharedPt
     const FString Name = GetJsonStringField(Step, TEXT("name"));
     if (Name.IsEmpty())
     {
-        return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("%s needs a name."), *Kind), TEXT("INVALID_ARGUMENT"));
+        return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s needs a name."), *Kind), TEXT("INVALID_ARGUMENT"));
     }
     if (Kind == TEXT("remove_element"))
     {
         const FRigElementKey Key = McpFindRigElement(Hierarchy, Name);
         return (Key.IsValid() && Edit.Hierarchy->RemoveElement(Key, true)) ||
-               McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("'%s' is not a bone, null or control of the rig."), *Name), TEXT("ELEMENT_NOT_FOUND"));
+               McpRefuse(OutError, OutCode, FString::Printf(TEXT("'%s' is not a bone, null or control of the rig."), *Name), TEXT("ELEMENT_NOT_FOUND"));
     }
     const FString ParentName = GetJsonStringField(Step, TEXT("parent"));
     const FRigElementKey Parent = ParentName.IsEmpty() ? FRigElementKey() : McpFindRigElement(Hierarchy, ParentName);
     if (!ParentName.IsEmpty() && !Parent.IsValid())
     {
-        return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("parent '%s' is not a bone, null or control of the rig."), *ParentName), TEXT("ELEMENT_NOT_FOUND"));
+        return McpRefuse(OutError, OutCode, FString::Printf(TEXT("parent '%s' is not a bone, null or control of the rig."), *ParentName), TEXT("ELEMENT_NOT_FOUND"));
     }
     const FTransform Transform(ExtractRotatorField(Step, TEXT("rotation"), FRotator::ZeroRotator),
                                ExtractVectorField(Step, TEXT("location"), FVector::ZeroVector),
@@ -86,13 +87,13 @@ bool McpEditRigHierarchy(FMcpRigEdit& Edit, const FString& Kind, const TSharedPt
         else if (Type == TEXT("transform")) { Settings.ControlType = ERigControlType::EulerTransform; Value = URigHierarchy::MakeControlValueFromEulerTransform(FEulerTransform::Identity); }
         else
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("controlType '%s' is not transform, float, bool, position or rotator."), *Type), TEXT("INVALID_ARGUMENT"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("controlType '%s' is not transform, float, bool, position or rotator."), *Type), TEXT("INVALID_ARGUMENT"));
         }
         Added = Edit.Hierarchy->AddControl(FName(*Name), Parent, Settings, Value, Transform, FTransform::Identity, true);
     }
     if (!Added.IsValid())
     {
-        return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("%s '%s' was not added."), *Kind, *Name), TEXT("ADD_FAILED"));
+        return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s '%s' was not added."), *Kind, *Name), TEXT("ADD_FAILED"));
     }
     McpNoteRigMade(Edit, TEXT("element"), Added.Name.ToString());
     return true;

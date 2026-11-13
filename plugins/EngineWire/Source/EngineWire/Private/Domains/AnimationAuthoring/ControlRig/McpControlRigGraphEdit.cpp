@@ -1,4 +1,5 @@
 #include "Domains/AnimationAuthoring/ControlRig/McpControlRigGraph.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 
 #if MCP_HAS_CONTROLRIG_BLUEPRINT
 #include "Kismet2/CompilerResultsLog.h"
@@ -20,13 +21,6 @@ void McpNoteRigMade(FMcpRigEdit& Edit, const TCHAR* Field, const FString& Name, 
     const TSharedPtr<FJsonObject> Item = Extra.IsValid() ? Extra : MakeShared<FJsonObject>();
     Item->SetStringField(Field, Name);
     Edit.Made.Add(MakeShared<FJsonValueObject>(Item));
-}
-
-bool McpRefuseRigEdit(FString& OutError, FString& OutCode, const FString& Error, const TCHAR* Code)
-{
-    OutError = Error;
-    OutCode = Code;
-    return false;
 }
 
 namespace {
@@ -61,7 +55,7 @@ bool McpEditRigGraph(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJ
         UScriptStruct* Struct = McpFindRigUnitStruct(UnitName);
         if (!Struct)
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("unit '%s' is not a rig unit; list_rig_units finds one."), *UnitName), TEXT("UNIT_NOT_FOUND"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("unit '%s' is not a rig unit; list_rig_units finds one."), *UnitName), TEXT("UNIT_NOT_FOUND"));
         }
         const TArray<TSharedPtr<FJsonValue>>* At = nullptr;
         const bool bPlaced = Step->TryGetArrayField(TEXT("position"), At) && At && At->Num() == 2;
@@ -70,7 +64,7 @@ bool McpEditRigGraph(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJ
         URigVMUnitNode* Node = Edit.Graph->AddUnitNodeFromStructPath(Struct->GetPathName(), TEXT("Execute"), Position, GetJsonStringField(Step, TEXT("name")), true);
         if (!Node)
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("%s could not be added to the graph."), *Struct->GetName()), TEXT("ADD_FAILED"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s could not be added to the graph."), *Struct->GetName()), TEXT("ADD_FAILED"));
         }
         const TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
         Extra->SetStringField(TEXT("unit"), Struct->GetPathName());
@@ -86,11 +80,11 @@ bool McpEditRigGraph(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJ
         {
             if (!Model->FindPin(Path))
             {
-                return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("pin '%s' is not in the graph; get_control_rig lists each node's pins as Node.Pin."), *Path), TEXT("PIN_NOT_FOUND"));
+                return McpRefuse(OutError, OutCode, FString::Printf(TEXT("pin '%s' is not in the graph; get_control_rig lists each node's pins as Node.Pin."), *Path), TEXT("PIN_NOT_FOUND"));
             }
         }
         const bool bDone = Kind == TEXT("connect") ? Edit.Graph->AddLink(From, To, true) : Edit.Graph->BreakLink(From, To, true);
-        return bDone || McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("%s %s -> %s was refused: an output must feed an input of a matching type (or no such link exists)."), *Kind, *From, *To), TEXT("LINK_FAILED"));
+        return bDone || McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s %s -> %s was refused: an output must feed an input of a matching type (or no such link exists)."), *Kind, *From, *To), TEXT("LINK_FAILED"));
     }
     if (Kind == TEXT("set_pin"))
     {
@@ -99,15 +93,15 @@ bool McpEditRigGraph(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJ
         FString Text;
         if (!Pin)
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("pin '%s' is not in the graph; a struct member has its own pin (Node.Item.Name)."), *PinPath), TEXT("PIN_NOT_FOUND"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("pin '%s' is not in the graph; a struct member has its own pin (Node.Item.Name)."), *PinPath), TEXT("PIN_NOT_FOUND"));
         }
         if (!McpRigPinText(Step->TryGetField(TEXT("value")), Text))
         {
-            return McpRefuseRigEdit(OutError, OutCode, TEXT("value must be text, a number or true/false; set a struct member through its own pin (Node.Transform.Translation.X)."), TEXT("INVALID_ARGUMENT"));
+            return McpRefuse(OutError, OutCode, TEXT("value must be text, a number or true/false; set a struct member through its own pin (Node.Transform.Translation.X)."), TEXT("INVALID_ARGUMENT"));
         }
         if (!Edit.Graph->SetPinDefaultValue(PinPath, Text, true, true))
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("%s did not take '%s'."), *PinPath, *Text), TEXT("SET_FAILED"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s did not take '%s'."), *PinPath, *Text), TEXT("SET_FAILED"));
         }
         const TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
         Extra->SetStringField(TEXT("value"), Pin->GetDefaultValue());
@@ -119,11 +113,11 @@ bool McpEditRigGraph(FMcpRigEdit& Edit, const FString& Kind, const TSharedPtr<FJ
         const FString Name = GetJsonStringField(Step, TEXT("node"));
         if (!Model->FindNodeByName(FName(*Name)))
         {
-            return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("node '%s' is not in the graph."), *Name), TEXT("NODE_NOT_FOUND"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("node '%s' is not in the graph."), *Name), TEXT("NODE_NOT_FOUND"));
         }
-        return Edit.Graph->RemoveNodeByName(FName(*Name), true) || McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("node '%s' could not be removed."), *Name), TEXT("REMOVE_FAILED"));
+        return Edit.Graph->RemoveNodeByName(FName(*Name), true) || McpRefuse(OutError, OutCode, FString::Printf(TEXT("node '%s' could not be removed."), *Name), TEXT("REMOVE_FAILED"));
     }
-    return McpRefuseRigEdit(OutError, OutCode, FString::Printf(TEXT("edit '%s' is not add_unit, connect, disconnect, set_pin, remove_node, import_bones, add_bone, add_null, add_control or remove_element."), *Kind), TEXT("INVALID_ARGUMENT"));
+    return McpRefuse(OutError, OutCode, FString::Printf(TEXT("edit '%s' is not add_unit, connect, disconnect, set_pin, remove_node, import_bones, add_bone, add_null, add_control or remove_element."), *Kind), TEXT("INVALID_ARGUMENT"));
 }
 
 } // namespace
@@ -168,7 +162,7 @@ TSharedPtr<FJsonObject> HandleEditControlRig(const TSharedPtr<FJsonObject>& Para
                                                   : McpEditRigGraph(Edit, Kind, *Step, Error, Code));
         if (!bObject)
         {
-            McpRefuseRigEdit(Error, Code, TEXT("each step is an object with an edit"), TEXT("INVALID_ARGUMENT"));
+            McpRefuse(Error, Code, TEXT("each step is an object with an edit"), TEXT("INVALID_ARGUMENT"));
         }
         Applied += bDone ? 1 : 0;
         Failed = bDone ? INDEX_NONE : Index;

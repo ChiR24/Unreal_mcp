@@ -110,14 +110,12 @@ FViewMeasure MeasureFrame(const McpInspectHandlers::FMcpViewCapture& View)
     {
         for (int32 X = 0; X < View.Size.X; X += DiffStride)
         {
-            const FColor& Id = View.Ids[Y * View.Size.X + X];
-            const FMcpViewProxy* Proxy = Proxies.Find(McpViewIdKey(Id));
-            Proxy = Proxy ? Proxy : &Proxies.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
-            const uint16* Slot = Proxy->Kind == EMcpViewKind::Actor ? Slots.Find(Proxy->Actor) : nullptr;
-            if (!Slot && Proxy->Kind == EMcpViewKind::Actor && Out.Names.Num() < MAX_uint16 - 1)
+            const FMcpViewProxy Proxy = McpViewProxyAt(Proxies, View.Ids[Y * View.Size.X + X]);
+            const uint16* Slot = Proxy.Kind == EMcpViewKind::Actor ? Slots.Find(Proxy.Actor) : nullptr;
+            if (!Slot && Proxy.Kind == EMcpViewKind::Actor && Out.Names.Num() < MAX_uint16 - 1)
             {
-                Out.Names.Add(Proxy->Actor->GetActorLabel());
-                Slot = &Slots.Add(Proxy->Actor, uint16(Out.Names.Num()));
+                Out.Names.Add(Proxy.Actor->GetActorLabel());
+                Slot = &Slots.Add(Proxy.Actor, uint16(Out.Names.Num()));
             }
             Out.Actor.Add(Slot ? *Slot : 0);
         }

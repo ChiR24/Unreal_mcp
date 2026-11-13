@@ -134,19 +134,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     UK2Node_FunctionEntry *EntryNode = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(NewGraph);
     UK2Node_FunctionResult *ResultNode = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(NewGraph);
 
-    for (const TSharedPtr<FJsonValue> &Value : Inputs) {
-      if (!Value.IsValid() || Value->Type != EJson::Object)
-        continue;
-      const TSharedPtr<FJsonObject> Obj = Value->AsObject();
-      if (!Obj.IsValid())
-        continue;
-      FString ParamName;
-      Obj->TryGetStringField(TEXT("name"), ParamName);
-      FString ParamType;
-      Obj->TryGetStringField(TEXT("type"), ParamType);
-      FEngineWire_AddUserDefinedPin(EntryNode, ParamName, ParamType,
-                                             EGPD_Input);
-    }
+    FEngineWire_AddUserPins(EntryNode, Inputs, EGPD_Input);
 
     // A freshly created function graph contains only the entry node; the result
     // node (which owns the function's return-value pins) is created lazily when
@@ -177,23 +165,11 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    for (const TSharedPtr<FJsonValue> &Value : Outputs) {
-      if (!Value.IsValid() || Value->Type != EJson::Object)
-        continue;
-      const TSharedPtr<FJsonObject> Obj = Value->AsObject();
-      if (!Obj.IsValid())
-        continue;
-      FString ParamName;
-      Obj->TryGetStringField(TEXT("name"), ParamName);
-      FString ParamType;
-      Obj->TryGetStringField(TEXT("type"), ParamType);
-      // Function outputs are the *input* pins of the result node — data flows
-      // into the return node. Adding them to the entry node, or with EGPD_Output,
-      // is what turned declared outputs into extra inputs.
-      if (ResultNode) {
-        FEngineWire_AddUserDefinedPin(ResultNode, ParamName, ParamType,
-                                               EGPD_Input);
-      }
+    // Function outputs are the *input* pins of the result node — data flows
+    // into the return node. Adding them to the entry node, or with EGPD_Output,
+    // is what turned declared outputs into extra inputs.
+    if (ResultNode) {
+      FEngineWire_AddUserPins(ResultNode, Outputs, EGPD_Input);
     }
 
     // Wire the entry node's exec output to the result node's exec input so the

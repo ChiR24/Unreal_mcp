@@ -3,6 +3,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "EngineWireSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
@@ -83,8 +84,6 @@ bool TryParseNetEnum(const FString& Name, TEnum& OutValue, FString& OutValidName
 }
 // Sends INVALID_ARGUMENT naming the field, the rejected value and the accepted ones.
 void ReplyInvalidEnum(FNetworkingActionContext& Context, const TCHAR* Field, const FString& Value, const FString& ValidNames);
-FString NetRoleToString(ENetRole Role);
-FString NetDormancyToString(ENetDormancy Dormancy);
 
 bool HandleSetPropertyReplicated(FNetworkingActionContext& Context);
 bool HandleSetReplicationCondition(FNetworkingActionContext& Context);

@@ -41,17 +41,7 @@ bool McpWritePluginReference(const FString& PluginName, const TArray<EBuildTarge
 	}
 	Ref->bEnabled = true;
 	Ref->TargetAllowList = Targets;
-	const FString ProjectFile = FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath());
-	FText FailReason;
-	// Read back before the editor takes it: LoadProjectFile opens a modal dialog when a file does not load.
-	FProjectDescriptor Written;
-	if (!Descriptor.Save(ProjectFile, FailReason) || !Written.Load(ProjectFile, FailReason))
-	{
-		OutError = FailReason.ToString();
-		return false;
-	}
-	IProjectManager::Get().LoadProjectFile(ProjectFile);
-	return true;
+	return McpSystemControlHandlers::McpSaveProjectDescriptor(Descriptor, OutError);
 }
 
 // One of Project Settings > Packaging's folder lists (DirectoriesToAlwaysCook, DirectoriesToNeverCook), each folder
@@ -158,6 +148,21 @@ TSharedPtr<FJsonObject> DescribePlugin(const TSharedRef<IPlugin>& Plugin)
 } // namespace
 
 namespace McpSystemControlHandlers {
+
+bool McpSaveProjectDescriptor(FProjectDescriptor& Descriptor, FString& OutError)
+{
+	const FString ProjectFile = FPaths::ConvertRelativePathToFull(FPaths::GetProjectFilePath());
+	FText FailReason;
+	// Read back before the editor takes it: LoadProjectFile opens a modal dialog when a file does not load.
+	FProjectDescriptor Written;
+	if (!Descriptor.Save(ProjectFile, FailReason) || !Written.Load(ProjectFile, FailReason))
+	{
+		OutError = FailReason.ToString();
+		return false;
+	}
+	IProjectManager::Get().LoadProjectFile(ProjectFile);
+	return true;
+}
 
 bool HandleManagePlugins(UEngineWireSubsystem* Self,
                          const FString& RequestId, const FString& SubAction,

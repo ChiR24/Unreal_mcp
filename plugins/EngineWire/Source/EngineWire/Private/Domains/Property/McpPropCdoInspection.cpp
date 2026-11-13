@@ -1,7 +1,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Domains/Property/McpPropTarget.h"
 
 #include "Dom/JsonObject.h"

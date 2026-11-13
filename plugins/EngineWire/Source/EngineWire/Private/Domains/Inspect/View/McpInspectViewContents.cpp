@@ -96,20 +96,14 @@ bool HandleInspectViewContentsAction(
             ++Histogram[FMath::Clamp(FMath::RoundToInt(Luma * 255.0), 0, 255)];
             Clipped += FMath::Max3(Pixel.R, Pixel.G, Pixel.B) >= 250 ? 1 : 0;
             Dark += Luma < 0.05 ? 1 : 0;
-            const FColor &Id = Ids[Index];
-            const uint32 Key = McpViewIdKey(Id);
-            const FMcpViewProxy *Proxy = Proxies.Find(Key);
-            if (!Proxy)
+            const FMcpViewProxy Proxy = McpViewProxyAt(Proxies, Ids[Index]);
+            if (Proxy.Kind != EMcpViewKind::Actor)
             {
-                Proxy = &Proxies.Add(Key, McpViewProxyOf(Id));
-            }
-            if (Proxy->Kind != EMcpViewKind::Actor)
-            {
-                ++(Proxy->Kind == EMcpViewKind::Background ? Background : Other);
+                ++(Proxy.Kind == EMcpViewKind::Background ? Background : Other);
                 continue;
             }
-            FMcpViewActor &Entry = Seen.FindOrAdd(Proxy->Actor);
-            Entry.Actor = Proxy->Actor;
+            FMcpViewActor &Entry = Seen.FindOrAdd(Proxy.Actor);
+            Entry.Actor = Proxy.Actor;
             ++Entry.Pixels;
             Entry.Luma += Luma;
             Entry.MinX = FMath::Min(Entry.MinX, X);

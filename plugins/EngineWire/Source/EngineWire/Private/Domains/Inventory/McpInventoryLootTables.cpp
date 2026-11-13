@@ -51,14 +51,9 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
-    UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
-
+    UMcpGenericDataAsset* LootTable = LoadInventoryAssetOrError<UMcpGenericDataAsset>(
+        Bridge, RequestId, RequestingSocket, LootTablePath, TEXT("lootTablePath"), TEXT("Loot table"));
     if (!LootTable) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Loot table not found: %s"), *LootTablePath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
@@ -119,14 +114,9 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
-    UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
-
+    UMcpGenericDataAsset* LootTable = LoadInventoryAssetOrError<UMcpGenericDataAsset>(
+        Bridge, RequestId, RequestingSocket, LootTablePath, TEXT("lootTablePath"), TEXT("Loot table"));
     if (!LootTable) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Loot table not found: %s"), *LootTablePath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

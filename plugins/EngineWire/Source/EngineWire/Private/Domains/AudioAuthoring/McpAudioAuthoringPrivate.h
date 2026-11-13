@@ -6,6 +6,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "EngineWireSubsystem.h"
 #include "Safety/McpSafeOperations.h"
 
@@ -199,6 +200,23 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+/** The distance model a name gives: Linear, Logarithmic, Inverse or NaturalSound, case ignored; false for any other
+ *  name (the enum's LogReverse and Custom too). */
+inline bool ParseAttenuationDistanceModel(const FString& Name, EAttenuationDistanceModel& Out)
+{
+	static const TPair<const TCHAR*, EAttenuationDistanceModel> Models[] = {
+		{TEXT("Linear"), EAttenuationDistanceModel::Linear}, {TEXT("Logarithmic"), EAttenuationDistanceModel::Logarithmic},
+		{TEXT("Inverse"), EAttenuationDistanceModel::Inverse}, {TEXT("NaturalSound"), EAttenuationDistanceModel::NaturalSound}};
+	for (const TPair<const TCHAR*, EAttenuationDistanceModel>& Model : Models)
+	{
+		if (Name.Equals(Model.Key, ESearchCase::IgnoreCase))
+		{
+			Out = Model.Value;
+			return true;
+		}
+	}
+	return false;
+}
 /** innerRadius as the shape reads its extents: a Box half-size on every axis, a Capsule radius (Y) with a half height
  *  (X) of at least that, a Sphere or Cone radius (X). Writing X alone left a Box or Capsule flat. */
 inline void SetAttenuationInnerRadius(FBaseAttenuationSettings& Settings, double Radius)

@@ -8,7 +8,7 @@
 #include "Domains/Blueprint/Components/McpBPScsPropagate.h"
 #include "Domains/Blueprint/Components/McpBPScsPropBag.h"
 #include "Domains/Blueprint/Components/McpBPScsTransform.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Components/ActorComponent.h"

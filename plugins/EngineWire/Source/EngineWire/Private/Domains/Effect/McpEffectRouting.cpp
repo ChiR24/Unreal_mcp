@@ -75,24 +75,6 @@ bool IsNiagaraGraphSubAction(const FString& SubAction)
            SubAction == TEXT("remove_node");
 }
 
-FString ResolveCreateEffectSubAction(
-    const FString& Action,
-    const FString& Lower,
-    const TSharedPtr<FJsonObject>& Payload)
-{
-    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
-    if (Lower.Equals(TEXT("create_niagara_system")))
-    {
-        SubAction = TEXT("create_niagara_system");
-    }
-    if (SubAction.IsEmpty() &&
-        !Action.Equals(TEXT("create_effect"), ESearchCase::IgnoreCase))
-    {
-        SubAction = Action;
-    }
-    return SubAction.ToLower();
-}
-
 bool HandleCreateEffectSubAction(
     const FEffectActionContext& Context,
     const FString& LowerSubAction)

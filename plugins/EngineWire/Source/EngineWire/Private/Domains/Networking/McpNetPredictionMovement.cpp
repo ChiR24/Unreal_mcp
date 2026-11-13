@@ -114,7 +114,7 @@ bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context)
 
     return SaveBlueprintAndReply(Context, Blueprint,
         FString::Printf(TEXT("NetworkSmoothingMode=%s, NetworkMaxSmoothUpdateDistance=%.1f, NetworkNoSmoothUpdateDistance=%.1f"),
-            *StaticEnum<ENetworkSmoothingMode>()->GetNameStringByValue(static_cast<int64>(CMC->NetworkSmoothingMode)),
+            *McpEnumName(CMC->NetworkSmoothingMode),
             CMC->NetworkMaxSmoothUpdateDistance, CMC->NetworkNoSmoothUpdateDistance),
         TEXT("Movement prediction configured"));
 }

@@ -9,19 +9,6 @@
 // repeat (a row or a ring) and mirror (reflected across the mesh's own planes).
 namespace McpGeometrySdf
 {
-inline FVector3d ReadCopyVec(const TSharedPtr<FJsonObject>& Obj, const TCHAR* Field)
-{
-    const TSharedPtr<FJsonObject>* V = nullptr;
-    FVector3d Out = FVector3d::ZeroVector;
-    if (Obj->TryGetObjectField(Field, V) && V && V->IsValid())
-    {
-        (*V)->TryGetNumberField(TEXT("x"), Out.X);
-        (*V)->TryGetNumberField(TEXT("y"), Out.Y);
-        (*V)->TryGetNumberField(TEXT("z"), Out.Z);
-    }
-    return Out;
-}
-
 // repeat {count, offset}: a row, each copy offset further. repeat {count, axis, angle, pivot}: a
 // ring turned about the axis through pivot; a full 360 spaces the copies evenly, an arc puts the
 // last copy at its end. count includes the shape itself.
@@ -42,7 +29,7 @@ inline bool ExpandRepeat(const TSharedPtr<FJsonObject>& Obj, const FShape& S, TA
     const FString Axis = GetJsonStringField(*Repeat, TEXT("axis")).ToLower();
     if (Axis.IsEmpty())
     {
-        const FVector3d Offset = ReadCopyVec(*Repeat, TEXT("offset"));
+        const FVector3d Offset = ExtractVectorField(*Repeat, TEXT("offset"), FVector::ZeroVector);
         if (Offset.IsNearlyZero())
         {
             Error = TEXT("repeat needs offset {x,y,z} for a row, or axis x|y|z for a ring.");
@@ -65,7 +52,7 @@ inline bool ExpandRepeat(const TSharedPtr<FJsonObject>& Obj, const FShape& S, TA
     FVector3d AxisVector = FVector3d::ZeroVector;
     AxisVector[AxisIndex] = 1.0;
     const double Angle = GetJsonNumberField(*Repeat, TEXT("angle"), 360.0);
-    const FVector3d Pivot = ReadCopyVec(*Repeat, TEXT("pivot"));
+    const FVector3d Pivot = ExtractVectorField(*Repeat, TEXT("pivot"), FVector::ZeroVector);
     const double Step = FMath::IsNearlyEqual(FMath::Abs(Angle), 360.0) ? Angle / Count : Angle / (Count - 1);
     for (int32 I = 0; I < Count; ++I)
     {
@@ -128,7 +115,7 @@ inline bool ExpandMirror(const TSharedPtr<FJsonObject>& Obj, TArray<FShape>& Cop
 // entry's own frame (its first copy) in mesh space, in shapes[] order.
 inline bool ExpandCopies(const TSharedPtr<FJsonObject>& Obj, const FShape& S, int32 Index, TArray<FTransform>& Authored, TArray<FShape>& Out, FString& Error)
 {
-    const int32 Parent = Obj->HasField(TEXT("relativeTo")) ? GetJsonIntField(Obj, TEXT("relativeTo"), -1) : -1;
+    const int32 Parent = GetJsonIntField(Obj, TEXT("relativeTo"), -1);
     if (Obj->HasField(TEXT("relativeTo")) && (Parent < 0 || Parent >= Index))
     {
         Error = TEXT("relativeTo must be the index of an earlier shapes[] entry.");

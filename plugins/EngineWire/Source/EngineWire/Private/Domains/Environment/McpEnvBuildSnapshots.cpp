@@ -1,5 +1,4 @@
 #include "Domains/Environment/McpEnvShared.h"
-#include "Domains/Environment/McpEnvSnapshotPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
 
 #include "HAL/FileManager.h"

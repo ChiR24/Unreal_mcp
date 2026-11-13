@@ -1,4 +1,5 @@
 #include "Domains/AI/Blackboard/McpAIBlackboardDefaults.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AI/McpAIContext.h"
 
@@ -20,13 +21,6 @@
 
 namespace
 {
-bool Refuse(FString& OutError, FString& OutCode, const FString& Error, const TCHAR* Code = TEXT("INVALID_ARGUMENT"))
-{
-    OutError = Error;
-    OutCode = Code;
-    return false;
-}
-
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
 // true/false, 1/0, or the same as text.
 bool ReadBoolValue(const TSharedPtr<FJsonValue>& Value, bool& Out)
@@ -106,13 +100,13 @@ UBlackboardData* LoadBlackboard(const TSharedPtr<FJsonObject>& Payload, bool bFo
     UBlackboardData* Blackboard = Path.IsEmpty() ? nullptr : LoadObject<UBlackboardData>(nullptr, *Path);
     if (!Blackboard)
     {
-        Refuse(OutError, OutCode, Path.IsEmpty() ? FString(TEXT("blackboardPath is required"))
+        McpRefuse(OutError, OutCode, Path.IsEmpty() ? FString(TEXT("blackboardPath is required"))
             : FString::Printf(TEXT("Blackboard not found: %s"), *Path), Path.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("NOT_FOUND"));
         return nullptr;
     }
     if (bForEdit && McpSafeOperations::IsEngineContentPackage(Blackboard->GetOutermost()->GetName()))
     {
-        Refuse(OutError, OutCode, TEXT("Engine content is not changed: duplicate the Blackboard into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
+        McpRefuse(OutError, OutCode, TEXT("Engine content is not changed: duplicate the Blackboard into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
         return nullptr;
     }
     return Blackboard;
@@ -136,16 +130,16 @@ FBlackboardEntry* FindOwnBlackboardKey(UBlackboardData* Blackboard, const FStrin
     }
     if (KeyName.IsEmpty())
     {
-        Refuse(OutError, OutCode, TEXT("keyName is required"));
+        McpRefuse(OutError, OutCode, TEXT("keyName is required"));
     }
     else if (Blackboard->Parent && Blackboard->Parent->GetKeyID(FName(*KeyName)) != FBlackboard::InvalidKey)
     {
-        Refuse(OutError, OutCode, FString::Printf(TEXT("Key '%s' comes from the parent Blackboard %s; change it there."),
+        McpRefuse(OutError, OutCode, FString::Printf(TEXT("Key '%s' comes from the parent Blackboard %s; change it there."),
             *KeyName, *Blackboard->Parent->GetPathName()), TEXT("KEY_IN_PARENT"));
     }
     else
     {
-        Refuse(OutError, OutCode, FString::Printf(TEXT("Key '%s' is not in %s; its keys: %s."), *KeyName, *Blackboard->GetPathName(),
+        McpRefuse(OutError, OutCode, FString::Printf(TEXT("Key '%s' is not in %s; its keys: %s."), *KeyName, *Blackboard->GetPathName(),
             Names.Num() > 0 ? *FString::Join(Names, TEXT(", ")) : TEXT("none")), TEXT("KEY_NOT_FOUND"));
     }
     return nullptr;
@@ -168,7 +162,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Bool* Key = Cast<UBlackboardKeyType_Bool>(KeyType))
     {
         bool Parsed = false;
-        if (!ReadBoolValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send true or false.")); }
+        if (!ReadBoolValue(Value, Parsed)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send true or false.")); }
         Key->Modify();
         Key->bDefaultValue = Parsed;
         return true;
@@ -176,7 +170,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Int* Key = Cast<UBlackboardKeyType_Int>(KeyType))
     {
         int32 Parsed = 0;
-        if (!McpJsonScalarToString(Value, Text) || !FDefaultValueHelper::ParseInt(Text, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send a whole number.")); }
+        if (!McpJsonScalarToString(Value, Text) || !FDefaultValueHelper::ParseInt(Text, Parsed)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send a whole number.")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         return true;
@@ -184,7 +178,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Float* Key = Cast<UBlackboardKeyType_Float>(KeyType))
     {
         float Parsed = 0.0f;
-        if (!McpJsonScalarToString(Value, Text) || !FDefaultValueHelper::ParseFloat(Text, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send a number.")); }
+        if (!McpJsonScalarToString(Value, Text) || !FDefaultValueHelper::ParseFloat(Text, Parsed)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send a number.")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         return true;
@@ -192,7 +186,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Vector* Key = Cast<UBlackboardKeyType_Vector>(KeyType))
     {
         FVector Parsed = FVector::ZeroVector;
-        if (!ReadVectorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {x, y, z} or exactly three numbers [x, y, z].")); }
+        if (!ReadVectorValue(Value, Parsed)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send {x, y, z} or exactly three numbers [x, y, z].")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         Key->bUseDefaultValue = true;
@@ -201,7 +195,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Rotator* Key = Cast<UBlackboardKeyType_Rotator>(KeyType))
     {
         FRotator Parsed = FRotator::ZeroRotator;
-        if (!ReadRotatorValue(Value, Parsed)) { return Refuse(OutError, OutCode, Bad + TEXT("send {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll].")); }
+        if (!ReadRotatorValue(Value, Parsed)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send {pitch, yaw, roll} or exactly three numbers [pitch, yaw, roll].")); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         Key->bUseDefaultValue = true;
@@ -211,7 +205,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     UBlackboardKeyType_String* StringKey = Cast<UBlackboardKeyType_String>(KeyType);
     if (NameKey || StringKey)
     {
-        if (!McpJsonScalarToString(Value, Text)) { return Refuse(OutError, OutCode, Bad + TEXT("send text.")); }
+        if (!McpJsonScalarToString(Value, Text)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send text.")); }
         KeyType->Modify();
         if (NameKey) { NameKey->DefaultValue = FName(*Text); } else { StringKey->DefaultValue = Text; }
         return true;
@@ -220,8 +214,8 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (UBlackboardKeyType_Enum* Key = Cast<UBlackboardKeyType_Enum>(KeyType))
     {
         uint8 Parsed = 0;
-        if (!Key->EnumType) { return Refuse(OutError, OutCode, TEXT("The key has no enum type to take a value from; add it again with enumType."), TEXT("NOT_SUPPORTED")); }
-        if (!ReadEnumValue(Key->EnumType, Value, Parsed)) { return Refuse(OutError, OutCode, Bad + FString::Printf(TEXT("send an enumerator of %s by name or value."), *Key->EnumType->GetName())); }
+        if (!Key->EnumType) { return McpRefuse(OutError, OutCode, TEXT("The key has no enum type to take a value from; add it again with enumType."), TEXT("NOT_SUPPORTED")); }
+        if (!ReadEnumValue(Key->EnumType, Value, Parsed)) { return McpRefuse(OutError, OutCode, Bad + FString::Printf(TEXT("send an enumerator of %s by name or value."), *Key->EnumType->GetName())); }
         Key->Modify();
         Key->DefaultValue = Parsed;
         return true;
@@ -231,24 +225,24 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
     if (ObjectKey || ClassKey)
     {
         // An asset (Object) or a class (Class) path; None clears it. Placed actors are not assets and cannot be defaults.
-        if (!McpJsonScalarToString(Value, Text)) { return Refuse(OutError, OutCode, Bad + TEXT("send an asset or class path, or None.")); }
+        if (!McpJsonScalarToString(Value, Text)) { return McpRefuse(OutError, OutCode, Bad + TEXT("send an asset or class path, or None.")); }
         const bool bClear = Text.IsEmpty() || Text == TEXT("None");
         UObject* Object = bClear || ClassKey ? nullptr : McpLoadAsset(Text);
         UClass* Class = bClear || ObjectKey ? nullptr : ResolveClassByName(Text);
         UClass* BaseClass = ObjectKey ? ObjectKey->BaseClass.Get() : ClassKey->BaseClass.Get();
-        if (!bClear && !Object && !Class) { return Refuse(OutError, OutCode, FString::Printf(TEXT("%s not found: %s"), ObjectKey ? TEXT("Asset") : TEXT("Class"), *Text), TEXT("NOT_FOUND")); }
+        if (!bClear && !Object && !Class) { return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s not found: %s"), ObjectKey ? TEXT("Asset") : TEXT("Class"), *Text), TEXT("NOT_FOUND")); }
         if (BaseClass && ((Object && !Object->IsA(BaseClass)) || (Class && !Class->IsChildOf(BaseClass))))
         {
-            return Refuse(OutError, OutCode, FString::Printf(TEXT("%s does not derive from %s, the base class of the key."), *Text, *BaseClass->GetName()), TEXT("TYPE_MISMATCH"));
+            return McpRefuse(OutError, OutCode, FString::Printf(TEXT("%s does not derive from %s, the base class of the key."), *Text, *BaseClass->GetName()), TEXT("TYPE_MISMATCH"));
         }
         KeyType->Modify();
         if (ObjectKey) { ObjectKey->DefaultValue = Object; } else { ClassKey->DefaultValue = Class; }
         return true;
     }
 #endif
-    return Refuse(OutError, OutCode, FString::Printf(TEXT("A %s key has no default value to set on this engine version."), *Type), TEXT("NOT_SUPPORTED"));
+    return McpRefuse(OutError, OutCode, FString::Printf(TEXT("A %s key has no default value to set on this engine version."), *Type), TEXT("NOT_SUPPORTED"));
 #else
-    return Refuse(OutError, OutCode, FString::Printf(TEXT("Blackboard key defaults exist from UE 5.4; this engine keeps none for the %s key."), *Type), TEXT("NOT_SUPPORTED"));
+    return McpRefuse(OutError, OutCode, FString::Printf(TEXT("Blackboard key defaults exist from UE 5.4; this engine keeps none for the %s key."), *Type), TEXT("NOT_SUPPORTED"));
 #endif
 }
 

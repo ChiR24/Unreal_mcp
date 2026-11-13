@@ -1,4 +1,5 @@
-#include "Domains/Environment/Runtime/McpEnvAssetValidate.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponses.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Environment/McpEnvShared.h"
 
@@ -43,8 +44,8 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
                                     : FPackageName::ObjectPathToPackageName(CurvePath);
     const FString Name = FPackageName::GetShortName(CurvePath);
     FString PackagePath;
-    if (!McpBuildValidatedEnvironmentAssetPath(FPackageName::GetLongPackagePath(CurvePath), Name, TEXT("color curve"),
-                                               PackagePath, OutMessage, OutErrorCode))
+    if (!McpBuildValidatedAssetPath(FPackageName::GetLongPackagePath(CurvePath), Name, TEXT("color curve"),
+                                    PackagePath, OutMessage, OutErrorCode))
     {
         return false;
     }
@@ -54,7 +55,7 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
     const bool bHasKeys = Payload->TryGetArrayField(TEXT("keys"), KeyValues) && KeyValues;
     if (bHasKeys && !McpReadColorCurveKeys(*KeyValues, Keys))
     {
-        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             TEXT("keys must be a non-empty array of {time, color {r, g, b, a}}"), TEXT("INVALID_ARGUMENT"));
     }
 
@@ -62,21 +63,21 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
     const bool bCreated = Curve == nullptr;
     if (!bCreated && !bHasKeys)
     {
-        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             FString::Printf(TEXT("%s exists; pass keys to change its colors"), *PackagePath), TEXT("INVALID_ARGUMENT"));
     }
     if (bCreated)
     {
         if (McpAssetExists(PackagePath))
         {
-            return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            return McpRefuse(OutMessage, OutErrorCode,
                 FString::Printf(TEXT("%s exists and is not a linear color curve"), *PackagePath), TEXT("INVALID_ARGUMENT"));
         }
         UPackage *Package = McpCreatePackageOrNull(PackagePath);
         Curve = Package ? NewObject<UCurveLinearColor>(Package, FName(*Name), RF_Public | RF_Standalone) : nullptr;
         if (!Curve)
         {
-            return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            return McpRefuse(OutMessage, OutErrorCode,
                 TEXT("Failed to create color curve"), TEXT("CREATION_FAILED"));
         }
         FAssetRegistryModule::AssetCreated(Curve);
@@ -104,7 +105,7 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
     Curve->MarkPackageDirty();
     if (!McpSafeAssetSave(Curve))
     {
-        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+        return McpRefuse(OutMessage, OutErrorCode,
             TEXT("Failed to save color curve"), TEXT("SAVE_FAILED"));
     }
 

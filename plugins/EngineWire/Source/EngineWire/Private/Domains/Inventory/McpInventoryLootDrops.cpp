@@ -6,21 +6,9 @@ bool HandleInventoryLootDropActions(UEngineWireSubsystem& Bridge, const FString&
   if (SubAction == TEXT("set_loot_quality_tiers")) {
     FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
 
-    if (LootTablePath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: lootTablePath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UObject* LootTableObj = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
-    UMcpGenericDataAsset* LootTable = Cast<UMcpGenericDataAsset>(LootTableObj);
-
+    UMcpGenericDataAsset* LootTable = LoadInventoryAssetOrError<UMcpGenericDataAsset>(
+        Bridge, RequestId, RequestingSocket, LootTablePath, TEXT("lootTablePath"), TEXT("Loot table"));
     if (!LootTable) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Loot table not found: %s"), *LootTablePath),
-          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 

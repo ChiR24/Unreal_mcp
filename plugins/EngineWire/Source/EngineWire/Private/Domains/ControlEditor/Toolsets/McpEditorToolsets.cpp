@@ -153,8 +153,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
     Payload->TryGetStringField(TEXT("toolName"), ToolName);
     Payload->TryGetStringField(TEXT("query"), Query);
     Payload->TryGetStringField(TEXT("toolset"), OnlyToolset);
-    double LimitValue = GetJsonNumberField(Payload, TEXT("limit"), 50.0);
-    const int32 Limit = FMath::Clamp(static_cast<int32>(LimitValue), 1, 200);
+    const int32 Limit = FMath::Clamp(GetJsonIntField(Payload, TEXT("limit"), 50), 1, 200);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     if (!ToolName.IsEmpty())

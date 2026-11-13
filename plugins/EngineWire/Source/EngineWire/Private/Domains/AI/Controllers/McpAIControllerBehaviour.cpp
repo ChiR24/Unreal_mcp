@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 
@@ -34,7 +35,7 @@ UBlueprint* LoadControllerBlueprint(UEngineWireSubsystem* Self, const FString& R
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Controller Blueprint not found: %s. %s"), *Path, *Error), TEXT("NOT_FOUND"));
         return nullptr;
     }
-    const UClass* Class = Blueprint->GeneratedClass ? Blueprint->GeneratedClass.Get() : Blueprint->ParentClass.Get();
+    const UClass* Class = McpBlueprintUtils::BlueprintClass(Blueprint);
     if (!Class || !Class->IsChildOf(AAIController::StaticClass()))
     {
         Self->SendAutomationError(Socket, RequestId,

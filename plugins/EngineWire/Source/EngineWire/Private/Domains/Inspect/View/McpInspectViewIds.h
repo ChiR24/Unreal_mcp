@@ -29,6 +29,17 @@ inline uint32 McpViewIdKey(const FColor &Id)
     return (uint32(Id.R) << 16) | (uint32(Id.G) << 8) | uint32(Id.B);
 }
 
+// The proxy of Id, looked up once per id through Proxies. By value: a pointer into the map dies at its next add.
+inline FMcpViewProxy McpViewProxyAt(TMap<uint32, FMcpViewProxy> &Proxies, const FColor &Id)
+{
+    const uint32 Key = McpViewIdKey(Id);
+    if (const FMcpViewProxy *Found = Proxies.Find(Key))
+    {
+        return *Found;
+    }
+    return Proxies.Add(Key, McpViewProxyOf(Id));
+}
+
 // Every second pixel of every second row: a quarter of the pixels, plenty for shares of the frame.
 constexpr int32 McpViewStride = 2;
 

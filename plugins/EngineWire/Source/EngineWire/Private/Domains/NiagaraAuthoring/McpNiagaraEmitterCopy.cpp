@@ -127,13 +127,8 @@ bool CopyEmitterFromSystem(FActionContext& Context)
     const FNiagaraEmitterHandle* SourceHandle = FindEmitterHandle(Source, SourceName);
     if (!SourceHandle)
     {
-        TArray<FString> Names;
-        for (const FNiagaraEmitterHandle& Handle : Source->GetEmitterHandles())
-        {
-            Names.Add(Handle.GetName().ToString());
-        }
         Context.SendError(FString::Printf(TEXT("No emitter '%s' in %s. Its emitters: %s."), *SourceName, *SourcePath,
-                                          *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
+                                          *ListEmitterNames(Source)), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1

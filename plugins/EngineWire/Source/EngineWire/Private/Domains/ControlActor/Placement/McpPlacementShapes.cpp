@@ -39,6 +39,10 @@ bool McpHasBody(const UPrimitiveComponent *Comp) {
   return Body && Body->IsValidBodyInstance();
 }
 
+bool McpIsSolidBody(const UPrimitiveComponent *Comp) {
+  return Comp->IsCollisionEnabled() && McpBlocksSolids(Comp) && McpHasBody(Comp);
+}
+
 namespace {
 
 // Only a plain static mesh is checked shape to shape; instanced and skeletal
@@ -151,8 +155,7 @@ bool McpShapesApart(AActor *Actor, AActor *Other) {
   const FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementShapes), false);
   for (UPrimitiveComponent *A : Mine) {
     for (UPrimitiveComponent *B : Theirs) {
-      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
-          !McpHasBody(A) || !McpHasBody(B) || !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
+      if (!McpIsSolidBody(A) || !McpIsSolidBody(B) || !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
         continue;
       }
       if (!McpPairApart(A, B, Params)) {
@@ -169,8 +172,8 @@ bool McpMeasurePush(AActor *Actor, AActor *Other, const FVector &Offset, FVector
   TInlineComponentArray<UPrimitiveComponent *> Mine(Actor), Theirs(Other);
   for (UPrimitiveComponent *A : Mine) {
     for (UPrimitiveComponent *B : Theirs) {
-      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
-          !McpHasBody(A) || !McpHasBody(B) || !A->Bounds.GetBox().ShiftBy(Offset).Intersect(B->Bounds.GetBox())) {
+      if (!McpIsSolidBody(A) || !McpIsSolidBody(B) ||
+          !A->Bounds.GetBox().ShiftBy(Offset).Intersect(B->Bounds.GetBox())) {
         continue;
       }
       // Each side's shape overstates it (a box holds a round rock with air to spare), so the shorter push is nearer the

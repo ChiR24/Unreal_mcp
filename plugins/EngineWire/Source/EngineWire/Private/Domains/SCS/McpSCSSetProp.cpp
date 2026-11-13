@@ -7,7 +7,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -136,20 +136,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   }
 
   FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-  TArray<FString> UpdatedInstances;
-  Defaults.Propagate(&UpdatedInstances);
   bool bCompiled = false;
   bool bSaved = false;
-  FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
-  TArray<FString> UpdatedAgain;
-  Defaults.Propagate(&UpdatedAgain);
-  for (const FString &Path : UpdatedAgain) {
-    UpdatedInstances.AddUnique(Path);
-  }
-  if (UpdatedInstances.Num() > 0) {
-    Result->SetNumberField(TEXT("instancesUpdated"), UpdatedInstances.Num());
-    Result->SetArrayField(TEXT("updatedInstances"), McpScsPropagate::ToJsonStrings(UpdatedInstances));
-  }
+  FinalizeTemplateEdit(Blueprint, Defaults, Result, bCompiled, bSaved);
 
   // Re-resolve through the same resolver: an inherited or native component has no SCS node on this
   // Blueprint, so looking one up here would fail verification for exactly the cases the fix above

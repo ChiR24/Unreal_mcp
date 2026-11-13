@@ -2,7 +2,7 @@
 
 #include "Domains/AssetWorkflow/Materials/McpMaterialParent.h"
 #include "Domains/Property/McpPropActorAccess.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Domains/Property/McpPropCdoPropagation.h"
 #include "Domains/Property/McpPropObjectWatch.h"
 #include "Domains/Property/McpPropTarget.h"

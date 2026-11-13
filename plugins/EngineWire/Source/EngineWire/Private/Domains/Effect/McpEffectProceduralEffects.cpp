@@ -85,15 +85,6 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
 
 static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
 {
-    if (!GetEditorActorSubsystem())
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), nullptr,
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-
     double Density = 0.05;
     double Scattering = 0.5;
     double Extinction = 0.5;
@@ -111,11 +102,9 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
                 Spawned->FindComponentByClass<UExponentialHeightFogComponent>())
         {
             FogComponent->SetFogDensity(static_cast<float>(Density));
-#if ENGINE_MAJOR_VERSION == 5
             FogComponent->SetVolumetricFog(true);
             FogComponent->SetVolumetricFogScatteringDistribution(static_cast<float>(Scattering));
             FogComponent->SetVolumetricFogExtinctionScale(static_cast<float>(Extinction));
-#endif
         }
         FString Name;
         Context.Payload->TryGetStringField(TEXT("name"), Name);

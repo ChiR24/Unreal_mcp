@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -130,9 +131,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
   for (AActor *Actor : AllActors) {
     if (!Actor)
       continue;
-    if (!Filter.IsEmpty() &&
-        !Actor->GetActorLabel().Contains(Filter, ESearchCase::IgnoreCase) &&
-        !Actor->GetName().Contains(Filter, ESearchCase::IgnoreCase))
+    if (!McpActorNameContains(Actor, Filter))
       continue;
     if (!McpActorMatchesListFilters(Actor, TagFilter, ClassFilter, FolderFilter))
       continue;

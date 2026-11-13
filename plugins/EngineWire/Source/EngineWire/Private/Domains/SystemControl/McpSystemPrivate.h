@@ -9,6 +9,7 @@ class FMcpBridgeWebSocket;
 class IMcpGameFeaturesProvider;
 class UEngineWireSubsystem;
 struct FModuleContextInfo;
+struct FProjectDescriptor;
 namespace McpPackageJobs { struct FJob; }
 
 namespace McpSystemControlHandlers {
@@ -24,6 +25,11 @@ TArray<TSharedPtr<FJsonValue>> McpMissingMaterialUsage(UObject* Asset);
 // Starts or stops recording the usage flags the editor sets on 5.8 material instances, which the engine's own record
 // of flags awaiting a save leaves out. The subsystem's lifetime; nothing on earlier engines.
 void McpWatchMaterialUsage(bool bWatch);
+// Saves Descriptor as the project file, reads it back, then has the editor load it (the editor keeps its own copy of
+// the file and writes that copy back on its next plugin change). The read-back comes first: LoadProjectFile opens a
+// modal dialog for a file that does not load. False with OutError when the save or the read-back fails.
+// McpSystemPlugins.cpp.
+bool McpSaveProjectDescriptor(FProjectDescriptor& Descriptor, FString& OutError);
 
 bool HandleValidateAssets(UEngineWireSubsystem* Self,
                           const FString& RequestId,

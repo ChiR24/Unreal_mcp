@@ -19,8 +19,8 @@ bool PlanSoundTrigger(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan &Pl
     return false;
   }
   Plan.Recipe = TEXT("SoundTrigger");
-  Plan.Values.Add(TEXT("Once"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("once"), false)));
-  Plan.Values.Add(TEXT("Spatial"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("spatial"), false)));
+  SetBool(Plan, TEXT("Once"), GetJsonBoolField(Payload, TEXT("once"), false));
+  SetBool(Plan, TEXT("Spatial"), GetJsonBoolField(Payload, TEXT("spatial"), false));
   return true;
 }
 
@@ -37,9 +37,9 @@ bool PlanSequenceTrigger(const TSharedPtr<FJsonObject> &Payload, FBehaviourPlan 
     return false;
   }
   Plan.Recipe = TEXT("SequenceTrigger");
-  Plan.Values.Add(TEXT("Sequence"), MakeShared<FJsonValueString>(Sequence->GetPathName()));
-  Plan.Values.Add(TEXT("Once"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("once"), true)));
-  Plan.Values.Add(TEXT("Cinematic"), MakeShared<FJsonValueBoolean>(GetJsonBoolField(Payload, TEXT("cinematic"), true)));
+  SetString(Plan, TEXT("Sequence"), Sequence->GetPathName());
+  SetBool(Plan, TEXT("Once"), GetJsonBoolField(Payload, TEXT("once"), true));
+  SetBool(Plan, TEXT("Cinematic"), GetJsonBoolField(Payload, TEXT("cinematic"), true));
   return true;
 }
 } // namespace McpBlueprintHandlers

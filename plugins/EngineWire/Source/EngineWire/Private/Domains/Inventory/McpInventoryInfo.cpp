@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Domains/Inventory/McpInventoryShared.h"
 
 namespace
@@ -21,16 +22,11 @@ void AddInventoryBlueprintDefaults(const TSharedPtr<FJsonObject>& Result, UBluep
   Result->SetArrayField(TEXT("components"), Components);
 
   UClass* GeneratedClass = Blueprint->GeneratedClass;
-  UObject* CDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
   TArray<TSharedPtr<FJsonValue>> Variables;
   TSharedPtr<FJsonObject> Properties = MakeShared<FJsonObject>();
   for (const FBPVariableDescription& Var : Blueprint->NewVariables) {
     FProperty* Property = GeneratedClass ? GeneratedClass->FindPropertyByName(Var.VarName) : nullptr;
-    FString Value = Var.DefaultValue;
-    if (Property && CDO) {
-      Value.Reset();
-      MCP_PROPERTY_EXPORT_TEXT(Property, Value, Property->ContainerPtrToValuePtr<void>(CDO), nullptr, CDO, PPF_None);
-    }
+    FString Value = McpBlueprintVariableDefault(Blueprint, Var);
     TSharedPtr<FJsonObject> VarInfo = McpHandlerUtils::CreateResultObject();
     VarInfo->SetStringField(TEXT("name"), Var.VarName.ToString());
     VarInfo->SetStringField(TEXT("type"), Property ? Property->GetCPPType() : Var.VarType.PinCategory.ToString());
@@ -171,12 +167,9 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
       Result->SetStringField(TEXT("className"), Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetName() : TEXT("Unknown"));
       AddInventoryBlueprintDefaults(Result, Blueprint);
     } else if (!ItemPath.IsEmpty()) {
-      // Use UDataAsset base class for loading - UPrimaryDataAsset is abstract in UE5.7
-      UObject* ItemAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *ItemPath);
+      UObject* ItemAsset = LoadInventoryAssetOrError(
+          Bridge, RequestId, RequestingSocket, ItemPath, TEXT("itemPath"), TEXT("Item"));
       if (!ItemAsset) {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Item not found: %s"), *ItemPath),
-                            TEXT("ASSET_NOT_FOUND"));
         return true;
       }
       Result->SetStringField(TEXT("assetType"), TEXT("Item"));
@@ -184,11 +177,9 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
       Result->SetStringField(TEXT("className"), ItemAsset->GetClass()->GetName());
       AddGenericProperties(Result, ItemAsset);
     } else if (!LootTablePath.IsEmpty()) {
-      UObject* LootTableAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *LootTablePath);
+      UObject* LootTableAsset = LoadInventoryAssetOrError(
+          Bridge, RequestId, RequestingSocket, LootTablePath, TEXT("lootTablePath"), TEXT("Loot table"));
       if (!LootTableAsset) {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Loot table not found: %s"), *LootTablePath),
-                            TEXT("ASSET_NOT_FOUND"));
         return true;
       }
       Result->SetStringField(TEXT("assetType"), TEXT("LootTable"));
@@ -217,11 +208,9 @@ bool HandleInventoryInfoActions(UEngineWireSubsystem& Bridge, const FString& Req
         Result->SetNumberField(TEXT("lootEntryCount"), LootEntries.Num());
       }
     } else if (!RecipePath.IsEmpty()) {
-      UObject* RecipeAsset = StaticLoadObject(UDataAsset::StaticClass(), nullptr, *RecipePath);
+      UObject* RecipeAsset = LoadInventoryAssetOrError(
+          Bridge, RequestId, RequestingSocket, RecipePath, TEXT("recipePath"), TEXT("Recipe"));
       if (!RecipeAsset) {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Recipe not found: %s"), *RecipePath),
-                            TEXT("ASSET_NOT_FOUND"));
         return true;
       }
       Result->SetStringField(TEXT("assetType"), TEXT("Recipe"));

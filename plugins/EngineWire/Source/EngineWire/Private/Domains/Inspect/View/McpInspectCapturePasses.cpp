@@ -216,15 +216,11 @@ bool HandleInspectCapturePassesAction(
                 for (int32 X = 0; X < Size.X; ++X)
                 {
                     const FColor &Id = Ids[FMath::Min(Y * ViewSize.Y / Size.Y, ViewSize.Y - 1) * ViewSize.X + FMath::Min(X * ViewSize.X / Size.X, ViewSize.X - 1)];
-                    const FMcpViewProxy *Proxy = Known.Find(McpViewIdKey(Id));
-                    if (!Proxy)
+                    const FMcpViewProxy Proxy = McpViewProxyAt(Known, Id);
+                    Drawn[Y * Size.X + X] = Proxy;
+                    if (Proxy.Kind == EMcpViewKind::Actor)
                     {
-                        Proxy = &Known.Add(McpViewIdKey(Id), McpViewProxyOf(Id));
-                    }
-                    Drawn[Y * Size.X + X] = *Proxy;
-                    if (Proxy->Kind == EMcpViewKind::Actor)
-                    {
-                        ++Pixels.FindOrAdd(Proxy->Actor);
+                        ++Pixels.FindOrAdd(Proxy.Actor);
                     }
                 }
             }

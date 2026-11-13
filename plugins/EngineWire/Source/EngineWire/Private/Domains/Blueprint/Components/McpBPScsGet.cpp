@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 

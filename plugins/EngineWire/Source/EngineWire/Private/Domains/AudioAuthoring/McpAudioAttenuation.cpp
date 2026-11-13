@@ -59,11 +59,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 		// Only when sent: defaulting to "linear" reset every curve a caller had chosen before.
 		const FString FunctionType = GetJsonStringField(Params, TEXT("distanceAlgorithm")).ToLower();
-		if (FunctionType == TEXT("linear")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear; }
-		else if (FunctionType == TEXT("logarithmic")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic; }
-		else if (FunctionType == TEXT("inverse")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse; }
-		else if (FunctionType == TEXT("naturalsound")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound; }
-		else if (!FunctionType.IsEmpty())
+		if (!FunctionType.IsEmpty() && !ParseAttenuationDistanceModel(FunctionType, Atten->Attenuation.DistanceAlgorithm))
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("distanceAlgorithm '%s' is not Linear, Logarithmic, Inverse or NaturalSound"), *FunctionType));
 		}
@@ -85,7 +81,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 
 		SaveAudioAsset(Atten, bSave);
 		// Read back like its siblings: this one answered only "Operation complete", so a value it set went unseen.
-		Response->SetStringField(TEXT("distanceAlgorithm"), StaticEnum<EAttenuationDistanceModel>()->GetNameStringByValue(static_cast<int64>(Atten->Attenuation.DistanceAlgorithm)));
+		Response->SetStringField(TEXT("distanceAlgorithm"), McpEnumName(Atten->Attenuation.DistanceAlgorithm));
 		Response->SetNumberField(TEXT("innerRadius"), GetAttenuationInnerRadius(Atten->Attenuation));
 		AddAttenuationBoxExtent(Response, Atten->Attenuation);
 		Response->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);

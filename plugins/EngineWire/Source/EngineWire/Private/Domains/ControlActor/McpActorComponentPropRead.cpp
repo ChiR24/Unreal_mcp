@@ -1,6 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlActor/McpActorSupport.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 

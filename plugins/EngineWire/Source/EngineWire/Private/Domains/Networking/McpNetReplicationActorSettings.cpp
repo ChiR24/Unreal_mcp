@@ -53,7 +53,7 @@ bool HandleSetNetDormancy(FNetworkingActionContext& Context)
     }
     CDO->NetDormancy = NetDormancy;
 
-    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net dormancy set to %s"), *NetDormancyToString(NetDormancy)), TEXT("Net dormancy configured"));
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net dormancy set to %s"), *McpEnumName<ENetDormancy>(NetDormancy)), TEXT("Net dormancy configured"));
 }
 
 bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)

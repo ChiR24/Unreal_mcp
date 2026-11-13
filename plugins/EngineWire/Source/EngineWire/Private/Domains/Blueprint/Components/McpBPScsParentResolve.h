@@ -9,7 +9,7 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
-#include "Domains/Property/McpPropCdoComponents.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 
 namespace McpScsParent {
 

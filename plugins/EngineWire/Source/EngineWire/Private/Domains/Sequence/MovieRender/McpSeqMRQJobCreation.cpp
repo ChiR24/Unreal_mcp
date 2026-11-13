@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
@@ -19,18 +20,6 @@
 namespace McpSequenceMovieRender {
 namespace {
 const TCHAR *CreationJobIdPrefix = TEXT("mcp.renderJobId=");
-
-FString GetCreationString(const TSharedPtr<FJsonObject> &Payload,
-                          const TCHAR *First,
-                          const TCHAR *Second = nullptr) {
-  FString Value;
-  if (Payload.IsValid() && Payload->TryGetStringField(First, Value) &&
-      !Value.IsEmpty())
-    return Value;
-  return Payload.IsValid() && Second && Payload->TryGetStringField(Second, Value)
-             ? Value
-             : FString();
-}
 }
 
 bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
@@ -43,7 +32,7 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
   if (!QueueSubsystem)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   const FString SequencePath =
-      GetCreationString(Payload, TEXT("sequencePath"), TEXT("path"));
+      McpGetFirstStringField(Payload, {TEXT("sequencePath"), TEXT("path")});
   ULevelSequence *Sequence =
       Cast<ULevelSequence>(McpLoadAsset(SequencePath));
   if (!Sequence)
@@ -61,7 +50,7 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
   if (!ValidateQueueResourceLimits(Queue, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   FSoftObjectPath MapObjectPath;
-  const FString MapPath = GetCreationString(Payload, TEXT("mapPath"));
+  const FString MapPath = McpGetFirstStringField(Payload, {TEXT("mapPath")});
   if (!MapPath.IsEmpty()) {
     UWorld *MapAsset =
         Cast<UWorld>(McpLoadAsset(MapPath));
@@ -74,7 +63,7 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
     MapObjectPath = FSoftObjectPath(MapAsset);
   }
   const FString JobName =
-      GetCreationString(Payload, TEXT("renderJobName"), TEXT("jobName"));
+      McpGetFirstStringField(Payload, {TEXT("renderJobName"), TEXT("jobName")});
   if (!JobName.IsEmpty() && !ValidateRenderJobName(JobName, Message))
     return SendError(Subsystem, RequestId, Socket, Message,
                      TEXT("INVALID_RENDER_JOB_NAME")),

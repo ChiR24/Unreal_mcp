@@ -3,6 +3,8 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 
 // Declarations shared by the Blueprint domain's files; McpBPActionContext.h includes this header.
+class UK2Node_EditablePinBase;
+
 namespace McpBlueprintHandlers {
 FBlueprintActionContext BuildBlueprintActionContext(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
@@ -26,6 +28,10 @@ void FEngineWire_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,
                                             EEdGraphPinDirection Direction);
+// Each {name, type} object of Params as a user pin of Node in Direction (anything else in Params is skipped);
+// bSkipExisting leaves a name the node already has alone.
+void FEngineWire_AddUserPins(UK2Node_EditablePinBase *Node, const TArray<TSharedPtr<FJsonValue>> &Params,
+                             EEdGraphPinDirection Direction, bool bSkipExisting = false);
 // The user-defined function graph named Name, in any case; null when the Blueprint has none.
 UEdGraph *FindFunctionGraph(UBlueprint *Blueprint, const FString &Name);
 UFunction *FEngineWire_ResolveFunction(UBlueprint *Blueprint,
@@ -40,9 +46,6 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      FString &OutErrorCode,
                                      TSharedPtr<FJsonObject> &OutErrorResult);
 FName FEngineWire_ResolveMetadataKey(const FString &RawKey);
-void FEngineWire_AppendPinsJson(
-    const TArray<TSharedPtr<FUserPinInfo>> &Pins,
-    TArray<TSharedPtr<FJsonValue>> &Out);
 TSharedPtr<FJsonObject> FEngineWire_BuildVariableJson(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc);
 TSharedPtr<FJsonObject> FEngineWire_CollectBlueprintDefaults(

@@ -19,32 +19,6 @@ using McpGeometrySdf::EOp;
 using McpGeometrySdf::EShape;
 using McpGeometrySdf::FShape;
 
-FVector3d ReadVec(const TSharedPtr<FJsonObject>& Obj, const TCHAR* Field, const FVector3d& Default)
-{
-    const TSharedPtr<FJsonObject>* V = nullptr;
-    FVector3d Out = Default;
-    if (Obj->TryGetObjectField(Field, V) && V && V->IsValid())
-    {
-        (*V)->TryGetNumberField(TEXT("x"), Out.X);
-        (*V)->TryGetNumberField(TEXT("y"), Out.Y);
-        (*V)->TryGetNumberField(TEXT("z"), Out.Z);
-    }
-    return Out;
-}
-
-FQuat ReadRotation(const TSharedPtr<FJsonObject>& Obj)
-{
-    const TSharedPtr<FJsonObject>* R = nullptr;
-    double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
-    if (Obj->TryGetObjectField(TEXT("rotation"), R) && R && R->IsValid())
-    {
-        (*R)->TryGetNumberField(TEXT("pitch"), Pitch);
-        (*R)->TryGetNumberField(TEXT("yaw"), Yaw);
-        (*R)->TryGetNumberField(TEXT("roll"), Roll);
-    }
-    return FRotator(Pitch, Yaw, Roll).Quaternion();
-}
-
 // Reads shapes[]; returns the refusal text, empty when every shape is usable.
 FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
 {
@@ -90,7 +64,8 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         FShape S;
         S.Type = *Type;
         S.Op = *Op;
-        S.Frame = FTransform(ReadRotation(*Obj), ReadVec(*Obj, TEXT("center"), FVector3d::ZeroVector));
+        S.Frame = FTransform(ExtractRotatorField(*Obj, TEXT("rotation"), FRotator::ZeroRotator).Quaternion(),
+                             ExtractVectorField(*Obj, TEXT("center"), FVector::ZeroVector));
         S.Radius = GetJsonNumberField(*Obj, TEXT("radius"), 50.0);
         S.TopRadius = GetJsonNumberField(*Obj, TEXT("topRadius"), 0.0);
         S.Length = GetJsonNumberField(*Obj, TEXT("length"), 100.0);
@@ -98,8 +73,8 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         S.Thickness = GetJsonNumberField(*Obj, TEXT("thickness"), 10.0);
         S.Blend = FMath::Max(0.0, GetJsonNumberField(*Obj, TEXT("blend"), 0.0));
         S.MaterialId = FMath::Clamp(GetJsonIntField(*Obj, TEXT("materialId"), 0), 0, 63);
-        S.Radii = ReadVec(*Obj, TEXT("radii"), FVector3d(S.Radius));
-        S.Extent = ReadVec(*Obj, TEXT("extent"), FVector3d(S.Radius));
+        S.Radii = ExtractVectorField(*Obj, TEXT("radii"), FVector(S.Radius));
+        S.Extent = ExtractVectorField(*Obj, TEXT("extent"), FVector(S.Radius));
         if (S.Radius <= 0.0 || S.TopRadius < 0.0 || S.Length < 0.0 || S.Thickness <= 0.0 || S.Radii.GetMin() <= 0.0 || S.Extent.GetMin() <= 0.0)
         {
             return FString::Printf(TEXT("shapes[%d] needs positive sizes (radius, radii, extent, thickness; length and topRadius 0 or more)."), Index);
@@ -239,7 +214,7 @@ bool HandleCreateSdf(UEngineWireSubsystem* Self, const FString& RequestId,
     UGeometryScriptLibrary_MeshNormalsFunctions::SetPerVertexNormals(DynMesh, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), GetJsonStringField(Payload, TEXT("name")), TEXT("GeneratedSdf"), DynMesh, Result);
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, TEXT("GeneratedSdf"), DynMesh, Result);
     if (!NewActor) return true;
     TArray<TSharedPtr<FJsonValue>> Parts;
     TArray<int32> CopyCounts;

@@ -7,6 +7,7 @@
 // a table nobody named. What rests on the ground is reported only for an actor asked about; roles.ground counts it.
 
 #include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Components/StaticMeshComponent.h"
@@ -166,8 +167,7 @@ bool HandleDescribeRelations(UEngineWireSubsystem* Bridge, const FString& Reques
     TArray<bool> IsAsked;
     for (const FItem& Item : Items)
     {
-        const bool bAsked = (!bNamed || Named.Contains(Item.Actor)) &&
-            (NameFilter.IsEmpty() || Item.Actor->GetActorLabel().Contains(NameFilter) || Item.Actor->GetName().Contains(NameFilter));
+        const bool bAsked = (!bNamed || Named.Contains(Item.Actor)) && McpActorNameContains(Item.Actor, NameFilter);
         IsAsked.Add(bAsked);
         if (bAsked)
         {

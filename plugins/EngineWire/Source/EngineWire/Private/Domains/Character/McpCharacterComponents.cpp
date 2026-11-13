@@ -15,7 +15,7 @@ bool HandleConfigureCapsuleComponent(UEngineWireSubsystem* Self, const FString& 
 
     // Setting only the radius used to reset the half-height to 96 (and the
     // other way round); each size now changes only when sent.
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     UCapsuleComponent* Capsule = CharCDO ? CharCDO->GetCapsuleComponent() : nullptr;
     if (!Capsule)
     {
@@ -81,7 +81,7 @@ bool HandleConfigureMeshComponent(UEngineWireSubsystem* Self, const FString& Req
 
     bool bSkeletalMeshAssigned = false;
     bool bAnimBlueprintAssigned = false;
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    ACharacter* CharCDO = CharacterDefaultsOf(Blueprint);
     // An Animation Blueprint made for another skeleton animates nothing: its clips evaluate to the mesh's rest pose,
     // without a warning. A template Animation Blueprint has no skeleton and fits any mesh.
     const USkeletalMesh* TargetMesh = RequestedMesh;
@@ -240,7 +240,7 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
                 Camera->bAutoActivate = false;
             }
         }
-        ACharacter* Character = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+        ACharacter* Character = CharacterDefaultsOf(Blueprint);
         if (Character && Character->GetMesh())
         {
             Character->GetMesh()->SetOwnerNoSee(false);
