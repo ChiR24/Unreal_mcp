@@ -6,7 +6,6 @@
 #include "Dom/JsonObject.h"
 #include "Engine/SkeletalMesh.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "ReferenceSkeleton.h"
 

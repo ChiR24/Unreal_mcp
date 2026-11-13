@@ -14,7 +14,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 namespace McpLevelStructure
 {

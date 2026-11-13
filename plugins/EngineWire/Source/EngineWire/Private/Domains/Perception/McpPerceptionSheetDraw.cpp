@@ -6,6 +6,7 @@
 #include "Domains/Perception/McpPerceptionSheet.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/Perception/McpPerception.h"
 #include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Texture/McpTextRaster.h"
 #include "Fonts/FontMeasure.h"
@@ -33,9 +34,7 @@ const FColor TileBackground(44, 48, 56);
 
 uint8 Encode(float Linear)
 {
-    const float Value = FMath::Clamp(Linear, 0.f, 1.f);
-    const float Encoded = Value <= 0.0031308f ? Value * 12.92f : 1.055f * FMath::Pow(Value, 1.f / 2.4f) - 0.055f;
-    return uint8(FMath::RoundToInt(Encoded * 255.f));
+    return uint8(FMath::RoundToInt(LinearToSrgb(Linear) * 255.f));
 }
 
 FColor Over(const FColor& Under, const FColor& Colour, float Alpha)

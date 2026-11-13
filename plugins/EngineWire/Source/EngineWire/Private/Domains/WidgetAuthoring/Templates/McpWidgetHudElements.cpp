@@ -7,7 +7,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 // add_game_widget: one ready-made HUD piece added to an existing Widget Blueprint.

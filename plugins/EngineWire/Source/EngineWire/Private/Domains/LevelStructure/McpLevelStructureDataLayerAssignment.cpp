@@ -7,7 +7,6 @@
 #include "GameFramework/Actor.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "WorldPartition/DataLayer/DataLayerInstance.h"

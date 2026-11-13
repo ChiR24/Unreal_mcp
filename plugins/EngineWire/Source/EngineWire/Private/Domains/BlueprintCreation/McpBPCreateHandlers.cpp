@@ -3,10 +3,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/BlueprintCreation/McpBPCreatePrivate.h"
-#include "HAL/PlatformTime.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Misc/ScopeLock.h"
 
 bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     UEngineWireSubsystem *Self, const FString &RequestId,

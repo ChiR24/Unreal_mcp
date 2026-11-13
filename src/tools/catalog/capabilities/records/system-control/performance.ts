@@ -22,7 +22,7 @@ export const PERFORMANCE_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A named profiling capture must begin for CPU, GPU, memory, or thread analysis.'],
     whenNotToUse: ['Only an HUD stat overlay is needed (use profile or show_stats).'],
     inputProps: {
-      duration: { type: 'number', description: 'Seconds after which the capture stops by itself (default: runs until stop_profiling).' },
+      duration: { type: 'number', description: 'Seconds: start_profiling stops its capture after that many (default: it runs until stop_profiling); run_benchmark samples that long (default 10, 0.5 to 600).' },
     },
     required: [],
     effect: 'write',

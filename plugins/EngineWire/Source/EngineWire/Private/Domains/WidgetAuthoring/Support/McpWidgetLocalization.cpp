@@ -6,12 +6,10 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/TextBlock.h"
 #include "Components/Widget.h"
-#include "Internationalization/StringTableCore.h"
 #include "Internationalization/StringTableRegistry.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHandlers

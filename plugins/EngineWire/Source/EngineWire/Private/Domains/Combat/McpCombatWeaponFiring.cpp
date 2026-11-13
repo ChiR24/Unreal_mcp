@@ -1,5 +1,3 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Combat/McpCombatPrivate.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"

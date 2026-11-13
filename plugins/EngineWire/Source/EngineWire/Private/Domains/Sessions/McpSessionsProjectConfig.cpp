@@ -5,7 +5,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 #include "HAL/IConsoleManager.h"
 #include "Interfaces/IPluginManager.h"

@@ -1,12 +1,10 @@
 #include "Domains/Volume/McpVolumeWorldResolve.h"
 
-#include "Editor.h"
 #include "Engine/TriggerBase.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Volume.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 namespace VolumeHelpers
 {

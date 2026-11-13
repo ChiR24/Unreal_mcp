@@ -6,10 +6,23 @@ All notable changes to the EngineWire plugin (formerly McpAutomationBridge) will
 
 ## [Unreleased]
 
+### Changed
+- **Shared code**: refusals with no result are sent, and logged, through `SendAutomationError`; code several files repeated lives once (`McpFindActorComponent`, `McpFindOrSpawnActor`, `McpParseEnum`, `RoundedVectorToJsonArray`, `LoadSequenceOrSend`, `FindUserParameter` and folder-local helpers); the viewport and screenshot helpers moved to `Foundation/Viewport`, private headers include only what their folders name, and no Domains file includes the WebSocket transport header.
+
 ### Fixed
 - **Builds**: on Windows the State Tree compile delegate is read from the DLL's export table, so the plugin links on UE 5.3 and 5.4 (`LNK1194`); the optional `PropertyBindingUtils` reference is gone, so SmartObjects loads in a Blueprint-only UE 5.5 project. On the UE 5.9 preview the Cascade classes come from the `CascadeRuntime` module, rounded numbers print as 32-bit and State Tree compile messages are read as text, so the plugin builds there.
 - **Search ranking**: the id rule scores the words of a record's own action, those its domain or family names too, and the one alias that adds the most (`McpSearchActionWords`); words spread over several other aliases score nothing and still count as named. A topic or summary holds a request only on word boundaries (`ContainsPhrase`). In a request that opens with an action verb, an alias scores its generic words (`McpSearchGenericWords`) only when the request holds a word that sets it apart.
 - **Counting by class**: `find_by_class` rows carry `class`; `options.aggregate` grouped by `class` reads a row's `classPath` or `className` where it has no `class`, and a `groupBy` no row carries adds a `note` naming the fields to count by.
+- **Blueprint graphs**: `create_node` makes an event node only for an event, once per Blueprint, and answers with where the node landed on every path; graph actions take the node ids `read_graph_as_code` prints; a class is resolved through `ResolveClassByName` (no node alias, a short Blueprint name before its class loads); `add_event` finds an overridable event through `McpFindOverridableEvent` (Receive events by short name, "Event X").
+- **Behavior Trees**: abstract node classes and a second Root are refused, stock decorators and services take the editor's names, and `remove_node` takes a decorator or service off its parent.
+- **Geometry**: creators and edits are held to the triangle counts and ranges the engine builds, and `displace_by_texture` reads its texture once.
+- **Sequencer**: a refused or deleted sequence leaves no file behind, refusals open no empty undo step, and a sequence is not added to a track of a sequence it already plays.
+- **Assets and levels**: no creator hands the engine a package name it stops on or an occupied path; a struct edited with `save:true` is saved; a level named "Untitled..." saves and `rename_level` judges a loaded level on its sanitized path.
+- **Animation, audio, materials**: bones are found among the raw bones, rigs refuse a taken name, montage notifies take only a notify class; plugin-mounted sounds resolve and a MetaSound edited with `save:false` stays dirty; material function pins are named as saved, and a material is set only in a slot the component has.
+- **Paths**: request paths pass the shared canonicalizer and output files the project-file resolver; save slots refuse Windows device names, Fab downloads stay in the Fab library folder, and actor lookups keep a path-restricted caller inside its prefixes.
+- **Enum values**: one `McpParseEnum` takes an enumerator's name, short name or display label in any case for blend modes, view modes, texture compression, net dormancy and blackboard enum keys.
+- **Actor moves**: align, distribute, randomize and snap_to_grid end each move with `McpFinishEditorMove` (PostEditMove and the physics state rebuilt), as every other move does.
+- **Editor**: `run_ubt` no longer holds the game thread for the build, occlusion bakes refuse a ray count that would hold the editor, and the WebSocket bridge accepts TLS connections.
 
 ## [0.6.1-beta-b] - 2026-11-08
 

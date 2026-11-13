@@ -7,6 +7,7 @@
 #include "Dom/JsonValue.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/World.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include MCP_HIT_RESULT_HEADER
 
@@ -23,11 +24,6 @@ constexpr int32 LayoutMaxRows = 100;      // spaces and doors listed (a cluttere
 constexpr int32 LayoutMaxNames = 50;      // names in chokes, deadEnds and unreachable
 constexpr int32 LayoutSummaryNames = 8;   // dead ends the summary names
 
-TArray<TSharedPtr<FJsonValue>> LayoutPoint(const FVector& Value)
-{
-    return {MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.X)), MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Y)),
-            MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Z))};
-}
 
 double LayoutRound(double Value, double Step) { return FMath::RoundToDouble(Value / Step) * Step; }
 
@@ -98,7 +94,7 @@ TSharedPtr<FJsonObject> LayoutPath(const FGraph& Graph, const FLayout& Layout, c
         const int32 Every = FMath::Max(1, Nodes.Num() / LayoutPathPoints);
         if (Index % Every == 0 || Index == Nodes.Num() - 1)
         {
-            Points.Add(MakeShared<FJsonValueArray>(LayoutPoint(Graph.Points[Nodes[Index]])));
+            Points.Add(MakeShared<FJsonValueArray>(McpHandlerUtils::RoundedVectorToJsonArray(Graph.Points[Nodes[Index]], 1.0)));
         }
     }
     Path->SetNumberField(TEXT("lengthCm"), FMath::RoundToDouble(Length));
@@ -146,7 +142,7 @@ FString WriteReply(UWorld* World, const FGraph& Graph, const FLayout& Layout, co
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("name"), LayoutName(Layout, Space));
         Row->SetStringField(TEXT("kind"), Each.bRoom ? TEXT("room") : TEXT("corridor"));
-        Row->SetArrayField(TEXT("center"), LayoutPoint(Each.Center));
+        Row->SetArrayField(TEXT("center"), McpHandlerUtils::RoundedVectorToJsonArray(Each.Center, 1.0));
         Row->SetNumberField(TEXT("areaM2"), LayoutRound(SpaceArea, 0.1));
         Row->SetNumberField(TEXT("widthCm"), FMath::RoundToDouble((2 * Each.Height + 1) * Cell));
         Row->SetArrayField(TEXT("neighbours"), LayoutNames(Layout, Each.Neighbours));
@@ -183,7 +179,7 @@ FString WriteReply(UWorld* World, const FGraph& Graph, const FLayout& Layout, co
         const FDoor& Door = *Doors[Index];
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetArrayField(TEXT("between"), LayoutNames(Layout, {Door.A, Door.B}));
-        Row->SetArrayField(TEXT("location"), LayoutPoint(Door.Location));
+        Row->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Door.Location, 1.0));
         Row->SetNumberField(TEXT("widthCm"), FMath::RoundToDouble(Door.WidthCells * Cell));
         Row->SetNumberField(TEXT("share"), LayoutRound(Door.Share, 0.001));
         DoorRows.Add(MakeShared<FJsonValueObject>(Row));

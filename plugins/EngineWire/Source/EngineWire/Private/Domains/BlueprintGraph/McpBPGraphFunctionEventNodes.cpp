@@ -6,11 +6,6 @@
 #include "K2Node_CallFunction.h"
 #include "K2Node_PromotableOperator.h"
 #include "K2Node_Event.h"
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetStringLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "Kismet/KismetTextLibrary.h"
 
 namespace McpBlueprintGraphHandlers
 {

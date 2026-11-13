@@ -11,7 +11,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Safety/McpSafeOperations.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHandlers

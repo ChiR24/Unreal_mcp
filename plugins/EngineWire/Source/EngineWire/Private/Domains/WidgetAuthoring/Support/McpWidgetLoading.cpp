@@ -7,7 +7,6 @@
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
-#include "Misc/EngineVersionComparison.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
@@ -15,10 +14,6 @@
 #include "Animation/WidgetAnimation.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
-#include "Blueprint/UserWidget.h"
-#include "Blueprint/WidgetBlueprintGeneratedClass.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 

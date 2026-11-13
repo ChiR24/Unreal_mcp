@@ -11,7 +11,6 @@
 #include "EngineWireSubsystem.h"
 #include "Misc/PackageName.h"
 #include "Safety/McpSafeOperations.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 #if ENGINE_MINOR_VERSION >= 3 && __has_include("PackedLevelActor/PackedLevelActorBuilder.h")
 #include "Components/InstancedStaticMeshComponent.h"

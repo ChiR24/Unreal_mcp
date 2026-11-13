@@ -17,7 +17,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScreenshotResample.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHelpers

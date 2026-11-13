@@ -3,7 +3,6 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "UObject/UnrealType.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3

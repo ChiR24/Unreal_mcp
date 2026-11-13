@@ -7,7 +7,6 @@
 #include "Domains/Volume/McpVolumeRequestParsing.h"
 #include "Domains/Volume/McpVolumeResponses.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Sound/AudioVolume.h"
 
 namespace McpVolumeHandlers

@@ -7,14 +7,10 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "FileHelpers.h"
 #include "Misc/PackageName.h"
-#include "StaticMeshResources.h"
 #include "TextureResource.h"
-#include "UObject/SoftObjectPath.h"
 
 
 #define TEXTURE_ERROR_RESPONSE(Msg) \

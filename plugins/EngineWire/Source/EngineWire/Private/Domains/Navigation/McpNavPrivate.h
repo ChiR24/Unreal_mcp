@@ -6,7 +6,6 @@
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
 #include "AI/NavigationSystemBase.h"
@@ -19,8 +18,6 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "NavAreas/NavArea.h"
 #include "NavAreas/NavArea_Default.h"
-#include "NavAreas/NavArea_Null.h"
-#include "NavAreas/NavArea_Obstacle.h"
 #include "NavLinkCustomComponent.h"
 #include "NavMesh/NavMeshBoundsVolume.h"
 #include "NavMesh/RecastNavMesh.h"

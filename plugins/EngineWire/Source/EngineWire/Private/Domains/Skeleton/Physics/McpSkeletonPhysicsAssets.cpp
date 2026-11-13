@@ -6,7 +6,6 @@
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/Paths.h"

@@ -14,7 +14,6 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Styling/SlateTypes.h"
 #include "UObject/UnrealType.h"
 #include "Styling/CoreStyle.h"

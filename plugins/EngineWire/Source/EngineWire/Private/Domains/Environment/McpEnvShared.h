@@ -119,7 +119,6 @@ bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double V
                                    const FString &ResponseName, TSharedPtr<FJsonObject> Resp, TArray<FString> &Applied);
 int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload,
                                      TArray<FString> &AppliedProperties, TArray<FString> &FailedProperties);
-UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass);
 UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, const FString &ComponentName);
 // Finds the actor named by targetActor, actorName, waterBodyName or name (else DefaultActorName, or with
 // bFirstOfClassWhenUnnamed the level's first actor of the class), spawning it when missing, then configures it.

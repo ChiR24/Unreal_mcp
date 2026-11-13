@@ -5,16 +5,12 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
-#include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/NetDriver.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -25,10 +21,7 @@
 #include "GameFramework/PlayerController.h"
 #include "K2Node_FunctionEntry.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/EngineVersionComparison.h"
-#include "Net/UnrealNetwork.h"
-#include "UObject/NoExportTypes.h"
 #include "UObject/UnrealType.h"
 
 namespace McpNetworkingHandlers

@@ -11,7 +11,6 @@
 #include "Domains/Volume/McpVolumeRequestParsing.h"
 #include "Domains/Volume/McpVolumeResponses.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpVolumeHandlers

@@ -9,13 +9,14 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Subdir | Count | Gives you |
 |--------|-------|-----------|
 | `Reflection/` | 12 files | UE property <-> JSON serialization boundary (`McpPropertyReflection*`), calls by reflection (`McpReflectedInvoke`), `McpInstancedStructView.h` |
-| `HandlerUtils/` | 6 .h, 5 .cpp | action normalization, JSON/path/response/transform helpers, actor lookup by name, project config reads |
+| `HandlerUtils/` | 7 .h, 5 .cpp | action normalization, JSON/path/response/transform helpers, actor lookup by name, project config reads |
 | `Blueprint/` | 4 .cpp, 1 .h | BP pin/type introspection and struct nodes, declared in `McpBlueprintUtils.h` |
 | `Diagnostics/` | 8 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers, `McpWorldTickTimer` |
 | `GraphLayout/` | 6 files | graph node extent geometry, overlap tests, the layered layout (`McpLayered`) with its known-answer test |
 | `Solvers/` | 21 files | general algorithms, one per file (a long one split), each with a known-answer test: `McpPratt` (the assertion language of execute's `expect`/`require`), `McpBoxSat` (boxes turned about Z: separation, depth, containment), `McpKMeans` (weighted k-means, fixed seed), `McpWatershed` (basins of a height over a graph, merged across high saddles), `McpBetweenness` (Brandes route shares of weighted nodes and edges), `McpCassowary` (linear constraints, required or preferred by strength, solved by the incremental simplex Kiwi builds), `McpUnionFind` (the root of a union-find set, halving the path; checked through `McpWatershed`'s test) |
 | `Optimize/` | 12 files | minimizers of a caller's cost, each with a known-answer test: `McpNelderMead` (the downhill simplex, for a cost of a few variables with no gradient: a camera judged by traces), `McpMinSnap` (the minimum-snap path through points, Richter et al.'s closed form), `McpAnneal` (Metropolis annealing over a caller's state), `McpChoiceKnapsack` (at most one option per group: the cheapest pick whose gains reach what is needed) |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
+| `Viewport/` | 6 files | the level viewport and the editor windows: the active viewport client, frame reads and settling, the window list and restore, screenshot receipts |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | 25 files (at cap) | `McpSecureTokenCompare.h` (constant-time token equality), capability authorization predicates and the path scan, the request principal and its quota, the idempotency ledger, compensation receipts, live-state revisions, readiness, the scoped editor transaction, screenshot resampling, the telemetry registry |
 
@@ -43,7 +44,8 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Which packages outside a delete still use an asset (delete safety) | `BridgeHelpers/Assets/McpAssetReferencers.h` |
 | Make the package of a new asset | `BridgeHelpers/Assets/McpAssetCreation.h` `McpCreatePackageForNewAsset` (refuses an occupied path and a name the engine does not take) or `McpCreatePackageOrNull` (null where the engine's `CreatePackage` is a Fatal log: a name holding `//`); never the engine call (contract test) |
 | Make a folder and a name into a new asset's package path, refusing a bad name (`ValidateAssetCreationPath` rewrites one) | `BridgeHelpers/Assets/McpAssetCreation.h` `McpBuildValidatedAssetPath` |
-| Spawn an actor | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` |
+| Spawn an actor; the level's actor of a class by label or name, or spawned when missing | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` (`SpawnActorInActiveWorld`, `McpFindActorByNameOrClass`, `McpFindOrSpawnActor`) |
+| An actor's component by its object name or the property that holds it; the event a Blueprint can override under a name | `BridgeHelpers/Blueprints/McpBPActorBinding.h` (`McpFindActorComponent`, `McpFindComponentProperty`, `McpFindOverridableEvent`) |
 | Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |
 | Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{McpBPAssetLoad,McpBPCompileHelpers,McpScsLookup,McpBPPaths}.h` |
 | A Blueprint's component template by name (its SCS, inherited or native), a node's effective template | `BridgeHelpers/Blueprints/McpPropCdoComponents.h` (`McpPropertyCdoComponents::FindCdoComponent`) |
@@ -53,6 +55,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Refuse a number outside a property's ClampMin/ClampMax | `Reflection/McpPropertyReflection.h` `CheckRange` |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
 | An enumerator's short name for a reply | `BridgeHelpers/Reflection/McpEnumName.h` `McpEnumName(Value)` |
+| An enumerator from a caller's word (its full or short name or its display label, case, spaces, `_` and `-` aside) | `BridgeHelpers/Reflection/McpEnumName.h` `McpParseEnum<TEnum>`, `McpParseEnumToken` for a `UEnum` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{McpResponses,McpResponseVerify,McpOutputCapture,McpJsonFields}.h` |
 | Refuse a missing field or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
 | Refuse in one line from a function that hands its refusal to its caller (sets OutError and OutCode, returns false) | `BridgeHelpers/Responses/McpResponses.h` `McpRefuse` |

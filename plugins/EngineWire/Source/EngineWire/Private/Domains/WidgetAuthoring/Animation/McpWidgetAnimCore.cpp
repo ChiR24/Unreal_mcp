@@ -13,7 +13,6 @@
 #include "Kismet2/Kismet2NameValidators.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "MovieScene.h"
 #include "WidgetBlueprint.h"
 

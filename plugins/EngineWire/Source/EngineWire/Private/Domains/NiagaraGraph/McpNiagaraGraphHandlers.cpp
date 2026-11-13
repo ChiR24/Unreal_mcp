@@ -14,13 +14,10 @@
 #include "NiagaraScript.h"
 #include "NiagaraScriptSource.h"
 #include "NiagaraGraph.h"
-#include "NiagaraNode.h"
 #include "NiagaraNodeFunctionCall.h"
-#include "NiagaraNodeInput.h"
 #include "NiagaraNodeOutput.h"
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "EdGraph/EdGraph.h"
-#include "EdGraph/EdGraphSchema.h"
 
 bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     const FString& RequestId,

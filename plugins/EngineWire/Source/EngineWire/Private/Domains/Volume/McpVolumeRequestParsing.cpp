@@ -3,7 +3,6 @@
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 namespace VolumeHelpers
 {

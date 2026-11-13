@@ -9,7 +9,6 @@
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 #include "Domains/Volume/McpVolumeRequestParsing.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/EngineVersionComparison.h"
 

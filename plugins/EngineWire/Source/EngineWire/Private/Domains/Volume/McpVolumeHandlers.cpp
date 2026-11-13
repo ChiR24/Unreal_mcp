@@ -5,7 +5,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 namespace
 {

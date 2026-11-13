@@ -4,7 +4,6 @@
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "PhysicsEngine/BodySetup.h"

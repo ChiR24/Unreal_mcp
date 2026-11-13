@@ -3,7 +3,6 @@
 #include "EngineWireSubsystem.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "McpConnectionManager.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

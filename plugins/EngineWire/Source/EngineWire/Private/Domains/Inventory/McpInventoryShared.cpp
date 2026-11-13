@@ -1,7 +1,5 @@
 #include "Domains/Inventory/McpInventoryShared.h"
 
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FString& RequestId,
                                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path,
                                       const FString& Name)

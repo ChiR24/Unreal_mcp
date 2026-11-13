@@ -8,7 +8,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 // import_morph_targets: move blend shapes from one mesh's source data into another's, each target vertex
 // taking the delta of its nearest source vertex, so the morphs survive every later build.

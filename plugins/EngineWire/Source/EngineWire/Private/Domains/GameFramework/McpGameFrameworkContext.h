@@ -34,7 +34,6 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/EngineVersionComparison.h"
 #include "UObject/SoftObjectPath.h"

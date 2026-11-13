@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 
+class FJsonObject;
 class UWorld;
 
 // The path a pawn would walk on a world's nav mesh (get_ai_info info:'path', and what drives a pawn in Play).
@@ -27,4 +28,10 @@ inline const FVector McpNavPathExtent(100.0, 100.0, 250.0);
  *  NAV_BUILD_IN_PROGRESS) and OutMessage when the nav mesh cannot answer. */
 bool FindNavPath(UWorld* World, const FVector& From, const FVector& To, const FVector& Extent, FMcpNavPath& Out,
                  FString& OutCode, FString& OutMessage);
+
+/** An end of a nav query given as an actor (ActorField: where it stands) or as a point (PointField, none when null).
+ *  False with OutError when the actor is not in World; false with OutError empty when neither is given. OutName is
+ *  the actor's name, or the point's field. */
+bool McpReadNavEnd(UWorld* World, const TSharedPtr<FJsonObject>& Payload, const TCHAR* ActorField, const TCHAR* PointField,
+                   FVector& Out, FString& OutName, FString& OutError);
 } // namespace McpNavigationHandlers

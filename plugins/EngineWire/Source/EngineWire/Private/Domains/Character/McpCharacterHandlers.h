@@ -17,24 +17,16 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
-#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
-#include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SkeletalMesh.h"
-#include "EngineUtils.h"
 #include "Factories/BlueprintFactory.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
-#include "Misc/PackageName.h"
-
-DECLARE_LOG_CATEGORY_EXTERN(LogMcpCharacterHandlers, Log, All);
 
 namespace McpCharacterHandlers
 {

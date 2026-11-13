@@ -9,6 +9,7 @@
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
@@ -70,7 +71,7 @@ bool HandleRandomizeTransforms(UEngineWireSubsystem* Bridge, const FString& Requ
             const FRotator Rotation = Actor->GetActorRotation() + FRotator(TurnPitch, TurnYaw, TurnRoll);
             Actor->SetActorLocationAndRotation(Actor->GetActorLocation() + Nudge, Rotation.GetNormalized(), false, nullptr, ETeleportType::TeleportPhysics);
             Actor->SetActorScale3D(Actor->GetActorScale3D() * Factor);
-            Actor->PostEditMove(true);
+            McpFinishEditorMove(Actor);
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
             Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
             Row->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Actor->GetActorLocation()));

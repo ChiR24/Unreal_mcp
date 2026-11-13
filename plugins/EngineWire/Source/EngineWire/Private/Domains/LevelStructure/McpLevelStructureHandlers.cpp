@@ -5,7 +5,6 @@ DEFINE_LOG_CATEGORY(LogMcpLevelStructureHandlers);
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 static bool IsManageLevelStructureVolumeSubAction(const FString& SubAction)
 {

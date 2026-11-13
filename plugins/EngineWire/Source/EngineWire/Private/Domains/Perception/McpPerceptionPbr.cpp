@@ -34,8 +34,7 @@ struct FPbrActor
 // A buffer's grey as drawn back to its value: the view shows the value through the display's sRGB encoding.
 float PbrValue(uint8 Shown)
 {
-    const float Encoded = Shown / 255.f;
-    return Encoded <= 0.04045f ? Encoded / 12.92f : FMath::Pow((Encoded + 0.055f) / 1.055f, 2.4f);
+    return SrgbToLinear(Shown / 255.f);
 }
 
 // Why an actor's G-buffer says nothing of its look: an unlit material writes black base colour and a translucent one

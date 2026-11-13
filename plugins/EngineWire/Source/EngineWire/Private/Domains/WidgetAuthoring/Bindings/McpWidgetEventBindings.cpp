@@ -17,7 +17,6 @@
 #include "Kismet2/Kismet2NameValidators.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 // bind_on_clicked, bind_on_hovered, bind_on_value_changed: the Designer's "+ OnClicked"

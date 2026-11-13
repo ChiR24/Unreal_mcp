@@ -16,15 +16,12 @@
 #endif
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Editor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
-#include "EditorAssetLibrary.h"
 #include "GameFramework/Actor.h"
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UnrealType.h"
-#include "UObject/UObjectIterator.h"
 
 #if MCP_HAS_PCG
 #include "PCGCommon.h"

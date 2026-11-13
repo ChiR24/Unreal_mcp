@@ -12,7 +12,6 @@
 #include "Domains/Volume/McpVolumeCullDistances.h"
 #include "Domains/Volume/McpVolumeGeometry.h"
 #include "Domains/Volume/McpVolumeResponses.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 #if MCP_HAS_POSTPROCESS_VOLUME
 #include "Engine/PostProcessVolume.h"

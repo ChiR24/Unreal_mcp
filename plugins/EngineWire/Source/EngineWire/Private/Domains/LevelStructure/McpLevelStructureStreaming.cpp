@@ -8,7 +8,6 @@
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"

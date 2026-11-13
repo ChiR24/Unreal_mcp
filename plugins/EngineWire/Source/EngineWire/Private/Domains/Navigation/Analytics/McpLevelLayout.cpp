@@ -2,6 +2,7 @@
 // with its spaces, doors, chokes, dead ends, loops, the start-to-goal walk and how far one sees from each space.
 #include "Domains/Navigation/Analytics/McpLevelLayout.h"
 
+#include "Domains/Navigation/McpNavPath.h"
 #include "Domains/Navigation/McpNavPrivate.h"
 #include "GameFramework/PlayerStart.h"
 #include "Misc/Paths.h"
@@ -55,26 +56,6 @@ TArray<int32> LayoutWalk(const FGraph& Graph, int32 Start)
     return Parent;
 }
 
-bool LayoutEnd(UWorld* World, const TSharedPtr<FJsonObject>& Payload, const TCHAR* ActorField, const TCHAR* PointField,
-               FVector& Out, FString& OutName, FString& OutError)
-{
-    FString ActorName;
-    if (Payload->TryGetStringField(ActorField, ActorName) && !ActorName.IsEmpty())
-    {
-        const AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, false);
-        OutError = Actor ? FString() : FString::Printf(TEXT("%s '%s' names no actor in the level."), ActorField, *ActorName);
-        Out = Actor ? Actor->GetActorLocation() : FVector::ZeroVector;
-        OutName = ActorName;
-        return Actor != nullptr;
-    }
-    if (PointField && Payload->HasField(PointField))
-    {
-        Out = ExtractVectorField(Payload, PointField, FVector::ZeroVector);
-        OutName = PointField;
-        return true;
-    }
-    return false;
-}
 } // namespace
 
 bool Handle(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
@@ -113,12 +94,12 @@ bool Handle(UEngineWireSubsystem* Bridge, const FString& RequestId, const TShare
     FString StartName;
     FString GoalName;
     FString Error;
-    const bool bStart = LayoutEnd(World, Payload, TEXT("startActor"), nullptr, Start, StartName, Error);
+    const bool bStart = McpNavigationHandlers::McpReadNavEnd(World, Payload, TEXT("startActor"), nullptr, Start, StartName, Error);
     if (!Error.IsEmpty())
     {
         return Refuse(Error, TEXT("ACTOR_NOT_FOUND"));
     }
-    const bool bGoal = LayoutEnd(World, Payload, TEXT("goalActor"), TEXT("goal"), Goal, GoalName, Error);
+    const bool bGoal = McpNavigationHandlers::McpReadNavEnd(World, Payload, TEXT("goalActor"), TEXT("goal"), Goal, GoalName, Error);
     if (!Error.IsEmpty())
     {
         return Refuse(Error, TEXT("ACTOR_NOT_FOUND"));

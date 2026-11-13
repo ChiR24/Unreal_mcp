@@ -11,7 +11,6 @@
 #include "Components/Widget.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 // set_anchor, set_alignment, set_position, set_size. A canvas-only setting on a widget

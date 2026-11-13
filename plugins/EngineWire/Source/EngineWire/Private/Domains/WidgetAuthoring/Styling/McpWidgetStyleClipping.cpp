@@ -11,7 +11,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "UObject/UnrealType.h"
 #include "WidgetBlueprint.h"

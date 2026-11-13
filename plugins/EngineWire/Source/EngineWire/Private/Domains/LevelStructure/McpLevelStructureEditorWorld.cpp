@@ -9,7 +9,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Safety/McpSafeOperations.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/LevelStreamingDynamic.h"
 #include "EngineWireLog.h"

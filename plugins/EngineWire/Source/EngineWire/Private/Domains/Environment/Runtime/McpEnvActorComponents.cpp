@@ -5,24 +5,6 @@
 
 namespace McpEnvironmentHandlers {
 
-UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass)
-{
-    if (!Actor || !ComponentClass)
-    {
-        return nullptr;
-    }
-
-    TInlineComponentArray<UActorComponent *> Components;
-    Actor->GetComponents(Components);
-    for (UActorComponent *Component : Components)
-    {
-        if (Component && Component->IsA(ComponentClass))
-        {
-            return Component;
-        }
-    }
-    return nullptr;
-}
 UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, const FString &ComponentName)
 {
     if (!Actor || !ComponentClass || !ComponentClass->IsChildOf(UActorComponent::StaticClass()))
@@ -30,7 +12,7 @@ UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, co
         return nullptr;
     }
 
-    if (UActorComponent *Existing = McpFindComponentByClass(Actor, ComponentClass))
+    if (UActorComponent *Existing = Actor->FindComponentByClass(ComponentClass))
     {
         return Existing;
     }
@@ -212,10 +194,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     McpHandlerUtils::AddVerification(Resp, Actor);
-    if (ConfigTarget)
-    {
-        Resp->SetStringField(TEXT("configuredTarget"), ConfigTarget->GetPathName());
-    }
+    Resp->SetStringField(TEXT("configuredTarget"), ConfigTarget->GetPathName());
     OutMessage = FString::Printf(TEXT("Configured environment actor %s"), *Actor->GetActorLabel());
     return true;
 }

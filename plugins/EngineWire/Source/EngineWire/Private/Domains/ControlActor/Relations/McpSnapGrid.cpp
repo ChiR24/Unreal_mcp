@@ -9,6 +9,7 @@
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
@@ -93,7 +94,7 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
             AActor* Actor = CastChecked<AActor>(Moving[Index]);
             Actor->Modify();
             Actor->SetActorLocationAndRotation(Targets[Index].Key, Targets[Index].Value, false, nullptr, ETeleportType::TeleportPhysics);
-            Actor->PostEditMove(true);
+            McpFinishEditorMove(Actor);
         }
         Transaction.DescribeInto(Result);
     }

@@ -1,8 +1,6 @@
 #include "Domains/Character/McpCharacterHandlers.h"
 #include "Domains/MetaHuman/McpMetaHumanHandlers.h"
 
-DEFINE_LOG_CATEGORY(LogMcpCharacterHandlers);
-
 bool UEngineWireSubsystem::HandleManageCharacterAction(
     const FString& RequestId,
     const FString& Action,

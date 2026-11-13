@@ -19,7 +19,6 @@
 #include "EngineWireSubsystem.h"
 #include "Misc/PackageName.h"
 #include "MovieScene.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"
 

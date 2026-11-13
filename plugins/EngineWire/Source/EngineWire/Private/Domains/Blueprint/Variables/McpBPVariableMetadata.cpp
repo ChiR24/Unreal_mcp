@@ -3,7 +3,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopeExit.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"

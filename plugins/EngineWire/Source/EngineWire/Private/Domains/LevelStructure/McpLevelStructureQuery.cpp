@@ -9,7 +9,6 @@
 #include "LevelInstance/LevelInstanceActor.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "WorldPartition/DataLayer/DataLayerSubsystem.h"
 #if __has_include("WorldPartition/DataLayer/DataLayerManager.h")

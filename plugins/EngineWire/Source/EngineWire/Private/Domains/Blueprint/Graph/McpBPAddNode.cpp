@@ -4,7 +4,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopeExit.h"
 
 #include "Engine/Blueprint.h"
 #include "EdGraph/EdGraph.h"
@@ -80,7 +79,6 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetNumberField(TEXT("posX"), PosX);
     LocalPayload->TryGetNumberField(TEXT("posY"), PosY);
 
-    // Declare RegistryKey outside the conditional blocks
     const FString RegistryKey = Path;
 
 

@@ -9,7 +9,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
 #include "ReferenceSkeleton.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 // copy_weights and mirror_weights: rewrite a mesh's source skin weights from the nearest vertex of another
 // mesh, or of the mirrored side of the same mesh, then rebuild so the weights survive every later build.

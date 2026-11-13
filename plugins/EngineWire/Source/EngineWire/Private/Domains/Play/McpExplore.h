@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-#include "Foundation/Viewport/McpEditorScreenshotSupport.h" // FMcpEditorRunHold
+#include "UObject/WeakObjectPtr.h"
 
 class APawn;
 class FMcpBridgeWebSocket;

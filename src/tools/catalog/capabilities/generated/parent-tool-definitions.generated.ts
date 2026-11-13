@@ -31109,7 +31109,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "duration": {
           "type": "number",
-          "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
+          "description": "Seconds the notification stays up (default 4, 0.5 to 60)."
         },
         "enableBatching": {
           "type": "boolean",

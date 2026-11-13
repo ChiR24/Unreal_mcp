@@ -7,7 +7,6 @@
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
-#include "Misc/ScopeExit.h"
 
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"

@@ -40,6 +40,10 @@ FLinearColor BlockMean(const McpInspectHandlers::FMcpViewCapture& View, int32 X,
 /** OKLab (Ottosson 2020) of an sRGB colour (0-1, as displayed). */
 FVector3f OkLab(const FLinearColor& Srgb);
 
+/** sRGB's transfer: a value as displayed (0-1) to linear light, and linear light (held to 0-1) to its displayed value. */
+float SrgbToLinear(float Value);
+float LinearToSrgb(float Value);
+
 /** Saliency by Boolean Map Saliency (Zhang and Sclaroff 2016) on OKLab: the share of the frame's saliency each actor
  *  draws (top 5), where the most salient cell is, and the subject's share and rank when named (McpPerceptionSaliency). */
 TSharedPtr<FJsonObject> Saliency(const FFrame& Frame, const AActor* Subject);

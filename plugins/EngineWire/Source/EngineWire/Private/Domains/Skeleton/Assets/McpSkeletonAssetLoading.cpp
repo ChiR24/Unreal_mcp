@@ -6,7 +6,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 
 namespace McpSkeletonHandlers

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"

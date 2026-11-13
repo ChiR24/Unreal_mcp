@@ -1,10 +1,10 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Animation/WidgetAnimation.h"
 #include "Blueprint/WidgetNavigation.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MovieScene.h"
 #include "WidgetBlueprint.h"
 #if __has_include("WidgetBlueprintEditorUtils.h") // private to UMGEditor on 5.0

@@ -28,26 +28,15 @@ struct FTemplate
     TArray<FSector> Sectors;
 };
 
-float Linear(float Value)
-{
-    return Value <= 0.04045f ? Value / 12.92f : FMath::Pow((Value + 0.055f) / 1.055f, 2.4f);
-}
-
-float Gamma(float Value)
-{
-    const float Clamped = FMath::Clamp(Value, 0.f, 1.f);
-    return Clamped <= 0.0031308f ? Clamped * 12.92f : 1.055f * FMath::Pow(Clamped, 1.f / 2.4f) - 0.055f;
-}
-
 FString Hex(const FVector3f& Lab)
 {
     const float L = Lab.X + 0.3963377774f * Lab.Y + 0.2158037573f * Lab.Z;
     const float M = Lab.X - 0.1055613458f * Lab.Y - 0.0638541728f * Lab.Z;
     const float S = Lab.X - 0.0894841775f * Lab.Y - 1.2914855480f * Lab.Z;
     const float L3 = L * L * L, M3 = M * M * M, S3 = S * S * S;
-    const FColor Shown(FMath::RoundToInt(255.f * Gamma(4.0767416621f * L3 - 3.3077115913f * M3 + 0.2309699292f * S3)),
-                       FMath::RoundToInt(255.f * Gamma(-1.2684380046f * L3 + 2.6097574011f * M3 - 0.3413193965f * S3)),
-                       FMath::RoundToInt(255.f * Gamma(-0.0041960863f * L3 - 0.7034186147f * M3 + 1.7076147010f * S3)));
+    const FColor Shown(FMath::RoundToInt(255.f * LinearToSrgb(4.0767416621f * L3 - 3.3077115913f * M3 + 0.2309699292f * S3)),
+                       FMath::RoundToInt(255.f * LinearToSrgb(-1.2684380046f * L3 + 2.6097574011f * M3 - 0.3413193965f * S3)),
+                       FMath::RoundToInt(255.f * LinearToSrgb(-0.0041960863f * L3 - 0.7034186147f * M3 + 1.7076147010f * S3)));
     return FString::Printf(TEXT("#%02X%02X%02X"), Shown.R, Shown.G, Shown.B);
 }
 
@@ -107,7 +96,7 @@ TSharedPtr<FJsonObject> Harmony(const TArray<double>& Hues, double Weight, int32
 
 FVector3f OkLab(const FLinearColor& Srgb)
 {
-    const float R = Linear(Srgb.R), G = Linear(Srgb.G), B = Linear(Srgb.B);
+    const float R = SrgbToLinear(Srgb.R), G = SrgbToLinear(Srgb.G), B = SrgbToLinear(Srgb.B);
     const float L = FMath::Pow(FMath::Max(0.f, 0.4122214708f * R + 0.5363325363f * G + 0.0514459929f * B), 1.f / 3.f);
     const float M = FMath::Pow(FMath::Max(0.f, 0.2119034982f * R + 0.6806995451f * G + 0.1073969566f * B), 1.f / 3.f);
     const float S = FMath::Pow(FMath::Max(0.f, 0.0883024619f * R + 0.2817188376f * G + 0.6299787005f * B), 1.f / 3.f);
@@ -160,5 +149,15 @@ TSharedPtr<FJsonObject> Palette(const FFrame& Frame)
     Cast->SetNumberField(TEXT("b"), FMath::RoundToDouble(1000.0 * B) / 1000.0);
     Out->SetObjectField(TEXT("cast"), Cast);
     return Out;
+}
+float SrgbToLinear(float Value)
+{
+    return Value <= 0.04045f ? Value / 12.92f : FMath::Pow((Value + 0.055f) / 1.055f, 2.4f);
+}
+
+float LinearToSrgb(float Value)
+{
+    const float Clamped = FMath::Clamp(Value, 0.f, 1.f);
+    return Clamped <= 0.0031308f ? Clamped * 12.92f : 1.055f * FMath::Pow(Clamped, 1.f / 2.4f) - 0.055f;
 }
 } // namespace McpPerception

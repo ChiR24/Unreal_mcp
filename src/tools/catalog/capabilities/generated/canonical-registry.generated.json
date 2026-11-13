@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "887cbbac05db1a95",
+  "catalogRevision": "223c3d5187411333",
   "recordCount": 489,
   "records": [
     {
@@ -119829,7 +119829,7 @@
             },
             "duration": {
               "type": "number",
-              "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
+              "description": "Seconds: start_profiling stops its capture after that many (default: it runs until stop_profiling); run_benchmark samples that long (default 10, 0.5 to 600)."
             },
             "type": {
               "type": "string",
@@ -119965,8 +119965,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4dacbb4d4d63dd1b1d4e536804a21ab771b11cf6c2d35c0fb7731b26a8b35c8c",
-        "content": "127b8c7ac044b72ecd67feada007572cf04b95b0bb1f024d997e9d8bbbae371d"
+        "schema": "aacda1ab25ab4dccb204693f20964fdfe0c37946b0f4777f101eb97e1f1f2315",
+        "content": "8450a66c45c673a8bb39470e046c74603dc4514c1ac9d06fbb953f00436f39a7"
       }
     },
     {

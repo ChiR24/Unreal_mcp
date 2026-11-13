@@ -12,8 +12,6 @@
 #include "Factories/BlueprintFactory.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-#include "EditorAssetLibrary.h"
-
 namespace McpCombatHandlers
 {
 inline UBlueprint* CreateActorBlueprint(

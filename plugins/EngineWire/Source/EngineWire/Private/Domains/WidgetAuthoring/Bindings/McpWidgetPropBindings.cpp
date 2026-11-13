@@ -15,7 +15,6 @@
 #include "K2Node_VariableGet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 // bind_text, bind_visibility, bind_color, bind_enabled, bind_percent: a real UMG property binding, the

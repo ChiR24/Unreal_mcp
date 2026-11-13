@@ -8,6 +8,7 @@
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Domains/Debug/Contracts/McpContracts.h"
 #include "Domains/Navigation/McpNavPath.h"
+#include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "GameFramework/PlayerController.h"

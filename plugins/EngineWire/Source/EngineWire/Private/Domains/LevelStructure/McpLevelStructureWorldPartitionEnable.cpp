@@ -6,7 +6,6 @@
 #include "GameFramework/WorldSettings.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "WorldPartition/WorldPartition.h"
 

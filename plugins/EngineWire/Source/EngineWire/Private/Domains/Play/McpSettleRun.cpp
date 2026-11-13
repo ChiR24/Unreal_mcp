@@ -8,7 +8,6 @@
 
 #include "Editor.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
-#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "PhysicsEngine/PhysicsSettings.h"

@@ -1,5 +1,3 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
 #include "Domains/Combat/McpCombatPrivate.h"
 
 namespace McpCombatHandlers

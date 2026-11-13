@@ -1,6 +1,7 @@
 #include "Domains/Navigation/McpNavPath.h"
 
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "NavigationPath.h"
 
 // get_ai_info info:'path' (get_navigation_path): whether a pawn could walk from one point to another on the editor
@@ -12,39 +13,43 @@ namespace NavPathParts
 {
 constexpr int32 MaxPoints = 100;
 
-TArray<TSharedPtr<FJsonValue>> Point(const FVector& Value)
-{
-    return {MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.X)), MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Y)),
-            MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Z))};
-}
 
-// An end given as a point, or as an actor (where it stands).
+// An end given as a point, or as an actor (where it stands); one of them is needed.
 bool ReadEnd(const TSharedPtr<FJsonObject>& Payload, const TCHAR* PointField, const TCHAR* ActorField, UWorld* World,
              FVector& Out, FString& OutError)
+{
+    FString Name;
+    if (McpReadNavEnd(World, Payload, ActorField, PointField, Out, Name, OutError))
+    {
+        return true;
+    }
+    OutError = OutError.IsEmpty() ? FString::Printf(TEXT("Give %s (a point) or %s (an actor)."), PointField, ActorField) : OutError;
+    return false;
+}
+} // namespace NavPathParts
+
+using namespace NavPathParts;
+
+bool McpReadNavEnd(UWorld* World, const TSharedPtr<FJsonObject>& Payload, const TCHAR* ActorField, const TCHAR* PointField,
+                   FVector& Out, FString& OutName, FString& OutError)
 {
     FString ActorName;
     if (Payload->TryGetStringField(ActorField, ActorName) && !ActorName.IsEmpty())
     {
         const AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, false);
-        if (!Actor)
-        {
-            OutError = FString::Printf(TEXT("%s '%s' names no actor in the level."), ActorField, *ActorName);
-            return false;
-        }
-        Out = Actor->GetActorLocation();
+        OutError = Actor ? FString() : FString::Printf(TEXT("%s '%s' names no actor in the level."), ActorField, *ActorName);
+        Out = Actor ? Actor->GetActorLocation() : FVector::ZeroVector;
+        OutName = ActorName;
+        return Actor != nullptr;
+    }
+    if (PointField && Payload->HasField(PointField))
+    {
+        Out = ExtractVectorField(Payload, PointField, FVector::ZeroVector);
+        OutName = PointField;
         return true;
     }
-    if (!Payload->HasField(PointField))
-    {
-        OutError = FString::Printf(TEXT("Give %s (a point) or %s (an actor)."), PointField, ActorField);
-        return false;
-    }
-    Out = ExtractVectorField(Payload, PointField, FVector::ZeroVector);
-    return true;
+    return false;
 }
-} // namespace NavPathParts
-
-using namespace NavPathParts;
 
 bool FindNavPath(UWorld* World, const FVector& From, const FVector& To, const FVector& Extent, FMcpNavPath& Out,
                  FString& OutCode, FString& OutMessage)
@@ -110,18 +115,18 @@ bool HandleGetNavigationPath(UEngineWireSubsystem* Self, const FString& RequestI
     Result->SetStringField(TEXT("navData"), Path.NavData);
     if (Path.bFromOnMesh)
     {
-        Result->SetArrayField(TEXT("fromOnMesh"), Point(Path.FromOnMesh));
+        Result->SetArrayField(TEXT("fromOnMesh"), McpHandlerUtils::RoundedVectorToJsonArray(Path.FromOnMesh, 1.0));
     }
     if (Path.bToOnMesh)
     {
-        Result->SetArrayField(TEXT("toOnMesh"), Point(Path.ToOnMesh));
+        Result->SetArrayField(TEXT("toOnMesh"), McpHandlerUtils::RoundedVectorToJsonArray(Path.ToOnMesh, 1.0));
     }
     if (Path.Points.Num() > 0)
     {
         TArray<TSharedPtr<FJsonValue>> Points;
         for (int32 Index = 0; Index < Path.Points.Num() && Points.Num() < MaxPoints; ++Index)
         {
-            Points.Add(MakeShared<FJsonValueArray>(Point(Path.Points[Index])));
+            Points.Add(MakeShared<FJsonValueArray>(McpHandlerUtils::RoundedVectorToJsonArray(Path.Points[Index], 1.0)));
         }
         Result->SetArrayField(TEXT("points"), Points);
         Result->SetNumberField(TEXT("pathLength"), FMath::RoundToDouble(Path.Length));

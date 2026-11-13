@@ -5,11 +5,6 @@
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Engine/Blueprint.h"
-#include "K2Node_BreakStruct.h"
-#include "K2Node_MakeStruct.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Core/Compatibility/McpVersionCompatibility.h"
-#include MCP_USER_DEFINED_STRUCT_HEADER
 
 
 namespace McpBlueprintHandlers

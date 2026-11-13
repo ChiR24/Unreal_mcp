@@ -8,6 +8,7 @@
 
 #include "Dom/JsonObject.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
@@ -88,7 +89,7 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
             AActor* Actor = CastChecked<AActor>(Moving[Index]);
             Actor->Modify();
             Actor->SetActorLocation(Destinations[Index], false, nullptr, ETeleportType::TeleportPhysics);
-            Actor->PostEditMove(true);
+            McpFinishEditorMove(Actor);
         }
         Transaction.DescribeInto(Result);
     }

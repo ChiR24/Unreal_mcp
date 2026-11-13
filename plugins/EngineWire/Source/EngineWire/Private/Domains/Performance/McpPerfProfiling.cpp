@@ -14,10 +14,7 @@
 #else
 #include "RenderCore.h"
 #endif
-#include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
-#include "Misc/DateTime.h"
-#include "Misc/Paths.h"
 #include "UnrealClient.h"
 #if __has_include("ViewportClient.h")
 #include "ViewportClient.h"

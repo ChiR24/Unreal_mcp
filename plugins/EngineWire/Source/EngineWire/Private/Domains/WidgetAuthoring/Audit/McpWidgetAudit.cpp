@@ -11,7 +11,6 @@
 #include "Foundation/McpScreenshotResample.h"
 #include "ImageUtils.h"
 #include "Misc/Base64.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 namespace McpWidgetAudit

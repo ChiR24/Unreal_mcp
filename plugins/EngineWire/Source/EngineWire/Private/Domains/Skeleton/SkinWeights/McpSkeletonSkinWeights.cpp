@@ -9,7 +9,6 @@
 #include "ReferenceSkeleton.h"
 #include "Safety/McpSafeOperations.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 // Source-data helpers shared by the skin-weight and morph-target edits, and prune_weights.

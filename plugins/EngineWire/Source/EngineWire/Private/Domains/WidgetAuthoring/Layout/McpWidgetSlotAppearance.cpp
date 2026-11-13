@@ -9,7 +9,6 @@
 #include "Components/Widget.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
 // set_padding, set_z_order, set_render_transform, set_visibility; each reply carries the

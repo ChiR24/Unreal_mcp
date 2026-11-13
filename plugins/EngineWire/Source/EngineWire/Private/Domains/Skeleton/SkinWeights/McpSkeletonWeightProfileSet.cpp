@@ -11,7 +11,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #if __has_include("Animation/SkinWeightProfile.h")
 #include "Animation/SkinWeightProfile.h"
 #endif

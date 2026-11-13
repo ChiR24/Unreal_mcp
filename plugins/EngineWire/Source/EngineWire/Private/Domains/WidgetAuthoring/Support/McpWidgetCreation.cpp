@@ -10,7 +10,6 @@
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"

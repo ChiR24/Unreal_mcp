@@ -10,7 +10,6 @@
 #include "Domains/Volume/McpVolumeRequestParsing.h"
 #include "Domains/Volume/McpVolumeResponses.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
-#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Sound/AudioVolume.h"
 #if MCP_HAS_POSTPROCESS_VOLUME
