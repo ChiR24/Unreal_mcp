@@ -22,7 +22,7 @@ const vec = (d: string): JsonObject => ({ type: 'object', description: d, proper
 // create_primitive keeps the first variant's text for a parameter every variant shares, so each shared text speaks for
 // all of them: the disc's "centred hole" was read as the arch's innerRadius, which is its tube.
 const RADIUS = cm('Radius in cm (default 50). Torus and arch: from the centre to the middle of the tube (arch default 100). Pipe: the outer wall, as outerRadius. Spiral stairs: the inner radius when innerRadius is not given (default 150).');
-const INNER_RADIUS = cm('In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). ' +
+const INNER_RADIUS = cm('In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall, above 0 and below the outer radius (default 0.8 x the outer radius, 40 for the default 50). ' +
   'Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well.');
 const SWEEP = cm('Sweep in degrees: torus default 360 (less leaves an open segment), arch default 180, a half ring. Both lie flat in the local XY plane, starting on local +X and turning toward +Y; give a rotation to stand an arch up.');
 const SDF_SHAPES: JsonObject = {

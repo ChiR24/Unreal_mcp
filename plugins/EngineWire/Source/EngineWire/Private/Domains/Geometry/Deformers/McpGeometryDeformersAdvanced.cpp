@@ -80,8 +80,10 @@ bool HandleDisplaceByTexture(UEngineWireSubsystem* Self, const FString& RequestI
         return true;
     }
 
+    // The source mip is read once here; every vertex samples from it.
+    const FMcpLuminanceSampler Sampler(Texture);
     double Probe = 0.0;
-    if (!SampleTextureLuminance(Texture, 0.5, 0.5, Probe))
+    if (!Sampler.Sample(0.5, 0.5, Probe))
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("Texture source format is not supported for displacement"), TEXT("TEXTURE_FORMAT_UNSUPPORTED"));
         return true;
@@ -105,7 +107,7 @@ bool HandleDisplaceByTexture(UEngineWireSubsystem* Self, const FString& RequestI
         const double U = BoundsSize.X > KINDA_SMALL_NUMBER ? (OriginalPos.X - BBox.Min.X) / BoundsSize.X : 0.5;
         const double V = BoundsSize.Y > KINDA_SMALL_NUMBER ? (OriginalPos.Y - BBox.Min.Y) / BoundsSize.Y : 0.5;
         double Luminance = 0.0;
-        return SampleTextureLuminance(Texture, U, V, Luminance)
+        return Sampler.Sample(U, V, Luminance)
             ? OriginalPos + DisplacementAxis * ((Luminance - Midpoint) * HeightScale)
             : OriginalPos;
     });

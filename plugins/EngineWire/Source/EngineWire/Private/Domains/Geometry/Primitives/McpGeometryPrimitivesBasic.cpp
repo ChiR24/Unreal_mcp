@@ -50,9 +50,7 @@ bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
     int32 HeightSegments = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), 1));
     int32 DepthSegments = ClampSegments(GetJsonIntField(Payload, TEXT("depthSegments"), 1));
 
-    const int64 EstimatedTriangles = 2LL * (static_cast<int64>(WidthSegments) * HeightSegments +
-                                            static_cast<int64>(WidthSegments) * DepthSegments +
-                                            static_cast<int64>(HeightSegments) * DepthSegments);
+    const int64 EstimatedTriangles = GridBoxTriangles(WidthSegments, HeightSegments, DepthSegments);
     if (!GuardMeshBudget(Self, RequestId, Socket, EstimatedTriangles, TEXT("Box creation"))) return true;
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
@@ -100,6 +98,7 @@ bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
 {
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     int32 Subdivisions = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
+    if (!GuardMeshBudget(Self, RequestId, Socket, GridBoxTriangles(Subdivisions, Subdivisions, Subdivisions), TEXT("Sphere creation"))) return true;
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

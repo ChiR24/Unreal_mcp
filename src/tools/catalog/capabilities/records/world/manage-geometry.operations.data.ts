@@ -13,7 +13,7 @@ import { P } from './properties.js';
 const F = 'operations';
 const PLUGIN = ['GeometryScripting'] as const;
 const BEVEL_DISTANCE = { type: 'number', description: 'Bevel width in world units (default 5).' };
-const BEVEL_SEGMENTS = { type: 'integer', description: 'Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel.' };
+const BEVEL_SEGMENTS = { type: 'integer', description: 'Subdivisions for a rounded bevel (UE 5.4 or later), at most 32 (more bevels with 32); omit or 0 for a flat bevel.' };
 const SWEEP_STEPS = { type: 'integer', description: 'Path steps along the sweep (default 16); the profile uses half as many sides.' };
 // A fold keeps the first member's description, so text shared by sweep and revolve names both.
 const STEPS = { type: 'integer', description: 'Path steps along a sweep (default 16; the profile uses half as many sides), or segments around the axis for a revolve (default 16, 3 to 512; 48 or more reads as round).' };

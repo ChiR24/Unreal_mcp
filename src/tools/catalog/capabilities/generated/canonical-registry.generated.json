@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "be90c0ae9da49f75",
+  "catalogRevision": "f43ac4778441e2b4",
   "recordCount": 489,
   "records": [
     {
@@ -82665,7 +82665,7 @@
             },
             "innerRadius": {
               "type": "number",
-              "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall (default 40). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
+              "description": "In cm, per variant. Disc and ring: the centred hole (disc default 0, solid; ring 25). Pipe: the inner wall, above 0 and below the outer radius (default 0.8 x the outer radius, 40 for the default 50). Torus and arch: the TUBE radius, its round cross-section, not a hole (default 20 torus, 25 arch); the opening under an arch is radius - innerRadius. Spiral stairs: the radius of the central well."
             },
             "outerRadius": {
               "type": "number",
@@ -83323,8 +83323,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "48dc3aeda0cfc28ef5bf650e1d7ee3a40ec94f237850c3de3784d0c72dcb6f53",
-        "content": "d55e7efad29b91b52aef4a502d259990de8a46255f0a2106ba1325be55c69934"
+        "schema": "498e2083267afc1684dbb8c7218f3b667744c673c8a9533d4a15e445f06960c7",
+        "content": "36f5e50a1a320d07b295104a3c7fb66d040cccbc29d3aaf5ffff96015061dde4"
       }
     },
     {
@@ -83542,7 +83542,7 @@
                 "lattice_deform",
                 "displace_by_texture"
               ],
-              "description": "Which deform mesh variant to run.\nbend: Bend a dynamic mesh along axis (X, Y or Z, default Z) by strength degrees (default 45), the bend spread over its length along that axis and centred on its local origin, the pivot. The reply gives the angle.\ntwist: Twist a dynamic mesh about axis (X, Y or Z, default Z) by strength degrees (default 45) across its length along that axis, centred on its local origin. The reply gives the angle.\ntaper: Flare a dynamic mesh around axis (X, Y or Z, default Z): its cross-section grows by strength percent (default 50) at the middle of its length and not at all at the ends, so a positive strength bulges it and a negative one pinches it (a sine profile, not a straight taper).\nstretch: Scale a dynamic mesh along one axis (X, Y or Z, default Z) by strength (default 1.5: 2 doubles it, 0.5 halves it) about its local origin, the other axes unchanged.\nspherify: Pull every vertex of a dynamic mesh toward a sphere around its bounds centre, as large as its largest half-extent: strength 0 to 1 (default 1, clamped) is how far, 1 making it that sphere.\ncylindrify: Pull every vertex of a dynamic mesh toward a cylinder around axis (X, Y or Z, default Z) through its bounds centre, its radius the average distance of the vertices from that axis: strength 0 to 1 (default 1, clamped) is how far. The reply gives avgRadius and verticesModified.\nsmooth: Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused.\nrelax: Relax a dynamic mesh: the same smoothing as smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused.\nnoise_deform: Displace a dynamic mesh along its normals by Perlin noise: strength is the height in cm (default 5) and frequency the noise cycles per cm (default three bumps across its largest dimension). The reply gives both.\nlattice_deform: Ripple a dynamic mesh with a sine wave: every vertex moves along axis (X, Y or Z, default Z) by a wave latticeResolution cycles across its bounds (2 to 16, default 3), at most weight (-2 to 2, default 0.25) times a quarter of its largest size, fading to nothing three quarters of that size from position (default the bounds centre). A procedural ripple, not a cage of control points.\ndisplace_by_texture: Raise a dynamic mesh by a heightmap texture projected straight down over its X/Y bounds: each vertex moves along axis (X, Y or Z, default Z) by (luminance - midpoint) x heightScale (midpoint 0 to 1, default 0.5; heightScale cm, default 10). A texture that does not load is TEXTURE_NOT_FOUND, one whose source format cannot be read TEXTURE_FORMAT_UNSUPPORTED."
+              "description": "Which deform mesh variant to run.\nbend: Bend a dynamic mesh along axis (X, Y or Z, default Z) by strength degrees (default 45), the bend spread over its length along that axis and centred on its local origin, the pivot. The reply gives the angle.\ntwist: Twist a dynamic mesh about axis (X, Y or Z, default Z) by strength degrees (default 45) across its length along that axis, centred on its local origin. The reply gives the angle.\ntaper: Flare a dynamic mesh around axis (X, Y or Z, default Z): its cross-section grows by strength percent (default 50) at the middle of its length and not at all at the ends, so a positive strength bulges it and a negative one pinches it (a sine profile, not a straight taper).\nstretch: Scale a dynamic mesh along one axis (X, Y or Z, default Z) by strength (default 1.5: 2 doubles it, 0.5 halves it) about its local origin, the other axes unchanged.\nspherify: Pull every vertex of a dynamic mesh toward a sphere around its bounds centre, as large as its largest half-extent: strength 0 to 1 (default 1, clamped) is how far, 1 making it that sphere.\ncylindrify: Pull every vertex of a dynamic mesh toward a cylinder around axis (X, Y or Z, default Z) through its bounds centre, its radius the average distance of the vertices from that axis: strength 0 to 1 (default 1, clamped) is how far. The reply gives avgRadius and verticesModified.\nsmooth: Smooth a dynamic mesh: iterations (default 10) of Laplacian smoothing, each moving every vertex strength (default 0.2) of the way toward its neighbours; the mesh shrinks a little. Fewer than 1 iteration or a strength of 0 is refused; more than 1000 iterations run 1000.\nrelax: Relax a dynamic mesh: the same smoothing as smooth with other defaults (3 iterations, strength 0.5), to even out vertex spacing. Fewer than 1 iteration or a strength of 0 is refused; more than 1000 iterations run 1000.\nnoise_deform: Displace a dynamic mesh along its normals by Perlin noise: strength is the height in cm (default 5) and frequency the noise cycles per cm (default three bumps across its largest dimension). The reply gives both.\nlattice_deform: Ripple a dynamic mesh with a sine wave: every vertex moves along axis (X, Y or Z, default Z) by a wave latticeResolution cycles across its bounds (2 to 16, default 3), at most weight (-2 to 2, default 0.25) times a quarter of its largest size, fading to nothing three quarters of that size from position (default the bounds centre). A procedural ripple, not a cage of control points.\ndisplace_by_texture: Raise a dynamic mesh by a heightmap texture projected straight down over its X/Y bounds: each vertex moves along axis (X, Y or Z, default Z) by (luminance - midpoint) x heightScale (midpoint 0 to 1, default 0.5; heightScale cm, default 10). A texture that does not load is TEXTURE_NOT_FOUND, one whose source format cannot be read TEXTURE_FORMAT_UNSUPPORTED."
             }
           },
           "required": [
@@ -83694,8 +83694,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2cb340c588e7e8f7a9296d2dd3ec8442cd33a45a45e612c2194a55ae86462360",
-        "content": "6cd342c2e15612c0f3caaae43b62bfa5571ebf29165c3ad3c9a9c01a3e67a49b"
+        "schema": "e62e4ecfb16f4d033e456dd9b1c23c98126f974291f2efc9424de1f0ac50aca4",
+        "content": "dc548c0d94912fc8b2fce937bf8166108d193117866bd9e1155460d58ee21bd4"
       }
     },
     {
@@ -86675,7 +86675,7 @@
             },
             "segments": {
               "type": "integer",
-              "description": "Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel."
+              "description": "Subdivisions for a rounded bevel (UE 5.4 or later), at most 32 (more bevels with 32); omit or 0 for a flat bevel."
             },
             "splineActorName": {
               "type": "string",
@@ -87212,8 +87212,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "348ed2324da34ab33c6bec3ec90a5880c8351522a4d234eb3b1d347f6bed503f",
-        "content": "4fda301ce784f1529a1b0026c1c788d5f83636fd7016d96a1fd0e31c1c82dc4e"
+        "schema": "4a87451cba77e4ccd86865bd44b08791e4c1bd5f8413a2f25f9a036323c52f96",
+        "content": "620cda7eded5596c2d647e75d393f3b5433e531d68c0789bfc5b207efddb59e5"
       }
     },
     {

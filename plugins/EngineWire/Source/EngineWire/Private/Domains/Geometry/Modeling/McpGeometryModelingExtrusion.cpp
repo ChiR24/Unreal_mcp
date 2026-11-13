@@ -116,8 +116,8 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     double BevelDistance = FaceOpDistance(Payload, 5.0);
-    // No segments = a single flat chamfer (the chamfer action routes here).
-    int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), 0);
+    // No segments = a single flat chamfer (the chamfer action routes here). At most 32: the engine took any count.
+    int32 Subdivisions = FMath::Clamp(GetJsonIntField(Payload, TEXT("segments"), 0), 0, 32);
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
     if (Subdivisions > 0)
     {

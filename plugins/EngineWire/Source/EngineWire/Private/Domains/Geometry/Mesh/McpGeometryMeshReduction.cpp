@@ -104,16 +104,36 @@ bool HandleRemeshUniform(UEngineWireSubsystem* Self, const FString& RequestId,
     RemeshOptions.bDiscardAttributes = false;
     RemeshOptions.bReprojectToInputMesh = true;
     FGeometryScriptUniformRemeshOptions UniformOptions;
+    // The triangle budget every growing operation checks: the target count, or for an edge length the about
+    // 2 x area / length^2 triangles a surface of that edge comes out at (the voxel remesh's estimate).
+    int64 Estimated = 0;
     if (Payload->HasField(TEXT("targetEdgeLength")))
     {
+        const double EdgeLength = GetJsonNumberField(Payload, TEXT("targetEdgeLength"), 10.0);
+        if (!FMath::IsFinite(EdgeLength) || EdgeLength <= 0.0)
+        {
+            Self->SendAutomationError(Socket, RequestId, TEXT("targetEdgeLength must be a positive number of centimetres."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        double Area = 0.0;
+        Mesh->ProcessMesh([&Area](const UE::Geometry::FDynamicMesh3& Source)
+        {
+            for (const int32 TriangleId : Source.TriangleIndicesItr())
+            {
+                Area += Source.GetTriArea(TriangleId);
+            }
+        });
+        Estimated = static_cast<int64>(FMath::Min(2.0 * Area / FMath::Square(EdgeLength), 1.0e15));
         UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TargetEdgeLength;
-        UniformOptions.TargetEdgeLength = GetJsonNumberField(Payload, TEXT("targetEdgeLength"), 10.0);
+        UniformOptions.TargetEdgeLength = EdgeLength;
     }
     else
     {
         UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
         UniformOptions.TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), 5000);
+        Estimated = UniformOptions.TargetTriangleCount;
     }
+    if (!GuardMeshBudget(Self, RequestId, Socket, Estimated, TEXT("Uniform remesh"))) return true;
     UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
     DMC->NotifyMeshUpdated();
 

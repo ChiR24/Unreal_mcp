@@ -13,7 +13,8 @@ bool HandleCreateTorus(UEngineWireSubsystem* Self, const FString& RequestId,
     const int32 MajorSegments = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
     const int32 MinorSegments = DeclaredSegments(Payload, {TEXT("numSides")}, 8);
     FGeometryScriptRevolveOptions RevolveOptions;
-    RevolveOptions.RevolveDegrees = GetJsonNumberField(Payload, TEXT("angle"), bArch ? 180.0 : 360.0);
+    // 1 to 360 degrees, as create_revolve takes it: 0 made a degenerate mesh, 720 wound the ring twice.
+    RevolveOptions.RevolveDegrees = FMath::Clamp(GetJsonNumberField(Payload, TEXT("angle"), bArch ? 180.0 : 360.0), 1.0, 360.0);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendTorus(

@@ -8,8 +8,18 @@ bool HandleCreatePipe(UEngineWireSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), GetJsonNumberField(Payload, TEXT("radius"), 50.0));
-    double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 40.0);
+    // The inner wall, by default 0.8 of the outer: a fixed 40 cut a 30 cm tube away entirely, and the empty mesh
+    // answered "Pipe created".
+    double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), OuterRadius * 0.8);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
+    if (!(InnerRadius > 0.0 && InnerRadius < OuterRadius))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("innerRadius %s must be above 0 and below the outer radius %s; nothing was created."),
+                            *FString::SanitizeFloat(InnerRadius), *FString::SanitizeFloat(OuterRadius)),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     int32 RadialSteps = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 24);
     int32 HeightSteps = DeclaredSegments(Payload, {TEXT("heightSegments")}, 1);
 
@@ -110,6 +120,8 @@ bool HandleRevolve(UEngineWireSubsystem* Self, const FString& RequestId,
     if (bDefaultProfile) ProfilePoints = {{10, 0}, {30, 0}, {50, 25}, {50, 75}, {30, 100}, {10, 100}};
 
     const int32 Steps = FMath::Clamp(GetJsonIntField(Payload, TEXT("steps"), 16), 3, 512);
+    // About two triangles per profile segment per step; the profile has no bound of its own.
+    if (!GuardMeshBudget(Self, RequestId, Socket, 2LL * Steps * ProfilePoints.Num(), TEXT("Revolve"))) return true;
     FGeometryScriptRevolveOptions RevolveOptions;
     RevolveOptions.RevolveDegrees = FMath::Clamp(GetJsonNumberField(Payload, TEXT("angle"), 360.0), 1.0, 360.0);
     bool bCap = true;

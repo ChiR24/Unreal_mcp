@@ -96,6 +96,13 @@ AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& Request
                               TSharedPtr<FJsonObject>& OutResult);
 // Replies with the error and returns false when memory is short or the op would exceed the triangle cap.
 bool GuardMeshBudget(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, int64 EstimatedTriangles, const TCHAR* OpName);
+// The triangles the engine's grid box (AppendBox, AppendSphereBox) makes from three segment counts: each, at least 2,
+// is the vertices along an edge (FGridBoxMeshGenerator), so a side of a x b quads is 2ab triangles, a = count - 1.
+inline int64 GridBoxTriangles(int32 X, int32 Y, int32 Z)
+{
+	const int64 A = FMath::Max(2, X) - 1, B = FMath::Max(2, Y) - 1, C = FMath::Max(2, Z) - 1;
+	return 4 * (A * B + B * C + C * A);
+}
 // The mesh's UV overlay for Channel, with attributes enabled and layers added up to it. A channel outside 0 to 7 is
 // answered INVALID_ARGUMENT and returns null: each layer is an overlay sized to the mesh, so a six-digit channel ran
 // the editor out of memory.
@@ -209,7 +216,20 @@ private:
 	TSharedPtr<const UE::Geometry::FDynamicMesh3, ESPMode::ThreadSafe> Before;
 };
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath);
-bool SampleTextureLuminance(UTexture2D* Texture, double U, double V, double& OutLuminance);
+// A texture's source mip 0, read once for many luminance samples: copying the whole mip for every sample made a
+// 16000-vertex displacement over a 1024 x 1024 texture copy 64 GB. Reads BGRA8 and G8 sources; any other samples nothing.
+class FMcpLuminanceSampler
+{
+public:
+	explicit FMcpLuminanceSampler(UTexture2D* Texture);
+	// The luminance (0 to 1) of the pixel nearest U, V (each clamped to 0-1); false for a source it cannot read.
+	bool Sample(double U, double V, double& OutLuminance) const;
+private:
+	TArray64<uint8> MipData;
+	int32 Width = 0;
+	int32 Height = 0;
+	int32 BytesPerPixel = 0; // 4 for BGRA8, 1 for G8, 0 when the source cannot be read
+};
 // The payload `axis` (X/Y/Z) as a unit vector or 0/1/2 index; Default when absent or unknown.
 FVector AxisVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const FVector& Default = FVector::UpVector);
 int32 AxisIndexFromPayload(const TSharedPtr<FJsonObject>& Payload, int32 Default = 2);

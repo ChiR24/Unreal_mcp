@@ -12,7 +12,8 @@ bool ApplySmoothing(UEngineWireSubsystem* Self, const FString& RequestId, const 
                     const TCHAR* Message)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    const int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), DefaultIterations);
+    // At most 1000 passes: any count above ran in full on the game thread.
+    const int32 Iterations = FMath::Min(GetJsonIntField(Payload, TEXT("iterations"), DefaultIterations), 1000);
     const double Step = GetJsonNumberField(Payload, TEXT("strength"), DefaultStep);
     // The engine returns without a change for either: the reply said the smoothing was applied.
     if (Iterations < 1 || Step <= 0.0)
