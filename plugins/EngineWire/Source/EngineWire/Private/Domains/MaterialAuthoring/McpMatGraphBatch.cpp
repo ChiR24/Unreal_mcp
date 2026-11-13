@@ -163,10 +163,12 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   const FMcpCapturedResponse Compiled = McpCaptureResponse(CompileId, [&] { RunStep(CompileId, Compile); });
   bool bSaved = false;
   bool bCompiles = Compiled.bSuccess;
+  // compile_material answers compiled for a material only: a function compiles nothing of its own.
+  bool bMaterial = false;
   const TArray<TSharedPtr<FJsonValue>>* CompileErrors = nullptr;
   if (Compiled.Result.IsValid()) {
     Compiled.Result->TryGetBoolField(TEXT("saved"), bSaved);
-    Compiled.Result->TryGetBoolField(TEXT("compiled"), bCompiles);
+    bMaterial = Compiled.Result->TryGetBoolField(TEXT("compiled"), bCompiles);
     Compiled.Result->TryGetArrayField(TEXT("compileErrors"), CompileErrors);
   }
 
@@ -175,13 +177,16 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
   Result->SetStringField(TEXT("assetPath"), AssetPath);
   McpSetBatchSteps(Result, Results, NodeIds);
   Result->SetNumberField(TEXT("succeeded"), Results.Num());
-  Result->SetBoolField(TEXT("compiled"), bCompiles);
+  if (bMaterial) {
+    Result->SetBoolField(TEXT("compiled"), bCompiles);
+  }
   if (CompileErrors) {
     Result->SetArrayField(TEXT("compileErrors"), *CompileErrors);
   }
   Result->SetBoolField(TEXT("saved"), bSaved);
   Bridge->SendAutomationResponse(Socket, RequestId, true, bCompiles
-      ? FString::Printf(TEXT("Ran %d material graph operations; %s compiles%s."), Results.Num(), *AssetPath,
+      ? FString::Printf(TEXT("Ran %d material graph operations; %s %s%s."), Results.Num(), *AssetPath,
+                        bMaterial ? TEXT("compiles") : TEXT("was updated"),
                         bSaved ? TEXT(" and was saved") : TEXT(", but it was NOT saved"))
       : FString::Printf(TEXT("Ran %d material graph operations. %s"), Results.Num(), *Compiled.Message),
       Result);

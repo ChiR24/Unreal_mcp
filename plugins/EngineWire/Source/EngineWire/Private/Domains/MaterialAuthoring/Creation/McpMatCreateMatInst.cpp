@@ -116,17 +116,7 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
 
     NewInstance->PostEditChange();
     NewInstance->MarkPackageDirty();
-
-    bool bSave = true;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      McpSafeAssetSave(NewInstance);
-    }
-
-    FAssetRegistryModule::AssetCreated(NewInstance);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, NewInstance);
+    TSharedPtr<FJsonObject> Result = FinishNewMaterialAsset(NewInstance, Payload, bParentFolderCreated);
     // parameters: the instance comes out already tinted, under the one consent
     // this call carried, instead of a consented set_material_parameter per value.
     const TArray<TSharedPtr<FJsonValue>> *Entries = nullptr;

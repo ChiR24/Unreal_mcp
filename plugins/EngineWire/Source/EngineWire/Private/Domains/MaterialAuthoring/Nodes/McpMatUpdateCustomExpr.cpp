@@ -60,9 +60,11 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
     // nothing of a compile error, including the HLSL errors only the shader compile finds.
     if (!FMcpResponseCaptureRegistry::Get().IsBatchStep(RequestId)) {
       const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
-      TArray<TSharedPtr<FJsonValue>> ErrorValues = McpHandlerUtils::ToJsonStringArray(CompileErrors);
-      Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
-      Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
+      // A material function compiles nothing of its own: it answers neither field.
+      if (Material) {
+        Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
+        Result->SetArrayField(TEXT("compileErrors"), McpHandlerUtils::ToJsonStringArray(CompileErrors));
+      }
       Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));
       if (CompileErrors.Num() > 0) {
         Message += FString::Printf(TEXT(" WARNING: the material does not compile (the default material renders in its place): %s"),

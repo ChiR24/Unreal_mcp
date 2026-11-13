@@ -5,7 +5,6 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 
 #include "Blueprint/WidgetTree.h"
-#include "Components/CanvasPanelSlot.h"
 #include "Components/PanelSlot.h"
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
@@ -248,10 +247,9 @@ bool HandleWidgetAuthoringManipulation(
         // false for every widget in the tree, including ones plainly on screen
         // at runtime, and reading it back after set_visibility never agreed
         // with what was written. Report the Visibility enum that set_visibility
-        // actually writes and that the designer shows, and derive isVisible
-        // from it so the boolean means what a reader assumes.
+        // actually writes and that the designer shows (layout.visibility), and
+        // derive isVisible from it so the boolean means what a reader assumes.
         const ESlateVisibility SlotVisibility = TargetWidget->GetVisibility();
-        ResultJson->SetStringField(TEXT("visibility"), McpVisibilityName(SlotVisibility));
         ResultJson->SetBoolField(TEXT("isVisible"),
                                  SlotVisibility != ESlateVisibility::Collapsed &&
                                      SlotVisibility != ESlateVisibility::Hidden);
@@ -259,31 +257,10 @@ bool HandleWidgetAuthoringManipulation(
         if (UPanelSlot* Slot = TargetWidget->Slot)
         {
             ResultJson->SetStringField(TEXT("slotClass"), Slot->GetClass()->GetName());
-
-            if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot))
-            {
-                TSharedPtr<FJsonObject> SlotInfo = McpHandlerUtils::CreateResultObject();
-                FAnchors Anchors = CanvasSlot->GetAnchors();
-                SlotInfo->SetNumberField(TEXT("anchorMinX"), Anchors.Minimum.X);
-                SlotInfo->SetNumberField(TEXT("anchorMinY"), Anchors.Minimum.Y);
-                SlotInfo->SetNumberField(TEXT("anchorMaxX"), Anchors.Maximum.X);
-                SlotInfo->SetNumberField(TEXT("anchorMaxY"), Anchors.Maximum.Y);
-                FVector2D Alignment = CanvasSlot->GetAlignment();
-                SlotInfo->SetNumberField(TEXT("alignmentX"), Alignment.X);
-                SlotInfo->SetNumberField(TEXT("alignmentY"), Alignment.Y);
-                FVector2D Position = CanvasSlot->GetPosition();
-                SlotInfo->SetNumberField(TEXT("positionX"), Position.X);
-                SlotInfo->SetNumberField(TEXT("positionY"), Position.Y);
-                FVector2D Size = CanvasSlot->GetSize();
-                SlotInfo->SetNumberField(TEXT("sizeX"), Size.X);
-                SlotInfo->SetNumberField(TEXT("sizeY"), Size.Y);
-                SlotInfo->SetNumberField(TEXT("zOrder"), CanvasSlot->GetZOrder());
-                ResultJson->SetObjectField(TEXT("canvasSlotInfo"), SlotInfo);
-            }
         }
 
-        // Every slot kind read back the same way the layout setters report it; canvasSlotInfo
-        // alone left box, overlay and border children with no padding, alignment or size rule.
+        // Every slot kind read back the same way the layout setters report it: a canvas slot's anchors,
+        // alignment, position, size and zOrder, a box child's padding, alignment and size rule.
         ResultJson->SetObjectField(TEXT("layout"), McpDescribeWidgetLayout(TargetWidget));
 
         if (UPanelWidget* Parent = TargetWidget->GetParent())

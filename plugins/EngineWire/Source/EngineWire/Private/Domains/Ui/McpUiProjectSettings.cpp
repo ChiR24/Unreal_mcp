@@ -3,6 +3,7 @@
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 #include "EngineWireSettings.h"
 
@@ -300,12 +301,11 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
   } else {
     // Config-file-only write: no UProperty matched (e.g. a console variable
     // such as r.AllowStaticLighting, or a key on an unknown section), so the
-    // running editor is unchanged. Previously the message claimed "Set ..."
-    // unconditionally, which read as a live change that never happened.
-    Message = FString::Printf(
-        TEXT("Wrote %s.%s = %s to %s (config file only). No live UProperty or registered console variable matched, so the running editor is unchanged; INI readers pick it up on restart. For an immediate effect, target a UProperty- or CVar-backed key."),
-        *NormalizedSection, *Key, *Value, *ConfigFile);
-    Resp->SetStringField(TEXT("warning"), Message);
+    // running editor is unchanged, and the warnings the receipt carries say so.
+    Message = FString::Printf(TEXT("Wrote %s.%s = %s to %s (config file only)."), *NormalizedSection, *Key, *Value, *ConfigFile);
+    Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString(TEXT(
+        "No live UProperty or registered console variable matched, so the running editor is unchanged; INI readers "
+        "pick it up on restart. For an immediate effect, target a UProperty- or CVar-backed key."))}));
   }
   return true;
 }

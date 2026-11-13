@@ -30,7 +30,7 @@ bool HandleCreatePainCausingVolume(UEngineWireSubsystem* Subsystem, const FStrin
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -50,7 +50,7 @@ bool HandleCreatePainCausingVolume(UEngineWireSubsystem* Subsystem, const FStrin
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created PainCausingVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created PainCausingVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 
@@ -60,7 +60,7 @@ bool HandleCreatePhysicsVolume(UEngineWireSubsystem* Subsystem, const FString& R
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -82,7 +82,7 @@ bool HandleCreatePhysicsVolume(UEngineWireSubsystem* Subsystem, const FString& R
     ResponseJson->SetNumberField(TEXT("terminalVelocity"), Volume->TerminalVelocity);
     ResponseJson->SetNumberField(TEXT("priority"), Volume->Priority);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created PhysicsVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created PhysicsVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 }

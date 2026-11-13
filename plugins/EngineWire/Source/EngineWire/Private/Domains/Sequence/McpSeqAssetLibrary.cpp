@@ -143,8 +143,7 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
     Resp->SetBoolField(TEXT("saved"), bSaved);
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
     Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
-    Resp->SetStringField(TEXT("duplicatedPath"), DuplicatedSeq->GetPathName());
-    Resp->SetStringField(TEXT("sequencePath"), DuplicatedSeq->GetPathName());
+    Resp->SetStringField(TEXT("sequencePath"), DestinationPath);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Sequence duplicated successfully"), Resp,
                            FString());

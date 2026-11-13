@@ -106,6 +106,15 @@ static bool HandleCreateTemplateSpline(
         }
     }
 
+    // A route needs two points: fewer used to lay the four-point demo route and answer pointCount 4.
+    const TArray<TSharedPtr<FJsonValue>>* PointsArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("points"), PointsArray) && PointsArray->Num() < 2)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("points needs at least two entries; nothing was created."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     UWorld* World = McpHandlerUtils::GetEditorWorld();
 
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, FRotator::ZeroRotator);
@@ -119,8 +128,7 @@ static bool HandleCreateTemplateSpline(
 
     // The caller's route, local to location; without one, a short demo route.
     SplineComp->ClearSplinePoints(false);
-    const TArray<TSharedPtr<FJsonValue>>* PointsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("points"), PointsArray) && PointsArray && PointsArray->Num() >= 2)
+    if (PointsArray)
     {
         AddSplinePointsFromJson(SplineComp, *PointsArray);
     }

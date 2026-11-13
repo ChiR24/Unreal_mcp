@@ -9749,7 +9749,7 @@
           },
           "operation": {
             "type": "string",
-            "description": "Math operation (Add, Multiply, etc.)."
+            "description": "Math operation: Add, Subtract, Multiply, Divide, Lerp, Clamp, Power, Frac, OneMinus or Append (any case)."
           },
           "operationId": {
             "type": "string",
@@ -21228,7 +21228,7 @@
               "duplicate",
               "rename"
             ],
-            "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
+            "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
             "default": "create"
           },
           "sequencePath": {

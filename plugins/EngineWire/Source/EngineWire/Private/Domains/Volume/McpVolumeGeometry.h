@@ -62,7 +62,7 @@ bool CreateBoxVolume(
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), DefaultExtent, Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -75,7 +75,7 @@ bool CreateBoxVolume(
         return true;
     }
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created %s: %s"), *ClassName, *Args.VolumeName), CreateVolumeResponse(Volume, TEXT("A") + ClassName));
+        FString::Printf(TEXT("Created %s: %s"), *ClassName, *Volume->GetActorLabel()), CreateVolumeResponse(Volume, TEXT("A") + ClassName));
     return true;
 }
 }

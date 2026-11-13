@@ -47,24 +47,8 @@ bool HandleCreateMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId
 
     NewMaterial->PostEditChange();
     NewMaterial->MarkPackageDirty();
-
-    // Notify asset registry FIRST (required for UE 5.7+ before saving)
-    FAssetRegistryModule::AssetCreated(NewMaterial);
-
-    bool bSave = true;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      McpSafeAssetSave(NewMaterial);
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, NewMaterial);
-    if (bParentFolderCreated) {
-      Result->SetBoolField(TEXT("parentFolderCreated"), true);
-    }
-    Bridge->SendAutomationResponse(Socket, RequestId, true,
-                           FString::Printf(TEXT("Material '%s' created."), *Name),
-                           Result);
+    Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Material '%s' created."), *Name),
+                                   FinishNewMaterialAsset(NewMaterial, Payload, bParentFolderCreated));
     return true;
   }
 

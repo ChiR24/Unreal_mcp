@@ -20,7 +20,8 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError,
+            VolumeName.IsEmpty() ? TEXT("MISSING_PARAMETER") : TEXT("INVALID_ARGUMENT"));
         return true;
     }
     TArray<float> BoundsValues;

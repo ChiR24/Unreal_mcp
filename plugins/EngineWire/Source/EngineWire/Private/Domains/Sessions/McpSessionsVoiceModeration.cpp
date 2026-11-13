@@ -1,11 +1,9 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpSessionsPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "Misc/EngineVersionComparison.h"
 
 bool HandleMutePlayer(
     UEngineWireSubsystem* Subsystem,
@@ -21,8 +19,8 @@ bool HandleMutePlayer(
 
     if (PlayerName.IsEmpty() && TargetPlayerId.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Either playerName or targetPlayerId is required"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Either playerName or targetPlayerId is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -132,8 +130,7 @@ bool HandleMutePlayer(
     }
 #endif
 
-    // No voice system applied the mute: say so. It used to be written to a set nothing read and reported
-    // as success, so the NOT_SUPPORTED reply below never fired.
+    // A mute no voice system applied answers NOT_SUPPORTED.
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("target"), TargetIdentifier);
     ResponseJson->SetBoolField(TEXT("muted"), bMuted);

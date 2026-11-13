@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8409a21ec2866bda",
+  "catalogRevision": "f5cfb27d3526e1ed",
   "recordCount": 489,
   "records": [
     {
@@ -24711,18 +24711,7 @@
             },
             "isVisible": {
               "type": "boolean",
-              "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
-            },
-            "visibility": {
-              "type": "string",
-              "enum": [
-                "Visible",
-                "Collapsed",
-                "Hidden",
-                "HitTestInvisible",
-                "SelfHitTestInvisible"
-              ],
-              "description": "The widget's design-time Visibility, the same value set_visibility writes."
+              "description": "Whether the widget draws, derived from layout.visibility, the design-time Visibility set_visibility writes (false only for Collapsed and Hidden)."
             },
             "slotClass": {
               "type": "string",
@@ -24733,70 +24722,6 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "The widget layout for any slot kind: visibility, renderOpacity, renderTransform, slotClass, then canvas anchors, alignment, position, size, zOrder and autoSize, or box padding, horizontal and vertical alignment and the sizeRule (Auto or Fill) with its fillValue."
-            },
-            "canvasSlotInfo": {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Canvas geometry of the widget (omitted unless the slot is a canvas panel slot).",
-              "properties": {
-                "anchorMinX": {
-                  "type": "number",
-                  "description": "Minimum anchor X."
-                },
-                "anchorMinY": {
-                  "type": "number",
-                  "description": "Minimum anchor Y."
-                },
-                "anchorMaxX": {
-                  "type": "number",
-                  "description": "Maximum anchor X."
-                },
-                "anchorMaxY": {
-                  "type": "number",
-                  "description": "Maximum anchor Y."
-                },
-                "alignmentX": {
-                  "type": "number",
-                  "description": "Alignment X within the slot."
-                },
-                "alignmentY": {
-                  "type": "number",
-                  "description": "Alignment Y within the slot."
-                },
-                "positionX": {
-                  "type": "number",
-                  "description": "Slot position X."
-                },
-                "positionY": {
-                  "type": "number",
-                  "description": "Slot position Y."
-                },
-                "sizeX": {
-                  "type": "number",
-                  "description": "Slot width."
-                },
-                "sizeY": {
-                  "type": "number",
-                  "description": "Slot height."
-                },
-                "zOrder": {
-                  "type": "number",
-                  "description": "Slot draw order."
-                }
-              },
-              "required": [
-                "anchorMinX",
-                "anchorMinY",
-                "anchorMaxX",
-                "anchorMaxY",
-                "alignmentX",
-                "alignmentY",
-                "positionX",
-                "positionY",
-                "sizeX",
-                "sizeY",
-                "zOrder"
-              ]
             },
             "parentName": {
               "type": "string",
@@ -24900,8 +24825,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d3cd4b87860a4cc18db1ad69a60129cd61745ba98b68014f9d9d6c6c3fba25df",
-        "content": "298a1a6d287cf56746e8a003335947672e2ac32ffc5e57d740dcfe45ab12352c"
+        "schema": "24faf2a9c6dd73601f7b4c0a5f4a17365d9771cdb6b660ecaa8dfa84d51c084a",
+        "content": "2f0d6fe92a89c7e63bcf6b5fb799f33b300ada7f9252be2a80e1210ae9501d7d"
       }
     },
     {
@@ -103323,7 +103248,7 @@
             },
             "operation": {
               "type": "string",
-              "description": "Math operation (Add, Multiply, etc.)."
+              "description": "Math operation: Add, Subtract, Multiply, Divide, Lerp, Clamp, Power, Frac, OneMinus or Append (any case)."
             },
             "constA": {
               "type": "number",
@@ -103523,7 +103448,7 @@
             },
             "compiled": {
               "type": "boolean",
-              "description": "False when the material does not compile after the batch; compileErrors says why."
+              "description": "False when the material does not compile after the batch; compileErrors says why. Absent when the batch edited a material function, which compiles nothing of its own."
             },
             "compileErrors": {
               "type": "array",
@@ -103886,8 +103811,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "56cdfdb00757f39d4b473f15831b1098a4ab76b28efee83aa9f01821c1c44760",
-        "content": "dd0f18b146c74828e28aebab7ee37e990404b8328705a4eea4a1f4e9fe17eae9"
+        "schema": "0b7cbe7b3adb8bdaad344a2dbcfcfa1d6192f8d1fff3c65ffc33ec62c2fde0d5",
+        "content": "0e423b66cde9c2af202b92cd317469e9ae59e4a5f75b112eb90a48dec45bdc7d"
       }
     },
     {
@@ -103977,7 +103902,7 @@
             },
             "compiled": {
               "type": "boolean",
-              "description": "False when the material does not compile; compileErrors says why."
+              "description": "False when the material does not compile; compileErrors says why. Absent with compileErrors for a material function, which compiles nothing of its own."
             },
             "compileErrors": {
               "type": "array",
@@ -104059,8 +103984,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6568f971583b19c52565d4468dd204e3a82013d0e2c1af4385972f4af58f9268",
-        "content": "353f9a3788385e79627a878c537a9f32c0ae6e0ebed9c104438d33410fd6c49e"
+        "schema": "d63a79fc1ffc7e83829f78213e4b0546d09a1b29ed63badadda39b4ac814d829",
+        "content": "7c7de0d10b7c5b85cface1e446e7ee9cfcc4c3edb8a4577c95634b29473a1c67"
       }
     },
     {
@@ -104577,7 +104502,7 @@
             },
             "saved": {
               "type": "boolean",
-              "description": "kind=parameter_collection: whether the collection reached disk."
+              "description": "Whether the asset reached disk: false when save is false or the save failed."
             }
           },
           "required": [
@@ -104683,8 +104608,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9127677ceb3ce51d695ff7cd61a0e332e640260820484cbc0535628365c6a00d",
-        "content": "94274958fd118046317ee0e689c9810a7ce6b24ed183042bfc4f2fe22053612e"
+        "schema": "543caf6441e819a7204012394791819cf22193c138d0f8992333e9e3d0bd0ae1",
+        "content": "77389e4659676831f311a72783f00e93b0c75da7576fbff297c24c875b38781a"
       }
     },
     {
@@ -106435,7 +106360,7 @@
             },
             "compiled": {
               "type": "boolean",
-              "description": "False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. A material function has no translation of its own to read, so this is true for one."
+              "description": "False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. Absent with compileErrors for a material function, which compiles nothing of its own."
             },
             "compileErrors": {
               "type": "array",
@@ -106502,8 +106427,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c16cb1a2e4c619b23fe490e4be1055fce94bf639b40494630b1aae150cec3aae",
-        "content": "29ce62ba01a1663cc96202b1670343d56416b5017922239fdb2114fb414d859b"
+        "schema": "c5a4b66bb3e0dfa6bbe0a8d5b8c49b06c341db298881e4e2ca4b0506ae8b7a38",
+        "content": "26d998665841446b2db047c00c46756e6d740adfbc2b6197d10816ed8f03c9c0"
       }
     },
     {
@@ -108047,7 +107972,7 @@
                 "duplicate",
                 "rename"
               ],
-              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
+              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
               "default": "create"
             }
           },
@@ -108191,8 +108116,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "07b908bab2635c907da30ba18c0ba01f44b79964eb7794a5c498ad516c5fca1d",
-        "content": "5be5657ae20166671e11d7b5fba137a39ed1fec44024ac28c04723ad0529c485"
+        "schema": "8286520e5be8014f50b36d02d117478769f2096fe34658fef85cc508105410f1",
+        "content": "8d2079a91e1289da5f0cf40a895b97292de4ac29c252e490eab57f1eaa5655d6"
       }
     },
     {

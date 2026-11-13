@@ -62,13 +62,48 @@ TSharedPtr<FJsonObject> DescribeBodyForListing(const USkeletalBodySetup* BodySet
     TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
     BodyObj->SetNumberField(TEXT("index"), Index);
     BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
-    AddGeometryCounts(BodyObj, BodySetup, TEXT("sphereCount"), TEXT("boxCount"), TEXT("sphylCount"), TEXT("convexCount"));
-    BodyObj->SetNumberField(TEXT("capsuleCount"), BodySetup->AggGeom.SphylElems.Num());
+    AddGeometryCounts(BodyObj, BodySetup, TEXT("sphereCount"), TEXT("boxCount"), TEXT("capsuleCount"), TEXT("convexCount"));
     BodyObj->SetStringField(TEXT("physicsType"), PhysicsTypeToString(BodySetup));
     BodyObj->SetNumberField(TEXT("mass"), BodySetup->CalculateMass());
     BodyObj->SetStringField(TEXT("collisionType"), CollisionTraceFlagToString(BodySetup->CollisionTraceFlag.GetValue()));
     BodyObj->SetBoolField(TEXT("considerForBounds"), BodySetup->bConsiderForBounds);
     return BodyObj;
+}
+
+// The physics asset a read names: physicsAssetPath, else the one assigned to skeletalMeshPath. Null after the refusal
+// that says which: neither sent, the asset's or the mesh's load error, or a mesh with no physics asset.
+UPhysicsAsset* ResolvePhysicsAssetOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FMcpBridgeWebSocket>& Socket)
+{
+    FString Error;
+    const FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    const FString MeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    if (!PhysicsAssetPath.IsEmpty())
+    {
+        UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
+        if (!PhysicsAsset)
+        {
+            Subsystem.SendAutomationError(Socket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        }
+        return PhysicsAsset;
+    }
+    if (MeshPath.IsEmpty())
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, TEXT("physicsAssetPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        return nullptr;
+    }
+    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, Error);
+    if (!Mesh)
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
+        return nullptr;
+    }
+    if (!Mesh->GetPhysicsAsset())
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s has no physics asset."), *MeshPath),
+            TEXT("PHYSICS_ASSET_NOT_FOUND"));
+    }
+    return Mesh->GetPhysicsAsset();
 }
 } // namespace
 
@@ -77,33 +112,9 @@ bool UEngineWireSubsystem::HandleListPhysicsBodies(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
-    if (PhysicsAssetPath.IsEmpty())
-    {
-        // Fall back to the physics asset assigned to a skeletal mesh.
-        const FString MeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-        if (!MeshPath.IsEmpty())
-        {
-            FString MeshError;
-            USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, MeshError);
-            if (Mesh && Mesh->GetPhysicsAsset())
-            {
-                PhysicsAssetPath = Mesh->GetPhysicsAsset()->GetPathName();
-            }
-        }
-    }
-
-    if (PhysicsAssetPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    FString Error;
-    UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
+    UPhysicsAsset* PhysicsAsset = ResolvePhysicsAssetOrReply(*this, RequestId, Payload, RequestingSocket);
     if (!PhysicsAsset)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
         return true;
     }
 
@@ -139,28 +150,9 @@ bool UEngineWireSubsystem::HandleGetPhysicsAssetInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
-    const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-
-    UPhysicsAsset* PhysAsset = nullptr;
-    FString Error;
-    if (!PhysicsAssetPath.IsEmpty())
-    {
-        PhysAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
-    }
-    else if (!SkeletalMeshPath.IsEmpty())
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
-        if (Mesh)
-        {
-            PhysAsset = Mesh->GetPhysicsAsset();
-        }
-    }
-
+    UPhysicsAsset* PhysAsset = ResolvePhysicsAssetOrReply(*this, RequestId, Payload, RequestingSocket);
     if (!PhysAsset)
     {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Physics asset not found. Provide physicsAssetPath or skeletalMeshPath"), TEXT("NOT_FOUND"));
         return true;
     }
 

@@ -176,8 +176,12 @@ bool HandleWidgetAuthoringEventBindings(
             : TEXT("widgetPath, slotName and bindingSource (the function the event calls) are required."), TEXT("MISSING_PARAMETER"));
         return true;
     }
-    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-    UWidget* Widget = WidgetBP && WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
+    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
+    if (!WidgetBP)
+    {
+        return true;
+    }
+    UWidget* Widget = WidgetBP->WidgetTree ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
     TArray<FEventBinding> Bindings;
     if (Widget && (bClicked || bHovered) && Widget->IsA<UButton>())
     {

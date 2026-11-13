@@ -33,8 +33,12 @@ bool HandleCreateSplineMeshComponentOnActor(
     UStaticMesh* Mesh = nullptr;
     if (!MeshPath.IsEmpty())
     {
-        const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
-        Mesh = SafeMeshPath.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
+        const FString SafeMeshPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("meshPath"), MeshPath);
+        if (SafeMeshPath.IsEmpty())
+        {
+            return true;
+        }
+        Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
         if (!Mesh)
         {
             Self->SendAutomationError(Socket, RequestId,

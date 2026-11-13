@@ -13533,7 +13533,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operation": {
           "type": "string",
-          "description": "Math operation (Add, Multiply, etc.)."
+          "description": "Math operation: Add, Subtract, Multiply, Divide, Lerp, Clamp, Power, Frac, OneMinus or Append (any case)."
         },
         "operationId": {
           "type": "string",
@@ -14647,7 +14647,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "compiled": {
           "type": "boolean",
-          "description": "False when the material does not compile after the batch; compileErrors says why."
+          "description": "False when the material does not compile after the batch; compileErrors says why. Absent when the batch edited a material function, which compiles nothing of its own."
         },
         "completedBytes": {
           "type": "number",
@@ -19501,70 +19501,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Every Button created; wire them with bind_widget on_clicked."
         },
-        "canvasSlotInfo": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Canvas geometry of the widget (omitted unless the slot is a canvas panel slot).",
-          "properties": {
-            "anchorMinX": {
-              "type": "number",
-              "description": "Minimum anchor X."
-            },
-            "anchorMinY": {
-              "type": "number",
-              "description": "Minimum anchor Y."
-            },
-            "anchorMaxX": {
-              "type": "number",
-              "description": "Maximum anchor X."
-            },
-            "anchorMaxY": {
-              "type": "number",
-              "description": "Maximum anchor Y."
-            },
-            "alignmentX": {
-              "type": "number",
-              "description": "Alignment X within the slot."
-            },
-            "alignmentY": {
-              "type": "number",
-              "description": "Alignment Y within the slot."
-            },
-            "positionX": {
-              "type": "number",
-              "description": "Slot position X."
-            },
-            "positionY": {
-              "type": "number",
-              "description": "Slot position Y."
-            },
-            "sizeX": {
-              "type": "number",
-              "description": "Slot width."
-            },
-            "sizeY": {
-              "type": "number",
-              "description": "Slot height."
-            },
-            "zOrder": {
-              "type": "number",
-              "description": "Slot draw order."
-            }
-          },
-          "required": [
-            "anchorMinX",
-            "anchorMinY",
-            "anchorMaxX",
-            "anchorMaxY",
-            "alignmentX",
-            "alignmentY",
-            "positionX",
-            "positionY",
-            "sizeX",
-            "sizeY",
-            "zOrder"
-          ]
-        },
         "chain": {
           "type": "array",
           "items": {
@@ -20198,7 +20134,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isVisible": {
           "type": "boolean",
-          "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
+          "description": "Whether the widget draws, derived from layout.visibility, the design-time Visibility set_visibility writes (false only for Collapsed and Hidden)."
         },
         "kept": {
           "type": "number",
@@ -20957,17 +20893,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
-        },
-        "visibility": {
-          "type": "string",
-          "enum": [
-            "Visible",
-            "Collapsed",
-            "Hidden",
-            "HitTestInvisible",
-            "SelfHitTestInvisible"
-          ],
-          "description": "The widget's design-time Visibility, the same value set_visibility writes."
         },
         "widgetClass": {
           "type": "string",
@@ -29608,7 +29533,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "duplicate",
             "rename"
           ],
-          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
+          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
           "default": "create"
         },
         "sequencePath": {

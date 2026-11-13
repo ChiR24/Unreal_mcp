@@ -35,17 +35,23 @@ bool HandleMetaHumanStatus(UEngineWireSubsystem* Self, const FString& RequestId,
         Blockers.Add(CoreDataDetail);
     }
 
-    // Report the reflected surface so a caller can tell an older MetaHuman from
-    // a missing one without a failed call.
+    // The functions the handlers call by name that this MetaHuman version lacks, so a caller can tell an older
+    // MetaHuman from a missing one without a failed call.
     if (Subsystem)
     {
-        TArray<TSharedPtr<FJsonValue>> Functions;
-        for (TFieldIterator<UFunction> It(Subsystem->GetClass()); It; ++It)
+        TArray<FString> Missing;
+        for (const TCHAR* Name : {TEXT("TryAddObjectToEdit"), TEXT("IsObjectAddedForEditing"), TEXT("CanBuildMetaHuman"),
+                                  TEXT("RequestAutoRigging"), TEXT("BuildMetaHuman")})
         {
-            Functions.Add(MakeShared<FJsonValueString>(It->GetName()));
+            if (!Subsystem->FindFunction(Name))
+            {
+                Missing.Add(Name);
+            }
         }
-        Result->SetNumberField(TEXT("reflectedFunctionCount"), Functions.Num());
-        Result->SetArrayField(TEXT("reflectedFunctions"), Functions);
+        if (Missing.Num() > 0)
+        {
+            Result->SetArrayField(TEXT("missingFunctions"), McpHandlerUtils::ToJsonStringArray(Missing));
+        }
     }
 
     const FString AssetPath = GetJsonStringField(Payload, TEXT("characterPath"));
@@ -68,8 +74,8 @@ bool HandleMetaHumanStatus(UEngineWireSubsystem* Self, const FString& RequestId,
             Result->SetBoolField(TEXT("openForEditing"), bOpenForEditing);
 
             // CanBuildMetaHuman is only meaningful once the character is
-            // registered for editing, so report it as unknown rather than
-            // reporting a false that just means "not open yet".
+            // registered for editing, so canBuild is left out until then rather
+            // than a false that just means "not open yet".
             if (bOpenForEditing)
             {
                 const bool bCanBuild = QueryCanBuild(Subsystem, Character, false);
@@ -82,7 +88,6 @@ bool HandleMetaHumanStatus(UEngineWireSubsystem* Self, const FString& RequestId,
             }
             else
             {
-                Result->SetStringField(TEXT("canBuild"), TEXT("unknown"));
                 Blockers.Add(TEXT("The character is not open for editing, so build readiness is unknown. ")
                     TEXT("Any mutating metahuman action opens it automatically."));
             }
@@ -93,8 +98,7 @@ bool HandleMetaHumanStatus(UEngineWireSubsystem* Self, const FString& RequestId,
         }
     }
 
-    TArray<TSharedPtr<FJsonValue>> BlockerValues = McpHandlerUtils::ToJsonStringArray(Blockers);
-    Result->SetArrayField(TEXT("blockers"), BlockerValues);
+    Result->SetArrayField(TEXT("blockers"), McpHandlerUtils::ToJsonStringArray(Blockers));
     Result->SetBoolField(TEXT("ready"), Blockers.Num() == 0);
 
     Self->SendAutomationResponse(Socket, RequestId, true,

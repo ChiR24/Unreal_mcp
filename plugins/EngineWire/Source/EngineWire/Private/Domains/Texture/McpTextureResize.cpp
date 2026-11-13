@@ -150,7 +150,7 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
     NewTexture->Source.UnlockMip(0);
     NewTexture->UpdateResource();
     FAssetRegistryModule::AssetCreated(NewTexture);
-    McpSafeAssetSave(NewTexture);
+    Response->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewTexture));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture resized to %dx%d"), NewWidth, NewHeight));
     Response->SetStringField(TEXT("assetPath"), Path / Name);

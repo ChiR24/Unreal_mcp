@@ -93,7 +93,7 @@ const BATCH_OUT = schema({
   nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node id for every node the batch created.' },
   succeeded: num('Steps that completed.'),
   failedIndex: num('Index of the step that stopped the batch (failures only).'),
-  compiled: bool('False when the material does not compile after the batch; compileErrors says why.'),
+  compiled: bool('False when the material does not compile after the batch; compileErrors says why. Absent when the batch edited a material function, which compiles nothing of its own.'),
   compileErrors: arr('Compile errors after the batch, empty when the material compiles.'),
   saved: bool('Whether the material was saved after the batch.'),
   dryRun: bool('True when nothing ran (dryRun).'),
@@ -106,7 +106,7 @@ const BATCH_OUT = schema({
 // (nodeId, code, inputCount, additionalOutputCount, assetPath).
 const CUSTOM_UPDATE_OUT = schema({
   success: bool('Operation succeeded.'),
-  compiled: bool('False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. A material function has no translation of its own to read, so this is true for one.'),
+  compiled: bool('False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. Absent with compileErrors for a material function, which compiles nothing of its own.'),
   compileErrors: arr('Compile errors after the edit, from the material translator and, once it has finished, the shader compile (where a Custom node\'s HLSL fails); empty when it compiles.'),
   saved: bool('Whether the material or function was saved after the edit.'),
   details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },

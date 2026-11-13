@@ -25,7 +25,8 @@ static AActor* ResolveVolumeByName(UEngineWireSubsystem* Subsystem, const FStrin
     OutVolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     if (!ValidateVolumeName(OutVolumeName, ValidationError))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError,
+            OutVolumeName.IsEmpty() ? TEXT("MISSING_PARAMETER") : TEXT("INVALID_ARGUMENT"));
         return nullptr;
     }
     UWorld* World = nullptr;

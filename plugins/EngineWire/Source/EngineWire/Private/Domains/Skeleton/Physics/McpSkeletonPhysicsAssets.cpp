@@ -176,10 +176,8 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     PhysicsAsset->UpdateBoundsBodiesArray();
     FAssetRegistryModule::AssetCreated(PhysicsAsset);
     Package->MarkPackageDirty();
-    if (bAssignToMesh)
-    {
-        SaveIfRequested(SkeletalMesh, Payload);
-    }
+    // The mesh it was assigned to is saved too, and says so beside the asset's own saved.
+    const bool bMeshSaved = bAssignToMesh && GetJsonBoolField(Payload, TEXT("save"), true) && SaveIfRequested(SkeletalMesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAsset->GetPathName());
@@ -190,6 +188,10 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     Result->SetStringField(TEXT("geomType"), GeomTypeName);
     Result->SetNumberField(TEXT("minBoneSize"), Params.MinBoneSize);
     Result->SetBoolField(TEXT("assignedToMesh"), bAssignToMesh);
+    if (bAssignToMesh)
+    {
+        Result->SetBoolField(TEXT("meshSaved"), bMeshSaved);
+    }
     SaveAndReport(PhysicsAsset, Payload, Result);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,

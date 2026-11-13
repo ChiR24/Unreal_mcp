@@ -16,6 +16,11 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
     }
 
     const FString GradientType = GetJsonStringField(Params, TEXT("gradientType"), TEXT("Linear"));
+    static const TArray<FString> KnownGradientTypes = {TEXT("Linear"), TEXT("Radial"), TEXT("Angular")};
+    if (!KnownGradientTypes.Contains(GradientType))
+    {
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unknown gradientType '%s'. Valid values: %s."), *GradientType, *FString::Join(KnownGradientTypes, TEXT(", "))));
+    }
     const float Angle = static_cast<float>(GetJsonNumberField(Params, TEXT("angle"), 0.0));
     const float CenterX = static_cast<float>(GetJsonNumberField(Params, TEXT("centerX"), 0.5));
     const float CenterY = static_cast<float>(GetJsonNumberField(Params, TEXT("centerY"), 0.5));

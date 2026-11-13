@@ -163,6 +163,10 @@ bool ApplyMaterialEnumFields(UMaterial* Material, const TSharedPtr<FJsonObject>&
 bool PrepareNewMaterialAsset(UEngineWireSubsystem* Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                              const FString& RawName, FString RequestedPath, const TCHAR* DefaultPath, const TCHAR* Noun,
                              FString& OutName, FString& OutPackagePath, bool& bOutParentFolderCreated);
+// The shared create_* tail: the asset registry hears of Asset before the save (as 5.7 requires), it is saved unless
+// the payload's save is false, and the reply begun carries its verification, saved, and parentFolderCreated when
+// the folder had to be made.
+TSharedPtr<FJsonObject> FinishNewMaterialAsset(UObject* Asset, const TSharedPtr<FJsonObject>& Payload, bool bParentFolderCreated);
 // set_blend_mode / set_material_domain / set_shading_model.
 bool HandleSetMaterialEnumProperty(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddTextureSample(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

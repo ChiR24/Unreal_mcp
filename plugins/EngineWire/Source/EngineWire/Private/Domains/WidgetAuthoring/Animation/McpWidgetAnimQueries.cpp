@@ -81,6 +81,7 @@ TSharedPtr<FJsonObject> McpDescribeWidgetTrack(UMovieSceneTrack* Track, const FF
                                       : Track->IsA<UMovieSceneFloatTrack>()     ? FString(TEXT("float"))
                                                                                 : Track->GetClass()->GetName());
     const TSharedPtr<FJsonObject> Channels = MakeShared<FJsonObject>();
+    bool bTruncated = false;
     // ponytail: every section's keys land under one channel name; key them per section if split tracks show up.
     for (UMovieSceneSection* Section : Track->GetAllSections())
     {
@@ -89,6 +90,7 @@ TSharedPtr<FJsonObject> McpDescribeWidgetTrack(UMovieSceneTrack* Track, const FF
         {
             FMovieSceneFloatChannel* Channel = Section->GetChannelProxy().GetChannel<FMovieSceneFloatChannel>(Index);
             auto Data = Channel->GetData();
+            bTruncated |= Data.GetTimes().Num() > McpMaxKeysPerChannel;
             TArray<TSharedPtr<FJsonValue>> Keys;
             for (int32 Key = 0; Key < FMath::Min(Data.GetTimes().Num(), McpMaxKeysPerChannel); ++Key)
             {
@@ -104,6 +106,10 @@ TSharedPtr<FJsonObject> McpDescribeWidgetTrack(UMovieSceneTrack* Track, const FF
         }
     }
     Out->SetObjectField(TEXT("channels"), Channels);
+    if (bTruncated)
+    {
+        Out->SetBoolField(TEXT("truncated"), true);
+    }
     return Out;
 }
 
@@ -172,7 +178,7 @@ bool HandleWidgetAuthoringAnimationQueries(
                 }
             }
             ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+            ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
             ResultJson->SetArrayField(TEXT("animations"), AnimationsArray);
             ResultJson->SetNumberField(TEXT("animationCount"), WidgetBP->Animations.Num());
         }
@@ -196,7 +202,7 @@ bool HandleWidgetAuthoringAnimationQueries(
             }
 
             ResultJson->SetBoolField(TEXT("success"), true);
-            ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+            ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
             ResultJson->SetStringField(TEXT("animationName"), AnimationName);
 
             DescribeWidgetAnimation(TargetAnim, ResultJson);
@@ -213,7 +219,6 @@ bool HandleWidgetAuthoringAnimationQueries(
 
     if (SubAction.Equals(TEXT("delete_animation"), ESearchCase::IgnoreCase))
     {
-        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
         UWidgetBlueprint* WidgetBP = nullptr;
         UWidgetAnimation* Animation = ResolveWidgetAnimation(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
@@ -227,7 +232,7 @@ bool HandleWidgetAuthoringAnimationQueries(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("saved"), bSaved);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("deletedAnimation"), AnimationName);
         ResultJson->SetNumberField(TEXT("remainingAnimations"), WidgetBP->Animations.Num());
 

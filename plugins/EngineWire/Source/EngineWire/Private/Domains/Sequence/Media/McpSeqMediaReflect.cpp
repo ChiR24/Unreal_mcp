@@ -75,8 +75,6 @@ void SendMediaError(UEngineWireSubsystem *Subsystem,
                     const TSharedPtr<FJsonObject> &Details) {
   TSharedPtr<FJsonObject> Result =
       Details.IsValid() ? Details : McpHandlerUtils::CreateResultObject();
-  Result->SetStringField(TEXT("code"), ErrorCode);
-  Result->SetStringField(TEXT("message"), Message);
   Subsystem->SendAutomationResponse(Socket, RequestId, false, Message, Result,
                                     ErrorCode);
 }
@@ -89,12 +87,12 @@ bool ResolveMediaAssetIdentity(const TSharedPtr<FJsonObject> &Payload,
                                FString &OutObjectPath,
                                FString &OutError) {
   FString AssetPath =
-      GetStringAny(Payload, {TEXT("assetPath"), TEXT("objectPath")});
+      GetStringAny(Payload, {TEXT("assetPath")});
   FString Folder =
-      GetStringAny(Payload, {TEXT("packagePath"), TEXT("folder"), TEXT("path")},
+      GetStringAny(Payload, {TEXT("path")},
                    DefaultFolder);
   FString Name =
-      GetStringAny(Payload, {TEXT("name"), TEXT("assetName")}, DefaultName);
+      GetStringAny(Payload, {TEXT("name")}, DefaultName);
   if (!AssetPath.IsEmpty()) {
     AssetPath.ReplaceInline(TEXT("\\"), TEXT("/"));
     if (AssetPath.Contains(TEXT("."))) {

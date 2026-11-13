@@ -56,8 +56,8 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
     NewTexture->UpdateResource();
     Package->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewTexture);
-    McpSafeAssetSave(NewTexture);
 
+    Response->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewTexture));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Channel '%s' extracted to grayscale texture"), *Channel));
     Response->SetStringField(TEXT("assetPath"), FullAssetPath);

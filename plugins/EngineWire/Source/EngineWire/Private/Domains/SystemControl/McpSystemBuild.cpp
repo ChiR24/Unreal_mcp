@@ -92,7 +92,7 @@ bool HandleRunUbt(UEngineWireSubsystem* Self, const FString& RequestId,
   if (!McpIsSafeUbtArgumentList(AdditionalArgs)) {
     Self->SendAutomationError(
         RequestingSocket, RequestId,
-        TEXT("additionalArgs contains unsafe UBT argument characters"),
+        TEXT("arguments contains unsafe UBT argument characters"),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }

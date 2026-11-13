@@ -75,7 +75,7 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
     OutputTexture->Source.UnlockMip(0);
     OutputTexture->UpdateResource();
     FAssetRegistryModule::AssetCreated(OutputTexture);
-    McpSafeAssetSave(OutputTexture);
+    Response->SetBoolField(TEXT("saved"), McpSafeAssetSave(OutputTexture));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), TEXT("Channels packed into single texture"));
     Response->SetStringField(TEXT("assetPath"), Path / Name);

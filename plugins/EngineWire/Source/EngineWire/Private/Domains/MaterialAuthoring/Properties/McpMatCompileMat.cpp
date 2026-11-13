@@ -31,40 +31,15 @@ TArray<FString> McpMaterialCompileErrors(UMaterial* Material)
 bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("compile_material")) {
-    // compile_material is published with `assetPath`; its alias
-    // rebuild_material is published with `materialPath`. Both are dispatched
-    // here, so accept either spelling or the alias is uncallable.
-    FString AssetPath;
-    if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-         AssetPath.IsEmpty()) &&
-        (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||
-         AssetPath.IsEmpty())) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' (or 'materialPath')."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    // Validate path security BEFORE loading asset
-    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
-      return true;
-
-    UMaterial *Material = nullptr;
-    UMaterialFunction *Function = nullptr;
-    LoadMaterialOrFunction(AssetPath, Material, Function);
-    if (!Material && !Function) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("Could not load Material or Material Function."),
-                          TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
+    // assetPath, or materialPath as its alias rebuild_material is published with.
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     // Force recompile / update
-    UObject *Host = Material ? static_cast<UObject*>(Material) : static_cast<UObject*>(Function);
-    Host->PreEditChange(nullptr);
-    McpRecompileMaterialHost(Host);
-    Host->MarkPackageDirty();
+    HostOuter->PreEditChange(nullptr);
+    McpRecompileMaterialHost(HostOuter);
+    HostOuter->MarkPackageDirty();
     // A material that fails to compile renders as the default material, and this used to answer "compiled"
-    // regardless.
+    // regardless. A function compiles nothing of its own: it answers neither field, where it said compiled.
     const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
 
     bool bSave = true;
@@ -76,9 +51,10 @@ bool HandleCompileMaterial(UEngineWireSubsystem* Bridge, const FString& RequestI
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
-    Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
-    TArray<TSharedPtr<FJsonValue>> ErrorValues = McpHandlerUtils::ToJsonStringArray(CompileErrors);
-    Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
+    if (Material) {
+      Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
+      Result->SetArrayField(TEXT("compileErrors"), McpHandlerUtils::ToJsonStringArray(CompileErrors));
+    }
     Result->SetBoolField(TEXT("saved"), bSaved);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            !Material ? FString(TEXT("Material function updated."))

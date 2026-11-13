@@ -64,7 +64,7 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
       added: { type: 'array', items: { type: 'string' }, description: 'kind=parameter_collection: the parameters this call added.' },
       scalars: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'kind=parameter_collection: every scalar parameter of the collection after the call, {name, default}.' },
       vectors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'kind=parameter_collection: every vector parameter after the call, {name, default [r, g, b, a]}.' },
-      saved: bool('kind=parameter_collection: whether the collection reached disk.'),
+      saved: bool('Whether the asset reached disk: false when save is false or the save failed.'),
     }, ['success']),
     WRITE, WRITE_POLICY, MEDIUM,
     { whenToUse: ['One value must drive many materials at once, set once at runtime (a level-wide wetness, wind strength, time of day or flash): a material reads it with a CollectionParameter node (material.add_material_node nodeType CollectionParameter with collectionPath and name), and a Blueprint sets it with SetScalarParameterValue or SetVectorParameterValue of the Kismet Material Library, the collection on its Collection pin.', 'An existing collection needs another parameter or new defaults: send it again; parameters are never removed, since materials read them by id.'],

@@ -22,7 +22,7 @@ bool HandleCreateTriggerVolume(UEngineWireSubsystem* Subsystem, const FString& R
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -37,7 +37,7 @@ bool HandleCreateTriggerVolume(UEngineWireSubsystem* Subsystem, const FString& R
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerVolume"));
     ResponseJson->SetObjectField(TEXT("location"), CreateVectorObject(Volume->GetActorLocation()));
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created TriggerVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created TriggerVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 
@@ -46,7 +46,7 @@ bool HandleCreateTriggerBox(UEngineWireSubsystem* Subsystem, const FString& Requ
     using namespace VolumeHelpers;
     FVolumeCreateArgs Args;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
         return true;
@@ -69,7 +69,7 @@ bool HandleCreateTriggerBox(UEngineWireSubsystem* Subsystem, const FString& Requ
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerBox"));
     ResponseJson->SetObjectField(TEXT("boxExtent"), CreateVectorObject(Extent));
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created TriggerBox: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created TriggerBox: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 
@@ -80,7 +80,7 @@ bool HandleCreateTriggerSphere(UEngineWireSubsystem* Subsystem, const FString& R
     UWorld* World = nullptr;
     FString ValidationError;
     const float Radius = GetJsonNumberField(Payload, TEXT("sphereRadius"), 100.0f);
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ValidateRadius(Radius, ValidationError) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -103,7 +103,7 @@ bool HandleCreateTriggerSphere(UEngineWireSubsystem* Subsystem, const FString& R
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created TriggerSphere: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created TriggerSphere: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 
@@ -115,7 +115,7 @@ bool HandleCreateTriggerCapsule(UEngineWireSubsystem* Subsystem, const FString& 
     FString ValidationError;
     const float Radius = GetJsonNumberField(Payload, TEXT("capsuleRadius"), 50.0f);
     const float HalfHeight = GetJsonNumberField(Payload, TEXT("capsuleHalfHeight"), 100.0f);
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ValidateCapsuleDimensions(Radius, HalfHeight, ValidationError) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -139,7 +139,7 @@ bool HandleCreateTriggerCapsule(UEngineWireSubsystem* Subsystem, const FString& 
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created TriggerCapsule: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created TriggerCapsule: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 }

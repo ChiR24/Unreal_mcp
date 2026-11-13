@@ -79,7 +79,7 @@ bool HandleSeekMedia(UEngineWireSubsystem *Subsystem,
   // Seeking a player with nothing open fails inside the engine with no explanation.
   if (!CallBoolFunction(Player, TEXT("IsReady"))) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("NO_MEDIA_OPEN"),
-                   TEXT("The media player has no media open; open a media source (open_media_source / open_media) before seek_media"),
+                   TEXT("The media player has no media open; open one with play_media (mediaSourcePath, playlistPath or filePath) before seek_media"),
                    Result);
     return true;
   }

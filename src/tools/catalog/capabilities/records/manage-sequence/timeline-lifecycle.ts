@@ -68,7 +68,7 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'duplicate',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives duplicatedPath and saved; the copy keeps the original\'s bindings, which still point at the same level actors.',
+    summary: 'Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy\'s package path) and saved; the copy keeps the original\'s bindings, which still point at the same level actors.',
     whenToUse: ['A sequence must be copied to a different folder or name.'],
     whenNotToUse: ['The sequence should be renamed in place.'],
     inputProps: { path: P.path, destinationPath: P.destinationPath, newName: P.newName },

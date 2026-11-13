@@ -20,6 +20,6 @@ bool ValidateExtent(const FVector& Extent, FString& OutError);
 bool ValidateRadius(float Radius, FString& OutError);
 bool ValidateCapsuleDimensions(float Radius, float HalfHeight, FString& OutError);
 bool ValidateLocation(const FVector& Location, FString& OutError);
-bool ReadNamedTransform(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& DefaultName, FVolumeCreateArgs& OutArgs);
+bool ReadNamedTransform(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, FVolumeCreateArgs& OutArgs);
 bool ReadExtent(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& FieldName, const FVector& DefaultExtent, FVector& OutExtent);
 }

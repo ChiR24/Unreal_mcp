@@ -1,4 +1,3 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpSessionsPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -13,8 +12,8 @@ bool HandleEnableVoiceChat(
 {
     if (!Payload->HasField(TEXT("voiceEnabled")))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("voiceEnabled is required (true to enable, false to disable)"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("voiceEnabled is required (true to enable, false to disable)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

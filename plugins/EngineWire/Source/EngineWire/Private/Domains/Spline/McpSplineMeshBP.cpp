@@ -126,7 +126,6 @@ bool HandleCreateSplineMeshComponent(
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetBoolField(TEXT("existsAfter"), true);
-    Result->SetStringField(TEXT("action"), TEXT("manage_splines:component_added"));
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("SplineMeshComponent '%s' added to Blueprint"), *ComponentName), Result);

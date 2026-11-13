@@ -46,20 +46,8 @@ bool HandleCreateMaterialFunction(UEngineWireSubsystem* Bridge, const FString& R
 
     NewFunc->PostEditChange();
     NewFunc->MarkPackageDirty();
-
-    bool bSave = true;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      McpSafeAssetSave(NewFunc);
-    }
-
-    FAssetRegistryModule::AssetCreated(NewFunc);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, NewFunc);
-    Bridge->SendAutomationResponse(
-        Socket, RequestId, true,
-        FString::Printf(TEXT("Material function '%s' created."), *Name), Result);
+    Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Material function '%s' created."), *Name),
+                                   FinishNewMaterialAsset(NewFunc, Payload, bParentFolderCreated));
     return true;
   }
 

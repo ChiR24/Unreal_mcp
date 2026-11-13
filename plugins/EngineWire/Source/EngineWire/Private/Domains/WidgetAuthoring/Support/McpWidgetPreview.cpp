@@ -1,5 +1,6 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Domains/WidgetAuthoring/Audit/McpWidgetAudit.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
@@ -93,23 +94,29 @@ bool HandleWidgetAuthoringPreview(
         return false;
     }
     FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-    UWidgetBlueprint* WidgetBP = WidgetPath.IsEmpty() ? nullptr : LoadWidgetBlueprint(WidgetPath);
-    if (!WidgetBP)
+    if (WidgetPath.IsEmpty())
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, WidgetPath.IsEmpty()
-            ? TEXT("Missing required parameter: widgetPath") : TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: widgetPath"), TEXT("MISSING_PARAMETER"));
         return true;
     }
-    // resolution "WxH" is the screen the widget is drawn for (default 1280x720).
-    FString Resolution = GetJsonStringField(Payload, TEXT("resolution"), TEXT("1280x720"));
-    FString Width, Height;
-    FIntPoint Size(1280, 720);
-    if (Resolution.ToLower().Split(TEXT("x"), &Width, &Height))
+    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
+    if (!WidgetBP)
     {
-        Size = FIntPoint(FMath::Clamp(FCString::Atoi(*Width), 64, 3840), FMath::Clamp(FCString::Atoi(*Height), 64, 2160));
+        return true;
     }
-    TArray<FColor> Pixels;
+    // resolution "WxH" is the screen the widget is drawn for (default 1280x720), read as arrange_widgets reads its
+    // own: a size it cannot read or out of 64-3840 by 64-2160 is refused, where it was clamped or replaced unsaid.
+    const TArray<TSharedPtr<FJsonValue>> ResolutionJson = {
+        MakeShared<FJsonValueString>(GetJsonStringField(Payload, TEXT("resolution"), TEXT("1280x720")))};
+    TArray<FIntPoint> Sizes;
     FString Error;
+    if (!McpWidgetAudit::ParseSizes(&ResolutionJson, TEXT("resolution"), Sizes, Error))
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    const FIntPoint Size = Sizes[0];
+    TArray<FColor> Pixels;
     TArray64<uint8> Png;
     if (!McpDrawWidget(WidgetBP, Size, Pixels, Error, [](UUserWidget&, float) {}))
     {

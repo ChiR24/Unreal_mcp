@@ -74,8 +74,8 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
     NormalMap->Source.UnlockMip(0);
     NormalMap->UpdateResource();
     FAssetRegistryModule::AssetCreated(NormalMap);
-    McpSafeAssetSave(NormalMap);
 
+    Response->SetBoolField(TEXT("saved"), McpSafeAssetSave(NormalMap));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), TEXT("Normal map created from height map"));
     McpHandlerUtils::AddVerification(Response, NormalMap);

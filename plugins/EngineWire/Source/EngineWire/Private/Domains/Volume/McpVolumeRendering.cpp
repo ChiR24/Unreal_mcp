@@ -67,7 +67,7 @@ bool HandleCreatePostProcessVolume(UEngineWireSubsystem* Subsystem, const FStrin
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(500.0f, 500.0f, 500.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -93,7 +93,7 @@ bool HandleCreatePostProcessVolume(UEngineWireSubsystem* Subsystem, const FStrin
     ResponseJson->SetBoolField(TEXT("enabled"), Volume->bEnabled);
     ResponseJson->SetBoolField(TEXT("unbound"), Volume->bUnbound);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created PostProcessVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created PostProcessVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 #endif
@@ -104,7 +104,7 @@ bool HandleCreateCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FStri
     FVolumeCreateArgs Args;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, Args) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -118,7 +118,7 @@ bool HandleCreateCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FStri
     }
     SetCullDistancesFromPayload(Volume, Payload);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created CullDistanceVolume: %s"), *Args.VolumeName), CreateVolumeResponse(Volume, TEXT("ACullDistanceVolume")));
+        FString::Printf(TEXT("Created CullDistanceVolume: %s"), *Volume->GetActorLabel()), CreateVolumeResponse(Volume, TEXT("ACullDistanceVolume")));
     return true;
 }
 

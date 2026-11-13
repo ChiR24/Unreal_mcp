@@ -86,13 +86,14 @@ bool ValidateLocation(const FVector& Location, FString& OutError)
     return true;
 }
 
-bool ReadNamedTransform(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& DefaultName, FVolumeCreateArgs& OutArgs)
+bool ReadNamedTransform(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, FVolumeCreateArgs& OutArgs)
 {
     FString ValidationError;
-    OutArgs.VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), DefaultName);
-    if (!ValidateVolumeName(OutArgs.VolumeName, ValidationError))
+    // Without a name the engine labels the volume, uniquely, after its class.
+    OutArgs.VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
+    if (!OutArgs.VolumeName.IsEmpty() && !ValidateVolumeName(OutArgs.VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         return false;
     }
     OutArgs.Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);

@@ -37,7 +37,7 @@ const COMPILE_OK = schema({
   success: bool('Operation succeeded.'),
   assetPath: str('Compiled asset path.'),
   assetType: str('Material or MaterialFunction.'),
-  compiled: bool('False when the material does not compile; compileErrors says why.'),
+  compiled: bool('False when the material does not compile; compileErrors says why. Absent with compileErrors for a material function, which compiles nothing of its own.'),
   compileErrors: arr('Compile errors from the material translator and, once it has finished, the shader compile (where a Custom node\'s HLSL fails); empty when it compiles.'),
   saved: bool('Whether the asset was saved.'),
 }, ['success']);

@@ -165,8 +165,6 @@ bool HandleCreateMediaPlaylist(UEngineWireSubsystem *Subsystem,
   Result->SetNumberField(TEXT("addedCount"),
                          Items.Sources.Num() + Items.Urls.Num() +
                              Items.Files.Num());
-  Result->SetArrayField(TEXT("failedItems"),
-                        TArray<TSharedPtr<FJsonValue>>());
   if (!Created.bSaved) {
     DiscardCreatedMediaAsset(Created);
     SendMediaError(Subsystem, Socket, RequestId, TEXT("ASSET_SAVE_FAILED"),

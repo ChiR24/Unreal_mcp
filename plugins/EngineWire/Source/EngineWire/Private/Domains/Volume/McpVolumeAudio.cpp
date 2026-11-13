@@ -22,7 +22,7 @@ static AAudioVolume* SpawnAudioVolume(
     using namespace VolumeHelpers;
     FVector Extent;
     UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), OutArgs) ||
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, OutArgs) ||
         !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), FVector(500.0f, 500.0f, 200.0f), Extent) ||
         !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -50,7 +50,7 @@ bool HandleCreateAudioVolume(UEngineWireSubsystem* Subsystem, const FString& Req
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created AudioVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created AudioVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 
@@ -77,7 +77,7 @@ bool HandleCreateReverbVolume(UEngineWireSubsystem* Subsystem, const FString& Re
     ResponseJson->SetNumberField(TEXT("reverbVolume"), ReverbVolumeLevel);
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
-        FString::Printf(TEXT("Created ReverbVolume: %s"), *Args.VolumeName), ResponseJson);
+        FString::Printf(TEXT("Created ReverbVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
 }

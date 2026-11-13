@@ -6,23 +6,23 @@ namespace McpMaterialAuthoringHandlers
 namespace
 {
 // Creates one expression of Class in the host at x/y, lets Configure touch it, adds it,
-// and replies with its nodeId, placement fields and Message.
+// and replies with its nodeId and placement fields, naming it NodeName.
 template <typename TConfigure>
 bool AddPlacedExpression(UEngineWireSubsystem* Bridge, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                         UClass* Class, const FString& Message, TConfigure&& Configure)
+                         UClass* Class, const FString& NodeName, TConfigure&& Configure)
 {
   LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
   if (!Class) {
     Bridge->SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Failed to create the node for '%s': its class is not available in this engine."), *Message),
+        FString::Printf(TEXT("Failed to create the %s node: its class is not available in this engine."), *NodeName),
         TEXT("CREATE_FAILED"));
     return true;
   }
   UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(HostOuter, Class, NAME_None, RF_Transactional);
   Configure(NewExpr);
   TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, NewExpr, X, Y);
-  Bridge->SendAutomationResponse(Socket, RequestId, true, Message, Result);
+  Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("%s node added."), *NodeName), Result);
   return true;
 }
 
@@ -65,17 +65,17 @@ void SetClassNodeNumber(UMaterialExpression* Expr, FNumericProperty* Prop, doubl
 
 // Validates the knobs against Class, then creates the node with them applied.
 bool AddConfiguredNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
-                       TSharedPtr<FMcpBridgeWebSocket> Socket, UClass* Class, const FString& Message,
+                       TSharedPtr<FMcpBridgeWebSocket> Socket, UClass* Class, const FString& NodeName,
                        TArrayView<const FClassNodeNumberField> Fields, bool bVoronoi)
 {
   FString Missing;
   if (!ForEachClassNodeNumber(Class, Payload, Fields, Missing, [](FNumericProperty*, double) {})) {
     Bridge->SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("'%s' does not apply to this node (%s); wire an input pin instead."), *Missing, *Message),
+        FString::Printf(TEXT("'%s' does not apply to the %s node; wire an input pin instead."), *Missing, *NodeName),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  return AddPlacedExpression(Bridge, RequestId, Payload, Socket, Class, Message, [&](UMaterialExpression* Expr) {
+  return AddPlacedExpression(Bridge, RequestId, Payload, Socket, Class, NodeName, [&](UMaterialExpression* Expr) {
     // Voronoi is Noise with the Voronoi function.
     if (bVoronoi) { CastChecked<UMaterialExpressionNoise>(Expr)->NoiseFunction = ENoiseFunction::NOISEFUNCTION_VoronoiALU; }
     ForEachClassNodeNumber(Class, Payload, Fields, Missing, [Expr](FNumericProperty* Prop, double Value) { SetClassNodeNumber(Expr, Prop, Value); });
@@ -111,8 +111,7 @@ bool HandleAddClassNode(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     else if (SubAction == TEXT("add_rotator")) { Fields = MakeArrayView(RotatorFields); }
     else if (SubAction == TEXT("add_noise")) { Fields = MakeArrayView(NoiseFields); }
     else if (SubAction == TEXT("add_voronoi")) { Fields = MakeArrayView(NoiseFields, 1); }
-    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, Kind->Class,
-        FString::Printf(TEXT("%s node added."), Kind->Name), Fields, SubAction == TEXT("add_voronoi"));
+    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, Kind->Class, Kind->Name, Fields, SubAction == TEXT("add_voronoi"));
   }
 
   if (SubAction == TEXT("add_math_node")) {
@@ -135,12 +134,14 @@ bool HandleAddClassNode(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     }
     UClass* const* OperationClass = Operations.Find(Operation);
     if (!OperationClass) {
+      TArray<FString> Known;
+      Operations.GetKeys(Known);
       Bridge->SendAutomationError(Socket, RequestId,
-          FString::Printf(TEXT("Unknown operation: %s"), *Operation), TEXT("UNKNOWN_OPERATION"));
+          FString::Printf(TEXT("Unknown operation: %s. Use one of %s."), *Operation, *FString::Join(Known, TEXT(", "))),
+          TEXT("UNKNOWN_OPERATION"));
       return true;
     }
-    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, *OperationClass,
-        FString::Printf(TEXT("Math node '%s' added."), *Operation), MakeArrayView(MathFields), false);
+    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, *OperationClass, Operation, MakeArrayView(MathFields), false);
   }
   return false;
 }

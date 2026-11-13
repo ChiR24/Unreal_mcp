@@ -6,6 +6,11 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     const FString BlendMode = GetJsonStringField(Params, TEXT("blendType"), TEXT("Normal"));
+    static const TArray<FString> KnownBlendTypes = {TEXT("Normal"), TEXT("Multiply"), TEXT("Screen"), TEXT("Overlay"), TEXT("Add")};
+    if (!KnownBlendTypes.Contains(BlendMode))
+    {
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unknown blendType '%s'. Valid values: %s."), *BlendMode, *FString::Join(KnownBlendTypes, TEXT(", "))));
+    }
     const float Opacity = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("opacity"), 1.0)), 0.0f, 1.0f);
     FString BasePath;
     FString OverlayPath;
@@ -78,7 +83,7 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
     OutputTexture->Source.UnlockMip(0);
     OutputTexture->UpdateResource();
     FAssetRegistryModule::AssetCreated(OutputTexture);
-    McpSafeAssetSave(OutputTexture);
+    Response->SetBoolField(TEXT("saved"), McpSafeAssetSave(OutputTexture));
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Textures combined (mode: %s)"), *BlendMode));
     Response->SetStringField(TEXT("assetPath"), Path / Name);

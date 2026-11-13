@@ -26,6 +26,11 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     }
 
     const FString PatternType = GetJsonStringField(Params, TEXT("patternType"), TEXT("Checker"));
+    static const TArray<FString> KnownPatternTypes = {TEXT("Checker"), TEXT("Grid"), TEXT("Brick"), TEXT("Stripes"), TEXT("Dots")};
+    if (!KnownPatternTypes.Contains(PatternType))
+    {
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unknown patternType '%s'. Valid values: %s."), *PatternType, *FString::Join(KnownPatternTypes, TEXT(", "))));
+    }
     const float LineWidth = static_cast<float>(GetJsonNumberField(Params, TEXT("lineWidth"), 0.02));
     const float BrickRatio = static_cast<float>(GetJsonNumberField(Params, TEXT("brickRatio"), 2.0));
     const float Offset = static_cast<float>(GetJsonNumberField(Params, TEXT("offset"), 0.5));

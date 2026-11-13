@@ -63,6 +63,19 @@ bool PrepareNewMaterialAsset(UEngineWireSubsystem* Bridge, const FString& Reques
   return true;
 }
 
+TSharedPtr<FJsonObject> FinishNewMaterialAsset(UObject* Asset, const TSharedPtr<FJsonObject>& Payload, bool bParentFolderCreated) {
+  FAssetRegistryModule::AssetCreated(Asset);
+  bool bSave = true;
+  Payload->TryGetBoolField(TEXT("save"), bSave);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Asset));
+  McpHandlerUtils::AddVerification(Result, Asset);
+  if (bParentFolderCreated) {
+    Result->SetBoolField(TEXT("parentFolderCreated"), true);
+  }
+  return Result;
+}
+
 // Shared lookup logic for expressions in any array.
 // Resolution order: object name (stable ID) > GUID (backwards compat) >
 // expr_N index > full path > parameter/input/output name.

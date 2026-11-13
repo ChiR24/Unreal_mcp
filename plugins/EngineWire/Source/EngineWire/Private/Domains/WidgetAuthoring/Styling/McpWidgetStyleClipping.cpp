@@ -78,11 +78,7 @@ bool HandleWidgetAuthoringStyleClipping(
             ResultJson->SetStringField(TEXT("value"), ClippingStr);
             ResultJson->SetStringField(TEXT("widgetName"), SlotName);
             ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
-            ResultJson->SetBoolField(TEXT("saveSucceeded"), bSaveSucceeded);
-            if (!bSaveSucceeded)
-            {
-                ResultJson->SetStringField(TEXT("warning"), TEXT("Clipping changed in editor memory, but package save did not complete in the current headless session."));
-            }
+            ResultJson->SetBoolField(TEXT("saved"), bSaveSucceeded);
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {
@@ -110,7 +106,6 @@ bool HandleWidgetAuthoringStyleClipping(
                     // convenience edit (text, colour, rounding, sounds) stayed dirty
                     // in memory, so an editor restart or a package build dropped it.
                     const bool bStyleSaved = McpSafeAssetSave(WidgetBP);
-                    ResultJson->SetBoolField(TEXT("saveSucceeded"), bStyleSaved);
                     ResultJson->SetBoolField(TEXT("saved"), bStyleSaved);
                     ResultJson->SetStringField(TEXT("widgetName"), SlotName);
                     ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
@@ -248,7 +243,7 @@ bool HandleWidgetAuthoringStyleClipping(
 
                 // Property change — mark dirty and save, do NOT recompile (that wipes instance values)
                 WidgetBP->MarkPackageDirty();
-                McpSafeAssetSave(WidgetBP);
+                ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(WidgetBP));
             }
         }
 

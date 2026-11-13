@@ -79,7 +79,8 @@ bool HandleRemoveVolume(UEngineWireSubsystem* Subsystem, const FString& RequestI
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError,
+            VolumeName.IsEmpty() ? TEXT("MISSING_PARAMETER") : TEXT("INVALID_ARGUMENT"));
         return true;
     }
     UWorld* World = nullptr;
@@ -102,7 +103,6 @@ bool HandleRemoveVolume(UEngineWireSubsystem* Subsystem, const FString& RequestI
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
     ResponseJson->SetBoolField(TEXT("existsAfter"), false);
-    ResponseJson->SetStringField(TEXT("action"), TEXT("manage_volumes:deleted"));
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeLevel,
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
     return true;
