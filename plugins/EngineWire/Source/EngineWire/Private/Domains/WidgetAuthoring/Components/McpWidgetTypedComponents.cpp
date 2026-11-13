@@ -137,10 +137,8 @@ bool HandleWidgetAuthoringTypedComponents(
                 UWidgetTree* Tree = Cast<UWidgetTree>(Widget->GetOuter());
                 UWidgetBlueprint* WidgetBP = Tree ? Cast<UWidgetBlueprint>(Tree->GetOuter()) : nullptr;
                 const FName Wanted(*(Widget->GetName() + TEXT("_Text")));
-                const bool bTaken = WidgetBP && (Tree->FindWidget(Wanted) ||
-                    !WidgetAuthoringHelpers::McpWidgetNameConflict(WidgetBP, Wanted, UTextBlock::StaticClass()).IsEmpty());
-                const FString LabelName = bTaken
-                    ? WidgetAuthoringHelpers::McpFreeWidgetName(WidgetBP, Wanted, UTextBlock::StaticClass()) : Wanted.ToString();
+                const bool bTaken = WidgetBP && !WidgetAuthoringHelpers::McpWidgetNameConflict(WidgetBP, Wanted).IsEmpty();
+                const FString LabelName = bTaken ? WidgetAuthoringHelpers::McpFreeWidgetName(WidgetBP, Wanted) : Wanted.ToString();
                 UTextBlock* Text = CreateAndRegisterWidget<UTextBlock>(WidgetBP, Tree, FName(*LabelName));
                 if (!Text)
                 {

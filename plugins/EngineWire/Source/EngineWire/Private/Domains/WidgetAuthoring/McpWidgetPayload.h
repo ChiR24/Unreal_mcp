@@ -12,8 +12,7 @@ namespace WidgetAuthoringHelpers
 {
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 FString GetSlotName(const TSharedPtr<FJsonObject>& Payload);
-// Unknown names read as Visible; TryParseVisibility says whether the name was one of the five.
-ESlateVisibility GetVisibility(const FString& VisibilityString);
+// One of the five visibility names, in any case, into Out; false for any other.
 bool TryParseVisibility(const FString& Name, ESlateVisibility& Out);
 // Resolves the widget's real style property; see the definition for why "Style"
 // alone is not enough.

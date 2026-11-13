@@ -93,7 +93,10 @@ bool HandleWidgetAuthoringStyleClipping(
             {
                 TArray<TSharedPtr<FJsonValue>> Applied;
                 FString Unsupported;
-                if (!McpApplyWidgetStyleConvenience(Widget, Payload, ResultJson, Applied, Unsupported))
+                // Every field checked before any is written: a later one refused left the earlier writes behind.
+                TArray<TSharedPtr<FJsonValue>> Checked;
+                if (!McpApplyWidgetStyleConvenience(Widget, Payload, MakeShared<FJsonObject>(), Checked, Unsupported, false) ||
+                    !McpApplyWidgetStyleConvenience(Widget, Payload, ResultJson, Applied, Unsupported, true))
                 {
                     SendStandardErrorResponse(&Subsystem, RequestingSocket, RequestId,
                         TEXT("STYLE_FIELD_UNSUPPORTED"), Unsupported, ResultJson);

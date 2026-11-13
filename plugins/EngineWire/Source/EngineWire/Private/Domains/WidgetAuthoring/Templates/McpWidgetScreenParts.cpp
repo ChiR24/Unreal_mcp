@@ -130,6 +130,19 @@ bool HandleWidgetAuthoringScreens(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // A repeated name ('Play' and 'Play!' both stem PlayButton) failed only in the build, after the asset was made.
+    TArray<FString> Names;
+    McpCollectSpecNames(Spec, FString(), Names);
+    for (int32 Index = 0; Index < Names.Num(); ++Index)
+    {
+        if (!Names[Index].IsEmpty() && Names.Find(Names[Index]) < Index)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("The %s template would name two "
+                "widgets '%s': two of its entries make that name. Make them differ; nothing was created."), Screen->Label,
+                *Names[Index]), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
     UWidgetBlueprint* WidgetBP = McpCreateTemplateWidgetBlueprint(Subsystem, RequestId, RequestingSocket, Payload, Screen->DefaultName);
     if (!WidgetBP)
     {

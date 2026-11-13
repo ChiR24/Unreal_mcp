@@ -31,9 +31,8 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
                    TArray<UWidget*>& OutCreated, FString& OutError)
 {
     const FString Type = GetJsonStringField(Node, TEXT("type"));
-    UClass* Class = FindObject<UClass>(nullptr, *(TEXT("/Script/UMG.") + Type));
-    // An abstract class fired the editor's ensure in NewObject before it came back null.
-    if (!Class || !Class->IsChildOf(UWidget::StaticClass()) || Class->HasAnyClassFlags(CLASS_Abstract))
+    UClass* Class = McpSpecWidgetClass(Type);
+    if (!Class)
     {
         OutError = FString::Printf(TEXT("widget spec names an unknown UMG type '%s'"), *Type);
         return nullptr;
@@ -47,7 +46,7 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
         OutError = FString::Printf(TEXT("two widgets in this build would both be named '%s'; give them distinct names"), *Name);
         return nullptr;
     }
-    const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*Name), Class);
+    const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*Name));
     if (!NameConflict.IsEmpty())
     {
         OutError = NameConflict;
@@ -137,6 +136,13 @@ TSharedPtr<FJsonObject> McpFindSpecNode(const TSharedPtr<FJsonObject>& Spec, con
         }
     }
     return nullptr;
+}
+
+UClass* McpSpecWidgetClass(const FString& Type)
+{
+    UClass* Class = Type.IsEmpty() ? nullptr : FindObject<UClass>(nullptr, *(TEXT("/Script/UMG.") + Type));
+    // An abstract class fired the editor's ensure in NewObject before it came back null.
+    return Class && Class->IsChildOf(UWidget::StaticClass()) && !Class->HasAnyClassFlags(CLASS_Abstract) ? Class : nullptr;
 }
 
 void McpCollectSpecNames(const TSharedPtr<FJsonObject>& Spec, const FString& SlotName, TArray<FString>& OutNames)

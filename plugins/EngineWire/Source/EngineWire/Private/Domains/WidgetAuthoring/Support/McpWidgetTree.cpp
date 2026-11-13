@@ -137,32 +137,13 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
 namespace
 {
 /**
- * Take a widget out of whichever panel currently lists it, keeping its layout.
- *
- * Re-using a slotName is how a caller edits an existing widget -- "the text
- * block called Txt_Health now reads 0". ConstructWidget re-initialises the
- * object that already holds that name rather than making a second one, and that
- * re-initialisation CLEARS the widget's Slot pointer. So GetParent() answers
- * null while the panel's own Slots array still points at the widget, and the
- * add that follows appends a second slot for the same widget: one widget listed
- * twice under one parent, with the graph's variable binding to whichever the
- * compiler reaches first.
- *
- * Asking the panels instead of the widget is what makes this reliable -- the
- * parent's slot list survives the re-initialisation that erases the widget's
- * own back-pointer.
- *
- * The layout has to come with it. Re-adding produces a fresh slot at the panel's
- * default position, so editing a HUD label's text would silently move it to the
- * corner. The old slot is handed back so the re-seat can copy it; the payload
- * still wins when the caller actually asked for new geometry. So are the old
- * parent and index, to put the widget back if the re-seat is refused.
+ * Take a widget out of whichever panel lists it, keeping its layout: reparent_widget moves a seated
+ * widget through the add funnel. The panels are asked, not the widget's own Slot pointer: a panel's
+ * slot list is what the tree is built from. The old slot is handed back so the re-seat copies its
+ * layout, and the old parent and index to put the widget back if the re-seat is refused.
  */
-// bWarnOnReuse says a widget found seated is a slotName re-used by an add, which is worth a
-// warning. A reparent moves a seated widget on purpose, so it passes false: the warning claimed
-// a duplicate had been avoided when the caller had only asked for a move.
 bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
-    UPanelSlot*& OutOldSlot, UPanelWidget*& OutOldParent, int32& OutOldIndex, bool bWarnOnReuse)
+    UPanelSlot*& OutOldSlot, UPanelWidget*& OutOldParent, int32& OutOldIndex)
 {
     OutOldSlot = nullptr;
     OutOldParent = nullptr;
@@ -192,13 +173,6 @@ bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
             Panel->RemoveChild(NewWidget);
             bDetached = true;
         }
-    }
-    if (bDetached && bWarnOnReuse)
-    {
-        UE_LOG(LogTemp, Warning,
-            TEXT("SafeAddWidgetToTree: '%s' was already in the tree; it was detached and re-seated "
-                 "rather than duplicated. Use a fresh slotName to add a second widget."),
-            *NewWidget->GetName());
     }
     return bDetached;
 }
@@ -230,12 +204,12 @@ void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To)
 }
 
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,
-    const TSharedPtr<FJsonObject>& Payload, bool bMove)
+    const TSharedPtr<FJsonObject>& Payload)
 {
     UPanelSlot* OldSlot = nullptr;
     UPanelWidget* OldParent = nullptr;
     int32 OldIndex = INDEX_NONE;
-    DetachFromOwningPanel(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex, !bMove);
+    DetachFromOwningPanel(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex);
 
     if (!SeatWidgetInTree(WidgetBP, NewWidget, ParentSlot))
     {

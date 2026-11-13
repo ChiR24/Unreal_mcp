@@ -214,12 +214,18 @@ bool HandleRemove(UEngineWireSubsystem& Bridge, const FString& RequestId, const 
 		}
 		const FName Removed = ReadName(Models.Struct, Models.At(Index), TEXT("ViewModelName"));
 		const TSharedPtr<FJsonObject> Row = ViewModelRow(Models, Index);
+		// The flag RemoveViewModel tests (5.3 added it), read before the step opens: refused inside it, an undo step that
+		// changed nothing stayed on the stack.
+		if (FieldOf(Models.Struct, TEXT("bCanRemove")) && !ReadBool(Models.Struct, Models.At(Index), TEXT("bCanRemove")))
+		{
+			return Refuse(FString::Printf(TEXT("The editor keeps %s: this viewmodel is marked as one that cannot be removed."), *ModelName), TEXT("VIEWMODEL_LOCKED"));
+		}
 		FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Viewmodel")), EMcpMutationDurability::EditorStateOnly, {Widget, ViewObject});
 		const FArg Args[] = {{Widget}, {nullptr, Removed}};
 		Call(TEXT("RemoveViewModel"), Args, [](const FProperty&, const void*) {});
 		if (FindViewModel(ViewObject, Removed.ToString()) != INDEX_NONE)
 		{
-			return Refuse(FString::Printf(TEXT("The editor keeps %s: this viewmodel is marked as one that cannot be removed."), *ModelName), TEXT("VIEWMODEL_LOCKED"));
+			return Refuse(FString::Printf(TEXT("The editor's RemoveViewModel left %s in place."), *ModelName), TEXT("REMOVE_FAILED"));
 		}
 		Result->SetObjectField(TEXT("removed"), Row);
 		Transaction.DescribeInto(Result);

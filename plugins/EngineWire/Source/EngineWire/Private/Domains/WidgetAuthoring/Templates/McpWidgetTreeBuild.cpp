@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
+#include "Domains/WidgetAuthoring/McpWidgetPayload.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 #include "Domains/WidgetAuthoring/Templates/McpWidgetSpec.h"
@@ -74,6 +75,25 @@ FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FSt
         return FString::Printf(TEXT("%s needs a type (a UMG class short name: CanvasPanel, Border, VerticalBox, ")
                                TEXT("HorizontalBox, Overlay, TextBlock, Image, ProgressBar ...) and a name"), *Where);
     }
+    // Values the props would otherwise read as their default without a word (a misspelt visibility as Visible).
+    const FString Type = GetJsonStringField(Node, TEXT("type"));
+    if (!McpSpecWidgetClass(Type))
+    {
+        return FString::Printf(TEXT("%s type '%s' is not a concrete UMG widget class (CanvasPanel, Border, VerticalBox, "
+                                    "TextBlock, Image, ProgressBar ...)"), *Where, *Type);
+    }
+    const FString VisibilityName = GetJsonStringField(Node, TEXT("visibility"));
+    ESlateVisibility Visibility = ESlateVisibility::Visible;
+    if (!VisibilityName.IsEmpty() && !TryParseVisibility(VisibilityName, Visibility))
+    {
+        return FString::Printf(TEXT("%s visibility '%s' is not Visible, Collapsed, Hidden, HitTestInvisible or "
+                                    "SelfHitTestInvisible"), *Where, *VisibilityName);
+    }
+    const FString Justify = GetJsonStringField(Node, TEXT("justify"));
+    if (!Justify.IsEmpty() && Justify != TEXT("left") && Justify != TEXT("center") && Justify != TEXT("right"))
+    {
+        return FString::Printf(TEXT("%s justify '%s' is not left, center or right"), *Where, *Justify);
+    }
     const TSharedPtr<FJsonObject>* SlotSpec = nullptr;
     const FString SlotUnknown = Node->TryGetObjectField(TEXT("slot"), SlotSpec) ? WidgetTreeUnknownKey(*SlotSpec, WidgetTreeSlotKeys()) : FString();
     if (!SlotUnknown.IsEmpty())
@@ -87,7 +107,6 @@ FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FSt
         return FString::Printf(TEXT("%s texture '%s' does not load as a Texture2D"), *Where, *Texture);
     }
     const FString Material = GetJsonStringField(Node, TEXT("material"));
-    const FString Type = GetJsonStringField(Node, TEXT("type"));
     if (!Material.IsEmpty() && Type != TEXT("Image") && Type != TEXT("Border"))
     {
         return FString::Printf(TEXT("%s material is the brush of an Image or a Border, not of a %s"), *Where, *Type);

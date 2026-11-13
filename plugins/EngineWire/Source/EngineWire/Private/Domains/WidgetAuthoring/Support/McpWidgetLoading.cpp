@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Safety/McpSafeOperations.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -21,77 +22,15 @@ namespace WidgetAuthoringHelpers
 {
 static UWidgetBlueprint* LoadWidgetBlueprintRaw(const FString& WidgetPath)
 {
-    FString Path = WidgetPath;
-    if (Path.EndsWith(TEXT("_C")))
+    // A class path (WBP_X_C) names the generated class, not the Blueprint.
+    if (WidgetPath.EndsWith(TEXT("_C")))
     {
         return nullptr;
     }
-    Path = McpRootedContentPath(Path);
-
-    FString ObjectPath = Path;
-    FString PackagePath = Path;
-    if (Path.Contains(TEXT(".")))
-    {
-        PackagePath = Path.Left(Path.Find(TEXT(".")));
-    }
-    else
-    {
-        FString AssetName = FPaths::GetBaseFilename(Path);
-        ObjectPath = Path + TEXT(".") + AssetName;
-    }
-
-    FString AssetName = FPaths::GetBaseFilename(PackagePath);
-    if (UWidgetBlueprint* WB = FindObject<UWidgetBlueprint>(nullptr, *ObjectPath))
-    {
-        return WB;
-    }
-    if (UPackage* Package = FindPackage(nullptr, *PackagePath))
-    {
-        if (UWidgetBlueprint* WB = FindObject<UWidgetBlueprint>(Package, *AssetName))
-        {
-            return WB;
-        }
-    }
-
-    for (TObjectIterator<UWidgetBlueprint> It; It; ++It)
-    {
-        UWidgetBlueprint* WB = *It;
-        if (!WB)
-        {
-            continue;
-        }
-        FString WBPath = WB->GetPathName();
-        if (WBPath.Equals(ObjectPath, ESearchCase::IgnoreCase) ||
-            WBPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
-            WBPath.Equals(Path, ESearchCase::IgnoreCase))
-        {
-            return WB;
-        }
-        FString WBPackagePath = WBPath;
-        if (WBPackagePath.Contains(TEXT(".")))
-        {
-            WBPackagePath = WBPackagePath.Left(WBPackagePath.Find(TEXT(".")));
-        }
-        if (WBPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase))
-        {
-            return WB;
-        }
-    }
-
-    IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
-    FAssetData AssetData = Registry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(ObjectPath));
-    if (AssetData.IsValid())
-    {
-        if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(AssetData.GetAsset()))
-        {
-            return WB;
-        }
-    }
-    if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *ObjectPath)))
-    {
-        return WB;
-    }
-    return Cast<UWidgetBlueprint>(StaticLoadObject(UWidgetBlueprint::StaticClass(), nullptr, *PackagePath));
+    // The shared canonicalizer: the /Content alias the gate accepts as /Game's, and a bare path under /Game.
+    const FString Path = McpCanonicalizeContentPath(WidgetPath, true);
+    FString Loaded;
+    return Path.IsEmpty() ? nullptr : McpLoadCanonicalAsset<UWidgetBlueprint>(Path, Loaded);
 }
 // The widget compiler ensures that every source widget and animation has a
 // WidgetVariableNameToGuidMap entry. Assets authored before the registry existed (or renamed

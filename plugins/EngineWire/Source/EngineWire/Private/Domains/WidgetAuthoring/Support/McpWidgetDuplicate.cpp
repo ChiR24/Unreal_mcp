@@ -4,6 +4,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetGuidRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
+#include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelSlot.h"
@@ -20,10 +21,13 @@ using namespace WidgetAuthoringHelpers;
 
 namespace
 {
-FName McpFreeCopyName(UWidgetTree* Tree, const FString& Wanted)
+// Past the tree's widgets and objects, and past a name a member of the Blueprint holds (a variable, a function,
+// UWidget's DisplayLabel): a copy under one was saved, then failed to compile behind a success reply.
+FName McpFreeCopyName(UWidgetBlueprint* WidgetBP, const FString& Wanted)
 {
     FName Name(*Wanted);
-    for (int32 Suffix = 1; Tree->FindWidget(Name) || StaticFindObjectFast(nullptr, Tree, Name); ++Suffix)
+    for (int32 Suffix = 1; StaticFindObjectFast(nullptr, WidgetBP->WidgetTree, Name) || !McpWidgetNameConflict(WidgetBP, Name).IsEmpty();
+         ++Suffix)
     {
         Name = FName(*FString::Printf(TEXT("%s_%d"), *Wanted, Suffix));
     }
@@ -33,7 +37,7 @@ FName McpFreeCopyName(UWidgetTree* Tree, const FString& Wanted)
 // Children are copied first and handed to the parent's copy as a duplication seed, so every slot the
 // parent's copy carries points at a copied child. A plain duplicate of a panel shares the original
 // children through its slots, and the first edit of either tree then corrupts the other.
-UWidget* McpCopySubtree(UWidgetTree* Tree, UWidget* Source, const FString& RootName, TArray<TSharedPtr<FJsonValue>>& Names)
+UWidget* McpCopySubtree(UWidgetBlueprint* WidgetBP, UWidget* Source, const FString& RootName, TArray<TSharedPtr<FJsonValue>>& Names)
 {
     TMap<UObject*, UObject*> Seed;
     if (UPanelWidget* Panel = Cast<UPanelWidget>(Source))
@@ -42,14 +46,14 @@ UWidget* McpCopySubtree(UWidgetTree* Tree, UWidget* Source, const FString& RootN
         {
             if (UWidget* Child = Panel->GetChildAt(Index))
             {
-                Seed.Add(Child, McpCopySubtree(Tree, Child, FString(), Names));
+                Seed.Add(Child, McpCopySubtree(WidgetBP, Child, FString(), Names));
             }
         }
     }
     // Named after the children exist: a newName equal to a child's "<name>_Copy" was taken
     // by then, and duplicating onto it replaced that child in place.
-    const FName CopyName = McpFreeCopyName(Tree, RootName.IsEmpty() ? Source->GetName() + TEXT("_Copy") : RootName);
-    FObjectDuplicationParameters Params = InitStaticDuplicateObjectParams(Source, Tree, CopyName);
+    const FName CopyName = McpFreeCopyName(WidgetBP, RootName.IsEmpty() ? Source->GetName() + TEXT("_Copy") : RootName);
+    FObjectDuplicationParameters Params = InitStaticDuplicateObjectParams(Source, WidgetBP->WidgetTree, CopyName);
     Params.DuplicationSeed = MoveTemp(Seed);
     UWidget* Copy = Cast<UWidget>(StaticDuplicateObjectEx(Params));
     if (!Copy)
@@ -112,7 +116,7 @@ bool HandleWidgetAuthoringDuplicate(
     }
     WidgetBP->Modify();
     TArray<TSharedPtr<FJsonValue>> Names;
-    UWidget* Copy = McpCopySubtree(WidgetBP->WidgetTree, Source, GetJsonStringField(Payload, TEXT("newName")), Names);
+    UWidget* Copy = McpCopySubtree(WidgetBP, Source, GetJsonStringField(Payload, TEXT("newName")), Names);
     if (!Copy || !SafeAddWidgetToTree(WidgetBP, Copy, Parent->GetName()))
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(

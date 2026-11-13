@@ -175,8 +175,8 @@ FString McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& 
                                    static_cast<float>(GetJsonNumberField(Node, TEXT("outlineWidth"), 0.0)), Ignored);
     }
     if (Node->TryGetNumberField(TEXT("opacity"), Number)) { Widget->SetRenderOpacity(static_cast<float>(Number)); }
-    const FString Visibility = GetJsonStringField(Node, TEXT("visibility"));
-    if (!Visibility.IsEmpty()) { Widget->SetVisibility(GetVisibility(Visibility)); }
+    ESlateVisibility Visibility = ESlateVisibility::Visible;
+    if (TryParseVisibility(GetJsonStringField(Node, TEXT("visibility")), Visibility)) { Widget->SetVisibility(Visibility); }
     ApplyPanelProps(Widget, Node);
     ApplyInputProps(Widget, Node);
     // A UI material draws the whole widget (its shape, rim and gradient), so it takes a plain image

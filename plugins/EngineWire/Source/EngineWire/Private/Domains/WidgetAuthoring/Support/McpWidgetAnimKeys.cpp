@@ -6,6 +6,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeys.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeysInternal.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 
 #include "Animation/WidgetAnimation.h"
 #include "Animation/WidgetAnimationBinding.h"
@@ -113,6 +114,21 @@ FString McpWidgetKeyTrackType(const TSharedPtr<FJsonObject>& Key)
     return TrackType.IsEmpty() ? FString(TEXT("opacity")) : TrackType;
 }
 
+bool McpWidgetKeyFrame(const UMovieScene* MovieScene, const TSharedPtr<FJsonObject>& Key, FFrameNumber& OutFrame,
+                       FString& OutError)
+{
+    // Past int32 ticks (35791 s at 60000 fps) the frame clamped, and the range grown to one past it wrapped negative.
+    const double Time = GetJsonNumberField(Key, TEXT("time"), 0.0);
+    FFrameNumber End;
+    if (McpSequenceFrameMath::TrySecondsToFrame(Time, MovieScene->GetTickResolution(), OutFrame, OutError) &&
+        McpSequenceFrameMath::TryAddFrames(OutFrame, 1, End, OutError))
+    {
+        return true;
+    }
+    OutError = FString::Printf(TEXT("time %g s cannot be keyed: %s"), Time, *OutError);
+    return false;
+}
+
 bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
                                  const TSharedPtr<FJsonObject>& Payload, FMcpWidgetKeyResult& Out,
                                  FString& OutError, FString& OutErrorCode)
@@ -125,14 +141,13 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
         return false;
     }
     const FString TrackType = McpWidgetKeyTrackType(Payload);
-    double Time = GetJsonNumberField(Payload, TEXT("time"), 0.0);
     FString Interp = TEXT("auto");
     Payload->TryGetStringField(TEXT("interpolation"), Interp);
-    const FFrameNumber Frame = (Time * MovieScene->GetTickResolution()).RoundToFrame();
     const TSharedPtr<FJsonValue> ValueField = ReadValueField(Payload);
     const FString Kind = TrackType.ToLower();
+    FFrameNumber Frame;
     OutError = KeyValueError(Kind, TrackType, ValueField);
-    if (!OutError.IsEmpty())
+    if (!OutError.IsEmpty() || !McpWidgetKeyFrame(MovieScene, Payload, Frame, OutError))
     {
         OutErrorCode = TEXT("INVALID_ARGUMENT");
         return false;

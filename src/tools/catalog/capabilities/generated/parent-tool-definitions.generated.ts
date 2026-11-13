@@ -19890,7 +19890,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   },
                   "widget": {
                     "type": "string",
-                    "description": "The widget, by its name in the tree."
+                    "description": "The widget, by its name in the tree; one inside a nested User Widget as Outer.Inner."
                   },
                   "other": {
                     "type": "string",

@@ -3,6 +3,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetGuidRegistry.h"
 #include "Domains/WidgetAuthoring/McpWidgetPayload.h"
+#include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 
 #include "Animation/WidgetAnimation.h"
 #include "Animation/WidgetAnimationBinding.h"
@@ -69,6 +70,20 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
+        // Checked before anything is made, at the rate the new scene takes (its constructor's legacy conversion rate):
+        // past 35791 s at 60000 fps the end tick clamped to INT32_MAX and the +1 below wrapped it negative.
+        const double SafeDuration = FMath::Max(Duration, 0.01);
+        FFrameNumber EndTick;
+        FString DurationError;
+        if (!McpSequenceFrameMath::TrySecondsToFrame(SafeDuration, GetLegacyConversionFrameRate(), EndTick, DurationError) ||
+            !McpSequenceFrameMath::TryAddFrames(EndTick, 1, EndTick, DurationError))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("duration %g s is too long for an animation: %s"), Duration, *DurationError),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
         UWidgetAnimation* NewAnim = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
         if (!NewAnim)
         {
@@ -86,9 +101,6 @@ bool HandleWidgetAuthoringAnimationCore(
         }
 
         UMovieScene* MovieScene = NewAnim->GetMovieScene();
-
-        // Clamp duration to avoid zero-length animations
-        const double SafeDuration = FMath::Max(Duration, 0.01);
 
         // Set display rate (20 fps is the UE default for widget animations)
         MovieScene->SetDisplayRate(FFrameRate(20, 1));

@@ -96,28 +96,19 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*ComponentName), WidgetClass);
+        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*ComponentName));
         if (!NameConflict.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
-                TEXT("Nothing was added: %s. Pick another slotName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*ComponentName), WidgetClass)),
+                TEXT("Nothing was added: %s. Pick another slotName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*ComponentName))),
                 TEXT("NAME_CONFLICT"));
             return true;
         }
-        const bool bExisted = WidgetBP->WidgetTree->FindWidget(FName(*ComponentName)) != nullptr;
         UWidget* NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(WidgetClass, *ComponentName);
-        if (!NewWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to construct widget"), TEXT("CREATION_FAILED"));
-            return true;
-        }
         if (!SafeAddWidgetToTree(WidgetBP, NewWidget, ParentSlot, Payload))
         {
-            if (!bExisted)
-            {
-                UnregisterWidgetGuid(WidgetBP, NewWidget);
-                WidgetBP->WidgetTree->RemoveWidget(NewWidget);
-            }
+            UnregisterWidgetGuid(WidgetBP, NewWidget);
+            WidgetBP->WidgetTree->RemoveWidget(NewWidget);
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to add widget component to widget tree"), TEXT("TREE_ERROR"));
             return true;
         }

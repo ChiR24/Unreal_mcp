@@ -7,6 +7,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Components/GridSlot.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/UniformGridSlot.h"
 #include "Components/VerticalBoxSlot.h"
@@ -94,6 +95,12 @@ void McpApplySpecSlot(UWidget* Widget, const TSharedPtr<FJsonObject>& SlotSpec)
         if (UVerticalBoxSlot* VSlot = Cast<UVerticalBoxSlot>(Slot)) { VSlot->SetSize(Size); }
     }
     if (UUniformGridSlot* Grid = Cast<UUniformGridSlot>(Slot))
+    {
+        Grid->SetRow(static_cast<int32>(GetJsonNumberField(SlotSpec, TEXT("row"), 0.0)));
+        Grid->SetColumn(static_cast<int32>(GetJsonNumberField(SlotSpec, TEXT("column"), 0.0)));
+    }
+    // A GridPanel's child (add_panel_widget makes GridPanels) kept cell 0,0.
+    if (UGridSlot* Grid = Cast<UGridSlot>(Slot))
     {
         Grid->SetRow(static_cast<int32>(GetJsonNumberField(SlotSpec, TEXT("row"), 0.0)));
         Grid->SetColumn(static_cast<int32>(GetJsonNumberField(SlotSpec, TEXT("column"), 0.0)));

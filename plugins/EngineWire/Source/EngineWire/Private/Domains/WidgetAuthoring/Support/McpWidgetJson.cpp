@@ -35,11 +35,4 @@ bool TryParseVisibility(const FString& Name, ESlateVisibility& Out)
     }
     return false;
 }
-
-ESlateVisibility GetVisibility(const FString& VisibilityStr)
-{
-    ESlateVisibility Visibility = ESlateVisibility::Visible;
-    TryParseVisibility(VisibilityStr, Visibility);
-    return Visibility;
-}
 }

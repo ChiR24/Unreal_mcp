@@ -3,9 +3,11 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Misc/FrameNumber.h"
 
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+class UMovieScene;
 class UWidget;
 class UWidgetAnimation;
 class UWidgetBlueprint;
@@ -44,6 +46,10 @@ TSharedPtr<FJsonValue> ReadValueField(const TSharedPtr<FJsonObject>& Payload);
 FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);
 // The track a key writes: trackType, else propertyName, else opacity.
 FString McpWidgetKeyTrackType(const TSharedPtr<FJsonObject>& Key);
+// The key's time as a tick of MovieScene, or false with why: a time whose tick, or the one after it that the playback
+// range grows to, is past int32.
+bool McpWidgetKeyFrame(const UMovieScene* MovieScene, const TSharedPtr<FJsonObject>& Key, FFrameNumber& OutFrame,
+                       FString& OutError);
 }
 
 namespace WidgetAuthoringHandlers

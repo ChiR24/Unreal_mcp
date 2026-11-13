@@ -129,6 +129,26 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   return FString();
 }
 
+// The asset of class T at a canonical path, loaded strictly, never a stand-in: the registry, then LoadObject (a path the
+// registry has not scanned yet, some engine content, loads straight from disk), then LoadObject with the object name
+// appended. OutResolvedPath is the path that loaded, or SafePath when none did.
+template <typename T>
+T *McpLoadCanonicalAsset(const FString &SafePath, FString &OutResolvedPath) {
+  OutResolvedPath = SafePath;
+  T *Asset = Cast<T>(McpLoadAsset(SafePath));
+  if (!Asset) {
+    Asset = LoadObject<T>(nullptr, *SafePath);
+  }
+  if (!Asset && !SafePath.Contains(TEXT("."))) {
+    const FString ObjectPath = McpToObjectPath(SafePath);
+    Asset = LoadObject<T>(nullptr, *ObjectPath);
+    if (Asset) {
+      OutResolvedPath = ObjectPath;
+    }
+  }
+  return Asset;
+}
+
 // A material or material instance the caller named, loaded strictly: no fallback to a default material. A path the
 // project confines refuses with FieldName in the message and leaves OutResolvedPath empty; a path that loads nothing
 // leaves it set and says "Material not found".
@@ -141,19 +161,7 @@ static inline UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath
     OutError = McpPathRefusalMessage(FieldName, MaterialPath);
     return nullptr;
   }
-  OutResolvedPath = SafeMaterialPath;
-  UMaterialInterface *Material = Cast<UMaterialInterface>(McpLoadAsset(SafeMaterialPath));
-  if (!Material) {
-    // McpLoadAsset reads the asset registry; a path it has not scanned yet (some engine content) loads straight from disk.
-    Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
-  }
-  if (!Material && !SafeMaterialPath.Contains(TEXT("."))) {
-    const FString ObjectPath = McpToObjectPath(SafeMaterialPath);
-    Material = LoadObject<UMaterialInterface>(nullptr, *ObjectPath);
-    if (Material) {
-      OutResolvedPath = ObjectPath;
-    }
-  }
+  UMaterialInterface *Material = McpLoadCanonicalAsset<UMaterialInterface>(SafeMaterialPath, OutResolvedPath);
   if (!Material) {
     OutError = FString::Printf(TEXT("Material not found: %s"), *MaterialPath);
   }

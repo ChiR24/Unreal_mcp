@@ -4,6 +4,7 @@
 #include "Dom/JsonObject.h"
 
 class FMcpBridgeWebSocket;
+class UClass;
 class UEngineWireSubsystem;
 class UMaterialInterface;
 class UTexture2D;
@@ -39,6 +40,9 @@ void McpBindSpecSlot(const TSharedPtr<FJsonObject>& Spec, const FString& SlotNam
 // Every name the spec would create; used to refuse a collision before anything is built.
 void McpCollectSpecNames(const TSharedPtr<FJsonObject>& Spec, const FString& SlotName, TArray<FString>& OutNames);
 
+// The concrete /Script/UMG widget class a node's type names, or null.
+UClass* McpSpecWidgetClass(const FString& Type);
+
 // Builds the subtree with its root unparented. Every widget constructed is appended to
 // OutCreated so a failure can be rolled back whole. Null with OutError on a bad node.
 UWidget* McpBuildWidgetSpec(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Spec,
@@ -49,7 +53,8 @@ UWidget* McpBuildWidgetSpec(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonOb
 FString McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node);
 
 // add_widget_tree's check of a caller's tree before anything is built: every node needs a
-// type and a name, and an unknown field (a typo such as "fontsize") is named instead of ignored.
+// type and a name, and an unknown field (a typo such as "fontsize") is named instead of ignored, as
+// are a type no concrete UMG widget has and a visibility or justify that is not one of its names.
 FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FString& Where, int32& InOutCount);
 
 // Applies a node's "slot" object to a widget that is already seated in a panel.

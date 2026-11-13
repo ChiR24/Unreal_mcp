@@ -78,20 +78,22 @@ void AuditText(const UWidget* Widget, FItem& Item)
         Item.Color = Item.bColorSet ? Color->GetSpecifiedColor() : FLinearColor::White;
     }
 }
-} // namespace
-
-TArray<FItem> Collect(UUserWidget& Widget)
+// One User Widget's tree into Items. A visible nested User Widget's own tree follows its item: ForEachWidget visits
+// panel children and named-slot content, never that tree, so a button widget used five times was five opaque boxes.
+// Its items are named 'Outer.Inner' (an object name holds no dot, so arrange_widgets' lookups by name meet only the
+// Blueprint's own widgets) and their ancestors go on from the nested widget's item.
+void CollectTree(const UUserWidget& Widget, const FString& Prefix, int32 OwnerItem, TArray<FItem>& Items)
 {
-    TArray<FItem> Items;
     TMap<const UWidget*, int32> Seen; // each widget's item, INDEX_NONE for one not shown
     if (!Widget.WidgetTree)
     {
-        return Items;
+        return;
     }
     // Parents come before their children (pre-order), so a child finds its parent's item.
     Widget.WidgetTree->ForEachWidget([&](UWidget* Child)
     {
-        const int32* ParentItem = Child && Child->GetParent() ? Seen.Find(Child->GetParent()) : nullptr;
+        const int32* ParentItem = !Child ? nullptr : Child->GetParent() ? Seen.Find(Child->GetParent())
+                                                   : OwnerItem != INDEX_NONE ? &OwnerItem : nullptr;
         const TSharedPtr<SWidget> Slate = Child ? Child->GetCachedWidget() : nullptr;
         if (!Child || !Slate.IsValid() || (ParentItem && *ParentItem == INDEX_NONE) || !Slate->GetVisibility().IsVisible() ||
             Child->GetRenderOpacity() <= 0.f)
@@ -100,7 +102,7 @@ TArray<FItem> Collect(UUserWidget& Widget)
             return;
         }
         FItem Item;
-        Item.Name = Child->GetName();
+        Item.Name = Prefix + Child->GetName();
         Item.Kind = AuditKind(Child);
         const FGeometry& Geometry = Child->GetPaintSpaceGeometry();
         const FSlateRect Box = Geometry.GetLayoutBoundingRect();
@@ -115,8 +117,21 @@ TArray<FItem> Collect(UUserWidget& Widget)
             Item.bScrolled = Parent.bScrolled || Cast<UScrollBox>(Child->GetParent()) != nullptr;
         }
         AuditText(Child, Item);
-        Seen.Add(Child, Items.Add(MoveTemp(Item)));
+        const FString Name = Item.Name;
+        const int32 Index = Items.Add(MoveTemp(Item));
+        Seen.Add(Child, Index);
+        if (const UUserWidget* Nested = Cast<UUserWidget>(Child))
+        {
+            CollectTree(*Nested, Name + TEXT("."), Index, Items);
+        }
     });
+}
+} // namespace
+
+TArray<FItem> Collect(UUserWidget& Widget)
+{
+    TArray<FItem> Items;
+    CollectTree(Widget, FString(), INDEX_NONE, Items);
     return Items;
 }
 } // namespace McpWidgetAudit

@@ -25,29 +25,29 @@
 // changed nothing. Every widget type below exposes its own tint under a
 // different name; map the one field onto whichever the target actually has.
 inline bool McpApplyWidgetStyleColor(UWidget *Widget, const FLinearColor &Color,
-                                     FString &OutPropertyName) {
+                                     FString &OutPropertyName, bool bWrite = true) {
   if (UTextBlock *Text = Cast<UTextBlock>(Widget)) {
-    Text->SetColorAndOpacity(FSlateColor(Color));
+    if (bWrite) { Text->SetColorAndOpacity(FSlateColor(Color)); }
     OutPropertyName = TEXT("ColorAndOpacity");
     return true;
   }
   if (UButton *Button = Cast<UButton>(Widget)) {
-    Button->SetBackgroundColor(Color);
+    if (bWrite) { Button->SetBackgroundColor(Color); }
     OutPropertyName = TEXT("BackgroundColor");
     return true;
   }
   if (UImage *Image = Cast<UImage>(Widget)) {
-    Image->SetColorAndOpacity(Color);
+    if (bWrite) { Image->SetColorAndOpacity(Color); }
     OutPropertyName = TEXT("ColorAndOpacity");
     return true;
   }
   if (UBorder *Border = Cast<UBorder>(Widget)) {
-    Border->SetBrushColor(Color);
+    if (bWrite) { Border->SetBrushColor(Color); }
     OutPropertyName = TEXT("BrushColor");
     return true;
   }
   if (UProgressBar *Bar = Cast<UProgressBar>(Widget)) {
-    Bar->SetFillColorAndOpacity(Color);
+    if (bWrite) { Bar->SetFillColorAndOpacity(Color); }
     OutPropertyName = TEXT("FillColorAndOpacity");
     return true;
   }
@@ -77,11 +77,11 @@ inline void McpApplyBrushRounding(FSlateBrush &Brush, float Radius,
 inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
                                        const FLinearColor &OutlineColor,
                                        float OutlineWidth,
-                                       FString &OutPropertyName) {
+                                       FString &OutPropertyName, bool bWrite = true) {
   if (UImage *Image = Cast<UImage>(Widget)) {
     FSlateBrush Brush = MCP_UIMAGE_GET_BRUSH(Image);
     McpApplyBrushRounding(Brush, Radius, OutlineColor, OutlineWidth);
-    Image->SetBrush(Brush);
+    if (bWrite) { Image->SetBrush(Brush); }
     OutPropertyName = TEXT("Brush");
     return true;
   }
@@ -91,14 +91,14 @@ inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
     McpApplyBrushRounding(Style.Hovered, Radius, OutlineColor, OutlineWidth);
     McpApplyBrushRounding(Style.Pressed, Radius, OutlineColor, OutlineWidth);
     McpApplyBrushRounding(Style.Disabled, Radius, OutlineColor, OutlineWidth);
-    Button->SetStyle(Style);
+    if (bWrite) { Button->SetStyle(Style); }
     OutPropertyName = TEXT("WidgetStyle");
     return true;
   }
   if (UBorder *Border = Cast<UBorder>(Widget)) {
     FSlateBrush Brush = Border->Background;
     McpApplyBrushRounding(Brush, Radius, OutlineColor, OutlineWidth);
-    Border->SetBrush(Brush);
+    if (bWrite) { Border->SetBrush(Brush); }
     OutPropertyName = TEXT("Background");
     return true;
   }
@@ -112,9 +112,9 @@ inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
 // and collapse the original. Same four-brush rule as the rounding above -- a
 // Button that only re-textures Normal flips back to the old art on hover.
 inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
-                                       FString &OutPropertyName) {
+                                       FString &OutPropertyName, bool bWrite = true) {
   if (UImage *Image = Cast<UImage>(Widget)) {
-    Image->SetBrushResourceObject(Texture);
+    if (bWrite) { Image->SetBrushResourceObject(Texture); }
     OutPropertyName = TEXT("Brush");
     return true;
   }
@@ -124,7 +124,7 @@ inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
     Style.Hovered.SetResourceObject(Texture);
     Style.Pressed.SetResourceObject(Texture);
     Style.Disabled.SetResourceObject(Texture);
-    Button->SetStyle(Style);
+    if (bWrite) { Button->SetStyle(Style); }
     OutPropertyName = TEXT("WidgetStyle");
     return true;
   }
@@ -133,7 +133,7 @@ inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
     // scratch and would drop any rounding or tint already set on this border.
     FSlateBrush Brush = Border->Background;
     Brush.SetResourceObject(Texture);
-    Border->SetBrush(Brush);
+    if (bWrite) { Border->SetBrush(Brush); }
     OutPropertyName = TEXT("Background");
     return true;
   }
@@ -144,7 +144,7 @@ inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
 // published surface reached them: a menu got click sounds only by wiring every
 // button's OnHovered/OnClicked to PlaySound2D. An empty path clears the sound.
 inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FString &SoundPath,
-                                FString &OutError) {
+                                FString &OutError, bool bWrite = true) {
   UButton *Button = Cast<UButton>(Widget);
   if (!Button) {
     OutError = FString::Printf(TEXT("%s has no `%s`; only Button carries hover and press sounds."),
@@ -163,7 +163,7 @@ inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FStri
   (FCString::Strcmp(Field, TEXT("hoverSoundPath")) == 0 ? Style.HoveredSlateSound
                                                          : Style.PressedSlateSound)
       .SetResourceObject(Sound);
-  Button->SetStyle(Style);
+  if (bWrite) { Button->SetStyle(Style); }
   return true;
 }
 
@@ -172,12 +172,13 @@ inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FStri
 // refusal instead of a forty-line ladder. Returns false only when a field was
 // asked for and the target widget cannot honour it -- the caller must then
 // refuse rather than fall through to the generic reflection path, which would
-// answer success.
+// answer success. With bWrite false it only checks and loads: the caller checks
+// every field first, since a later one refused left the earlier writes behind.
 inline bool McpApplyWidgetStyleConvenience(
     UWidget *Widget, const TSharedPtr<FJsonObject> &Payload,
     const TSharedPtr<FJsonObject> &ResultJson,
-    TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported) {
-  if (!McpApplyWidgetText(Widget, Payload, Applied, OutUnsupported)) {
+    TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported, bool bWrite) {
+  if (!McpApplyWidgetText(Widget, Payload, Applied, OutUnsupported, bWrite)) {
     return false;
   }
   if (!Payload->HasField(TEXT("cornerRadius")) &&
@@ -199,8 +200,10 @@ inline bool McpApplyWidgetStyleConvenience(
                             *Widget->GetClass()->GetName());
       return false;
     }
-    TextLayout->SetJustification(bCenter ? ETextJustify::Center
-                                 : Key == TEXT("right") ? ETextJustify::Right : ETextJustify::Left);
+    if (bWrite) {
+      TextLayout->SetJustification(bCenter ? ETextJustify::Center
+                                   : Key == TEXT("right") ? ETextJustify::Right : ETextJustify::Left);
+    }
     Applied.Add(MakeShared<FJsonValueString>(TEXT("justification")));
   }
   const TSharedPtr<FJsonObject> *ColorObj = nullptr;
@@ -212,7 +215,7 @@ inline bool McpApplyWidgetStyleConvenience(
     FString ColorProperty;
     const FLinearColor Color(Channel(TEXT("r")), Channel(TEXT("g")),
                              Channel(TEXT("b")), Channel(TEXT("a")));
-    if (!McpApplyWidgetStyleColor(Widget, Color, ColorProperty)) {
+    if (!McpApplyWidgetStyleColor(Widget, Color, ColorProperty, bWrite)) {
       OutUnsupported = FString::Printf(
           TEXT("%s has no colour that `colorAndOpacity` maps to; pass ")
           TEXT("propertyName/value to write one of its style properties directly."),
@@ -238,7 +241,7 @@ inline bool McpApplyWidgetStyleConvenience(
     FString BrushProperty;
     if (!McpApplyWidgetCornerRadius(Widget, static_cast<float>(CornerRadius),
                                     OutlineColor, static_cast<float>(OutlineWidth),
-                                    BrushProperty)) {
+                                    BrushProperty, bWrite)) {
       OutUnsupported = FString::Printf(
           TEXT("%s draws no brush that `cornerRadius` can round; only Image, ")
           TEXT("Button and Border carry one."),
@@ -271,7 +274,7 @@ inline bool McpApplyWidgetStyleConvenience(
       return false;
     }
     FString BrushProperty;
-    if (!McpApplyWidgetBrushTexture(Widget, Texture, BrushProperty)) {
+    if (!McpApplyWidgetBrushTexture(Widget, Texture, BrushProperty, bWrite)) {
       OutUnsupported = FString::Printf(
           TEXT("%s draws no brush that `texturePath` can re-point; only Image, ")
           TEXT("Button and Border carry one."),
@@ -283,13 +286,13 @@ inline bool McpApplyWidgetStyleConvenience(
   }
   double RenderOpacity = 0.0;
   if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity)) {
-    Widget->SetRenderOpacity(static_cast<float>(RenderOpacity));
+    if (bWrite) { Widget->SetRenderOpacity(static_cast<float>(RenderOpacity)); }
     Applied.Add(MakeShared<FJsonValueString>(TEXT("renderOpacity")));
   }
   for (const TCHAR *Field : {TEXT("hoverSoundPath"), TEXT("pressSoundPath")}) {
     FString SoundPath;
     if (Payload->TryGetStringField(Field, SoundPath)) {
-      if (!McpApplyButtonSound(Widget, Field, SoundPath, OutUnsupported)) {
+      if (!McpApplyButtonSound(Widget, Field, SoundPath, OutUnsupported, bWrite)) {
         return false;
       }
       Applied.Add(MakeShared<FJsonValueString>(Field));

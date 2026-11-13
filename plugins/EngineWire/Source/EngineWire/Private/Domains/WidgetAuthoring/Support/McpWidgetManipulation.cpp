@@ -123,12 +123,12 @@ bool HandleWidgetAuthoringManipulation(
         }
         // The add paths refuse a name a member of the class already holds; a rename did not, so a widget renamed to
         // DisplayLabel (a UWidget property) answered success and the Widget Blueprint stopped compiling.
-        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*NewName), TargetWidget->GetClass());
+        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*NewName));
         if (!NameConflict.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
                 TEXT("Nothing was renamed: %s. Pick another newName, e.g. '%s'."), *NameConflict,
-                *McpFreeWidgetName(WidgetBP, FName(*NewName), TargetWidget->GetClass())), TEXT("NAME_CONFLICT"));
+                *McpFreeWidgetName(WidgetBP, FName(*NewName))), TEXT("NAME_CONFLICT"));
             return true;
         }
         const FName OldFName(*OldName);
@@ -197,8 +197,7 @@ bool HandleWidgetAuthoringManipulation(
 
         // The add funnel keeps the slot layout (padding and alignment used to reset to 0) and refuses a
         // parent inside the widget's own subtree, a cycle UMG recursed through until the editor died.
-        // The move is intended, so the funnel does not warn that the widget was already in the tree.
-        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName(), TSharedPtr<FJsonObject>(), /*bMove=*/true))
+        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName()))
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
                 TEXT("'%s' cannot move under '%s', which sits inside it. Nothing was changed."), *SlotName, *NewParent), TEXT("INVALID_PARENT"));

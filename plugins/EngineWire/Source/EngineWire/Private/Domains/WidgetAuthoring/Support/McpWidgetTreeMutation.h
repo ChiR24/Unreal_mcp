@@ -19,12 +19,10 @@ void ApplyCanvasSlotGeometry(const TSharedPtr<FJsonObject>& Payload, UWidget* Wi
 void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To);
 
 // Passing Payload lets the one funnel every add path shares apply that geometry,
-// so a caller never has to follow an add with a separate layout call.
-// bMove marks a widget that is meant to be in the tree already (reparent_widget): it is
-// detached and seated under the new parent without the "was already in the tree" warning,
-// which is reserved for an add that re-uses an existing slotName.
+// so a caller never has to follow an add with a separate layout call. A widget already
+// seated (reparent_widget) is detached and seated under the new parent, keeping its layout.
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBlueprint, UWidget* NewWidget, const FString& ParentSlot,
-    const TSharedPtr<FJsonObject>& Payload = TSharedPtr<FJsonObject>(), bool bMove = false);
+    const TSharedPtr<FJsonObject>& Payload = TSharedPtr<FJsonObject>());
 void ClearWidgetTreeForRebuild(UWidgetBlueprint* WidgetBlueprint);
 
 // After renaming a widget: property bindings, animation bindings, navigation rules and the desired focus follow the new

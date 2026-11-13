@@ -24,7 +24,8 @@ inline FSlateFontInfo McpTextBlockFont(const UTextBlock *Text) {
 // faces it has), letterSpacing, and copyStyleFrom (another widget's font, colour and
 // shadow). There was no way to pick a face or match one label to another at all.
 inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Payload,
-                             TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported) {
+                             TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported,
+                             bool bWrite = true) {
   FString Family, Typeface, CopyFrom;
   double Spacing = 0.0;
   const bool bFamily = Payload->TryGetStringField(TEXT("fontFamily"), Family) && !Family.IsEmpty();
@@ -40,15 +41,17 @@ inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Pa
       return false;
     }
     Font = McpTextBlockFont(Source);
+    if (bWrite) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Text->SetColorAndOpacity(Source->GetColorAndOpacity());
-    Text->SetShadowOffset(Source->GetShadowOffset());
-    Text->SetShadowColorAndOpacity(Source->GetShadowColorAndOpacity());
+      Text->SetColorAndOpacity(Source->GetColorAndOpacity());
+      Text->SetShadowOffset(Source->GetShadowOffset());
+      Text->SetShadowColorAndOpacity(Source->GetShadowColorAndOpacity());
 #else
-    Text->SetColorAndOpacity(Source->ColorAndOpacity);
-    Text->SetShadowOffset(Source->ShadowOffset);
-    Text->SetShadowColorAndOpacity(Source->ShadowColorAndOpacity);
+      Text->SetColorAndOpacity(Source->ColorAndOpacity);
+      Text->SetShadowOffset(Source->ShadowOffset);
+      Text->SetShadowColorAndOpacity(Source->ShadowColorAndOpacity);
 #endif
+    }
     Applied.Add(MakeShared<FJsonValueString>(TEXT("copyStyleFrom")));
   }
   if (bFamily) {
@@ -81,7 +84,7 @@ inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Pa
     Font.LetterSpacing = static_cast<int32>(Spacing);
     Applied.Add(MakeShared<FJsonValueString>(TEXT("letterSpacing")));
   }
-  if (bCopy || bFamily || bTypeface || bSpacing) {
+  if (bWrite && (bCopy || bFamily || bTypeface || bSpacing)) {
     Text->SetFont(Font);
   }
   return true;
@@ -92,7 +95,8 @@ inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Pa
 // nothing applied the handler fell into read mode and answered success. A content
 // widget (Button, Border, SizeBox) whose child is a text block now edits that child.
 inline bool McpApplyWidgetText(UWidget *Widget, const TSharedPtr<FJsonObject> &Payload,
-                               TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported) {
+                               TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported,
+                               bool bWrite = true) {
   FString NewText;
   double FontSize = 0.0;
   const bool bText = Payload->TryGetStringField(TEXT("text"), NewText);
@@ -108,15 +112,15 @@ inline bool McpApplyWidgetText(UWidget *Widget, const TSharedPtr<FJsonObject> &P
   }
   if (UTextBlock *Text = Cast<UTextBlock>(Target)) {
     // Face, family, spacing and copied style first: fontSize then sizes whichever font they left.
-    if (bFont && !McpApplyTextFont(Text, Payload, Applied, OutUnsupported)) {
+    if (bFont && !McpApplyTextFont(Text, Payload, Applied, OutUnsupported, bWrite)) {
       return false;
     }
-    if (bSize) {
+    if (bSize && bWrite) {
       FSlateFontInfo Font = McpTextBlockFont(Text);
       Font.Size = static_cast<int32>(FontSize);
       Text->SetFont(Font);
     }
-    if (bText) {
+    if (bText && bWrite) {
       Text->SetText(FText::FromString(NewText));
     }
   } else if (URichTextBlock *Rich = Cast<URichTextBlock>(Target)) {
@@ -125,10 +129,10 @@ inline bool McpApplyWidgetText(UWidget *Widget, const TSharedPtr<FJsonObject> &P
                        TEXT("letterSpacing and copyStyleFrom apply to a TextBlock.");
       return false;
     }
-    if (bSize) {
+    if (bSize && bWrite) {
       Rich->SetDefaultFont(FCoreStyle::GetDefaultFontStyle("Regular", static_cast<int32>(FontSize)));
     }
-    if (bText) {
+    if (bText && bWrite) {
       Rich->SetText(FText::FromString(NewText));
     }
   } else {

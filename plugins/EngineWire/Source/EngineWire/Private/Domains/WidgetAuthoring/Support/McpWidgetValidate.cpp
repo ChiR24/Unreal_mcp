@@ -64,12 +64,11 @@ bool ValidateWidgetCreation(UWidgetBlueprint* WidgetBP, const FString& WidgetNam
     return true;
 }
 
-FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)
+FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name)
 {
     if (const UWidget* Existing = WidgetBP->WidgetTree->FindWidget(Name))
     {
-        return Existing->GetClass() == WidgetClass ? FString()
-            : FString::Printf(TEXT("'%s' is already a %s in this widget tree"), *Name.ToString(), *Existing->GetClass()->GetName());
+        return FString::Printf(TEXT("'%s' is already a %s in this widget tree"), *Name.ToString(), *Existing->GetClass()->GetName());
     }
     const FProperty* Bound = WidgetBP->ParentClass ? WidgetBP->ParentClass->FindPropertyByName(Name) : nullptr;
     if (Bound && (Bound->HasMetaData(TEXT("BindWidget")) || Bound->HasMetaData(TEXT("BindWidgetOptional"))))
@@ -85,12 +84,12 @@ FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name, cons
     return FString::Printf(TEXT("'%s': %s"), *Name.ToString(), *Why);
 }
 
-FString McpFreeWidgetName(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)
+FString McpFreeWidgetName(UWidgetBlueprint* WidgetBP, const FName Name)
 {
     for (int32 Suffix = 1; Suffix < 1000; ++Suffix)
     {
         const FString Candidate = FString::Printf(TEXT("%s_%d"), *Name.ToString(), Suffix);
-        if (!WidgetBP->WidgetTree->FindWidget(FName(*Candidate)) && McpWidgetNameConflict(WidgetBP, FName(*Candidate), WidgetClass).IsEmpty())
+        if (McpWidgetNameConflict(WidgetBP, FName(*Candidate)).IsEmpty())
         {
             return Candidate;
         }

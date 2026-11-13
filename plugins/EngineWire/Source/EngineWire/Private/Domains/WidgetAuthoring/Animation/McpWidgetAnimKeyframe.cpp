@@ -36,11 +36,17 @@ TSharedPtr<FJsonObject> MergeKey(const TSharedPtr<FJsonObject>& Payload, const T
     return Merged;
 }
 
-// Why the key's track or value would be refused, read as McpAuthorWidgetAnimationKey reads them.
-FString KeyRefusal(const TSharedPtr<FJsonObject>& Key)
+// Why the key's track, value or time would be refused, read as McpAuthorWidgetAnimationKey reads them.
+FString KeyRefusal(const UMovieScene* MovieScene, const TSharedPtr<FJsonObject>& Key)
 {
     const FString TrackType = McpWidgetKeyTrackType(Key);
-    return KeyValueError(TrackType.ToLower(), TrackType, ReadValueField(Key));
+    FString Refusal = KeyValueError(TrackType.ToLower(), TrackType, ReadValueField(Key));
+    FFrameNumber Frame;
+    if (Refusal.IsEmpty() && MovieScene)
+    {
+        McpWidgetKeyFrame(MovieScene, Key, Frame, Refusal); // writes Refusal only for a time it cannot key
+    }
+    return Refusal;
 }
 } // namespace
 
@@ -88,7 +94,7 @@ bool HandleWidgetAuthoringAnimationKeyframe(UEngineWireSubsystem& Subsystem, con
         UWidget* Target = WidgetBP->WidgetTree && !SlotName.IsEmpty() ? WidgetBP->WidgetTree->FindWidget(FName(*SlotName)) : nullptr;
         const FString Refusal = !Keys[Index].IsValid() ? FString(TEXT("each key is an object such as {time, propertyValue}"))
             : !Target ? FString::Printf(TEXT("Widget '%s' not found in the tree; pass slotName (the widget to animate)"), *SlotName)
-            : KeyRefusal(Keys[Index]);
+            : KeyRefusal(Animation->GetMovieScene(), Keys[Index]);
         if (!Refusal.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, Where + Refusal,

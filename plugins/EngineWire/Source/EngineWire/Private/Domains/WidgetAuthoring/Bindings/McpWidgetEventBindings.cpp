@@ -35,18 +35,42 @@ struct FEventBinding
     FName Handler;
 };
 
-UFunction* ResolveHandler(UWidgetBlueprint* WidgetBP, FName Name, UFunction* Signature, bool& bOutCreated, FString& OutError)
+// Why Binding cannot be made, checked for every binding before anything is written: the widget made a variable, a
+// handler created and the first of two bindings wired stayed in the open Blueprint behind a BIND_FAILED reply.
+FString BindingRefusal(UWidgetBlueprint* WidgetBP, const UWidget* Widget, const FEventBinding& Binding)
+{
+    if (!FindFProperty<FMulticastDelegateProperty>(Widget->GetClass(), Binding.Delegate) || !FBlueprintEditorUtils::FindEventGraph(WidgetBP))
+    {
+        return FString::Printf(TEXT("'%s' exposes no %s event to bind"), *Widget->GetName(), *Binding.Delegate.ToString());
+    }
+    const UClass* Skeleton = WidgetBP->SkeletonGeneratedClass;
+    if (!(Skeleton && Skeleton->FindFunctionByName(Binding.Handler)) &&
+        FKismetNameValidator(WidgetBP).IsValid(Binding.Handler) != EValidatorResult::Ok)
+    {
+        return FString::Printf(TEXT("'%s' is not free for a new function in '%s' (a variable, widget or other member uses it)"),
+                               *Binding.Handler.ToString(), *WidgetBP->GetName());
+    }
+    const UK2Node_ComponentBoundEvent* Event =
+        FKismetEditorUtilities::FindBoundEventForComponent(WidgetBP, Binding.Delegate, Widget->GetFName());
+    const UEdGraphPin* Then = Event ? Event->FindPin(UEdGraphSchema_K2::PN_Then) : nullptr;
+    for (const UEdGraphPin* Linked : Then ? Then->LinkedTo : TArray<UEdGraphPin*>())
+    {
+        const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Linked->GetOwningNode());
+        if (!Call || Call->GetFunctionName() != Binding.Handler)
+        {
+            return FString::Printf(TEXT("%s of '%s' already runs other nodes; add the call to '%s' with edit_graph"),
+                                   *Binding.Delegate.ToString(), *Widget->GetName(), *Binding.Handler.ToString());
+        }
+    }
+    return FString();
+}
+
+UFunction* ResolveHandler(UWidgetBlueprint* WidgetBP, FName Name, UFunction* Signature, bool& bOutCreated)
 {
     UClass* Skeleton = WidgetBP->SkeletonGeneratedClass;
     if (UFunction* Existing = Skeleton ? Skeleton->FindFunctionByName(Name) : nullptr)
     {
         return Existing;
-    }
-    if (FKismetNameValidator(WidgetBP).IsValid(Name) != EValidatorResult::Ok)
-    {
-        OutError = FString::Printf(TEXT("'%s' is not free for a new function in '%s' (a variable, widget or other member uses it)"),
-                                   *Name.ToString(), *WidgetBP->GetName());
-        return nullptr;
     }
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(WidgetBP, Name, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
     FBlueprintEditorUtils::AddFunctionGraph<UFunction>(WidgetBP, Graph, true, Signature);
@@ -57,6 +81,7 @@ UFunction* ResolveHandler(UWidgetBlueprint* WidgetBP, FName Name, UFunction* Sig
 
 // The bound event node for Widget.Delegate, created when missing, then a call to the
 // handler hung off its exec output with the event's outputs fed to same-named inputs.
+// Binding has passed BindingRefusal; the widget property exists once the widget is a variable.
 FString BindAndWire(UWidgetBlueprint* WidgetBP, UWidget* Widget, const FEventBinding& Binding, const TSharedPtr<FJsonObject>& Out)
 {
     FMulticastDelegateProperty* Delegate = FindFProperty<FMulticastDelegateProperty>(Widget->GetClass(), Binding.Delegate);
@@ -67,11 +92,10 @@ FString BindAndWire(UWidgetBlueprint* WidgetBP, UWidget* Widget, const FEventBin
         return FString::Printf(TEXT("'%s' exposes no %s event to bind"), *Widget->GetName(), *Binding.Delegate.ToString());
     }
     bool bCreatedFunction = false;
-    FString Error;
-    UFunction* Handler = ResolveHandler(WidgetBP, Binding.Handler, Delegate->SignatureFunction, bCreatedFunction, Error);
+    UFunction* Handler = ResolveHandler(WidgetBP, Binding.Handler, Delegate->SignatureFunction, bCreatedFunction);
     if (!Handler)
     {
-        return Error.IsEmpty() ? FString::Printf(TEXT("could not create function '%s'"), *Binding.Handler.ToString()) : Error;
+        return FString::Printf(TEXT("could not create function '%s'"), *Binding.Handler.ToString());
     }
     UK2Node_ComponentBoundEvent* Event = const_cast<UK2Node_ComponentBoundEvent*>(
         FKismetEditorUtilities::FindBoundEventForComponent(WidgetBP, Delegate->GetFName(), WidgetProp->GetFName()));
@@ -90,11 +114,6 @@ FString BindAndWire(UWidgetBlueprint* WidgetBP, UWidget* Widget, const FEventBin
     {
         UK2Node_CallFunction* Existing = Cast<UK2Node_CallFunction>(Linked->GetOwningNode());
         Call = Existing && Existing->GetFunctionName() == Handler->GetFName() ? Existing : Call;
-    }
-    if (!Call && Then && Then->LinkedTo.Num() > 0)
-    {
-        return FString::Printf(TEXT("%s of '%s' already runs other nodes; add the call to '%s' with edit_graph"),
-                               *Binding.Delegate.ToString(), *Widget->GetName(), *Handler->GetName());
     }
     if (!Call && Then)
     {
@@ -180,6 +199,14 @@ bool HandleWidgetAuthoringEventBindings(
                               bClicked || bHovered ? TEXT("a Button") : TEXT("a Slider, SpinBox, CheckBox or ComboBoxString"))
             : FString::Printf(TEXT("No widget '%s' in '%s'."), *SlotName, *WidgetPath), Widget ? TEXT("UNSUPPORTED_WIDGET") : TEXT("WIDGET_NOT_FOUND"));
         return true;
+    }
+    for (const FEventBinding& Binding : Bindings)
+    {
+        if (const FString Refusal = BindingRefusal(WidgetBP, Widget, Binding); !Refusal.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, Refusal, TEXT("BIND_FAILED"));
+            return true;
+        }
     }
     if (!Widget->bIsVariable)
     {
