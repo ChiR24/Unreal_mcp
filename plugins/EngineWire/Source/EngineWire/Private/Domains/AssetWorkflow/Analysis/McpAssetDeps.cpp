@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/AssetWorkflow/Analysis/McpAssetAnalysisShared.h"
@@ -64,10 +65,7 @@ bool UEngineWireSubsystem::HandleGetDependencies(
   }
   Packages.Sort(FNameLexicalLess());
 
-  TArray<TSharedPtr<FJsonValue>> DepArray;
-  for (const FName &Dep : Packages) {
-    DepArray.Add(MakeShared<FJsonValueString>(Dep.ToString()));
-  }
+  TArray<TSharedPtr<FJsonValue>> DepArray = McpHandlerUtils::NamesToJsonStringArray(Packages);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);

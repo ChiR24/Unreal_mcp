@@ -21,18 +21,6 @@ inline TSharedPtr<FJsonObject> GatewayError(const FString& Operation, const FStr
 	return Obj;
 }
 
-/** Wrap a string array as a JSON array value. */
-inline TArray<TSharedPtr<FJsonValue>> GatewayStringArray(const TArray<FString>& Strings)
-{
-	TArray<TSharedPtr<FJsonValue>> Arr;
-	Arr.Reserve(Strings.Num());
-	for (const FString& S : Strings)
-	{
-		Arr.Add(MakeShared<FJsonValueString>(S));
-	}
-	return Arr;
-}
-
 /** Edit-distance for closest-match suggestions. */
 int32 GatewayLevenshtein(const FString& A, const FString& B);
 

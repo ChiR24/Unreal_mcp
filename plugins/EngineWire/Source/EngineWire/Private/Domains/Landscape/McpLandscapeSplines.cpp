@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Landscape/McpLandscapeShared.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
@@ -23,8 +24,7 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         return false;
     }
 
-    double WidthValue = 256.0;
-    Payload->TryGetNumberField(TEXT("width"), WidthValue);
+    double WidthValue = GetJsonNumberField(Payload, TEXT("width"), 256.0);
     const float Width = FMath::Max(0.0f, static_cast<float>(WidthValue));
 
     double SideFalloffValue = WidthValue * 0.5;

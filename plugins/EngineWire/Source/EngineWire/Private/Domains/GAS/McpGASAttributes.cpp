@@ -1,4 +1,5 @@
 #include "Domains/GAS/McpGASBPCreation.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 #include "Domains/GAS/McpGASPayloadFields.h"
 #include "Domains/GAS/McpGASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
@@ -51,11 +52,9 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = McpLoadBlueprintOrReply(Bridge, RequestingSocket, RequestId, BlueprintPath);
         if (!Blueprint)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
             return true;
         }
 

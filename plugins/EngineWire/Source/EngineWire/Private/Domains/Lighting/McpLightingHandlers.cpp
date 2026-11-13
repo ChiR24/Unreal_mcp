@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Lighting/McpLightingPrivate.h"
 #include "EngineWireSubsystem.h"
@@ -15,16 +16,12 @@ bool UEngineWireSubsystem::HandleLightingAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString EffectiveAction = Action;
-    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase) && Payload.IsValid())
+    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
     {
         // subAction first, then `action` as the fallback - the same priority the
         // pre-queue gate's NormalizeAction uses, so a split payload can never
         // route this dispatcher away from what the gate authorized.
-        FString PayloadAction;
-        if ((!Payload->TryGetStringField(TEXT("subAction"), PayloadAction) || PayloadAction.IsEmpty()))
-        {
-            Payload->TryGetStringField(TEXT("action"), PayloadAction);
-        }
+        const FString PayloadAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
         if (!PayloadAction.IsEmpty())
         {
             EffectiveAction = PayloadAction;

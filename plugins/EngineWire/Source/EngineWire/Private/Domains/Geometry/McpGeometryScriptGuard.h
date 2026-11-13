@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "Modules/ModuleManager.h"
 
@@ -16,11 +17,10 @@ inline bool McpGeometryScriptReady()
     {
         return false;
     }
-    FModuleManager& Modules = FModuleManager::Get();
     static const TCHAR* const Required[] = {TEXT("GeometryScriptingCore"), TEXT("GeometryScriptingEditor")};
     for (const TCHAR* Module : Required)
     {
-        if (!Modules.IsModuleLoaded(Module) && !(Modules.ModuleExists(Module) && Modules.LoadModule(Module) != nullptr))
+        if (!McpLoadOptionalModule(Module))
         {
             return false;
         }

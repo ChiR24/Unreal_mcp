@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 
 namespace McpInteractionHandlers
 {
@@ -24,14 +25,13 @@ bool HandleInteractionComponentAuthoringAction(
             return true;
         }
         const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("InteractionComponent"));
-        USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(USphereComponent::StaticClass(), *ComponentName);
+        USCS_Node* Node = McpAddScsNode(Blueprint->SimpleConstructionScript, USphereComponent::StaticClass(), *ComponentName);
         if (!Node)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create interaction component"), TEXT("COMPONENT_CREATE_FAILED"));
             return true;
         }
         ConfigureInteractionShape(Node->ComponentTemplate, static_cast<float>(TraceDistance));
-        Blueprint->SimpleConstructionScript->AddNode(Node);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("componentAdded"), true);

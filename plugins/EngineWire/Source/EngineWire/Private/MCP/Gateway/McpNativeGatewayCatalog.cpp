@@ -1,6 +1,7 @@
 // McpNativeGatewayCatalog.cpp — see header. The availability execute gate came out of McpNativeGatewayValidation.cpp,
 // and the views out of the search and describe files, so each stays under the plugin's 250 pure-line ceiling.
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Editor.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
@@ -101,7 +102,7 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
 	TArray<FString> Reasons;
 	if (!bEnabled) Reasons.Add(TEXT("parent_tool_disabled"));
 	if (!bRunsHere) Reasons.Add(TEXT("engine_version"));
-	View->SetArrayField(TEXT("reasons"), GatewayStringArray(Reasons));
+	View->SetArrayField(TEXT("reasons"), McpHandlerUtils::ToJsonStringArray(Reasons));
 	if (!MinEngine.IsEmpty()) View->SetStringField(TEXT("minEngineVersion"), MinEngine);
 	// Declared requirements are data, not decided here: discovery has no live editor state to probe.
 	const TCHAR* const Declared[] = {TEXT("requiredPlugins"), TEXT("editorStates")};
@@ -117,7 +118,7 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
 			}
 		}
 		Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
-		View->SetArrayField(Field, GatewayStringArray(Values));
+		View->SetArrayField(Field, McpHandlerUtils::ToJsonStringArray(Values));
 	}
 	return View;
 }
@@ -140,7 +141,7 @@ TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bE
 	{
 		for (const auto& Field : (*Properties)->Values) Outputs.Emplace(*Field.Key);  // 5.8 keys are not FString
 	}
-	Row->SetArrayField(TEXT("outputs"), GatewayStringArray(Outputs));
+	Row->SetArrayField(TEXT("outputs"), McpHandlerUtils::ToJsonStringArray(Outputs));
 	Row->SetBoolField(TEXT("runnable"), bEnabled && McpRunsOnThisEngine(Record));
 	TSharedPtr<FJsonObject> Next;
 	if (bEnabled)

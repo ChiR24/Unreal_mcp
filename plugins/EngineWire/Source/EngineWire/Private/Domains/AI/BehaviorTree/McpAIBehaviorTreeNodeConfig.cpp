@@ -29,28 +29,14 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
         return true;
     }
 
-    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    UBehaviorTree* BT = LoadBehaviorTreeOrReply(Self, RequestId, RequestingSocket, BTPath);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 
     UBTNode* TargetNode = nullptr;
     FString ResolvedNodeRole;
-
-    auto MatchesNodeId = [&NodeId](const UBTNode* Candidate) -> bool
-    {
-        if (!Candidate)
-        {
-            return false;
-        }
-        return Candidate->GetName().Equals(NodeId, ESearchCase::IgnoreCase) ||
-               Candidate->GetPathName().Equals(NodeId, ESearchCase::IgnoreCase) ||
-               Candidate->GetNodeName().Equals(NodeId, ESearchCase::IgnoreCase);
-    };
 
     TFunction<void(UBTCompositeNode*)> VisitComposite;
     VisitComposite = [&](UBTCompositeNode* Composite)
@@ -60,7 +46,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
             return;
         }
 
-        if (MatchesNodeId(Composite))
+        if (McpBTNodeMatchesId(Composite, NodeId))
         {
             TargetNode = Composite;
             ResolvedNodeRole = TEXT("composite");
@@ -69,7 +55,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
 
         for (UBTService* Service : Composite->Services)
         {
-            if (MatchesNodeId(Service))
+            if (McpBTNodeMatchesId(Service, NodeId))
             {
                 TargetNode = Service;
                 ResolvedNodeRole = TEXT("service");
@@ -79,7 +65,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
 
         for (const FBTCompositeChild& Child : Composite->Children)
         {
-            if (MatchesNodeId(Child.ChildTask))
+            if (McpBTNodeMatchesId(Child.ChildTask, NodeId))
             {
                 TargetNode = Child.ChildTask;
                 ResolvedNodeRole = TEXT("task");
@@ -88,7 +74,7 @@ bool HandleConfigureBehaviorTreeNode(UEngineWireSubsystem* Self, const FString& 
 
             for (UBTDecorator* Decorator : Child.Decorators)
             {
-                if (MatchesNodeId(Decorator))
+                if (McpBTNodeMatchesId(Decorator, NodeId))
                 {
                     TargetNode = Decorator;
                     ResolvedNodeRole = TEXT("decorator");

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -216,8 +217,7 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
   // honouring it here lets a caller ask for "fab" and get an inventory worth
   // reading, instead of paging past eleven rows called "Unreal Engine".
   Payload->TryGetStringField(TEXT("filter"), Read->Filter);
-  double Limit = 200;
-  Payload->TryGetNumberField(TEXT("limit"), Limit);
+  double Limit = GetJsonNumberField(Payload, TEXT("limit"), 200);
   Read->MaxRows = FMath::Clamp(static_cast<int32>(Limit), 1, 1000);
 
   // The answer, once the rows to report are in hand. WaitedSeconds is negative when no sync ran.

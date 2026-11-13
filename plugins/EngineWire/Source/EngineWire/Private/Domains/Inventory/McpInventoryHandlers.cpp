@@ -6,10 +6,6 @@ bool UEngineWireSubsystem::HandleManageInventoryAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (Action != TEXT("manage_inventory")) {
-    return false;
-  }
-
   const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
   if (HandleInventoryDataAssetActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {

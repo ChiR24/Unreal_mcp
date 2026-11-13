@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -17,26 +18,13 @@
 
 namespace McpAIHandlers
 {
-static bool IsMassModuleAvailable()
-{
-    if (FModuleManager::Get().IsModuleLoaded(TEXT("MassEntity")))
-    {
-        return true;
-    }
-    if (FModuleManager::Get().ModuleExists(TEXT("MassEntity")))
-    {
-        return FModuleManager::Get().LoadModule(TEXT("MassEntity")) != nullptr;
-    }
-    return false;
-}
-
 // Implements the "create_mass_entity_config" action.
 bool HandleCreateMassEntityConfig(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 #if MCP_MASS_AI_HEADERS_AVAILABLE
     // Runtime check: Verify MassEntity module is actually loaded
-    if (!IsMassModuleAvailable())
+    if (!McpLoadOptionalModule(TEXT("MassEntity")))
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
             TEXT("MassEntity plugin is not enabled in this project. Enable the MassEntity plugin to use Mass AI features."),

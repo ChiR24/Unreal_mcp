@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
@@ -118,6 +119,29 @@ FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayloa
     }
   }
   return FString();
+}
+
+FString RequireBlueprintPath(const FBlueprintActionContext &Context, const TCHAR *Action) {
+  const FString Path = ResolveBlueprintRequestedPath(Context.LocalPayload);
+  if (Path.IsEmpty()) {
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+        FString::Printf(TEXT("%s requires a blueprint path."), Action), nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+  }
+  return Path;
+}
+
+UBlueprint *LoadBlueprintOrReply(const FBlueprintActionContext &Context, const FString &Path, FString &OutNormalized) {
+  FString LoadErr;
+  UBlueprint *Blueprint = LoadBlueprintAsset(Path, OutNormalized, LoadErr);
+  if (!Blueprint) {
+    TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
+    if (!LoadErr.IsEmpty()) {
+      Err->SetStringField(TEXT("error"), LoadErr);
+    }
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, TEXT("Failed to load blueprint"), Err,
+                                          TEXT("BLUEPRINT_NOT_FOUND"));
+  }
+  return Blueprint;
 }
 
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload) {

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
@@ -30,9 +31,9 @@ TSharedPtr<FJsonObject> IssueToJson(const FPartIssue& Issue)
     if (!Issue.Other.IsEmpty())
     {
         Object->SetStringField(TEXT("otherComponent"), Issue.Other);
-        Object->SetNumberField(TEXT("insideShare"), FMath::RoundToDouble(Issue.InsideShare * 100.0) / 100.0);
+        Object->SetNumberField(TEXT("insideShare"), McpRoundTo(Issue.InsideShare, 100.0));
     }
-    Object->SetNumberField(TEXT("depth"), FMath::RoundToDouble(Issue.Depth * 10.0) / 10.0);
+    Object->SetNumberField(TEXT("depth"), McpRoundTo(Issue.Depth, 10.0));
     Object->SetStringField(TEXT("issue"), Issue.Issue);
     return Object;
 }
@@ -147,7 +148,7 @@ int32 AppendMeshUserWarnings(UStaticMesh* Mesh, const TSharedPtr<FJsonObject>& R
     {
         const FString PackageName = Package.ToString();
         UBlueprint* Blueprint = FindObject<UBlueprint>(
-            nullptr, *(PackageName + TEXT(".") + FPackageName::GetShortName(PackageName)));
+            nullptr, *McpToObjectPath(PackageName));
         if (!Blueprint || Audited++ >= 8)
         {
             continue;
@@ -196,7 +197,7 @@ TSharedPtr<FJsonObject> BuildBlueprintAuditReply(const FString& BlueprintPath, d
         if (Index < Limit)
         {
             TSharedPtr<FJsonObject> Entry = IssueToJson(Audit.Issues[Index]);
-            Entry->SetNumberField(TEXT("severity"), FMath::RoundToDouble(Audit.Issues[Index].Depth * 10.0) / 10.0);
+            Entry->SetNumberField(TEXT("severity"), McpRoundTo(Audit.Issues[Index].Depth, 10.0));
             Problems.Add(MakeShared<FJsonValueObject>(Entry));
         }
     }
@@ -214,7 +215,7 @@ TSharedPtr<FJsonObject> BuildBlueprintAuditReply(const FString& BlueprintPath, d
     Data->SetArrayField(TEXT("problems"), Problems);
     if (Audit.bHasGround)
     {
-        Data->SetNumberField(TEXT("groundZ"), FMath::RoundToDouble(Audit.GroundZ * 10.0) / 10.0);
+        Data->SetNumberField(TEXT("groundZ"), McpRoundTo(Audit.GroundZ, 10.0));
     }
     TArray<TSharedPtr<FJsonValue>> Notes = McpHandlerUtils::ToJsonStringArray(Audit.Notes);
     if (Notes.Num() > 0)

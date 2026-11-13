@@ -114,6 +114,12 @@ inline void McpNormalizeSlashes(FString& Path)
 	FPaths::RemoveDuplicateSlashes(Path);
 }
 
+// A content path as the handlers take one: a path that does not start with '/' is under /Game.
+inline FString McpRootedContentPath(const FString& Path)
+{
+	return Path.StartsWith(TEXT("/")) ? Path : TEXT("/Game/") + Path;
+}
+
 /**
  * Canonical `/Game`-rooted form of a client-supplied content path, or an empty
  * string when the value is not a content path (or is one the engine must never
@@ -134,9 +140,9 @@ inline FString McpCanonicalizeContentPath(const FString& InPath, bool bAssumeGam
 
 	McpAssetPathCanonical::MapContentRootInline(Path);
 
-	if (bAssumeGameRoot && !Path.StartsWith(TEXT("/")))
+	if (bAssumeGameRoot)
 	{
-		Path = TEXT("/Game/") + Path;
+		Path = McpRootedContentPath(Path);
 	}
 
 	// Rejected rather than canonicalized: a traversal segment or a colon can

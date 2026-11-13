@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Safety/McpSafeOperationsLog.h"
 
 #include "CoreGlobals.h"
@@ -41,16 +42,13 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     FString PackagePath = FullPath;
     if (!PackagePath.StartsWith(TEXT("/Game/")))
     {
-        if (!PackagePath.StartsWith(TEXT("/")))
-        {
-            PackagePath = TEXT("/Game/") + PackagePath;
-        }
-        else
+        if (PackagePath.StartsWith(TEXT("/")))
         {
             UE_LOG(LogMcpSafeOperations, Error,
                 TEXT("McpSafeLevelSave: Invalid path (not under /Game/): %s"), *PackagePath);
             return false;
         }
+        PackagePath = McpRootedContentPath(PackagePath);
     }
 
     if (PackagePath.Contains(TEXT("//")))

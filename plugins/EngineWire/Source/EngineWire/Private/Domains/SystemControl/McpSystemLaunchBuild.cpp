@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/SystemControl/McpSystemPackageJobs.h"
 
 #include "Containers/Ticker.h"
@@ -121,8 +122,7 @@ bool HandleLaunchBuild(UEngineWireSubsystem* Self, const FString& RequestId,
 		return true;
 	}
 
-	double Seconds = 20.0;
-	Payload->TryGetNumberField(TEXT("seconds"), Seconds);
+	double Seconds = GetJsonNumberField(Payload, TEXT("seconds"), 20.0);
 	Seconds = FMath::Clamp(Seconds, 5.0, 120.0);
 	bool bWindowed = false;
 	Payload->TryGetBoolField(TEXT("windowed"), bWindowed);

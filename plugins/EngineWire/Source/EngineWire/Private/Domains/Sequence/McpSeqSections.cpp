@@ -106,8 +106,7 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
     }
     Sound = LoadObject<USoundBase>(
         nullptr,
-        *(SoundObjectPath.Contains(TEXT(".")) ? SoundObjectPath
-                                              : SoundObjectPath + TEXT(".") + FPackageName::GetShortName(SoundObjectPath)),
+        *McpToObjectPath(SoundObjectPath),
         nullptr, LOAD_NoWarn);
     if (!Sound) {
       SendAutomationResponse(Socket, RequestId, false,

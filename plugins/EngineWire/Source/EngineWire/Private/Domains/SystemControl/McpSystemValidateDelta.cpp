@@ -42,7 +42,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     for (const FString& Package : Packages)
     {
         // What a call changed is in memory; a removed asset, or a package whose asset has another name, is skipped.
-        UObject* Asset = FindObject<UObject>(nullptr, *(Package + TEXT(".") + FPackageName::GetShortName(Package)));
+        UObject* Asset = FindObject<UObject>(nullptr, *McpToObjectPath(Package));
         if (!IsValid(Asset) || ++Validated > MaxValidated)
         {
             continue;

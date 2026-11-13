@@ -18,12 +18,6 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("generate_thumbnail"), ESearchCase::IgnoreCase) &&
-      !Lower.Equals(TEXT("create_thumbnail"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
       AssetPath.IsEmpty()) {

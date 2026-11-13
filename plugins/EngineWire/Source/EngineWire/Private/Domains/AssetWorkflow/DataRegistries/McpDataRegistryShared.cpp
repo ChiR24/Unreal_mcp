@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/DataRegistries/McpDataRegistries.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -96,7 +97,7 @@ TArray<FString> ScanDirectories(bool& bOutAllLoaded)
 		Directory.RemoveFromEnd(TEXT("/"));
 		if (!Directory.IsEmpty())
 		{
-			Directories.Add(Directory.StartsWith(TEXT("/")) ? Directory : TEXT("/Game/") + Directory);
+			Directories.Add(McpRootedContentPath(Directory));
 		}
 	}
 	return Directories;

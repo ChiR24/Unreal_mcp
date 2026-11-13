@@ -15,15 +15,8 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("remove_variable"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_remove_variable handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_remove_variable"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_remove_variable requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 
@@ -96,15 +89,8 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
   }
 
   if (ActionMatchesPattern(TEXT("rename_variable"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_rename_variable handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_rename_variable"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_rename_variable requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 

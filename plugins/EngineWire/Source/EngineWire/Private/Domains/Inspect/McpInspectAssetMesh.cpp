@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Animation/Skeleton.h"
 #include "Engine/Blueprint.h"
@@ -163,11 +164,7 @@ void McpDescribeStaticMesh(UStaticMesh *Mesh, TSharedPtr<FJsonObject> Resp)
     Resp->SetNumberField(TEXT("materialSlotCount"), Slots.Num());
     Resp->SetBoolField(TEXT("slotBoundsAvailable"), bHasSlotBounds);
     Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Mesh->GetBounds().GetBox()));
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
-    Resp->SetBoolField(TEXT("naniteEnabled"), Mesh->IsNaniteEnabled());
-#else
-    Resp->SetBoolField(TEXT("naniteEnabled"), Mesh->NaniteSettings.bEnabled);
-#endif
+    Resp->SetBoolField(TEXT("naniteEnabled"), MCP_STATIC_MESH_NANITE_ENABLED(Mesh));
     const UBodySetup *BodySetup = Mesh->GetBodySetup();
     Resp->SetNumberField(TEXT("collisionPrimitiveCount"), BodySetup ? BodySetup->AggGeom.GetElementCount() : 0);
     Resp->SetStringField(TEXT("collisionComplexity"), BodySetup

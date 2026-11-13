@@ -1,5 +1,6 @@
 // McpWidgetAnimKeyframe.cpp — add_animation_keyframe.
 #include "Domains/WidgetAuthoring/Support/McpWidgetAnimKeys.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/McpWidgetPayload.h"
 #include "Animation/WidgetAnimation.h"
@@ -26,12 +27,12 @@ TSharedPtr<FJsonObject> MergeKey(const TSharedPtr<FJsonObject>& Payload, const T
     TSharedPtr<FJsonObject> Merged = MakeShared<FJsonObject>();
     for (const auto& Pair : Payload->Values)
     {
-        Merged->SetField(FString(Pair.Key.Len(), *Pair.Key), Pair.Value);
+        Merged->SetField(McpJsonKey(Pair.Key), Pair.Value);
     }
     Merged->RemoveField(TEXT("keys"));
     for (const auto& Pair : Key->Values)
     {
-        Merged->SetField(FString(Pair.Key.Len(), *Pair.Key), Pair.Value);
+        Merged->SetField(McpJsonKey(Pair.Key), Pair.Value);
     }
     return Merged;
 }

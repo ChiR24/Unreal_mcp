@@ -4,6 +4,7 @@
 // sound each shows from), which the engine shows at the bottom of the game's screen while the sound plays.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Engine/Engine.h"
@@ -76,7 +77,7 @@ TSharedPtr<FJsonObject> HandleSubtitleActions(const FString& SubAction, const TS
     {
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("text"), Cue.Text.ToString());
-        Row->SetNumberField(TEXT("time"), FMath::RoundToDouble(Cue.Time * 100.0) / 100.0);
+        Row->SetNumberField(TEXT("time"), McpRoundTo(Cue.Time, 100.0));
         ReadBack.Add(MakeShared<FJsonValueObject>(Row));
     }
     Response->SetStringField(TEXT("soundPath"), Wave->GetPathName());

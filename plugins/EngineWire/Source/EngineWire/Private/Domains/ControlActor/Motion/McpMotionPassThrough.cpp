@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "CollisionQueryParams.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/EngineTypes.h"
@@ -46,7 +47,7 @@ void McpTrackMotionPasses(FMcpMotionPasses &Passes, AActor *Actor) {
   const FString Name = Hit.GetActor() ? McpActorRef(Hit.GetActor()) : FString(TEXT("the level"));
   const FString Part = Hit.GetComponent() ? Hit.GetComponent()->GetName() : FString();
   const double Speed = FMath::RoundToDouble(Step / Dt);
-  const double At = FMath::RoundToDouble((Now - Passes.FirstTime) * 1000.0) / 1000.0;
+  const double At = McpRoundTo(Now - Passes.FirstTime, 1000.0);
   TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
   Entry->SetNumberField(TEXT("t"), At);
   Entry->SetStringField(TEXT("actorName"), Name);

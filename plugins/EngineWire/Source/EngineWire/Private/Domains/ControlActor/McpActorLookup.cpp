@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
@@ -74,7 +75,13 @@ AActor *UEngineWireSubsystem::FindActorOrReply(const TSharedPtr<FJsonObject> &Pa
   FString TargetName;
   if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), TargetName))
     return nullptr;
-  AActor *Found = FindActorByName(TargetName);
+  return FindActorNamedOrReply(TargetName, RequestId, Socket);
+}
+
+// The actor Name names; nullptr after an ACTOR_NOT_FOUND reply ("Actor not found") when nothing goes by it.
+AActor *UEngineWireSubsystem::FindActorNamedOrReply(const FString &Name, const FString &RequestId,
+                                                    const TSharedPtr<FMcpBridgeWebSocket> &Socket) {
+  AActor *Found = FindActorByName(Name);
   if (!Found)
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"), TEXT("Actor not found"), nullptr);
   return Found;
@@ -96,11 +103,7 @@ bool UEngineWireSubsystem::HandleControlActorGet(
                                           ? Found->GetClass()->GetPathName()
                                           : TEXT(""));
 
-  TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : Found->Tags) {
-    TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-  }
-  Data->SetArrayField(TEXT("tags"), TagsArray);
+  Data->SetArrayField(TEXT("tags"), McpHandlerUtils::NamesToJsonStringArray(Found->Tags));
 
   Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Current.GetLocation()));
   Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Current.GetScale3D()));

@@ -136,8 +136,7 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   UMovieSceneTrack *Track = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("set_section"), Sequence, MovieScene);
   if (!Track)
     return true;
-  double Index = 0.0;
-  Payload->TryGetNumberField(TEXT("sectionIndex"), Index);
+  double Index = GetJsonNumberField(Payload, TEXT("sectionIndex"), 0.0);
   const TArray<UMovieSceneSection *> &Sections = Track->GetAllSections();
   UMovieSceneSection *Section = Index >= 0.0 && Index < Sections.Num() ? Sections[static_cast<int32>(Index)] : nullptr;
   if (!Section) {

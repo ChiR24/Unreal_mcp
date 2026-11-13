@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 bool UEngineWireSubsystem::HandleControlActorFindByName(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -200,11 +201,7 @@ bool UEngineWireSubsystem::HandleControlActorGetMetadata(
                                           ? Found->GetClass()->GetPathName()
                                           : TEXT(""));
 
-  TArray<TSharedPtr<FJsonValue>> TagsArray;
-  for (const FName &Tag : Found->Tags) {
-    TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-  }
-  Data->SetArrayField(TEXT("tags"), TagsArray);
+  Data->SetArrayField(TEXT("tags"), McpHandlerUtils::NamesToJsonStringArray(Found->Tags));
 
   const FTransform Current = Found->GetActorTransform();
   Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Current.GetLocation()));

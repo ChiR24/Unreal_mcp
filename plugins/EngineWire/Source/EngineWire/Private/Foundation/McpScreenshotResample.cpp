@@ -1,4 +1,5 @@
 #include "Foundation/McpScreenshotResample.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
@@ -220,7 +221,7 @@ bool McpDeferForShaderCompile(const TSharedPtr<FJsonObject> &Payload,
           return true;
         }
         TSharedPtr<FJsonObject> Wait = MakeShared<FJsonObject>();
-        Wait->SetNumberField(TEXT("waitedSeconds"), FMath::RoundToDouble(Waited * 10.0) / 10.0);
+        Wait->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Waited, 10.0));
         Wait->SetNumberField(TEXT("jobsLeft"), McpShaderJobsRemaining());
         Wait->SetBoolField(TEXT("timedOut"), bCompiling);
         Payload->SetObjectField(TEXT("shaderWait"), Wait);

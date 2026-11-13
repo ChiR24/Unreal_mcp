@@ -5,6 +5,7 @@
 // where it now lists domains; and every capability inputSchema leaked the envelope key `action` as a required
 // parameter.
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
@@ -71,7 +72,7 @@ TSharedPtr<FJsonObject> UnknownDomain(const FMcpCapabilityStore& Store, const FS
 {
 	TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_DOMAIN"),
 		FString::Printf(TEXT("Unknown domain '%s'."), *Domain));
-	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Domain, Store.GetDomains(), 3)));
+	Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(GatewayClosestMatches(Domain, Store.GetDomains(), 3)));
 	Error->SetObjectField(TEXT("nextCall"), BrowseCall(FString(), FString()));
 	return Error;
 }
@@ -81,8 +82,8 @@ TSharedPtr<FJsonObject> UnknownFamily(const FString& Domain, const FString& Fami
 	TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_FAMILY"),
 		FString::Printf(TEXT("Unknown family '%s' in domain '%s'."), *Family, *Domain));
 	Error->SetStringField(TEXT("domain"), Domain);
-	Error->SetArrayField(TEXT("availableFamilies"), GatewayStringArray(Families));
-	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Family, Families, 3)));
+	Error->SetArrayField(TEXT("availableFamilies"), McpHandlerUtils::ToJsonStringArray(Families));
+	Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(GatewayClosestMatches(Family, Families, 3)));
 	Error->SetObjectField(TEXT("nextCall"), BrowseCall(Domain, FString()));
 	return Error;
 }
@@ -206,7 +207,7 @@ TSharedPtr<FJsonObject> McpGatewayToolSummary(
 	Out->SetStringField(TEXT("category"), Definition ? Definition->GetCategory() : FString());
 	Out->SetStringField(TEXT("description"), Definition ? Definition->GetDescription() : FString());
 	Out->SetBoolField(TEXT("enabled"), bEnabled);
-	SetListing(Out, TEXT("actions"), TEXT("action"), GatewayStringArray(Paged), Filtered.Num(), Offset, Limit, bHasMore);
+	SetListing(Out, TEXT("actions"), TEXT("action"), McpHandlerUtils::ToJsonStringArray(Paged), Filtered.Num(), Offset, Limit, bHasMore);
 	Out->SetStringField(TEXT("scope"), TEXT("tool"));
 	Out->SetBoolField(TEXT("perActionSchemas"), false);
 	const FString First = Paged.Num() > 0 ? Paged[0] : (Actions.Num() > 0 ? Actions[0] : FString());

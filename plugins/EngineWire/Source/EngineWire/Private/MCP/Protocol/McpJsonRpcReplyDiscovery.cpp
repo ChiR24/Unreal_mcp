@@ -1,6 +1,7 @@
 // Describe and search replies as a client reads them; see McpJsonRpcReplyCompaction.h.
 
 #include "MCP/Protocol/McpJsonRpcReplyFields.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace McpJsonRpcReplyFields
 {
@@ -38,7 +39,7 @@ TSharedPtr<FJsonObject> CompactInputSchema(const TSharedPtr<FJsonObject>& Schema
 	TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
 	for (const auto& Property : Properties->Values)
 	{
-		const FString Name(Property.Key.Len(), *Property.Key);  // 5.8 keys are not FString
+		const FString Name = McpJsonKey(Property.Key);
 		const TSharedPtr<FJsonObject> Object = AsObject(Property.Value);
 		if (Object && Same(Object->TryGetField(TEXT("description")), ListedDescription(*Parameters, Name)))
 		{

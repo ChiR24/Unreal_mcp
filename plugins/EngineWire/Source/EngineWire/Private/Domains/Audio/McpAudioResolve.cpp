@@ -94,11 +94,6 @@ USoundBase* LoadSoundOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWe
 UWorld* McpAudioEditorWorldOrReply(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
 	const FString& RequestId)
 {
-	if (!GEditor)
-	{
-		Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
-		return nullptr;
-	}
 	UWorld* World = GEditor->GetEditorWorldContext().World();
 	if (!World)
 	{

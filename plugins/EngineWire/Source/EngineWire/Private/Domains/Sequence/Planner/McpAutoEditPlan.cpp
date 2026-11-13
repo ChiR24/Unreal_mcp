@@ -4,6 +4,7 @@
 // scored at each segment's middle as the sequence plays them.
 
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Sequence/Planner/McpAutoEditPose.h"
 #include "Domains/Sequence/Planner/McpAutoEditScore.h"
 #include "Domains/Sequence/Planner/McpAutoEditWrite.h"
@@ -33,7 +34,7 @@ TArray<TSharedPtr<FJsonValue>> FEditPlan::UnseenJson() const
     TArray<TSharedPtr<FJsonValue>> Out;
     for (int32 Index = 0; Index < Unseen.Num() && Index < 20; ++Index)
     {
-        Out.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Unseen[Index] * 100.0) / 100.0));
+        Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Unseen[Index], 100.0)));
     }
     return Out;
 }

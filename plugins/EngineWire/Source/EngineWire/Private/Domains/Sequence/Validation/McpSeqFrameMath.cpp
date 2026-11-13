@@ -1,4 +1,5 @@
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "MovieScene.h"
 
@@ -151,8 +152,7 @@ bool ValidateCinematicFrameRequest(
     OutError = TEXT("MovieScene is required for frame validation.");
     return false;
   }
-  double StartValue = 0.0;
-  Payload->TryGetNumberField(TEXT("startFrame"), StartValue);
+  double StartValue = GetJsonNumberField(Payload, TEXT("startFrame"), 0.0);
   FFrameNumber StartTick;
   if (!TryTransformFrame(StartValue, MovieScene->GetDisplayRate(),
                          MovieScene->GetTickResolution(), StartTick,

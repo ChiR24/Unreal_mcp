@@ -2,6 +2,7 @@
 
 #include "Domains/GAS/McpGASAssetValidate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Domains/GAS/McpGASRequestContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
@@ -81,11 +82,7 @@ static inline UBlueprint* CreateGASBlueprint(
         return nullptr;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = ParentClass;
-    UBlueprint* Blueprint = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*SanitizedName),
-                                  RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* Blueprint = McpNewBlueprint(Package, FName(*SanitizedName), ParentClass);
     if (!Blueprint)
     {
         OutError = TEXT("Failed to create blueprint");

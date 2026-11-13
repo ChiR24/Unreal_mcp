@@ -24,14 +24,8 @@ bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& R
     }
 
     // Validate path security BEFORE loading asset
-    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
-    if (ValidatedPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("path"), AssetPath),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
       return true;
-    }
-    AssetPath = ValidatedPath;
 
     UMaterial *Material = nullptr;
     UMaterialFunction *Function = nullptr;

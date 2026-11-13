@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
@@ -162,8 +163,7 @@ bool UEngineWireSubsystem::HandleSequencePlay(
 bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  double Speed = 1.0;
-  Payload->TryGetNumberField(TEXT("speed"), Speed);
+  double Speed = GetJsonNumberField(Payload, TEXT("speed"), 1.0);
   if (!FMath::IsFinite(Speed) || Speed <= 0.0) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Invalid speed (must be > 0)"), nullptr,

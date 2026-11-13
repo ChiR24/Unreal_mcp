@@ -9,12 +9,9 @@ bool UEngineWireSubsystem::HandleControlActorApplyForce(
   FVector ForceVector =
       ExtractVectorField(Payload, TEXT("force"), FVector::ZeroVector);
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
   // The editor world never steps physics: a push there moved nothing and left the placed actor
   // simulating, a level change nobody asked for.
   const UWorld *World = Found->GetWorld();

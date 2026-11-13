@@ -136,7 +136,7 @@ bool TryCreateEnumNode(FActionContext& Context, UClass* NodeClass, float X, floa
     UEnum* Enum = EnumPath.StartsWith(TEXT("/")) ? LoadObject<UEnum>(nullptr, *EnumPath, nullptr, Quiet) : nullptr;
     if (!Enum && EnumPath.StartsWith(TEXT("/")) && !EnumPath.Contains(TEXT(".")))
     {
-        Enum = LoadObject<UEnum>(nullptr, *(EnumPath + TEXT(".") + FPackageName::GetShortName(EnumPath)), nullptr, Quiet);
+        Enum = LoadObject<UEnum>(nullptr, *McpToObjectPath(EnumPath), nullptr, Quiet);
     }
     // A bare name (ECollisionChannel) of an enum already loaded.
     for (TObjectIterator<UEnum> It; It && !Enum && !EnumPath.IsEmpty(); ++It)

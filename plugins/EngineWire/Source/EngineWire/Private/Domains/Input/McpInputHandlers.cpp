@@ -1,4 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Input/McpInputActionRouting.h"
 
@@ -10,11 +12,6 @@ bool UEngineWireSubsystem::HandleInputAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_input"))
-    {
-        return false;
-    }
-
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -22,11 +19,7 @@ bool UEngineWireSubsystem::HandleInputAction(
         return true;
     }
 
-    FString SubAction;
-    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("action"), SubAction);
-    }
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
     if (SubAction.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -37,17 +30,12 @@ bool UEngineWireSubsystem::HandleInputAction(
     UE_LOG(LogEngineWireSubsystem, Log,
         TEXT("HandleInputAction: %s"), *SubAction);
 
-    if (!McpInputHandlers::IsLegacyInputMappingAction(SubAction) &&
-        !FModuleManager::Get().IsModuleLoaded(TEXT("EnhancedInput")))
+    if (!McpInputHandlers::IsLegacyInputMappingAction(SubAction) && !McpLoadOptionalModule(TEXT("EnhancedInput")))
     {
-        if (!FModuleManager::Get().ModuleExists(TEXT("EnhancedInput")) ||
-            !FModuleManager::Get().LoadModule(TEXT("EnhancedInput")))
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("EnhancedInput plugin is not enabled in this project. Enable the Enhanced Input plugin to use Input features."),
-                TEXT("ENHANCEDINPUT_PLUGIN_NOT_ENABLED"));
-            return true;
-        }
+        SendAutomationError(RequestingSocket, RequestId,
+            TEXT("EnhancedInput plugin is not enabled in this project. Enable the Enhanced Input plugin to use Input features."),
+            TEXT("ENHANCEDINPUT_PLUGIN_NOT_ENABLED"));
+        return true;
     }
 
     using namespace McpInputHandlers;

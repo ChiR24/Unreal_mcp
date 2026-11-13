@@ -1,4 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
 
 #include "Modules/ModuleManager.h"
@@ -19,13 +21,7 @@ bool EnsureBehaviorTreeEditorModule(
     const McpBehaviorTreeHandlers::FRequestContext& Context,
     const FString& SubAction)
 {
-  if (!BehaviorTreeEditorModuleRequired(SubAction) ||
-      FModuleManager::Get().IsModuleLoaded(TEXT("BehaviorTreeEditor"))) {
-    return true;
-  }
-
-  if (FModuleManager::Get().ModuleExists(TEXT("BehaviorTreeEditor")) &&
-      FModuleManager::Get().LoadModule(TEXT("BehaviorTreeEditor"))) {
+  if (!BehaviorTreeEditorModuleRequired(SubAction) || McpLoadOptionalModule(TEXT("BehaviorTreeEditor"))) {
     return true;
   }
 
@@ -45,19 +41,14 @@ bool UEngineWireSubsystem::HandleBehaviorTreeAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (Action != TEXT("manage_behavior_tree")) {
-    return false;
-  }
-
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));
     return true;
   }
 
-  FString SubAction;
-  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
-      SubAction.IsEmpty()) {
+  const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
+  if (SubAction.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Missing 'subAction' for manage_behavior_tree"),
                         TEXT("INVALID_ARGUMENT"));

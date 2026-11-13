@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
@@ -115,10 +116,7 @@ inline UClass* McpFindStateTreeSchemaClass(const FString& Schema, FString& OutEr
         OutCode = TEXT("INVALID_ARGUMENT");
         return nullptr;
     }
-    if (FModuleManager::Get().ModuleExists(TEXT("GameplayStateTreeModule")))
-    {
-        FModuleManager::Get().LoadModule(TEXT("GameplayStateTreeModule"));
-    }
+    McpLoadOptionalModule(TEXT("GameplayStateTreeModule"));
     UClass* SchemaClass = FindObject<UClass>(nullptr, bAI ? TEXT("/Script/GameplayStateTreeModule.StateTreeAIComponentSchema")
                                                          : TEXT("/Script/GameplayStateTreeModule.StateTreeComponentSchema"));
     if (!SchemaClass || !SchemaClass->IsChildOf(UStateTreeSchema::StaticClass()))

@@ -4,6 +4,7 @@
 // come from the keepalive thread when the change journal's number moves: at most one per stream a second.
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Core/Journal/McpChangeJournal.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
@@ -136,11 +137,7 @@ void FMcpNativeTransport::HandleSubscriptionsListen(FSocket* ClientSocket, const
 	const TSharedPtr<FJsonObject> Honored = MakeShared<FJsonObject>();
 	if (Uris.Num() > 0)
 	{
-		TArray<TSharedPtr<FJsonValue>> Values;
-		for (const FString& Uri : Uris)
-		{
-			Values.Add(MakeShared<FJsonValueString>(Uri));
-		}
+		TArray<TSharedPtr<FJsonValue>> Values = McpHandlerUtils::ToJsonStringArray(Uris);
 		Honored->SetArrayField(TEXT("resourceSubscriptions"), Values);
 	}
 	const TSharedPtr<FJsonObject> AckParams = MakeShared<FJsonObject>();

@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 bool UEngineWireSubsystem::HandleManageMaterialAuthoringAction(
     const FString& RequestId,
@@ -6,19 +7,14 @@ bool UEngineWireSubsystem::HandleManageMaterialAuthoringAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-  if (Action != TEXT("manage_material_authoring")) {
-    return false;
-  }
-
   if (!Payload.IsValid()) {
     SendAutomationError(Socket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));
     return true;
   }
 
-  FString SubAction;
-  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
-      SubAction.IsEmpty()) {
+  FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
+  if (SubAction.IsEmpty()) {
     SendAutomationError(Socket, RequestId,
                         TEXT("Missing 'subAction' for manage_material_authoring"),
                         TEXT("INVALID_ARGUMENT"));

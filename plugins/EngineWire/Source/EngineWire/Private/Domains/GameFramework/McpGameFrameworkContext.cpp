@@ -1,6 +1,7 @@
 #include "Domains/GameFramework/McpGameFrameworkContext.h"
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 DEFINE_LOG_CATEGORY(LogMcpGameFrameworkHandlers);
@@ -165,7 +166,7 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
     if (!FullPath.StartsWith(TEXT("/Game/")))
     {
         McpAssetPathCanonical::MapContentRootInline(FullPath);
-        if (!FullPath.StartsWith(TEXT("/"))) FullPath = TEXT("/Game/") + FullPath;
+        FullPath = McpRootedContentPath(FullPath);
     }
     if (FullPath.EndsWith(TEXT("/"))) FullPath = FullPath.LeftChop(1);
 
@@ -185,10 +186,7 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
         return nullptr;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = ParentClass;
-    UBlueprint* Blueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
-        UBlueprint::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* Blueprint = McpNewBlueprint(Package, FName(*Name), ParentClass);
     if (!Blueprint)
     {
         OutError = FString::Printf(TEXT("Failed to create %s blueprint"), *ParentClass->GetName());

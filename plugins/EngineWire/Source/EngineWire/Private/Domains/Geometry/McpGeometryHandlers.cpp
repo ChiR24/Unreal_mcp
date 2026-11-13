@@ -10,11 +10,6 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_geometry"))
-    {
-        return false;
-    }
-
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
     using namespace McpGeometryHandlers;

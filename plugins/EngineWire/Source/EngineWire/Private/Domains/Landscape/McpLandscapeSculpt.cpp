@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/Landscape/McpLandscapeLookup.h"
 
@@ -51,8 +52,7 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   if (!Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff)) {
     Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
   }
-  double Strength = 0.1;
-  Payload->TryGetNumberField(TEXT("strength"), Strength);
+  double Strength = GetJsonNumberField(Payload, TEXT("strength"), 0.1);
   bool bSkipFlush = false;
   Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
 

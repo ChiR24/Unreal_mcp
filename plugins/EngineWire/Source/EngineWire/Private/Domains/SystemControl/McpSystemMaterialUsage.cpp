@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/SkinnedMeshComponent.h"
@@ -114,11 +115,7 @@ bool McpUsagePending(UMaterialInterface *Owner, EMaterialUsage Usage)
 
 bool McpUsesNanite(const UStaticMesh *Mesh)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
-    return Mesh && Mesh->IsNaniteEnabled();
-#else
-    return Mesh && Mesh->NaniteSettings.bEnabled;
-#endif
+    return Mesh && MCP_STATIC_MESH_NANITE_ENABLED(Mesh);
 }
 
 void McpCheckUsage(UMaterialInterface *Interface, const FMcpUsageNeed &Need, const FString &Component,

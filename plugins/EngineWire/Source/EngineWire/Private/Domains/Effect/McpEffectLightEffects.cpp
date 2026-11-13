@@ -33,13 +33,6 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     const bool bHasColor = Context.Payload->HasField(TEXT("color"));
     const FLinearColor LightColor = ExtractLinearColorField(Context.Payload, TEXT("color"), FLinearColor::White);
 
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     if (!GetEditorActorSubsystem())
     {
         Context.Bridge.SendAutomationResponse(

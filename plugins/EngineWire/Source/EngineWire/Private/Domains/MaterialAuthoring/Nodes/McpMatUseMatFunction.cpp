@@ -16,14 +16,8 @@ bool HandleUseMaterialFunction(UEngineWireSubsystem* Bridge, const FString& Requ
     }
 
     // SECURITY: Validate functionPath before loading
-    FString ValidatedFunctionPath = SanitizeProjectRelativePath(FunctionPath);
-    if (ValidatedFunctionPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("functionPath"), FunctionPath),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("functionPath"), FunctionPath))
       return true;
-    }
-    FunctionPath = ValidatedFunctionPath;
 
     UMaterialFunction *Func =
         LoadObject<UMaterialFunction>(nullptr, *FunctionPath);

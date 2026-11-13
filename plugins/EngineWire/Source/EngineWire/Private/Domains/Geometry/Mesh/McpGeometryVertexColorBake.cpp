@@ -10,6 +10,7 @@
 // Script converts with bTransformVtxColorsSRGBToLinear on (UE 5.1 and later), which cancels the sRGB encoding
 // the static-mesh build applies, so the byte a vertex ends up with is the mask times 255.
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -266,7 +267,7 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
     Result->SetNumberField(TEXT("blurIterations"), Blur);
     Result->SetObjectField(TEXT("averages"), Averages);
     Result->SetStringField(TEXT("channels"), TEXT("r ambient occlusion (1 open), g 1 minus convex edge, b 1 minus concave cavity, a height (0 bottom, 1 top); white means no effect except in height"));
-    Result->SetNumberField(TEXT("coarseShare"), FMath::RoundToDouble(CoarseShare * 100.0) / 100.0);
+    Result->SetNumberField(TEXT("coarseShare"), McpRoundTo(CoarseShare, 100.0));
     if (CoarseShare > CoarseShareWarning)
     {
         Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(

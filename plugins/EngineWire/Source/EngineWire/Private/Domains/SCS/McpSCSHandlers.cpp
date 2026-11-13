@@ -100,9 +100,6 @@ UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJso
 }
 
 bool IsPlayInEditorActive() {
-  if (!GEditor) {
-    return false;
-  }
   if (GEditor->IsPlaySessionInProgress()) {
     return true;
   }

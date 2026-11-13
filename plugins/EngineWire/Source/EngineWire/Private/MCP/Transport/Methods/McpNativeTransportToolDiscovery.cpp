@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Gateway/McpNativeGatewayDefinition.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
@@ -70,11 +71,7 @@ FString FMcpNativeTransport::HandleInitialize(
 	if (!NegotiateInitializeProtocolVersion(Params, NegotiatedVersion, NegotiationError))
 	{
 		auto Data = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Supported;
-		for (const FString& V : McpSupportedProtocolVersions())
-		{
-			Supported.Add(MakeShared<FJsonValueString>(V));
-		}
+		TArray<TSharedPtr<FJsonValue>> Supported = McpHandlerUtils::ToJsonStringArray(McpSupportedProtocolVersions());
 		Data->SetArrayField(TEXT("supported"), Supported);
 		FString Requested;
 		if (Params.IsValid() && Params->TryGetStringField(TEXT("protocolVersion"), Requested))

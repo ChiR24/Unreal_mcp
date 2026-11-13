@@ -14,12 +14,8 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("remove_event"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_remove_event"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_remove_event requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
     // Accept eventName, falling back to customEventName: the schema advertises

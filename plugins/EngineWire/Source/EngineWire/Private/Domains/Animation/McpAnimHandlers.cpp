@@ -1,4 +1,5 @@
 #include "Domains/Animation/McpAnimActionContext.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/Animation/McpAnimActionDecls.h"
 #include "Domains/Animation/Physics/McpAnimPhysicsProp.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -23,11 +24,7 @@ bool UEngineWireSubsystem::HandleAnimationPhysicsAction(
     return true;
   }
 
-  FString SubAction;
-  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("action"), SubAction);
-  }
-  const FString LowerSub = SubAction.ToLower();
+  const FString LowerSub = McpConsolidatedActions::GetPayloadSubAction(Payload);
   UE_LOG(LogEngineWireSubsystem, Verbose,
          TEXT("HandleAnimationPhysicsAction: subaction='%s'"), *LowerSub);
 

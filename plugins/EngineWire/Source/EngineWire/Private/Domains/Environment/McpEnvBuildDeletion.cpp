@@ -120,13 +120,6 @@ bool HandleBuildSnapshotAndDeletionAction(const FString &LowerSub, FEnvironmentB
         return false;
     }
 
-    if (!GEditor)
-    {
-        Context.bSuccess = false;
-        Context.Message = TEXT("Editor is unavailable");
-        Context.ErrorCode = TEXT("EDITOR_NOT_AVAILABLE");
-        return true;
-    }
     UEditorActorSubsystem *ActorSubsystem = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     if (!ActorSubsystem)
     {

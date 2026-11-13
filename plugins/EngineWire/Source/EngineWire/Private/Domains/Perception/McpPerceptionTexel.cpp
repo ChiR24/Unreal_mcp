@@ -6,6 +6,7 @@
 // Instancing: static mesh actors of the level that draw one mesh with one set of materials, the groups worth instancing.
 
 #include "Domains/Perception/McpPerception.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -150,7 +151,7 @@ TSharedPtr<FJsonObject> TexelDensity(const FFrame& Frame)
         Row->SetStringField(TEXT("material"), Slot.Material->GetPathName());
         Row->SetStringField(TEXT("texture"), Slot.Texture->GetPathName());
         Row->SetNumberField(TEXT("texelsPerMetre"), FMath::RoundToDouble(Slot.PerMetre));
-        Row->SetNumberField(TEXT("ratio"), FMath::RoundToDouble(Slot.PerMetre / Median * 100.0) / 100.0);
+        Row->SetNumberField(TEXT("ratio"), McpRoundTo(Slot.PerMetre / Median, 100.0));
         if (Verdict != 0)
         {
             Row->SetStringField(TEXT("finding"), Verdict > 0 ? TEXT("too_sharp") : TEXT("too_blurry"));

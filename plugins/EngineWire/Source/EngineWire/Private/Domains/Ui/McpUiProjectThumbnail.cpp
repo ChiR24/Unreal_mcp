@@ -2,6 +2,7 @@
 // game view (no icons or gizmos) drawn as a square, written where the editor's own "capture project thumbnail" writes it
 // (<ProjectDir>/<ProjectName>.png, UThumbnailManager::CaptureProjectThumbnail's 192 px center crop of the viewport).
 #include "Domains/Ui/McpUiPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
@@ -39,8 +40,7 @@ bool HandleProjectThumbnailAction(const FString &LowerSub, const TSharedPtr<FJso
     {
         return Refuse(TEXT("VIEWPORT_NOT_AVAILABLE"), TEXT("No level viewport is open to draw the thumbnail from."));
     }
-    double Side = 512;
-    Payload->TryGetNumberField(TEXT("size"), Side);
+    double Side = GetJsonNumberField(Payload, TEXT("size"), 512);
     Side = FMath::Clamp(FMath::RoundToDouble(Side), 64.0, 1024.0);
     PlaceViewCameraForMcp(Client, Payload);
     const bool bWasGameView = Client->IsInGameView();

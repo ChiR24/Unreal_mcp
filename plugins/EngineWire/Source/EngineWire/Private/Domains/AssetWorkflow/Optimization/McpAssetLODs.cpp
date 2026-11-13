@@ -14,12 +14,6 @@ bool UEngineWireSubsystem::HandleGenerateLODs(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("generate_lods"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-
   // Support both landscapePath (single) and assetPaths (array)
   FString LandscapePath;
   Payload->TryGetStringField(TEXT("landscapePath"), LandscapePath);

@@ -5,6 +5,7 @@
 // undo step.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Domains/AudioAuthoring/McpLoudness.h"
@@ -104,8 +105,8 @@ TSharedPtr<FJsonObject> SetSoundVolume(const TSharedPtr<FJsonObject>& Params, TS
         const float Now = Wave ? Wave->Volume : CastChecked<USoundCue>(Sounds[Index])->VolumeMultiplier;
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("soundPath"), Sounds[Index]->GetPathName());
-        Row->SetNumberField(TEXT("previousVolume"), FMath::RoundToDouble(Before[Index] * 1000.0) / 1000.0);
-        Row->SetNumberField(TEXT("volume"), FMath::RoundToDouble(Now * 1000.0) / 1000.0);
+        Row->SetNumberField(TEXT("previousVolume"), McpRoundTo(Before[Index], 1000.0));
+        Row->SetNumberField(TEXT("volume"), McpRoundTo(Now, 1000.0));
         Row->SetBoolField(TEXT("saved"), SaveAudioAsset(Sounds[Index], bSave) && bSave);
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
@@ -182,7 +183,7 @@ TSharedPtr<FJsonObject> HandleLoudnessActions(const FString& SubAction, const TS
         TSharedPtr<FJsonObject> Sound = MakeShared<FJsonObject>();
         Sound->SetStringField(TEXT("soundPath"), Row.Wave->GetPathName());
         Sound->SetNumberField(TEXT("peakDb"), McpRoundTo(Row.PeakDb, 10.0));
-        Sound->SetNumberField(TEXT("volume"), FMath::RoundToDouble(Row.Wave->Volume * 1000.0) / 1000.0);
+        Sound->SetNumberField(TEXT("volume"), McpRoundTo(Row.Wave->Volume, 1000.0));
         if (Row.Lufs.IsSet())
         {
             const double PlaysAt = Row.Lufs.GetValue() + LoudnessDb(Row.Wave->Volume);

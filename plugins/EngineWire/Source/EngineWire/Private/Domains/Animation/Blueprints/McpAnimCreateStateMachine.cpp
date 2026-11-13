@@ -62,42 +62,14 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
     }
   }
 
-  // Create the State Machine Node using FGraphNodeCreator
-  FGraphNodeCreator<UAnimGraphNode_StateMachine> NodeCreator(*AnimGraph);
-  UAnimGraphNode_StateMachine* SMNode = NodeCreator.CreateNode();
-  SMNode->NodePosX = 0;
-  SMNode->NodePosY = 0;
-  NodeCreator.Finalize();
-
-  // Create the internal State Machine Graph
-  UAnimationStateMachineGraph* InnerGraph = Cast<UAnimationStateMachineGraph>(
-    FBlueprintEditorUtils::CreateNewGraph(
-      AnimBP,
-      FName(*MachineName),
-      UAnimationStateMachineGraph::StaticClass(),
-      UAnimationStateMachineSchema::StaticClass()
-    )
-  );
-  if (!InnerGraph) {
-    Context.Bridge.SendAutomationError(RequestingSocket, RequestId,
-      TEXT("Failed to create animation state machine graph"),
-      TEXT("CREATE_GRAPH_FAILED"));
+  FString SMError, SMCode;
+  UAnimGraphNode_StateMachine* SMNode =
+    McpAnimationAuthoring::CreateStateMachineNode(AnimBP, *AnimGraph, MachineName, 0, 0, SMError, SMCode);
+  if (!SMNode) {
+    Context.Bridge.SendAutomationError(RequestingSocket, RequestId, SMError, SMCode);
     return true;
   }
-
-  // Link the State Machine Node to its internal graph
-  SMNode->EditorStateMachineGraph = InnerGraph;
-  InnerGraph->OwnerAnimGraphNode = SMNode;
-
-  // Initialize Entry Node (required for State Machines)
-  const UAnimationStateMachineSchema* Schema = Cast<UAnimationStateMachineSchema>(InnerGraph->GetSchema());
-  if (!Schema) {
-    Context.Bridge.SendAutomationError(RequestingSocket, RequestId,
-      TEXT("Animation state machine graph has an invalid schema"),
-      TEXT("INVALID_SCHEMA"));
-    return true;
-  }
-  Schema->CreateDefaultNodesForGraph(*InnerGraph);
+  UAnimationStateMachineGraph* InnerGraph = SMNode->EditorStateMachineGraph;
 
   // Process states array if provided
   const TArray<TSharedPtr<FJsonValue>>* StatesArray = nullptr;

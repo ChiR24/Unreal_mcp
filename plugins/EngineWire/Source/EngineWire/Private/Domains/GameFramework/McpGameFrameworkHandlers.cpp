@@ -6,11 +6,6 @@ bool UEngineWireSubsystem::HandleManageGameFrameworkAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_game_framework"))
-    {
-        return false;
-    }
-
     McpGameFrameworkHandlers::FActionContext Context =
         McpGameFrameworkHandlers::MakeActionContext(this, RequestId, Payload, RequestingSocket);
 

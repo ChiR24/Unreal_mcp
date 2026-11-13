@@ -1,4 +1,5 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
@@ -27,16 +28,6 @@ FString NormalizeLoadPath(const FString &Input) {
   return Path;
 }
 
-}
-
-FString CanonicalMediaAction(const FString &Action) {
-  FString Result = Action.TrimStartAndEnd().ToLower();
-  Result.ReplaceInline(TEXT("-"), TEXT("_"));
-  Result.ReplaceInline(TEXT(" "), TEXT("_"));
-  if (Result.StartsWith(TEXT("sequence_"))) {
-    Result.RightChopInline(9);
-  }
-  return Result;
 }
 
 FString GetStringAny(const TSharedPtr<FJsonObject> &Payload,
@@ -162,10 +153,7 @@ bool CreateMediaAssetFromPayload(const TSharedPtr<FJsonObject> &Payload,
 }
 
 UClass *ResolveMediaClass(const FString &ClassName, FString &OutError) {
-  FModuleManager &Modules = FModuleManager::Get();
-  if (!Modules.IsModuleLoaded(TEXT("MediaAssets")) &&
-      (!Modules.ModuleExists(TEXT("MediaAssets")) ||
-       !Modules.LoadModule(TEXT("MediaAssets")))) {
+  if (!McpLoadOptionalModule(TEXT("MediaAssets"))) {
     OutError = TEXT("MediaAssets module is unavailable");
     return nullptr;
   }

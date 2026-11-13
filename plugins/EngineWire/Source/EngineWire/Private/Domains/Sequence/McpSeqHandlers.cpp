@@ -133,9 +133,11 @@ bool UEngineWireSubsystem::HandleSequenceAction(
     return McpFrameShot::Handle(*this, RequestId, LocalPayload, RequestingSocket,
                                 [this](const FString &Name) { return FindActorByName(Name, true); });
 
+  // The sub-dispatchers below are keyed by the sub-action without its sequence_ prefix.
+  const FString BareAction = EffectiveAction.RightChop(9);
   TSharedPtr<FJsonObject> CinematicsResult;
   if (McpSequenceCinematics::TryHandleCinematics(
-          EffectiveAction, LocalPayload, CinematicsResult)) {
+          BareAction, LocalPayload, CinematicsResult)) {
     bool bSuccess = false;
     FString Message;
     FString ErrorCode;
@@ -151,13 +153,13 @@ bool UEngineWireSubsystem::HandleSequenceAction(
     return true;
   }
 
-  if (McpSequenceMovieRender::TryHandle(this, RequestId, EffectiveAction,
+  if (McpSequenceMovieRender::TryHandle(this, RequestId, BareAction,
                                         LocalPayload, RequestingSocket))
     return true;
-  if (McpSequenceMedia::TryHandleMediaAction(this, RequestId, EffectiveAction,
+  if (McpSequenceMedia::TryHandleMediaAction(this, RequestId, BareAction,
                                              LocalPayload, RequestingSocket))
     return true;
-  if (McpSequenceRecordReplay::TryHandle(this, RequestId, EffectiveAction,
+  if (McpSequenceRecordReplay::TryHandle(this, RequestId, BareAction,
                                          LocalPayload, RequestingSocket))
     return true;
 

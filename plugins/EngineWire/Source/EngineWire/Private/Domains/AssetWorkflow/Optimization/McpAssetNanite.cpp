@@ -1,6 +1,8 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -91,15 +93,9 @@ FString McpNaniteRebuildOne(const FString &Given, double TrianglePercent, const 
   const TArray<UMaterialInterface *> Unflagged = McpNaniteUnflagged(StaticMesh);
 
   // Only bEnabled and the kept share change; the mesh's other Nanite settings stay as they are.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-  FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
+  FMeshNaniteSettings &Settings = MCP_STATIC_MESH_NANITE_SETTINGS(StaticMesh);
   Settings.bEnabled = true;
   Settings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
-  StaticMesh->SetNaniteSettings(Settings);
-#else
-  StaticMesh->NaniteSettings.bEnabled = true;
-  StaticMesh->NaniteSettings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
-#endif
   // New settings do nothing until the render data is rebuilt, and are gone on the next load
   // unless saved: this used to rebuild on 5.7+ only, save never, and echo the request back.
   StaticMesh->Build(true);
@@ -109,11 +105,7 @@ FString McpNaniteRebuildOne(const FString &Given, double TrianglePercent, const 
     return FString::Printf(TEXT("Nanite was turned on for %s, but the mesh could not be saved."), *MeshPath);
   }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-  const FMeshNaniteSettings &After = StaticMesh->GetNaniteSettings();
-#else
-  const FMeshNaniteSettings &After = StaticMesh->NaniteSettings;
-#endif
+  const FMeshNaniteSettings &After = MCP_STATIC_MESH_NANITE_SETTINGS(StaticMesh);
   Resp->SetStringField(TEXT("meshPath"), MeshPath);
   Resp->SetStringField(TEXT("meshName"), StaticMesh->GetName());
   Resp->SetBoolField(TEXT("naniteEnabled"), After.bEnabled);
@@ -137,8 +129,7 @@ bool UEngineWireSubsystem::HandleNaniteRebuildMesh(
 
 
   // Percent of the source triangles Nanite keeps (the record's default: all of them).
-  double TrianglePercent = 100.0;
-  Payload->TryGetNumberField(TEXT("trianglePercent"), TrianglePercent);
+  double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 100.0);
   TrianglePercent = FMath::Clamp(TrianglePercent, 0.0, 100.0);
 
   // The published capability schema names this `assetPath` (and rejects any

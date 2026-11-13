@@ -7,9 +7,6 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("ensure_exists"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_ensure_exists handler: RequestId=%s"),
-           *RequestId);
     // The declared form is name + savePath, and the create below lands there:
     // check that same place. The check used to resolve the bare name (to
     // /Game/<name>, or any same-named Blueprint elsewhere), so a Blueprint
@@ -95,15 +92,8 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
 
   // blueprint_probe_handle: Lightweight check for blueprint existence without loading
   if (ActionMatchesPattern(TEXT("probe_handle"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_probe_handle handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_probe_handle"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_probe_handle requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 

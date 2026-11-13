@@ -2,6 +2,7 @@
 // nav mesh the pawn reached. Islands are nav points sampled at start that no path from the start reaches and no visited
 // cell holds. Coverage: of the cells those samples fall in (flags aside), how many the pawn has stood in.
 #include "Domains/Play/McpExplore.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Domains/Navigation/McpNavPath.h"
 #include "Editor.h"
@@ -20,7 +21,7 @@ TSharedPtr<FJsonObject> Row(const FFinding& F)
     Out->SetStringField(TEXT("text"), F.Text);
     Out->SetArrayField(TEXT("where"), McpHandlerUtils::VectorToJsonArray(F.Where));
     Out->SetNumberField(TEXT("cell"), F.Cell);
-    Out->SetNumberField(TEXT("t"), FMath::RoundToDouble(F.GameSeconds * 100.0) / 100.0);
+    Out->SetNumberField(TEXT("t"), McpRoundTo(F.GameSeconds, 100.0));
     return Out;
 }
 } // namespace ExploreReportParts

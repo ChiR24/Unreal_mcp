@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -41,13 +42,7 @@ inline UBlueprint* CreateActorBlueprint(
         return nullptr;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = ParentClass;
-
-    UBlueprint* Blueprint = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name),
-                                  RF_Public | RF_Standalone, nullptr, GWarn));
-
+    UBlueprint* Blueprint = McpNewBlueprint(Package, FName(*Name), ParentClass);
     if (!Blueprint)
     {
         OutError = TEXT("Failed to create blueprint");
@@ -81,40 +76,23 @@ T* GetOrCreateSCSComponent(
     }
 
     USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
-    USCS_Node* NewNode = SCS->CreateNode(T::StaticClass(), FName(*ComponentName));
-    if (!NewNode || !NewNode->ComponentTemplate)
-    {
-        return nullptr;
-    }
-
-    T* NewComp = Cast<T>(NewNode->ComponentTemplate);
-    if (!NewComp)
-    {
-        return nullptr;
-    }
-
-    // Attach via AddChildNode, not SetParent + AddNode. AddNode() registers the
-    // node as a ROOT and SetParent() only writes a textual parent name; at compile
-    // time the engine reports "Couldn't find inherited parent component 'X' for
-    // 'Y'" and the hierarchy flattens (seen for ProjectileMesh under
-    // CollisionComponent). AddChildNode() actually moves the node under its parent.
-    bool bAttachedToParent = false;
+    USCS_Node* Parent = nullptr;
     if (!AttachTo.IsEmpty())
     {
         for (USCS_Node* ParentNode : SCS->GetAllNodes())
         {
             if (ParentNode && ParentNode->GetVariableName().ToString() == AttachTo)
             {
-                ParentNode->AddChildNode(NewNode);
-                bAttachedToParent = true;
+                Parent = ParentNode;
                 break;
             }
         }
     }
-
-    if (!bAttachedToParent)
+    USCS_Node* NewNode = McpAddScsNode(SCS, T::StaticClass(), FName(*ComponentName), Parent);
+    T* NewComp = NewNode ? Cast<T>(NewNode->ComponentTemplate) : nullptr;
+    if (!NewComp)
     {
-        SCS->AddNode(NewNode);
+        return nullptr;
     }
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     return NewComp;

@@ -17,13 +17,8 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
        ActionMatchesPattern(TEXT("get_blueprint")) ||
        ActionMatchesPattern(TEXT("get"))) &&
       !Lower.Contains(TEXT("scs"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_get handler: RequestId=%s"), *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_get"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("blueprint_get requires a blueprint path."),
-                             nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 

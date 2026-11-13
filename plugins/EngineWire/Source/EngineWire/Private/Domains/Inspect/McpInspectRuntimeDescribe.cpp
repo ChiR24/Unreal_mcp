@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace McpInspectHandlers {
 
@@ -8,15 +9,7 @@ FString McpGetWorldTypeName(UWorld *World)
 }
 void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor)
 {
-    TArray<TSharedPtr<FJsonValue>> TagsArray;
-    if (Actor)
-    {
-        for (const FName &Tag : Actor->Tags)
-        {
-            TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-        }
-    }
-    Obj->SetArrayField(TEXT("tags"), TagsArray);
+    Obj->SetArrayField(TEXT("tags"), Actor ? McpHandlerUtils::NamesToJsonStringArray(Actor->Tags) : TArray<TSharedPtr<FJsonValue>>());
 }
 // The values of the named properties (names or dotted paths) found on Object, or null when it has none of them;
 // each name found is added to Found.

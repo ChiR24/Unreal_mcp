@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "ComponentReregisterContext.h"
 #include "Components/ActorComponent.h"
@@ -140,7 +141,7 @@ static inline bool McpReadCollisionResponses(const TSharedPtr<FJsonObject> &Resp
                                              FString &OutError) {
   const TArray<TPair<FString, ECollisionChannel>> Channels = McpCollisionChannels();
   for (const auto &Pair : Responses->Values) {
-    const FString Channel(Pair.Key.Len(), *Pair.Key);
+    const FString Channel = McpJsonKey(Pair.Key);
     const TPair<FString, ECollisionChannel> *Found = Channels.FindByPredicate(
         [&Channel](const TPair<FString, ECollisionChannel> &Entry) { return Entry.Key.Equals(Channel, ESearchCase::IgnoreCase); });
     const FString Value = Pair.Value.IsValid() && Pair.Value->Type == EJson::String ? Pair.Value->AsString() : FString();

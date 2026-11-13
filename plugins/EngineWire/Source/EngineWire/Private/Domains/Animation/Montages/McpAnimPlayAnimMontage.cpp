@@ -1,4 +1,5 @@
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Animation/McpAnimActionDecls.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -34,8 +35,7 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
     return true;
   }
 
-  double PlayRate = 1.0;
-  Payload->TryGetNumberField(TEXT("playRate"), PlayRate);
+  double PlayRate = GetJsonNumberField(Payload, TEXT("playRate"), 1.0);
 
   bool bPlaying = false;
   USkeletalMeshComponent *SkelMeshComp = McpAnimationHandlers::FindSkeletalMeshOrReply(

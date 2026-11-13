@@ -3,13 +3,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpSequenceCinematics {
-namespace {
-// The sequence dispatcher hands over its action lower-cased, with sequence_ before the sub-action.
-FString NormalizeAction(const FString &Action) {
-  return Action.StartsWith(TEXT("sequence_")) ? Action.RightChop(9) : Action;
-}
-}
-
 TSharedPtr<FJsonObject> MakeResult(bool bSuccess, const FString &Action,
                                    const FString &Message,
                                    const FString &ErrorCode) {
@@ -47,7 +40,7 @@ bool TryHandleCinematics(const FString &Action,
       {TEXT("add_event_track"), &HandleAddEventTrack},
       {TEXT("add_property_track"), &HandleAddPropertyTrack},
   };
-  const FHandler *Handler = Handlers.Find(NormalizeAction(Action));
+  const FHandler *Handler = Handlers.Find(Action);
   return Handler && (*Handler)(Params, OutResult);
 }
 }

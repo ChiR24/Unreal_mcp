@@ -35,8 +35,6 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-  if (!McpRequireEditor(this, RequestingSocket, RequestId))
-    return true;
   if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"),
                               TEXT("EditorActorSubsystem not available"), nullptr);

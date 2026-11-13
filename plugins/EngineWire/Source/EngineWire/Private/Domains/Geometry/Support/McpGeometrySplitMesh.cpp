@@ -1,4 +1,6 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/Solvers/McpUnionFind.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -26,7 +28,7 @@ TArray<TSharedPtr<FJsonValue>> VectorJson(const FVector& Value)
     TArray<TSharedPtr<FJsonValue>> Out;
     for (const double Axis : {Value.X, Value.Y, Value.Z})
     {
-        Out.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Axis * 10.0) / 10.0));
+        Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Axis, 10.0)));
     }
     return Out;
 }
@@ -81,7 +83,6 @@ TArray<FMcpTriangleGroup> GroupTriangles(const UE::Geometry::FDynamicMesh3& Mesh
         Root.Add(Index);
         Order.Add(Index);
     }
-    auto Find = [&Root](int32 Index) { while (Root[Index] != Index) { Root[Index] = Root[Root[Index]]; Index = Root[Index]; } return Index; };
     Order.Sort([&Pieces](int32 A, int32 B) { return Pieces[A].Box.Min.X < Pieces[B].Box.Min.X; });
     for (int32 I = 0; I < Order.Num(); ++I)
     {
@@ -90,7 +91,7 @@ TArray<FMcpTriangleGroup> GroupTriangles(const UE::Geometry::FDynamicMesh3& Mesh
         {
             if (Reach.Intersect(Pieces[Order[J]].Box))
             {
-                Root[Find(Order[I])] = Find(Order[J]);
+                Root[McpUnionFindRoot(Root, Order[I])] = McpUnionFindRoot(Root, Order[J]);
             }
         }
     }
@@ -98,7 +99,7 @@ TArray<FMcpTriangleGroup> GroupTriangles(const UE::Geometry::FDynamicMesh3& Mesh
     TMap<int32, int32> GroupOfRoot;
     for (int32 Index = 0; Index < Pieces.Num(); ++Index)
     {
-        const int32 At = GroupOfRoot.FindOrAdd(Find(Index), Groups.Num());
+        const int32 At = GroupOfRoot.FindOrAdd(McpUnionFindRoot(Root, Index), Groups.Num());
         if (At == Groups.Num())
         {
             Groups.AddDefaulted();

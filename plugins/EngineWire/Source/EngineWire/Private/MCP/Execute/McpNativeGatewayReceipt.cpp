@@ -1,6 +1,7 @@
 // McpNativeGatewayReceipt.cpp — see header for the envelope contract.
 
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
@@ -128,7 +129,7 @@ TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FMc
 	{
 		for (const auto& Field : Context.Provenance->Values)
 		{
-			Receipt->SetField(FString(Field.Key.Len(), *Field.Key), Field.Value);  // 5.8 keys are not FString
+			Receipt->SetField(McpJsonKey(Field.Key), Field.Value);
 		}
 	}
 	return Receipt;
@@ -169,7 +170,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	// variant, so it is emitted for that kind even when the principal holds none.
 	if (Error.Kind == TEXT("authorization"))
 	{
-		TypedError->SetArrayField(TEXT("grantedScopes"), GatewayStringArray(Error.GrantedScopes));
+		TypedError->SetArrayField(TEXT("grantedScopes"), McpHandlerUtils::ToJsonStringArray(Error.GrantedScopes));
 	}
 	if (Error.bHasRetryable)
 	{
@@ -177,7 +178,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	}
 	if (Error.Supported.Num() > 0)
 	{
-		TypedError->SetArrayField(TEXT("supported"), GatewayStringArray(Error.Supported));
+		TypedError->SetArrayField(TEXT("supported"), McpHandlerUtils::ToJsonStringArray(Error.Supported));
 	}
 	if (Error.bHasResultChars)
 	{

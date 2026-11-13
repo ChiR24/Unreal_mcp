@@ -1,4 +1,5 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 
@@ -35,8 +36,7 @@ int32 GetDuration(const TSharedPtr<FJsonObject> &Params, UMovieScene *MovieScene
       !Params->TryGetNumberField(TEXT("durationFrames"), Duration)) {
     double EndFrame = 0.0;
     if (Params->TryGetNumberField(TEXT("endFrame"), EndFrame)) {
-      double StartFrame = 0.0;
-      Params->TryGetNumberField(TEXT("startFrame"), StartFrame);
+      double StartFrame = GetJsonNumberField(Params, TEXT("startFrame"), 0.0);
       FFrameNumber End;
       FFrameNumber Start;
       int32 Difference = 0;

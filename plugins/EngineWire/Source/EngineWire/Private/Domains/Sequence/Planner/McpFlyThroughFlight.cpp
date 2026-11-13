@@ -8,8 +8,9 @@ namespace
 {
 constexpr int32 FlightRounds = 8;
 constexpr double FlightSlack = 0.8; // a curve may pass this share of the clearance from geometry (the corners' lines keep all of it)
+} // namespace
 
-double FlightLength(const TArray<FVector>& Points)
+double PathLength(const TArray<FVector>& Points)
 {
     double Length = 0.0;
     for (int32 Index = 0; Index + 1 < Points.Num(); ++Index)
@@ -18,14 +19,13 @@ double FlightLength(const TArray<FVector>& Points)
     }
     return Length;
 }
-} // namespace
 
 bool Fly(const FSpace& Space, FPlan& Plan, double Seconds, const FSearchBudget& Budget, TArray<McpMinSnap::FLeg>& OutLegs,
          FString& OutError)
 {
     for (int32 Round = 0; Round < FlightRounds && Budget.InTime(); ++Round)
     {
-        const double Length = FMath::Max(FlightLength(Plan.Points), 1.0);
+        const double Length = FMath::Max(PathLength(Plan.Points), 1.0);
         TArray<double> Times;
         for (int32 Leg = 0; Leg + 1 < Plan.Points.Num(); ++Leg)
         {

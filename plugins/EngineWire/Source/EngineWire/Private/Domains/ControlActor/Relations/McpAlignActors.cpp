@@ -76,7 +76,7 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
         Row->SetStringField(TEXT("actor"), Actor->GetActorLabel());
         Row->SetArrayField(TEXT("from"), McpHandlerUtils::VectorToJsonArray(From));
         Row->SetArrayField(TEXT("to"), McpHandlerUtils::VectorToJsonArray(To));
-        Row->SetNumberField(TEXT("movedCm"), FMath::RoundToDouble(FVector::Dist(From, To) * 10.0) / 10.0);
+        Row->SetNumberField(TEXT("movedCm"), McpRoundTo(FVector::Dist(From, To), 10.0));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
     // The undo step covers only actors that move: a row already in line would make a step that changes nothing.
@@ -93,7 +93,7 @@ bool HandleAlignActors(UEngineWireSubsystem* Bridge, const FString& RequestId, c
         Transaction.DescribeInto(Result);
     }
     Result->SetArrayField(TEXT("actors"), Rows);
-    Result->SetNumberField(TEXT("line"), FMath::RoundToDouble(Line * 1000.0) / 1000.0);
+    Result->SetNumberField(TEXT("line"), McpRoundTo(Line, 1000.0));
     Result->SetNumberField(TEXT("moved"), Moving.Num());
     Result->SetBoolField(TEXT("dryRun"), bDryRun);
     Bridge->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("%s %d of %d actor(s): their %s on %s = %.1f."),

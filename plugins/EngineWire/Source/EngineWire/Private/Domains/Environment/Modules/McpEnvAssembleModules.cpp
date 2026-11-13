@@ -7,6 +7,7 @@
 // adjacencies are authored by hand where these are read from the meshes.
 
 #include "Domains/Environment/Modules/McpModuleKit.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Dom/JsonObject.h"
@@ -182,7 +183,7 @@ bool HandleAssembleModules(UEngineWireSubsystem& Bridge, const FString& RequestI
     Result->SetNumberField(TEXT("openFaces"), OpenFaces(In, Layout.Placed));
     Result->SetNumberField(TEXT("backtracks"), Layout.Backtracks);
     Result->SetNumberField(TEXT("seedsTried"), Layout.Attempt + 1);
-    Result->SetNumberField(TEXT("seconds"), FMath::RoundToDouble((FPlatformTime::Seconds() - Start) * 100.0) / 100.0);
+    Result->SetNumberField(TEXT("seconds"), McpRoundTo(FPlatformTime::Seconds() - Start, 100.0));
     if (Unmatched.Num() > 0)
     {
         Result->SetArrayField(TEXT("unmatchedFaces"), Unmatched);

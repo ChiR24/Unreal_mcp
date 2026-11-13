@@ -1,4 +1,5 @@
 #include "Domains/Play/McpPlaytest.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Domains/Debug/Contracts/McpContracts.h"
 #include "Domains/Log/McpScriptErrors.h"
@@ -69,7 +70,7 @@ FString Advance(FRun& Run)
     if (Now >= Run.NextSample && Run.Timeline.Num() < MaxTimeline)
     {
         TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
-        Sample->SetNumberField(TEXT("t"), FMath::RoundToDouble(Now * 100.0) / 100.0);
+        Sample->SetNumberField(TEXT("t"), McpRoundTo(Now, 100.0));
         Sample->SetArrayField(TEXT("location"), Point(Here));
         Run.Timeline.Add(MakeShared<FJsonValueObject>(Sample));
         Run.NextSample = Now + Run.Interval;

@@ -219,12 +219,9 @@ bool UEngineWireSubsystem::HandleControlActorSetVisibility(
                                 TEXT("actorName (or actorNames) required"), nullptr);
       return true;
     }
-    AActor *Found = FindActorByName(TargetName);
-    if (!Found) {
-      SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                                TEXT("Actor not found"), nullptr);
+    AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+    if (!Found)
       return true;
-    }
     Actors.Add(Found);
   }
 

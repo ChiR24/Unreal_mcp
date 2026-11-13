@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 
+class APawn;
 class UWorld;
 
 // Which Play session this server started (control_editor play notes it once play has begun): what drives the running
@@ -11,4 +12,6 @@ namespace McpPlaySession
 {
 void NoteStarted(UWorld* PlayWorld);
 bool StartedByMcp(const UWorld* PlayWorld);
+// The pawn Name names in World (label, name or path), else the first player's pawn; null when there is none.
+APawn* ResolvePawn(UWorld* World, const FString& Name);
 }

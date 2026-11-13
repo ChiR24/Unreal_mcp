@@ -112,12 +112,9 @@ bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
 
   UClass *ActorClass = Found->GetClass();
   // Names are resolved before the actor is touched, and one unknown name refuses the whole call: a

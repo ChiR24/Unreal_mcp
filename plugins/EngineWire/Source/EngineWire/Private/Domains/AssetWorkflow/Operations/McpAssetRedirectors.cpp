@@ -12,12 +12,6 @@ bool UEngineWireSubsystem::HandleFixupRedirectors(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("fixup_redirectors"), ESearchCase::IgnoreCase)) {
-    // Not our action — allow other handlers to try
-    return false;
-  }
-
   // Implementation of redirector fixup functionality
 
   // Get directory path - REQUIRED for proper error reporting

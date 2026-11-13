@@ -14,6 +14,13 @@
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/PackageName.h"
 
+bool McpBTNodeMatchesId(const UBTNode* Node, const FString& Id)
+{
+    return Node && (Node->GetName().Equals(Id, ESearchCase::IgnoreCase) ||
+                    Node->GetPathName().Equals(Id, ESearchCase::IgnoreCase) ||
+                    Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase));
+}
+
 namespace
 {
 // Depth-first search for a composite by object name, path or display name.
@@ -23,9 +30,7 @@ UBTCompositeNode* FindCompositeById(UBTCompositeNode* Node, const FString& Id)
     {
         return nullptr;
     }
-    if (Node->GetName().Equals(Id, ESearchCase::IgnoreCase) ||
-        Node->GetPathName().Equals(Id, ESearchCase::IgnoreCase) ||
-        Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase))
+    if (McpBTNodeMatchesId(Node, Id))
     {
         return Node;
     }
@@ -42,6 +47,16 @@ UBTCompositeNode* FindCompositeById(UBTCompositeNode* Node, const FString& Id)
 
 namespace McpAIHandlers
 {
+UBehaviorTree* LoadBehaviorTreeOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path)
+{
+    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *Path);
+    if (!BT)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Behavior Tree not found: %s"), *Path), TEXT("NOT_FOUND"));
+    }
+    return BT;
+}
+
 static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString& Name, FString& OutError, FString& OutCode, bool& bOutSaved)
 {
     UBehaviorTree* BehaviorTree = CreateAIAssetInPackage<UBehaviorTree>(
@@ -109,12 +124,9 @@ bool HandleAddCompositeNode(UEngineWireSubsystem* Self, const FString& RequestId
     // but never assembled.
     const FString RequestedNodeName = GetJsonStringField(Payload, TEXT("nodeName"));
 
-    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    UBehaviorTree* BT = LoadBehaviorTreeOrReply(Self, RequestId, RequestingSocket, BTPath);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -207,12 +219,9 @@ bool HandleAddTaskNode(UEngineWireSubsystem* Self, const FString& RequestId, con
     FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
     FString TaskType = GetJsonStringField(Payload, TEXT("taskType"));
 
-    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    UBehaviorTree* BT = LoadBehaviorTreeOrReply(Self, RequestId, RequestingSocket, BTPath);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -6,23 +7,15 @@ namespace McpEffectHandlers
 {
 FString NormalizeNativeSubAction(
     const FString& Lower,
-    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload)
 {
-    FString SubAction;
-    Payload->TryGetStringField(TEXT("subAction"), SubAction);
-    if (SubAction.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("action"), SubAction);
-    }
+    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
     if (SubAction.IsEmpty() && !Lower.Equals(TEXT("manage_effect")) &&
         !Lower.Equals(TEXT("create_effect")))
     {
-        SubAction = Action;
+        // The dispatcher's own action name: a handler-table or in-file name, with no '-' or ' '.
+        SubAction = Lower;
     }
-    SubAction = SubAction.ToLower();
-    SubAction.ReplaceInline(TEXT("-"), TEXT("_"));
-    SubAction.ReplaceInline(TEXT(" "), TEXT("_"));
     if (!SubAction.IsEmpty())
     {
         Payload->SetStringField(TEXT("subAction"), SubAction);
@@ -87,11 +80,7 @@ FString ResolveCreateEffectSubAction(
     const FString& Lower,
     const TSharedPtr<FJsonObject>& Payload)
 {
-    FString SubAction;
-    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("action"), SubAction);
-    }
+    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
     if (Lower.Equals(TEXT("create_niagara_system")))
     {
         SubAction = TEXT("create_niagara_system");

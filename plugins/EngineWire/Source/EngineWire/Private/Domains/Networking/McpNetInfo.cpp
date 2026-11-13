@@ -28,10 +28,9 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
 
     if (!BlueprintPath.IsEmpty())
     {
-        UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+        UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
         if (!Blueprint)
         {
-            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
             return true;
         }
 

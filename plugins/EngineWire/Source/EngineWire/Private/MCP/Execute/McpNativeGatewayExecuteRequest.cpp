@@ -1,6 +1,7 @@
 // McpNativeGatewayExecuteRequest.cpp — see header for the accepted forms.
 
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/Request/McpExecuteAggregate.h"
 #include "MCP/Execute/Request/McpExecuteContractOptions.h"
@@ -29,7 +30,7 @@ TSharedPtr<FJsonObject> BuildGuidance(
 	const TArray<FString>& Suggestions, const TSharedPtr<FJsonObject>& NextCall)
 {
 	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
-	Guidance->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+	Guidance->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
 	if (NextCall.IsValid())
 	{
 		Guidance->SetObjectField(TEXT("nextCall"), NextCall);
@@ -166,7 +167,7 @@ bool ResolveFromLegacyFields(
 	const FMcpUnknownActionGuide Guide = GatewayGuideUnknownAction(
 		Tool, Action, Actions, FMcpCapabilityStore::Get().GetParentsWithAction(Action));
 	OutGuidance = BuildGuidance(Guide.Suggestions, Guide.NextCall);
-	OutGuidance->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
+	OutGuidance->SetArrayField(TEXT("availableActions"), McpHandlerUtils::ToJsonStringArray(Actions));
 	OutError = McpValidationError(TEXT("UNKNOWN_ACTION"),
 		FString::Printf(TEXT("Unknown action '%s' for tool '%s'.%s Call describe before execute."),
 			*Action, *Tool, *Guide.Hint));

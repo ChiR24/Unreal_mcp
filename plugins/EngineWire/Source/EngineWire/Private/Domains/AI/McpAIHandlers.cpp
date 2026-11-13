@@ -9,11 +9,6 @@ bool UEngineWireSubsystem::HandleManageAIAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_ai"))
-    {
-        return false;
-    }
-
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {

@@ -29,6 +29,20 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
   return Package;
 }
 
+UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const FString& Name, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
+                                            TFunctionRef<void(UMcpGenericDataAsset&)> Fill)
+{
+  UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
+  OutSaved = false;
+  if (Asset) {
+    Fill(*Asset);
+    Asset->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(Asset);
+    OutSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Asset);
+  }
+  return Asset;
+}
+
 bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                             const FString& Path, const TCHAR* Field)
 {

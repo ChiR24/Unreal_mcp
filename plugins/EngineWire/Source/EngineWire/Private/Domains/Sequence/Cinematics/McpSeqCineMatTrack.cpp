@@ -1,4 +1,5 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 
@@ -87,8 +88,7 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  double MaterialIndexValue = 0.0;
-  Params->TryGetNumberField(TEXT("materialIndex"), MaterialIndexValue);
+  double MaterialIndexValue = GetJsonNumberField(Params, TEXT("materialIndex"), 0.0);
   // The sequence dispatcher has refused one that is not finite, not whole or outside int32.
   if (MaterialIndexValue < 0.0) {
     OutResult = MakeResult(false, TEXT("add_material_parameter_track"),

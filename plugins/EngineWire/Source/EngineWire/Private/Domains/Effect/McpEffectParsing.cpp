@@ -64,7 +64,7 @@ UObject* LoadEffectAsset(const FString& AssetPath)
     {
         return nullptr;
     }
-    const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
+    const FString ObjectPath = McpToObjectPath(PackagePath);
     // In memory first, so an asset created but not saved yet still resolves.
     if (UObject* Loaded = FindObject<UObject>(nullptr, *ObjectPath))
     {

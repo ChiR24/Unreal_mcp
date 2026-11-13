@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Editor.h"
 
@@ -102,7 +103,7 @@ bool UEngineWireSubsystem::HandleManageAudioAuthoringAction(
 			TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
 			for (const auto& Pair : Response->Values)
 			{
-				const FString Key(Pair.Key.Len(), *Pair.Key);
+				const FString Key = McpJsonKey(Pair.Key);
 				if (Key == TEXT("success") || Key == TEXT("error") ||
 					Key == TEXT("code") || Key == TEXT("message") || Key == TEXT("type") ||
 					Key == TEXT("requestId") || Key == TEXT("data") || Key == TEXT("result"))

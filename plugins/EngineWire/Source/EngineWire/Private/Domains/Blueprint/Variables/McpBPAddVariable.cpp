@@ -24,15 +24,8 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("add_variable"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_add_variable handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_add_variable"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_add_variable requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 

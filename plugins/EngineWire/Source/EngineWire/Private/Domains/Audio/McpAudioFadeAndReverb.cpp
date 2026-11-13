@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "EngineUtils.h"
 #include "Domains/Audio/McpAudioPrivate.h"
@@ -203,10 +204,8 @@ bool HandleFadeAndReverbActions(
            FString::Printf(TEXT("ReverbEffect not found: %s"), *ReverbEffectPath), TEXT("ASSET_NOT_FOUND"));
        return true;
      }
-     double Volume = 1.0;
-     Payload->TryGetNumberField(TEXT("volume"), Volume);
-     double FadeTime = 2.0;
-     Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+     double Volume = GetJsonNumberField(Payload, TEXT("volume"), 1.0);
+     double FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 2.0);
 
      UWorld *World = McpAudioEditorWorldOrReply(Self, RequestingSocket, RequestId);
      if (!World) {

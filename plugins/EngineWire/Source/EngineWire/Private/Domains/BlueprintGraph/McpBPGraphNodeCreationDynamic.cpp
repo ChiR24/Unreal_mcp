@@ -241,7 +241,7 @@ void CreateDynamicNode(
         StructType = StructPath.IsEmpty() ? nullptr : LoadObject<UScriptStruct>(nullptr, *StructPath);
         if (!StructType && !StructPath.IsEmpty() && !StructPath.Contains(TEXT(".")))
         {
-            StructType = LoadObject<UScriptStruct>(nullptr, *(StructPath + TEXT(".") + FPackageName::GetShortName(StructPath)));
+            StructType = LoadObject<UScriptStruct>(nullptr, *McpToObjectPath(StructPath));
         }
         if (!StructType)
         {

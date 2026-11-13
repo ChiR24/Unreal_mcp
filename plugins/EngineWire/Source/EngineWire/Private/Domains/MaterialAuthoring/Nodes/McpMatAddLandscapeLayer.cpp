@@ -31,14 +31,8 @@ bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& Reques
     if (Path.IsEmpty()) { Path = TEXT("/Game/Landscape/Layers"); }
 
     // Validate path security - reject traversal and invalid paths
-    FString ValidatedPath = SanitizeProjectRelativePath(Path);
-    if (ValidatedPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("path"), Path),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), Path))
       return true;
-    }
-    Path = ValidatedPath;
 
     FString PackagePath = Path / LayerName;
     if (!FPackageName::IsValidLongPackageName(PackagePath)) {

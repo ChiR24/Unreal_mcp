@@ -1,5 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 
 #include "AIController.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -55,19 +56,7 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
         return nullptr;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    if (!Factory)
-    {
-        OutError = TEXT("Failed to create BlueprintFactory");
-        return nullptr;
-    }
-
-    Factory->ParentClass = AAIController::StaticClass();
-
-    UBlueprint* Blueprint = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name,
-                                  RF_Public | RF_Standalone, nullptr, GWarn));
-
+    UBlueprint* Blueprint = McpNewBlueprint(Package, *Name, AAIController::StaticClass());
     if (!Blueprint)
     {
         OutError = TEXT("Failed to create AI Controller blueprint");

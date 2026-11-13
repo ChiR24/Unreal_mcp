@@ -19,20 +19,12 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    // UMcpGenericDataAsset (UDataAsset/UPrimaryDataAsset are abstract in UE5)
-    UMcpGenericDataAsset* LootTableAsset =
-        NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
-
-    if (LootTableAsset) {
-      LootTableAsset->MarkPackageDirty();
-      FAssetRegistryModule::AssetCreated(LootTableAsset);
-
-      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(LootTableAsset);
-
+    bool bSaved = false;
+    if (NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
+      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Loot table created"), Result);
     } else {

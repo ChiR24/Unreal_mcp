@@ -27,10 +27,6 @@ UClass* FindMetaHumanCharacterClass()
 
 UObject* FindMetaHumanSubsystem()
 {
-    if (!GEditor)
-    {
-        return nullptr;
-    }
     UClass* SubsystemClass = FindObject<UClass>(nullptr, MetaHumanSubsystemClassPath);
     if (!SubsystemClass || !SubsystemClass->IsChildOf(UEditorSubsystem::StaticClass()))
     {

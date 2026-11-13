@@ -4,9 +4,6 @@
 bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   // waitForShaders: capture once the shader queue drains. The wait polls on the core ticker, so the game thread
   // keeps running and the compiling can finish; the call resumes here with shaderWait in the payload.
   if (McpDeferForShaderCompile(

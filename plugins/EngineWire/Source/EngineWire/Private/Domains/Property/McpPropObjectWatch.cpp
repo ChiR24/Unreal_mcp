@@ -1,4 +1,5 @@
 #include "Domains/Property/McpPropObjectWatch.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Containers/Ticker.h"
 #include "Dom/JsonValue.h"
@@ -56,7 +57,7 @@ bool AdvanceWatch(FWatchRun& Run)
     if (Run.Samples.Num() == 0 || Text != Run.LastText)
     {
       TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
-      Sample->SetNumberField(TEXT("t"), FMath::RoundToDouble(Now * 1000.0) / 1000.0);
+      Sample->SetNumberField(TEXT("t"), McpRoundTo(Now, 1000.0));
       Sample->SetField(TEXT("value"), Value);
       Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
       Run.LastText = Text;

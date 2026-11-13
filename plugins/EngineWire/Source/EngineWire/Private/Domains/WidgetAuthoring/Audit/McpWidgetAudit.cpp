@@ -1,6 +1,7 @@
 // manage_blueprint audit_widget (see McpWidgetAudit.h): the Widget Blueprint drawn at each screen size asked for, its
 // findings merged across the sizes (one row per finding, with the sizes it shows at), the most severe first.
 #include "Domains/WidgetAuthoring/Audit/McpWidgetAudit.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
@@ -70,11 +71,7 @@ TSharedPtr<FJsonObject> AuditRowJson(const FAuditRow& Row)
     {
         Json->SetStringField(TEXT("other"), Finding.Other);
     }
-    TArray<TSharedPtr<FJsonValue>> Sizes;
-    for (const FString& Size : Row.Sizes)
-    {
-        Sizes.Add(MakeShared<FJsonValueString>(Size));
-    }
+    TArray<TSharedPtr<FJsonValue>> Sizes = McpHandlerUtils::ToJsonStringArray(Row.Sizes);
     Json->SetArrayField(TEXT("resolutions"), Sizes);
     const FVector2D Min = Finding.Rect.bIsValid ? Finding.Rect.Min : FVector2D::ZeroVector;
     const FVector2D Extent = Finding.Rect.bIsValid ? Finding.Rect.GetSize() : FVector2D::ZeroVector;

@@ -7,20 +7,6 @@
 #endif
 
 namespace McpSequenceMovieRender {
-namespace {
-FString NormalizeAction(const FString &Action,
-                        const TSharedPtr<FJsonObject> &Payload) {
-  FString Normalized = Action.ToLower();
-  if (Normalized == TEXT("manage_sequence") && Payload.IsValid()) {
-    FString SubAction;
-    if (Payload->TryGetStringField(TEXT("subAction"), SubAction))
-      Normalized = SubAction.ToLower();
-  }
-  if (Normalized.StartsWith(TEXT("sequence_")))
-    Normalized.RightChopInline(9);
-  return Normalized;
-}
-}
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 
@@ -42,7 +28,7 @@ bool TryHandle(UEngineWireSubsystem *Subsystem, const FString &RequestId,
       {TEXT("queue_render"), &HandleQueueRender},
       {TEXT("start_render"), &HandleStartRender},
   };
-  const FHandler *Handler = Handlers.Find(NormalizeAction(Action, Payload));
+  const FHandler *Handler = Handlers.Find(Action);
   return Handler && (*Handler)(Subsystem, RequestId, Payload, RequestingSocket);
 }
 
@@ -58,7 +44,7 @@ bool TryHandle(UEngineWireSubsystem *Subsystem,
       TEXT("configure_console_variables"), TEXT("configure_burn_ins"),
       TEXT("queue_render"), TEXT("start_render"), TEXT("cancel_render"),
   };
-  if (!Actions.Contains(NormalizeAction(Action, Payload)))
+  if (!Actions.Contains(Action))
     return false;
   Subsystem->SendAutomationError(
       RequestingSocket, RequestId,

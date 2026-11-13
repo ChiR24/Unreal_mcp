@@ -10,8 +10,6 @@ bool UEngineWireSubsystem::HandleControlEditorFocusActor(
   if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("actorName"), ActorName))
     return true;
 
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
   // The running game draws through its pawn's camera: the level viewport this moves is hidden behind it.
   if (RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("focus_actor"))) {
     return true;

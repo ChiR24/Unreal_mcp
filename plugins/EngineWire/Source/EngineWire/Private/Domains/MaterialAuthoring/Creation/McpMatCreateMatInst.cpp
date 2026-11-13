@@ -79,14 +79,8 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
       return true;
     }
     // SECURITY: Validate parentMaterial path before loading
-    FString ValidatedParentPath = SanitizeProjectRelativePath(ParentMaterial);
-    if (ValidatedParentPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("parentMaterial"), ParentMaterial),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("parentMaterial"), ParentMaterial))
       return true;
-    }
-    ParentMaterial = ValidatedParentPath;
 
     // Any material interface: a child instance of another instance is how a material family is built, and loading
     // only a UMaterial refused every instance as a parent.

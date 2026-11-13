@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Subsystems/EditorActorSubsystem.h"
 
@@ -22,8 +23,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewTarget(
   }
   UWorld *PlayWorld = GEditor->PlayWorld.Get();
 
-  double BlendTime = 0.0;
-  Payload->TryGetNumberField(TEXT("blendTime"), BlendTime);
+  double BlendTime = GetJsonNumberField(Payload, TEXT("blendTime"), 0.0);
   if (BlendTime < 0.0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("blendTime must be non-negative"), nullptr);

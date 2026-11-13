@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "EngineWireSubsystem.h"
 #include "Domains/Input/McpInputKeyResolve.h"
@@ -97,8 +98,7 @@ bool HandleLegacyInputMapping(
     const int32 BeforeCount = CountMatching();
     if (bAxis)
     {
-        double Scale = 1.0;
-        Payload->TryGetNumberField(TEXT("scale"), Scale);
+        double Scale = GetJsonNumberField(Payload, TEXT("scale"), 1.0);
         FInputAxisKeyMapping Mapping(FName(*MappingName), Key, static_cast<float>(Scale));
         if (bRemove)
         {

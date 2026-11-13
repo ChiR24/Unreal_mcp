@@ -83,11 +83,6 @@ bool HandleCreateLightingEnabledLevel(
         return true;
     }
 
-    if (!GEditor)
-    {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"), TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     if (GEditor->PlayWorld)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Play In Editor is running; stop it first. Nothing was created."), TEXT("PIE_ACTIVE"));

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "McpConnectionManager.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/McpSecureTokenCompare.h"
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
@@ -49,7 +50,7 @@ inline FString PreviewJsonFields(const TSharedPtr<FJsonObject>& Obj, int32 MaxSt
     return FString();
   }
   for (const auto& Pair : Obj->Values) {
-    const FString Key(Pair.Key.Len(), *Pair.Key);
+    const FString Key = McpJsonKey(Pair.Key);
     if (bRequest && (Key == TEXT("type") || Key == TEXT("requestId"))) {
       continue;
     }

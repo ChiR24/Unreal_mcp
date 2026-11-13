@@ -37,7 +37,7 @@ bool HandleDoorAction(
                     ValidateAssetCreationPath(GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables")),
                                               Name, PackageName, PathError) &&
                     McpAssetExists(PackageName)
-                ? LoadObject<UBlueprint>(nullptr, *(PackageName + TEXT(".") + FPackageName::GetShortName(PackageName)))
+                ? LoadObject<UBlueprint>(nullptr, *McpToObjectPath(PackageName))
                 : nullptr;
         // An existing door gets the opening logic too (it is re-runnable), so one made before it existed opens.
         if (ExistingDoorBP)

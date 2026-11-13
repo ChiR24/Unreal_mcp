@@ -4,6 +4,7 @@
 // against the editor world's sight lines, and the camera moved, or spawned, with its lens and focus as one undo step.
 
 #include "Domains/Sequence/Planner/McpFrameShot.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 #include "Domains/Sequence/Planner/McpFrameShotCamera.h"
@@ -142,8 +143,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     FString Size = TEXT("medium");
     Payload->TryGetStringField(TEXT("shotSize"), Size);
     const int32 SizeIndex = SizeIndexOf(Size);
-    double Asked = 0.0;
-    Payload->TryGetNumberField(TEXT("focalLength"), Asked);
+    double Asked = GetJsonNumberField(Payload, TEXT("focalLength"), 0.0);
     FFrameCamera Camera;
     if (Error.IsEmpty() && SizeIndex == INDEX_NONE)
     {

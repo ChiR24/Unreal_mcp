@@ -139,8 +139,7 @@ bool HandleConfigureVoiceSettings(
     }
     if (Payload->HasField(TEXT("sampleRate")))
     {
-        double Rate = 0.0;
-        Payload->TryGetNumberField(TEXT("sampleRate"), Rate);
+        double Rate = GetJsonNumberField(Payload, TEXT("sampleRate"), 0.0);
         if (Rate != 16000.0 && Rate != 24000.0)
         {
             Subsystem->SendAutomationError(Socket, RequestId,

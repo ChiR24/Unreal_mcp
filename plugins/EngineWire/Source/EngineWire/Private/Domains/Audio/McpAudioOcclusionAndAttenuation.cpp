@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 #include "Algo/Find.h"
@@ -32,14 +33,11 @@ bool HandleSpatialActions(
     bool bEnable = true;
     Payload->TryGetBoolField(TEXT("enable"), bEnable);
 
-    double OcclusionVolumeScale = 0.5;
-    Payload->TryGetNumberField(TEXT("occlusionVolumeScale"), OcclusionVolumeScale);
+    double OcclusionVolumeScale = GetJsonNumberField(Payload, TEXT("occlusionVolumeScale"), 0.5);
 
-    double OcclusionFilterScale = 0.5;
-    Payload->TryGetNumberField(TEXT("occlusionFilterScale"), OcclusionFilterScale);
+    double OcclusionFilterScale = GetJsonNumberField(Payload, TEXT("occlusionFilterScale"), 0.5);
 
-    double OcclusionInterpolationTime = 0.1;
-    Payload->TryGetNumberField(TEXT("occlusionInterpolationTime"), OcclusionInterpolationTime);
+    double OcclusionInterpolationTime = GetJsonNumberField(Payload, TEXT("occlusionInterpolationTime"), 0.1);
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
@@ -160,10 +158,8 @@ bool HandleSpatialActions(
      FString PackagePath = TEXT("/Game/Audio/Attenuation");
      Payload->TryGetStringField(TEXT("path"), PackagePath);
 
-     double InnerRadius = 400.0;
-     Payload->TryGetNumberField(TEXT("innerRadius"), InnerRadius);
-      double FalloffDistance = 3600.0;
-      Payload->TryGetNumberField(TEXT("falloffDistance"), FalloffDistance);
+     double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 400.0);
+      double FalloffDistance = GetJsonNumberField(Payload, TEXT("falloffDistance"), 3600.0);
       FString AttenuationShape = TEXT("Sphere");
       Payload->TryGetStringField(TEXT("attenuationShape"), AttenuationShape);
       FString FalloffMode = TEXT("Linear");

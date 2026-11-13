@@ -32,7 +32,7 @@ bool UEngineWireSubsystem::HandleEffectAction(
     TSharedPtr<FJsonObject> LocalPayload =
         Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
     const FString NativeSubAction =
-        McpEffectHandlers::NormalizeNativeSubAction(Lower, Action, LocalPayload);
+        McpEffectHandlers::NormalizeNativeSubAction(Lower, LocalPayload);
 
     // set_niagara_parameter on a system ASSET (assetPath, no actor) sets the user parameter's
     // default, which is set_parameter_value's job; it used to fall to the actor form and

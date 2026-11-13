@@ -42,17 +42,6 @@ static bool DrawShape(
     float Thickness,
     const FColor& Color)
 {
-    if (!GEditor)
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("Editor not available for debug drawing"));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false, TEXT("Editor not available"),
-            Response, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
-
     UWorld* World = GetEditorWorld();
     if (!World)
     {

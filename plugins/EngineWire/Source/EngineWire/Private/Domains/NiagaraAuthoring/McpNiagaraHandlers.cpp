@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 bool UEngineWireSubsystem::HandleManageNiagaraAuthoringAction(
     const FString& RequestId,
@@ -8,18 +9,14 @@ bool UEngineWireSubsystem::HandleManageNiagaraAuthoringAction(
 {
     // Reached only from manage_effect (McpEffectHandlers.cpp), which passes this action and a payload carrying the
     // sub-action.
-    if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor")))
+    if (!McpLoadOptionalModule(TEXT("NiagaraEditor")))
     {
-        if (!FModuleManager::Get().ModuleExists(TEXT("NiagaraEditor")) ||
-            !FModuleManager::Get().LoadModule(TEXT("NiagaraEditor")))
-        {
-            SendAutomationError(
-                RequestingSocket,
-                RequestId,
-                TEXT("NiagaraEditor plugin is not enabled in this project. Enable the Niagara plugin to use Niagara VFX features."),
-                TEXT("NIAGARAEDITOR_PLUGIN_NOT_ENABLED"));
-            return true;
-        }
+        SendAutomationError(
+            RequestingSocket,
+            RequestId,
+            TEXT("NiagaraEditor plugin is not enabled in this project. Enable the Niagara plugin to use Niagara VFX features."),
+            TEXT("NIAGARAEDITOR_PLUGIN_NOT_ENABLED"));
+        return true;
     }
 
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));

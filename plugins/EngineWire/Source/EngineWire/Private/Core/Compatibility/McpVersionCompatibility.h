@@ -155,6 +155,20 @@
   #define MCP_GET_MATERIAL_RESOURCE(Material) (Material)->GetMaterialResource(GMaxRHIFeatureLevel)
 #endif
 
+// UStaticMesh's Nanite switch is IsNaniteEnabled() from 5.3 and the NaniteSettings member before. Its settings are
+// GetNaniteSettings() from 5.7, where the member is deprecated ("will become private soon"), and the member before;
+// the non-const accessor hands back the member itself, as SetNaniteSettings writes it.
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+  #define MCP_STATIC_MESH_NANITE_ENABLED(Mesh) ((Mesh)->IsNaniteEnabled())
+#else
+  #define MCP_STATIC_MESH_NANITE_ENABLED(Mesh) ((Mesh)->NaniteSettings.bEnabled)
+#endif
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+  #define MCP_STATIC_MESH_NANITE_SETTINGS(Mesh) ((Mesh)->GetNaniteSettings())
+#else
+  #define MCP_STATIC_MESH_NANITE_SETTINGS(Mesh) ((Mesh)->NaniteSettings)
+#endif
+
 // =============================================================================
 // Material API Compatibility (UE 5.0 vs 5.1+)
 // =============================================================================

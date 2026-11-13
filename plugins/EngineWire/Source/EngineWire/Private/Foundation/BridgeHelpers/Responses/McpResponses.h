@@ -4,6 +4,7 @@
 // See: https://google.github.io/styleguide/jsoncstyleguide.xml
 
 #include "Editor.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
@@ -33,10 +34,7 @@ static inline void SendStandardSuccessResponse(
   Envelope->SetObjectField(TEXT("data"),
                            Data.IsValid() ? Data : MakeShared<FJsonObject>());
 
-  TArray<TSharedPtr<FJsonValue>> WarningVals;
-  for (const FString &W : Warnings) {
-    WarningVals.Add(MakeShared<FJsonValueString>(W));
-  }
+  TArray<TSharedPtr<FJsonValue>> WarningVals = McpHandlerUtils::ToJsonStringArray(Warnings);
   Envelope->SetArrayField(TEXT("warnings"), WarningVals);
 
   Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Envelope,
@@ -100,16 +98,6 @@ static inline bool McpReadRequiredField(UEngineWireSubsystem *Subsystem, TShared
     return true;
   SendStandardErrorResponse(Subsystem, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                             FString::Printf(TEXT("%s required"), Field), nullptr);
-  return false;
-}
-
-// True while GEditor exists; false after the standard EDITOR_NOT_AVAILABLE error. `if (!McpRequireEditor(...)) return true;`
-static inline bool McpRequireEditor(UEngineWireSubsystem *Subsystem, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                                    const FString &RequestId) {
-  if (GEditor)
-    return true;
-  SendStandardErrorResponse(Subsystem, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"), TEXT("Editor not available"),
-                            nullptr);
   return false;
 }
 

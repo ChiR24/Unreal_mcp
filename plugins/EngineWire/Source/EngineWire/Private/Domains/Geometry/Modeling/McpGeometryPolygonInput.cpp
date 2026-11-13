@@ -34,18 +34,13 @@ static bool ParseAppendVertices(const TSharedPtr<FJsonObject>& Payload, TArray<F
     OutVertices.Reserve(Values->Num());
     for (int32 Index = 0; Index < Values->Num(); ++Index)
     {
-        const TSharedPtr<FJsonObject>* Point = nullptr;
-        double X = 0.0;
-        double Y = 0.0;
-        double Z = 0.0;
-        if (!(*Values)[Index].IsValid() || !(*Values)[Index]->TryGetObject(Point) || !Point->IsValid()
-            || !(*Point)->TryGetNumberField(TEXT("x"), X) || !(*Point)->TryGetNumberField(TEXT("y"), Y)
-            || !(*Point)->TryGetNumberField(TEXT("z"), Z) || !FMath::IsFinite(X) || !FMath::IsFinite(Y) || !FMath::IsFinite(Z))
+        FVector3d Vertex;
+        if (!ReadPointValue((*Values)[Index], Vertex))
         {
             OutError = FString::Printf(TEXT("vertices[%d] must be an {x, y, z} object of finite numbers"), Index);
             return false;
         }
-        OutVertices.Add(FVector3d(X, Y, Z));
+        OutVertices.Add(Vertex);
     }
     return true;
 }

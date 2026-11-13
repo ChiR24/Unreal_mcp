@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
 #include "Editor.h"
@@ -81,10 +82,7 @@ bool HandleCreateLevel(
     // levelPath may already name the level (".../Maps/MCP_Arena" + levelName
     // "MCP_Arena"); do not nest it a second time.
     FString FullPath = LevelPath.EndsWith(TEXT("/") + LevelName, ESearchCase::IgnoreCase) ? LevelPath : LevelPath / LevelName;
-    if (!FullPath.StartsWith(TEXT("/")))
-    {
-        FullPath = TEXT("/Game/") + FullPath;
-    }
+    FullPath = McpRootedContentPath(FullPath);
 
     // With loadAfterCreate, opens FullPath and reports where the editor ended up; false (refusal sent) when it would not load.
     auto LoadIfRequested = [&](const TSharedPtr<FJsonObject>& Result, const TCHAR* FailurePrefix)

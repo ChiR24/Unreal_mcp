@@ -1,4 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "EditorAssetLibrary.h"
@@ -50,14 +52,12 @@ UAIPerceptionComponent* FindOrCreatePerceptionComponent(
         }
     }
 
-    USCS_Node* PerceptionNode = Blueprint->SimpleConstructionScript->CreateNode(
-        UAIPerceptionComponent::StaticClass(), TEXT("AIPerceptionComponent"));
+    USCS_Node* PerceptionNode = McpAddScsNode(Blueprint->SimpleConstructionScript, UAIPerceptionComponent::StaticClass(), TEXT("AIPerceptionComponent"));
     if (!PerceptionNode)
     {
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create perception component node"), TEXT("CREATION_FAILED"));
         return nullptr;
     }
-    Blueprint->SimpleConstructionScript->AddNode(PerceptionNode);
 
     UAIPerceptionComponent* Created = Cast<UAIPerceptionComponent>(PerceptionNode->ComponentTemplate);
     if (!Created)
@@ -76,10 +76,9 @@ UAIPerceptionComponent* LoadPerceptionOrReply(UEngineWireSubsystem* Self, const 
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint*& OutBlueprint)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    OutBlueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    OutBlueprint = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, BlueprintPath);
     if (!OutBlueprint)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return nullptr;
     }
     UAIPerceptionComponent* Perception = FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, OutBlueprint, nullptr);
@@ -103,11 +102,9 @@ bool ConfigurePerception(UEngineWireSubsystem* Self, const FString& RequestId, c
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath or controllerPath"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+    UBlueprint* ControllerBP = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, ControllerPath);
     if (!ControllerBP)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
         return true;
     }
     // An unknown dominant sense was echoed back as if applied.

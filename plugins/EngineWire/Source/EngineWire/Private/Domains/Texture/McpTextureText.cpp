@@ -105,10 +105,7 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
     }
 
     FString Family = GetJsonStringField(Params, TEXT("fontFamily"), TEXT("/Engine/EngineFonts/Roboto"));
-    if (!Family.Contains(TEXT(".")))
-    {
-        Family += TEXT(".") + FPackageName::GetShortName(Family);
-    }
+    Family = McpToObjectPath(Family);
     UFont* FontAsset = LoadObject<UFont>(nullptr, *Family);
     const FCompositeFont* Composite = FontAsset ? FontAsset->GetCompositeFont() : nullptr;
     if (!Composite)

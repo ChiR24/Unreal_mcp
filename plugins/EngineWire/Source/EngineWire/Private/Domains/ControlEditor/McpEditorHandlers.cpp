@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/EditorUi/McpEditorUi.h"
 #include "Domains/ControlEditor/Selection/McpEditorSelection.h"
@@ -23,14 +24,7 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return true;
   }
 
-  FString SubAction;
-  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("action"), SubAction);
-  }
-  const FString LowerSub = SubAction.ToLower();
-
-  if (!McpRequireEditor(this, RequestingSocket, RequestId))
-    return true;
+  const FString LowerSub = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
   if (LowerSub == TEXT("play"))
     return HandleControlEditorPlay(RequestId, Payload, RequestingSocket);

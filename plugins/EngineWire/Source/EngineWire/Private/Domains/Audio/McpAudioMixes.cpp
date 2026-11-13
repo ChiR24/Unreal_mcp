@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 
 namespace McpAudioHandlers
@@ -64,8 +65,7 @@ bool HandleMixActions(
     UGameplayStatics::SetSoundMixClassOverride(World, Mix, Class, (float)Volume, (float)Pitch, (float)FadeTime, true);
     Done = TEXT("Sound Mix class override set");
   } else {
-    double FadeTime = 1.0;
-    Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
+    double FadeTime = GetJsonNumberField(Payload, TEXT("fadeOutTime"), 1.0);
     UGameplayStatics::ClearSoundMixClassOverride(World, Mix, Class, (float)FadeTime);
     Done = TEXT("Sound Mix class override cleared");
   }

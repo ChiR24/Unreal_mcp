@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 
@@ -31,12 +32,9 @@ bool HandlePlaybackActions(
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
-    double Volume = 1.0;
-    Payload->TryGetNumberField(TEXT("volume"), Volume);
-    double Pitch = 1.0;
-    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    double StartTime = 0.0;
-    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+    double Volume = GetJsonNumberField(Payload, TEXT("volume"), 1.0);
+    double Pitch = GetJsonNumberField(Payload, TEXT("pitch"), 1.0);
+    double StartTime = GetJsonNumberField(Payload, TEXT("startTime"), 0.0);
 
     USoundAttenuation *Attenuation = nullptr;
     USoundConcurrency *Concurrency = nullptr;
@@ -46,12 +44,6 @@ bool HandlePlaybackActions(
       return true;
     }
 
-    if (!GEditor)
-    {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
-      return true;
-    }
     UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId,
@@ -86,18 +78,10 @@ bool HandlePlaybackActions(
       return true;
     }
 
-    double Volume = 1.0;
-    Payload->TryGetNumberField(TEXT("volume"), Volume);
-    double Pitch = 1.0;
-    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    double StartTime = 0.0;
-    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
+    double Volume = GetJsonNumberField(Payload, TEXT("volume"), 1.0);
+    double Pitch = GetJsonNumberField(Payload, TEXT("pitch"), 1.0);
+    double StartTime = GetJsonNumberField(Payload, TEXT("startTime"), 0.0);
 
-    if (!GEditor) {
-      Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"),
-                          TEXT("EDITOR_NOT_AVAILABLE"));
-      return true;
-    }
     UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
@@ -193,12 +177,6 @@ bool HandlePlaybackActions(
       return true;
     }
 
-    if (!GEditor)
-    {
-      Self->SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Editor not available"), TEXT("NO_EDITOR"));
-      return true;
-    }
     UWorld *World = McpAudibleWorld();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),

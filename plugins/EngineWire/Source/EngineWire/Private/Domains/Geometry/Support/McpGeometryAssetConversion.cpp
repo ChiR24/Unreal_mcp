@@ -1,4 +1,5 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -141,11 +142,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
 
     // Read back from the mesh: the reply used to echo the request.
     bool bNaniteOn = false;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3
-    bNaniteOn = CreatedMesh && CreatedMesh->IsNaniteEnabled();
-#else
-    bNaniteOn = CreatedMesh && CreatedMesh->NaniteSettings.bEnabled;
-#endif
+    bNaniteOn = CreatedMesh && MCP_STATIC_MESH_NANITE_ENABLED(CreatedMesh);
     if (bNanite && !bNaniteOn)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(

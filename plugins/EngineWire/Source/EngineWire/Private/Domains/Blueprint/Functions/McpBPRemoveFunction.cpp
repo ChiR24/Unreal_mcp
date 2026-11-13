@@ -24,12 +24,8 @@ UEdGraph *FindFunctionGraph(UBlueprint *Blueprint, const FString &Name) {
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("remove_function"))) {
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_remove_function"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_remove_function requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 
@@ -54,17 +50,9 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
     }
 
     FString Normalized;
-    FString LoadErr;
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    UBlueprint *Blueprint = LoadBlueprintOrReply(Context, Path, Normalized);
     const FString RegistryKey = !Normalized.IsEmpty() ? Normalized : Path;
     if (!Blueprint) {
-      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
-      if (!LoadErr.IsEmpty()) {
-        Err->SetStringField(TEXT("error"), LoadErr);
-      }
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    TEXT("Failed to load blueprint"), Err,
-                                    TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 

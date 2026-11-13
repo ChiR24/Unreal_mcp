@@ -1,4 +1,5 @@
 #include "Domains/Character/McpCharacterHandlers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Animation/Skeleton.h"
 
 namespace McpCharacterHandlers
@@ -205,7 +206,7 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
 
     if (!bHasSpringArm)
     {
-        USCS_Node* SpringArmNode = Blueprint->SimpleConstructionScript->CreateNode(USpringArmComponent::StaticClass(), FName(TEXT("CameraBoom")));
+        USCS_Node* SpringArmNode = McpAddScsNode(Blueprint->SimpleConstructionScript, USpringArmComponent::StaticClass(), FName(TEXT("CameraBoom")));
         if (SpringArmNode)
         {
             if (USpringArmComponent* SpringArm = Cast<USpringArmComponent>(SpringArmNode->ComponentTemplate))
@@ -213,21 +214,12 @@ bool HandleConfigureCameraComponent(UEngineWireSubsystem* Self, const FString& R
                 ApplyArm(SpringArm, true);
                 ConfiguredArm = SpringArm;
             }
-            Blueprint->SimpleConstructionScript->AddNode(SpringArmNode);
-            if (USCS_Node* CameraNode = Blueprint->SimpleConstructionScript->CreateNode(UCameraComponent::StaticClass(), FName(TEXT("FollowCamera"))))
+            if (USCS_Node* CameraNode = McpAddScsNode(Blueprint->SimpleConstructionScript, UCameraComponent::StaticClass(), FName(TEXT("FollowCamera")), SpringArmNode))
             {
                 if (UCameraComponent* Camera = Cast<UCameraComponent>(CameraNode->ComponentTemplate))
                 {
                     Camera->bUsePawnControlRotation = false;
                 }
-                // Attach via AddChildNode rather than SetParent + AddNode.
-                // AddNode() registers the camera as a second ROOT whose parent is
-                // only a textual name; at compile time the engine then cannot find
-                // 'CameraBoom' ("FixupRootNodeParentReferences: Couldn't find
-                // inherited parent component 'CameraBoom' for 'FollowCamera'") and
-                // the spring-arm hierarchy silently flattens. AddChildNode() moves
-                // the node under its actual parent (ChildNodes + AllNodes).
-                SpringArmNode->AddChildNode(CameraNode);
             }
         }
     }

@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -95,7 +96,7 @@ void KeepModuleEntries(const TSharedPtr<FJsonObject>& EmitterObj, const TArray<F
         TArray<FString> Drop;
         for (const auto& Pair : (*Field)->Values)
         {
-            const FString Key(Pair.Key.Len(), *Pair.Key);
+            const FString Key = McpJsonKey(Pair.Key);
             const FString Module = Key.Left(Key.Find(TEXT(".")));
             if (!ModuleNames.ContainsByPredicate([&Module](const FString& Name) { return Name.Equals(Module, ESearchCase::IgnoreCase); }))
             {

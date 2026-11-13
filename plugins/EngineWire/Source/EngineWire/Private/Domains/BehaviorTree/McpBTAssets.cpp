@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Domains/BehaviorTree/McpBTPrivate.h"
 #include "Domains/BehaviorTree/McpBTSerializers.h"
 
@@ -26,9 +27,7 @@ bool HandleCreate(UEngineWireSubsystem* Subsystem,
       SavePath.IsEmpty()) {
     SavePath = TEXT("/Game");
   }
-  if (!SavePath.StartsWith(TEXT("/"))) {
-    SavePath = TEXT("/Game/") + SavePath;
-  }
+  SavePath = McpRootedContentPath(SavePath);
 
   const FString PackagePath = SavePath / Name;
   if (!IsValidAssetPath(PackagePath)) {

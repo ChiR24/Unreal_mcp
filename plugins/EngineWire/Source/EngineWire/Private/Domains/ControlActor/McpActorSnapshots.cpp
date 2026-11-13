@@ -14,12 +14,9 @@ bool UEngineWireSubsystem::HandleControlActorCreateSnapshot(
   if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("snapshotName"), SnapshotName))
     return true;
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
 
   const FString SnapshotKey =
       FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);
@@ -51,12 +48,9 @@ bool UEngineWireSubsystem::HandleControlActorRestoreSnapshot(
   if (!McpReadRequiredField(this, Socket, RequestId, Payload, TEXT("snapshotName"), SnapshotName))
     return true;
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
 
   const FString SnapshotKey =
       FString::Printf(TEXT("%s::%s"), *Found->GetPathName(), *SnapshotName);

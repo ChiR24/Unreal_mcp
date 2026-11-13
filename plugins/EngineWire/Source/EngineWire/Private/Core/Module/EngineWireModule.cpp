@@ -1,4 +1,5 @@
 #include "EngineWireSettings.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
@@ -37,14 +38,13 @@ public:
         // The lint validator's module imports DataValidation, a plugin a project may turn off (whose module then does
         // not exist), so the .uplugin never loads it (LoadingPhase None). It is loaded here, before the editor's
         // validator subsystem gathers validator classes, only where DataValidation is on.
-        if (FModuleManager::Get().ModuleExists(TEXT("DataValidation")) && FModuleManager::Get().LoadModule(TEXT("DataValidation")))
+        if (McpLoadOptionalModule(TEXT("DataValidation")))
         {
             FModuleManager::Get().LoadModule(TEXT("EngineWireValidation"));
         }
         // The same for the game feature adapter: the .uplugin names GameFeatures without turning it on, so its module
         // exists only in a project that enables that plugin itself. A build of this plugin may leave the adapter out.
-        if (FModuleManager::Get().ModuleExists(TEXT("EngineWireGameFeatures")) && FModuleManager::Get().ModuleExists(TEXT("GameFeatures")) &&
-            FModuleManager::Get().LoadModule(TEXT("GameFeatures")))
+        if (FModuleManager::Get().ModuleExists(TEXT("EngineWireGameFeatures")) && McpLoadOptionalModule(TEXT("GameFeatures")))
         {
             FModuleManager::Get().LoadModule(TEXT("EngineWireGameFeatures"));
         }

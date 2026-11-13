@@ -1,4 +1,5 @@
 #include "Foundation/McpCompensationReceipt.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace
 {
@@ -97,11 +98,7 @@ void FMcpCompensationReceipt::DescribeInto(const TSharedPtr<FJsonObject>& Result
 	Block->SetArrayField(TEXT("notCompleted"), StepsToJson(NotCompleted));
 	Block->SetArrayField(TEXT("skipped"), StepsToJson(Skipped));
 
-	TArray<TSharedPtr<FJsonValue>> Capabilities;
-	for (const FString& CapabilityId : CompensatingCapabilities)
-	{
-		Capabilities.Add(MakeShared<FJsonValueString>(CapabilityId));
-	}
+	TArray<TSharedPtr<FJsonValue>> Capabilities = McpHandlerUtils::ToJsonStringArray(CompensatingCapabilities);
 	Block->SetArrayField(TEXT("compensatingCapabilities"), Capabilities);
 	Block->SetStringField(TEXT("callerAction"), CallerAction);
 	Result->SetObjectField(TEXT("compensation"), Block);

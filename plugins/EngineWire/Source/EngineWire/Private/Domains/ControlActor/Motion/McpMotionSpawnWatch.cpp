@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
@@ -26,7 +27,7 @@ void McpAnswerNoSpawn(UEngineWireSubsystem *Self, TSharedPtr<FMcpBridgeWebSocket
   Data->SetArrayField(TEXT("samples"), TArray<TSharedPtr<FJsonValue>>());
   Data->SetNumberField(TEXT("sampleCount"), 0);
   Data->SetNumberField(TEXT("gameSeconds"), 0);
-  Data->SetNumberField(TEXT("waitedSeconds"), FMath::RoundToDouble(Waited * 1000.0) / 1000.0);
+  Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Waited, 1000.0));
   Data->SetStringField(TEXT("endedBecause"), Ended);
   const FString Warning = FString::Printf(
       TEXT("No %s spawned while the call waited: check that what spawns it runs (its timer, or the event that "

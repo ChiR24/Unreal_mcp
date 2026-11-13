@@ -202,11 +202,6 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_blueprint"))
-    {
-        return false;
-    }
-
     if (!Payload.IsValid())
     {
         SendAutomationError(

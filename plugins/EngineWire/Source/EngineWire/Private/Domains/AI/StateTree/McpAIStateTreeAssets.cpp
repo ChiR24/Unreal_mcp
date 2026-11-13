@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #include "Domains/AI/StateTree/McpAIStateTreeFeature.h"
 
@@ -9,17 +10,10 @@ namespace McpAIHandlers
 static bool IsStateTreeModuleAvailable()
 {
 #if MCP_HAS_STATE_TREE
-    if (FModuleManager::Get().IsModuleLoaded(TEXT("StateTreeModule")))
-    {
-        return true;
-    }
-    // Try to load it
-    if (FModuleManager::Get().ModuleExists(TEXT("StateTreeModule")))
-    {
-        return FModuleManager::Get().LoadModule(TEXT("StateTreeModule")) != nullptr;
-    }
-#endif
+    return McpLoadOptionalModule(TEXT("StateTreeModule"));
+#else
     return false;
+#endif
 }
 
 // Implements the "create_state_tree" action.

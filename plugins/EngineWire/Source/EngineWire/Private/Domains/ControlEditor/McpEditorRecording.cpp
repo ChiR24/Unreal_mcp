@@ -14,9 +14,6 @@ bool UEngineWireSubsystem::HandleControlEditorConsoleCommand(
 bool UEngineWireSubsystem::HandleControlEditorStartRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   FString RecordingName;
   // filename first, then name
   RecordingName = McpGetFirstStringField(Payload, {TEXT("filename"), TEXT("name")});
@@ -87,9 +84,6 @@ bool UEngineWireSubsystem::HandleControlEditorStartRecording(
 bool UEngineWireSubsystem::HandleControlEditorStopRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   // It answered "Recording stopped" with nothing recording, even with no game running.
   UWorld* World = GEditor->PlayWorld.Get();
   if (!World || !World->GetDemoNetDriver()) {

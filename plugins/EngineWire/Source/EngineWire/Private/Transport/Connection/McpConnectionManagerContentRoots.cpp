@@ -1,4 +1,5 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Misc/PackageName.h"
 
@@ -11,13 +12,7 @@ TArray<TSharedPtr<FJsonValue>> McpBuildContentRootValues()
 		/*bWithoutLeadingSlashes*/ false, /*bWithoutTrailingSlashes*/ true);
 	Roots.Sort();
 
-	TArray<TSharedPtr<FJsonValue>> Values;
-	Values.Reserve(Roots.Num());
-	for (const FString& Root : Roots)
-	{
-		Values.Add(MakeShared<FJsonValueString>(Root));
-	}
-	return Values;
+	return McpHandlerUtils::ToJsonStringArray(Roots);
 }
 
 void FMcpConnectionManager::SubscribeContentRootChanges()

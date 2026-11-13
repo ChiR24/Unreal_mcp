@@ -20,16 +20,9 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    // Create UMcpGenericDataAsset (UDataAsset/UPrimaryDataAsset are abstract in UE5)
-    UMcpGenericDataAsset* ItemAsset =
-        NewObject<UMcpGenericDataAsset>(Package, FName(*SanitizedName), RF_Public | RF_Standalone);
-
+    bool bSaved = false;
+    UMcpGenericDataAsset* ItemAsset = NewInventoryDataAsset(Package, SanitizedName, Payload, bSaved);
     if (ItemAsset) {
-      ItemAsset->MarkPackageDirty();
-      FAssetRegistryModule::AssetCreated(ItemAsset);
-
-      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(ItemAsset);
-
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("assetName"), SanitizedName);

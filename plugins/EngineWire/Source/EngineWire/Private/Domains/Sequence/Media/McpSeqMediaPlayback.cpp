@@ -35,30 +35,29 @@ bool TryHandleMediaAction(UEngineWireSubsystem *Subsystem,
                           const FString &Action,
                           const TSharedPtr<FJsonObject> &Payload,
                           TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString MediaAction = CanonicalMediaAction(Action);
-  if (MediaAction == TEXT("create_media_player")) {
+  if (Action == TEXT("create_media_player")) {
     return HandleCreateMediaPlayer(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("create_media_source")) {
+  if (Action == TEXT("create_media_source")) {
     return HandleCreateMediaSource(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("create_media_texture")) {
+  if (Action == TEXT("create_media_texture")) {
     return HandleCreateMediaTexture(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("create_media_sound_component")) {
+  if (Action == TEXT("create_media_sound_component")) {
     return HandleCreateMediaSoundComponent(Subsystem, RequestId, Payload,
                                            Socket);
   }
-  if (MediaAction == TEXT("create_media_playlist")) {
+  if (Action == TEXT("create_media_playlist")) {
     return HandleCreateMediaPlaylist(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("play_media")) {
+  if (Action == TEXT("play_media")) {
     return HandlePlayMedia(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("pause_media")) {
+  if (Action == TEXT("pause_media")) {
     return HandlePauseMedia(Subsystem, RequestId, Payload, Socket);
   }
-  if (MediaAction == TEXT("seek_media")) {
+  if (Action == TEXT("seek_media")) {
     return HandleSeekMedia(Subsystem, RequestId, Payload, Socket);
   }
   return false;

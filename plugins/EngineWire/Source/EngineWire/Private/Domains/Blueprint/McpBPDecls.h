@@ -12,6 +12,10 @@ bool ActionMatchesPattern(const FBlueprintActionContext &Context,
                           const TCHAR *Pattern);
 FString ResolveBlueprintRequestedPath(
     const TSharedPtr<FJsonObject> &LocalPayload);
+// The request's Blueprint path, or empty after refusing "<Action> requires a blueprint path." (INVALID_BLUEPRINT_PATH).
+FString RequireBlueprintPath(const FBlueprintActionContext &Context, const TCHAR *Action);
+// LoadBlueprintAsset, or null after refusing "Failed to load blueprint" (BLUEPRINT_NOT_FOUND, the loader's reason as error).
+UBlueprint *LoadBlueprintOrReply(const FBlueprintActionContext &Context, const FString &Path, FString &OutNormalized);
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
 // variableNames then variableName, without repeats: set_variable_metadata and remove_variable read a list the same way.
 TArray<FString> McpReadVariableNames(const TSharedPtr<FJsonObject> &Payload);

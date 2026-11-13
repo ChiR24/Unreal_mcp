@@ -105,8 +105,7 @@ bool UEngineWireSubsystem::HandleControlEditorStop(
 bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  double Speed = 1.0;
-  Payload->TryGetNumberField(TEXT("speed"), Speed);
+  double Speed = GetJsonNumberField(Payload, TEXT("speed"), 1.0);
   if (Speed <= 0.0 || Speed > 20.0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("speed must be greater than 0 and no more than 20"), nullptr);
@@ -136,9 +135,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
 bool UEngineWireSubsystem::HandleControlEditorPause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to pause"), nullptr);
@@ -161,9 +157,6 @@ bool UEngineWireSubsystem::HandleControlEditorPause(
 bool UEngineWireSubsystem::HandleControlEditorResume(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to resume"), nullptr);
@@ -212,9 +205,6 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
 bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   if (!GEditor->PlayWorld) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
                               TEXT("No active PIE session to step"), nullptr);

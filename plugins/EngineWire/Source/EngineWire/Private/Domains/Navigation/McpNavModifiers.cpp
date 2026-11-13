@@ -1,4 +1,5 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 
 namespace
 {
@@ -115,7 +116,7 @@ bool HandleCreateNavModifierComponent(
         }
     }
 
-    USCS_Node* NewNode = SCS->CreateNode(UNavModifierComponent::StaticClass(), *ComponentName);
+    USCS_Node* NewNode = McpAddScsNode(SCS, UNavModifierComponent::StaticClass(), *ComponentName);
     if (!NewNode)
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create SCS node"), nullptr, TEXT("CREATE_FAILED"));
@@ -132,7 +133,6 @@ bool HandleCreateNavModifierComponent(
         }
     }
 
-    SCS->AddNode(NewNode);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), false) && McpSafeAssetSave(Blueprint);
 

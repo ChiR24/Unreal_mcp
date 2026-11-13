@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Inspect/MeshCheck/McpMeshCheck.h"
 
 // check_mesh: whether a static or skeletal mesh's geometry is sound, read from its source triangles (the mesh as
@@ -11,8 +12,8 @@ constexpr int32 McpMaxListedParts = 8;
 
 TArray<TSharedPtr<FJsonValue>> McpRoundedVec(const FVector &V)
 {
-    return McpHandlerUtils::VectorToJsonArray(FVector(FMath::RoundToDouble(V.X * 10.0) / 10.0,
-        FMath::RoundToDouble(V.Y * 10.0) / 10.0, FMath::RoundToDouble(V.Z * 10.0) / 10.0));
+    return McpHandlerUtils::VectorToJsonArray(FVector(McpRoundTo(V.X, 10.0),
+        McpRoundTo(V.Y, 10.0), McpRoundTo(V.Z, 10.0)));
 }
 } // namespace
 

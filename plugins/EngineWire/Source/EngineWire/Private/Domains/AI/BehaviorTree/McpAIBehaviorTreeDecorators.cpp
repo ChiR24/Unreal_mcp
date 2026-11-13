@@ -14,13 +14,6 @@
 
 namespace
 {
-bool MatchesDecoratorTarget(const UBTNode* Node, const FString& Id)
-{
-    return Node && (Node->GetName().Equals(Id, ESearchCase::IgnoreCase) ||
-                    Node->GetPathName().Equals(Id, ESearchCase::IgnoreCase) ||
-                    Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase));
-}
-
 // The composite-child slot whose composite or task is Id, and the composite that keeps it: a decorator on a node lives
 // in the entry its parent keeps for it, not on the node itself.
 FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString& Id, UBTCompositeNode*& OutOwner)
@@ -31,7 +24,7 @@ FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString&
     }
     for (FBTCompositeChild& Child : Composite->Children)
     {
-        if (MatchesDecoratorTarget(Child.ChildComposite, Id) || MatchesDecoratorTarget(Child.ChildTask, Id))
+        if (McpBTNodeMatchesId(Child.ChildComposite, Id) || McpBTNodeMatchesId(Child.ChildTask, Id))
         {
             OutOwner = Composite;
             return &Child;
@@ -55,12 +48,9 @@ bool HandleAddDecorator(UEngineWireSubsystem* Self, const FString& RequestId, co
     // The node the decorator guards; empty or "root" means a root decorator.
     const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
 
-    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    UBehaviorTree* BT = LoadBehaviorTreeOrReply(Self, RequestId, RequestingSocket, BTPath);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -103,7 +93,7 @@ bool HandleAddDecorator(UEngineWireSubsystem* Self, const FString& RequestId, co
             return true;
         }
         const bool bRoot = ParentNodeId.IsEmpty() || ParentNodeId.Equals(TEXT("root"), ESearchCase::IgnoreCase) ||
-                           MatchesDecoratorTarget(BT->RootNode, ParentNodeId);
+                           McpBTNodeMatchesId(BT->RootNode, ParentNodeId);
         UBTCompositeNode* Owner = nullptr;
         FBTCompositeChild* Slot = bRoot ? nullptr : FindDecoratorSlot(BT->RootNode, ParentNodeId, Owner);
         if (!bRoot && !Slot)
@@ -156,12 +146,9 @@ bool HandleAddService(UEngineWireSubsystem* Self, const FString& RequestId, cons
     FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
     FString ServiceType = GetJsonStringField(Payload, TEXT("serviceType"));
 
-    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    UBehaviorTree* BT = LoadBehaviorTreeOrReply(Self, RequestId, RequestingSocket, BTPath);
     if (!BT)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 

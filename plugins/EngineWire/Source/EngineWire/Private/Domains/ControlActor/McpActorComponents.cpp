@@ -17,12 +17,9 @@ bool UEngineWireSubsystem::HandleControlActorAddComponent(
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
 
   UClass *ComponentClass = ResolveClassByName(ComponentType);
   // An abstract class (PrimitiveComponent, MeshComponent) makes a component the editor warns about and nulls on save.

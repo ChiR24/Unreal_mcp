@@ -24,31 +24,24 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
       return true;
     }
 
-    // UMcpGenericDataAsset (UDataAsset/UPrimaryDataAsset are abstract in UE5)
-    UMcpGenericDataAsset* RecipeAsset =
-        NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
-
-    if (RecipeAsset) {
-      // These three were only ever echoed into the JSON response, so a recipe
-      // read straight back reported properties:{} and outputs:[] while the
-      // create call had reported the caller's own values as if stored.
-      // configure_recipe_requirements and add_recipe_ingredient already persist
-      // through Properties; do the same here.
-      const int32 OutputQuantity =
-          static_cast<int32>(GetJsonNumberField(Payload, TEXT("outputQuantity"), 1));
-      const double CraftTime = GetJsonNumberField(Payload, TEXT("craftTime"), 1.0);
-      RecipeAsset->Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
-      RecipeAsset->Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
-      RecipeAsset->Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
-      RecipeAsset->MarkPackageDirty();
-      FAssetRegistryModule::AssetCreated(RecipeAsset);
-
-      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(RecipeAsset);
-
+    // These three were only ever echoed into the JSON response, so a recipe
+    // read straight back reported properties:{} and outputs:[] while the
+    // create call had reported the caller's own values as if stored.
+    // configure_recipe_requirements and add_recipe_ingredient already persist
+    // through Properties; do the same here.
+    const int32 OutputQuantity =
+        static_cast<int32>(GetJsonNumberField(Payload, TEXT("outputQuantity"), 1));
+    const double CraftTime = GetJsonNumberField(Payload, TEXT("craftTime"), 1.0);
+    bool bSaved = false;
+    if (NewInventoryDataAsset(Package, Name, Payload, bSaved, [&](UMcpGenericDataAsset& Recipe) {
+          Recipe.Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
+          Recipe.Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
+          Recipe.Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
+        })) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("recipePath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
+      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
       Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
       Result->SetNumberField(TEXT("outputQuantity"), OutputQuantity);
       Result->SetNumberField(TEXT("craftTime"), CraftTime);

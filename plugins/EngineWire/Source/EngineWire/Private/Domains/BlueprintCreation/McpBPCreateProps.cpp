@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/BlueprintCreation/McpBPCreatePrivate.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
@@ -27,7 +28,7 @@ void ApplyPropertiesToObject(UObject *TargetObject,
     // A dotted key reaches a component or struct member as set_property's paths do
     // ("CapsuleComponent.CapsuleRadius", "BodyInstance.CollisionEnabled"); its first segment may also be a
     // component's object name ("CollisionCylinder.CapsuleRadius"), which is what the editor shows.
-    const FString Key(Pair.Key.Len(), *Pair.Key); // 5.8 keys are shared strings, not FString
+    const FString Key = McpJsonKey(Pair.Key);
     FString Head, Tail;
     if (Key.Split(TEXT("."), &Head, &Tail)) {
       UObject *Holder = TargetObject;

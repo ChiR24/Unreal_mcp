@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 
 #include "Dom/JsonObject.h"
@@ -52,7 +53,7 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
         Face->SetStringField(TEXT("component"), Hit.Component);
         Face->SetStringField(TEXT("otherActor"), McpActorRef(Hit.OtherActor));
         Face->SetStringField(TEXT("otherComponent"), Hit.OtherComponent);
-        Face->SetNumberField(TEXT("gap"), FMath::RoundToDouble(Hit.Gap * 100.0) / 100.0);
+        Face->SetNumberField(TEXT("gap"), McpRoundTo(Hit.Gap, 100.0));
         Face->SetNumberField(TEXT("overlapU"), FMath::RoundToDouble(Hit.OverlapU));
         Face->SetNumberField(TEXT("overlapV"), FMath::RoundToDouble(Hit.OverlapV));
         Report.Faces.Add(MakeShared<FJsonValueObject>(Face));

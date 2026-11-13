@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "ObjectTools.h"
 
@@ -245,10 +246,7 @@ bool UEngineWireSubsystem::HandleControlActorDeleteByTag(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("tag"), TagNames[0].ToString());
   if (TagNames.Num() > 1) {
-    TArray<TSharedPtr<FJsonValue>> TagArray;
-    for (const FName &Tag : TagNames)
-      TagArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-    Data->SetArrayField(TEXT("tags"), TagArray);
+    Data->SetArrayField(TEXT("tags"), McpHandlerUtils::NamesToJsonStringArray(TagNames));
   }
   Data->SetNumberField(TEXT("deletedCount"), Deleted.Num());
   Data->SetArrayField(TEXT("deleted"), McpHandlerUtils::ToJsonStringArray(Deleted));

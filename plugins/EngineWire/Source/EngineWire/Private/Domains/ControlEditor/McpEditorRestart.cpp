@@ -34,9 +34,6 @@
 bool UEngineWireSubsystem::HandleControlEditorRestart(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   TArray<UPackage *> DirtyWorldPackages;
   TArray<UPackage *> DirtyContentPackages;
   FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);

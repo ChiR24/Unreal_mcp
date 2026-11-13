@@ -1,6 +1,7 @@
 // McpNativeGatewaySearch.cpp — see header for the cross-surface contract.
 
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Scripts/McpRecipes.h"
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -31,7 +32,7 @@ TSharedPtr<FJsonObject> GuidedFilterError(const FString& ErrorCode, const FStrin
 {
 	TSharedPtr<FJsonObject> Error = GatewayError(TEXT("search"), ErrorCode, Message);
 	const TArray<FString> Suggestions = GatewayClosestMatches(Target, Candidates, 3);
-	Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+	Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
 	TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString());
 	if (!Domain.IsEmpty()) Next->SetStringField(TEXT("domain"), Domain);
 	if (Suggestions.Num() > 0) Next->SetStringField(Dimension, Suggestions[0]);

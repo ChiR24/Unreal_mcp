@@ -6,6 +6,7 @@
 // (owner no see), which a camera inside the head would otherwise look out through.
 
 #include "Domains/Character/McpCharacterHandlers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 
 namespace McpCharacterHandlers
 {
@@ -38,14 +39,13 @@ bool HandleFirstPersonCamera(UEngineWireSubsystem* Self, const FString& RequestI
     }
     if (!Eyes)
     {
-        USCS_Node* Node = Scs->CreateNode(UCameraComponent::StaticClass(), FirstPersonCameraName());
+        USCS_Node* Node = McpAddScsNode(Scs, UCameraComponent::StaticClass(), FirstPersonCameraName());
         Eyes = Node ? Cast<UCameraComponent>(Node->ComponentTemplate) : nullptr;
         if (!Eyes)
         {
             Self->SendAutomationError(Socket, RequestId, TEXT("Could not create the first-person camera."), TEXT("COMPONENT_CREATION_FAILED"));
             return true;
         }
-        Scs->AddNode(Node);
     }
     Eyes->SetRelativeLocation(FVector(0.0, 0.0, EyeHeight));
     Eyes->bUsePawnControlRotation = true;

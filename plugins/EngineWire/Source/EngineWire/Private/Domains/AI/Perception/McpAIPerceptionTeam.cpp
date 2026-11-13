@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 
 #include "EdGraphSchema_K2.h"
 #include "EditorAssetLibrary.h"
@@ -55,12 +56,9 @@ bool HandleSetPerceptionTeam(UEngineWireSubsystem* Self, const FString& RequestI
     }
     const int32 TeamId = static_cast<int32>(TeamValue);
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 

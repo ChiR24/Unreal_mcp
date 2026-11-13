@@ -58,7 +58,6 @@ bool HandleSeekMedia(UEngineWireSubsystem *Subsystem,
                      const TSharedPtr<FJsonObject> &Payload,
                      TSharedPtr<FMcpBridgeWebSocket> Socket);
 
-FString CanonicalMediaAction(const FString &Action);
 FString GetStringAny(const TSharedPtr<FJsonObject> &Payload,
                      std::initializer_list<const TCHAR *> Fields,
                      const FString &DefaultValue = FString());

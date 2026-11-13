@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Engine/TextureCube.h"
 #include "UObject/Script.h"
 
@@ -202,7 +203,7 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
 
         for (const auto &Pair : ObjectToApply->Values)
         {
-            const FString FieldName(Pair.Key.Len(), *Pair.Key);
+            const FString FieldName = McpJsonKey(Pair.Key);
             if (IgnoredFields.Contains(FieldName) || !Pair.Value.IsValid())
             {
                 continue;

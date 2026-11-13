@@ -214,6 +214,20 @@ bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& R
 bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 }
 
+// The caller's path through SanitizeProjectRelativePath, in place; false after refusing it (McpPathRefusalMessage
+// with Label, INVALID_PATH). Every path a material handler loads goes through this first.
+inline bool SanitizeMaterialPathOrReply(UEngineWireSubsystem* Bridge, const FString& RequestId,
+                                        const TSharedPtr<FMcpBridgeWebSocket>& Socket, const TCHAR* Label, FString& InOutPath)
+{
+  const FString Safe = SanitizeProjectRelativePath(InOutPath);
+  if (Safe.IsEmpty()) {
+    Bridge->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(Label, InOutPath), TEXT("INVALID_PATH"));
+    return false;
+  }
+  InOutPath = Safe;
+  return true;
+}
+
 // Helper macro for expression creation - validates path BEFORE loading
 #define LOAD_MATERIAL_OR_RETURN()                                              \
   FString AssetPath;                                                           \
@@ -225,15 +239,8 @@ bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, c
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \
-  /* SECURITY: Validate path BEFORE loading asset */                           \
-  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
-  if (ValidatedAssetPath.IsEmpty()) {                                          \
-    Bridge->SendAutomationError(Socket, RequestId,                                     \
-                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
-                        TEXT("INVALID_PATH"));                                \
-    return true;                                                               \
-  }                                                                            \
-  AssetPath = ValidatedAssetPath;                                              \
+  if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))  \
+    return true;                                              \
   UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);            \
   if (!Material) {                                                             \
     Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),   \
@@ -259,14 +266,8 @@ bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, c
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \
   }                                                                            \
-  FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
-  if (ValidatedAssetPath.IsEmpty()) {                                          \
-    Bridge->SendAutomationError(Socket, RequestId,                                     \
-                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
-                        TEXT("INVALID_PATH"));                                 \
-    return true;                                                               \
-  }                                                                            \
-  AssetPath = ValidatedAssetPath;                                              \
+  if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))  \
+    return true;                                              \
   UMaterial *Material = nullptr;                                               \
   UMaterialFunction *Function = nullptr;                                       \
   LoadMaterialOrFunction(AssetPath, Material, Function);                       \

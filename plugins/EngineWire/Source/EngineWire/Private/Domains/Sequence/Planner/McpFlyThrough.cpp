@@ -4,6 +4,7 @@
 // world's collision, sampled into keys (facing lookAt, else the way ahead), and written by McpFlyThroughKeys.
 
 #include "Domains/Sequence/Planner/McpFlyThrough.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Camera/CameraComponent.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
@@ -77,16 +78,6 @@ FFlightKeys FlySampleKeys(const TArray<McpMinSnap::FLeg>& Legs, double Seconds, 
     }
     return Keys;
 }
-
-double FlyPathLength(const TArray<FVector>& Points)
-{
-    double Length = 0.0;
-    for (int32 Index = 0; Index + 1 < Points.Num(); ++Index)
-    {
-        Length += FVector::Dist(Points[Index], Points[Index + 1]);
-    }
-    return Length;
-}
 } // namespace
 
 bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
@@ -158,7 +149,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     Budget.Cells = FlyMaxCells;
     Budget.Deadline = FPlatformTime::Seconds() + FlyDeadline;
     FPlan Plan = PlanCorners(Space, Through, Budget);
-    Seconds = Seconds > 0.0 ? Seconds : FMath::Max(1.0, FlyPathLength(Plan.Points) / FlySpeed);
+    Seconds = Seconds > 0.0 ? Seconds : FMath::Max(1.0, PathLength(Plan.Points) / FlySpeed);
     TArray<McpMinSnap::FLeg> Legs;
     if (!Plan.Error.IsEmpty() || !Fly(Space, Plan, Seconds, Budget, Legs, Plan.Error))
     {
@@ -179,15 +170,15 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     for (int32 Index = 0; Index < Plan.Points.Num() && Index < 64; ++Index)
     {
         const FVector& Corner = Plan.Points[Index];
-        const FVector Rounded(FMath::RoundToDouble(Corner.X * 10.0) / 10.0, FMath::RoundToDouble(Corner.Y * 10.0) / 10.0, FMath::RoundToDouble(Corner.Z * 10.0) / 10.0);
+        const FVector Rounded(McpRoundTo(Corner.X, 10.0), McpRoundTo(Corner.Y, 10.0), McpRoundTo(Corner.Z, 10.0));
         Corners.Add(MakeShared<FJsonValueArray>(McpHandlerUtils::VectorToJsonArray(Rounded)));
     }
-    const double Length = FlyPathLength(Keys.Locations);
+    const double Length = PathLength(Keys.Locations);
     const bool bSpawn = Camera.Actor == nullptr;
     Result->SetStringField(TEXT("camera"), Camera.Label);
     Result->SetBoolField(TEXT("spawned"), bSpawn);
     Result->SetStringField(TEXT("sequencePath"), Sequence->GetOutermost()->GetName());
-    Result->SetNumberField(TEXT("seconds"), FMath::RoundToDouble(Seconds * 100.0) / 100.0);
+    Result->SetNumberField(TEXT("seconds"), McpRoundTo(Seconds, 100.0));
     Result->SetNumberField(TEXT("lengthCm"), FMath::RoundToDouble(Length));
     Result->SetNumberField(TEXT("keys"), Keys.Times.Num());
     Result->SetArrayField(TEXT("corners"), Corners);

@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -45,7 +46,7 @@ const UStruct* ElementStruct(const FArrayProperty* Array)
 
 bool ResolveMassSpawnerFields(FMassSpawnerFields& F)
 {
-    if (!FModuleManager::Get().ModuleExists(TEXT("MassSpawner")) || !FModuleManager::Get().LoadModule(TEXT("MassSpawner")))
+    if (!McpLoadOptionalModule(TEXT("MassSpawner")))
     {
         return false;
     }

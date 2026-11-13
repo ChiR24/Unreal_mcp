@@ -68,11 +68,6 @@ bool UEngineWireSubsystem::HandleManageAnimationAuthoringAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_animation_authoring"))
-    {
-        return false;
-    }
-
     TSharedPtr<FJsonObject> Result = HandleAnimationAuthoringRequest(Payload);
 
     // Send response

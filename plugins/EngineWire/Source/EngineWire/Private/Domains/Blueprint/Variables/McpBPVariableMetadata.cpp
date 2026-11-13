@@ -46,16 +46,8 @@ void McpMatchVariableNames(const UBlueprint *Blueprint, TArray<FString> &InOutNa
 bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("set_variable_metadata"))) {
-    UE_LOG(
-        LogEngineWireSubsystem, Verbose,
-        TEXT("Entered blueprint_set_variable_metadata handler: RequestId=%s"),
-        *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_set_variable_metadata"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_set_variable_metadata requires a blueprint path."),
-          nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 
@@ -84,16 +76,8 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
 
     FString Normalized;
-    FString LoadErr;
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    UBlueprint *Blueprint = LoadBlueprintOrReply(Context, Path, Normalized);
     if (!Blueprint) {
-      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
-      if (!LoadErr.IsEmpty()) {
-        Err->SetStringField(TEXT("error"), LoadErr);
-      }
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to load blueprint"), Err,
-                             TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 

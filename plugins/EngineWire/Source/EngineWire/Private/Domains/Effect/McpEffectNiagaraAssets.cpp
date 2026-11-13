@@ -16,16 +16,6 @@ bool CreateNiagaraEffectFromPayload(
     const FString& DefaultSystemPath,
     const TSharedPtr<FJsonObject>& ExtraFields)
 {
-    if (!GEditor)
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("Editor not available"));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), Response, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     if (!GEditor->GetEditorSubsystem<UEditorActorSubsystem>())
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();

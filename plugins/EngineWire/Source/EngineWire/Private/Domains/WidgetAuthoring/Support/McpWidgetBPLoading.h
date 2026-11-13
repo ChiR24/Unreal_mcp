@@ -16,6 +16,9 @@ class UWidgetTree;
 namespace WidgetAuthoringHelpers
 {
 UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
+// LoadWidgetBlueprint, or null after refusing "Widget blueprint not found" (NOT_FOUND).
+UWidgetBlueprint* LoadWidgetBlueprintOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
+                                             const TSharedPtr<FMcpBridgeWebSocket>& Socket, const FString& WidgetPath);
 // Draws WidgetBP offscreen the way the game would at Size (the project's DPI curve applied, Scale), with the designer
 // flags of its thumbnail: Construct graphs do not run, and each widget keeps the visibility it is saved with.
 // OutPixels are the raw pixels (alpha 0 where nothing drew); Inspect sees the laid-out widget before it is dropped.

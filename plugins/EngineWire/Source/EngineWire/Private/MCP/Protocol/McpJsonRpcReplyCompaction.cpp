@@ -1,4 +1,5 @@
 #include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "MCP/Protocol/McpJsonRpcReplyFields.h"
 
@@ -60,7 +61,7 @@ TSharedPtr<FJsonObject> WithoutRepeatedValues(const TSharedPtr<FJsonObject>& Dat
 	TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
 	for (const auto& Field : Details->Values)
 	{
-		const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+		const FString Key = McpJsonKey(Field.Key);
 		const bool bString = Field.Value.IsValid() && Field.Value->Type == EJson::String;
 		const FString Value = bString ? Field.Value->AsString() : FString();
 		const bool bRepeat = bString && Value.Len() >= 8 &&
@@ -100,7 +101,7 @@ TSharedPtr<FJsonObject> ReceiptOutcome(const TSharedPtr<FJsonObject>& Receipt, c
 		TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
 		for (const auto& Field : Error->Values)
 		{
-			const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			const FString Key = McpJsonKey(Field.Key);
 			if (!SameField(Error, Key, Typed, Key) && !SameField(Error, Key, Reply, Key)) Kept->SetField(Key, Field.Value);
 		}
 		if (Kept->Values.Num() > 0) Out->SetObjectField(TEXT("error"), Kept);
@@ -150,7 +151,7 @@ TSharedPtr<FJsonObject> CompactTypedError(const TSharedPtr<FJsonObject>& Typed, 
 	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 	for (const auto& Field : Typed->Values)
 	{
-		const FString Key(Field.Key.Len(), *Field.Key);
+		const FString Key = McpJsonKey(Field.Key);
 		if (!SameField(Typed, Key, Reply, Key)) Out->SetField(Key, Field.Value);
 	}
 	if (SameField(Out, TEXT("handlerCode"), Reply, TEXT("errorCode"))) Out->RemoveField(TEXT("handlerCode"));

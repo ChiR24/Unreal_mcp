@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/McpSkeletonActions.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Skeleton/Assets/McpSkeletonAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpSkeletonPayload.h"
 #include "Domains/Skeleton/SkinWeights/McpSkeletonSkinWeightSource.h"
@@ -143,9 +144,7 @@ bool HandleCopyWeightsAction(UEngineWireSubsystem* Subsystem, const FString& Req
     TSharedPtr<FJsonObject> Reply = McpHandlerUtils::CreateResultObject();
     Reply->SetNumberField(TEXT("verticesWritten"), Target.Positions.Num());
     Reply->SetNumberField(TEXT("verticesFarFromSource"), FarFromSource);
-    TArray<TSharedPtr<FJsonValue>> UnmappedJson;
-    for (const FName& Bone : Unmapped) UnmappedJson.Add(MakeShared<FJsonValueString>(Bone.ToString()));
-    Reply->SetArrayField(TEXT("unmappedBones"), UnmappedJson);
+    Reply->SetArrayField(TEXT("unmappedBones"), McpHandlerUtils::NamesToJsonStringArray(Unmapped.Array()));
     return CommitTransferredWeights(Subsystem, RequestId, Socket, Payload, TargetMesh, LOD, Target, Result, Reply,
         FString::Printf(TEXT("Copied skin weights from %s onto %d vertices of %s"), *SourceMesh->GetName(), Target.Positions.Num(), *TargetMesh->GetName()));
 }

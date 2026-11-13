@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Dom/JsonValue.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -79,7 +80,7 @@ static inline bool ApplyJsonArrayValueToProperty(void *TargetContainer, FPropert
 static inline FString McpFillMapFromJson(FMapProperty *MP, void *MapValue, const TSharedPtr<FJsonObject> &Object) {
   FScriptMapHelper Helper(MP, MapValue);
   for (const auto &Entry : Object->Values) {
-    const FString Key(Entry.Key.Len(), *Entry.Key);
+    const FString Key = McpJsonKey(Entry.Key);
     const int32 Index = Helper.AddDefaultValue_Invalid_NeedsRehash();
     uint8 *Pair = Helper.GetPairPtr(Index);
     FString Error;

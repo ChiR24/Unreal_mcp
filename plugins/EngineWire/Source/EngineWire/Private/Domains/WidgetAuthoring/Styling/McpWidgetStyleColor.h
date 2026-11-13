@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Components/Border.h"
@@ -233,8 +234,7 @@ inline bool McpApplyWidgetStyleConvenience(
       OutlineColor = FLinearColor(Ch(TEXT("r")), Ch(TEXT("g")), Ch(TEXT("b")),
                                   Ch(TEXT("a")));
     }
-    double OutlineWidth = 0.0;
-    Payload->TryGetNumberField(TEXT("outlineWidth"), OutlineWidth);
+    double OutlineWidth = GetJsonNumberField(Payload, TEXT("outlineWidth"), 0.0);
     FString BrushProperty;
     if (!McpApplyWidgetCornerRadius(Widget, static_cast<float>(CornerRadius),
                                     OutlineColor, static_cast<float>(OutlineWidth),

@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/Environment/Decals/McpDecalPlacement.h"
 #include "Domains/Environment/Modules/McpModuleKit.h"
 #include "Domains/Environment/Roads/McpRoadPlan.h"
@@ -28,12 +29,7 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
         return true;
     }
 
-    FString SubAction;
-    if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("action"), SubAction);
-    }
-    const FString LowerSub = SubAction.ToLower();
+    const FString LowerSub = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
     UE_LOG(LogMcpEnvironmentHandlers, Verbose,
            TEXT("HandleBuildEnvironmentAction: SubAction=%s"), *LowerSub);

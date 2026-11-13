@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Containers/Ticker.h"
 #include "CoreGlobals.h"
@@ -41,7 +42,7 @@ TSharedPtr<FJsonObject> McpTestRow(const FAutomationTestInfo& Test, bool bPassed
 
 // What the test reported: its errors and warnings (the first few of each, as the log carries them) and their totals.
 void McpAddTestEvents(const FAutomationTestExecutionInfo& Info, double Seconds, const TSharedPtr<FJsonObject>& Row) {
-  Row->SetNumberField(TEXT("durationSeconds"), FMath::RoundToDouble(Seconds * 1000.0) / 1000.0);
+  Row->SetNumberField(TEXT("durationSeconds"), McpRoundTo(Seconds, 1000.0));
   TArray<TSharedPtr<FJsonValue>> Errors, Warnings;
   for (const FAutomationExecutionEntry& Entry : Info.GetEntries()) {
     TArray<TSharedPtr<FJsonValue>>* List = Entry.Event.Type == EAutomationEventType::Error     ? &Errors

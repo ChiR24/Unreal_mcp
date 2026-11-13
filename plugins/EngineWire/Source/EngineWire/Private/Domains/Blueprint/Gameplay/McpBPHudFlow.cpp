@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/Gameplay/McpBPHudFlow.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
@@ -74,8 +75,8 @@ void AuthorHud(const FBlueprintActionContext &Context, UBlueprint *Blueprint, co
   const bool bOwnWidget = WidgetPath.IsEmpty();
   if (bOwnWidget) {
     WidgetPath = FPackageName::GetLongPackagePath(Blueprint->GetPackage()->GetName()) + TEXT("/UI/") + Hud.WidgetName;
-  } else if (!WidgetPath.StartsWith(TEXT("/"))) {
-    WidgetPath = TEXT("/Game/") + WidgetPath;
+  } else {
+    WidgetPath = McpRootedContentPath(WidgetPath);
   }
   // Asked of the asset registry first: loading a path that holds no asset logs "Failed to find object" warnings.
   UWidgetBlueprint *Widget = McpAssetExists(WidgetPath) ? WidgetAuthoringHelpers::LoadWidgetBlueprint(WidgetPath) : nullptr;

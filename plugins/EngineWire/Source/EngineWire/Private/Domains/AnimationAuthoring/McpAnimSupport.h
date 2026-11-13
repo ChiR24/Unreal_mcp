@@ -191,6 +191,8 @@ inline void McpSetRetargetTargetRig(UIKRetargeterController* Controller, UIKRigD
     Response->SetBoolField(TEXT("success"), true); \
     Response->SetStringField(TEXT("message"), Msg);
 
+class UAnimGraphNode_SequencePlayer;
+
 namespace McpAnimationAuthoring {
 
 FString NormalizeAnimPath(const FString& Path);
@@ -303,6 +305,12 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
 // Fills a state's BoundGraph with sequence players and wires the first to the
 // state Result, writing animationsApplied / animationsFailed into Response.
 void ApplyStateAnimations(UAnimStateNode* StateNode, const TArray<FString>& AnimPaths, TSharedPtr<FJsonObject> Response);
+// A state machine node at X, Y in AnimGraph with its inner graph named Name and that graph's entry node; null with
+// OutError and OutCode when the graph or its schema could not be made (Blueprints/McpAnimGraphNodeMake.cpp).
+UAnimGraphNode_StateMachine* CreateStateMachineNode(UAnimBlueprint* AnimBP, UEdGraph& AnimGraph, const FString& Name,
+                                                    int32 X, int32 Y, FString& OutError, FString& OutCode);
+// A sequence player node at X, Y in Graph playing Sequence (Blueprints/McpAnimGraphNodeMake.cpp).
+UAnimGraphNode_SequencePlayer* CreateSequencePlayer(UEdGraph& Graph, UAnimSequenceBase* Sequence, int32 X, int32 Y);
 // set_anim_graph_node_value (Blueprints/McpAnimGraphNodeLookup.cpp). FindAnimGraphNode looks in the
 // AnimGraph and every graph under it for a node by object name or GUID, else by a custom name or title; a name several nodes
 // share comes back in OutAmbiguous with a null node. ResolveAnimNodeProperty gives the property a dotted path names AND the

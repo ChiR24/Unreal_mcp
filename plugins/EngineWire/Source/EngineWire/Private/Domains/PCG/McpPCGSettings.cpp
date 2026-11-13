@@ -1,4 +1,5 @@
 #include "Domains/PCG/McpPCGPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #if MCP_HAS_PCG
 namespace McpPCGHandlers
@@ -69,7 +70,7 @@ bool ApplySettingsObject(UPCGSettings* Settings, const TSharedPtr<FJsonObject>& 
 
     for (const auto& Pair : SettingsObject->Values)
     {
-        const FString FieldName(Pair.Key.Len(), *Pair.Key);
+        const FString FieldName = McpJsonKey(Pair.Key);
         FProperty* Property = Settings->GetClass()->FindPropertyByName(FName(*FieldName));
         if (!Property)
         {

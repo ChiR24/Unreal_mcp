@@ -1,5 +1,6 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Foundation/BridgeHelpers/Responses/McpMutationEvidence.h"
 
 namespace McpInteractionHandlers
@@ -50,13 +51,7 @@ bool HandleInteractableInterfaceAction(
         return true;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Factory->BlueprintType = BPTYPE_Interface;
-#endif
-    Factory->ParentClass = UInterface::StaticClass();
-    UBlueprint* InterfaceBP = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*FPackageName::GetShortName(InterfacePath)), RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* InterfaceBP = McpNewBlueprint(Package, FName(*FPackageName::GetShortName(InterfacePath)), UInterface::StaticClass(), BPTYPE_Interface);
 
     if (!InterfaceBP)
     {

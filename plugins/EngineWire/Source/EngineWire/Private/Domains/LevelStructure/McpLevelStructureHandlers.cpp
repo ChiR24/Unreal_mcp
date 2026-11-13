@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 DEFINE_LOG_CATEGORY(LogMcpLevelStructureHandlers);
 
@@ -48,11 +49,7 @@ bool UEngineWireSubsystem::HandleManageLevelStructureAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString SubAction;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("subAction"), SubAction);
-    }
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
 
     UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("HandleManageLevelStructureAction: SubAction=%s"), *SubAction);
 

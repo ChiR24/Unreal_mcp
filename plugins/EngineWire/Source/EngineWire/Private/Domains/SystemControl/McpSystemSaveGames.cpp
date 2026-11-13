@@ -1,4 +1,5 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -122,7 +123,7 @@ void SendSaveSlotList(UEngineWireSubsystem* Self, const FString& RequestId, FSys
 bool ApplySavedProperties(UEngineWireSubsystem* Self, const FString& RequestId, FSystemControlSocket Socket,
                           USaveGame* Save, const TSharedPtr<FJsonObject>& Props) {
   for (const auto& Pair : Props->Values) {
-    const FString Key(Pair.Key.Len(), *Pair.Key);
+    const FString Key = McpJsonKey(Pair.Key);
     FProperty* Property = Save->GetClass()->FindPropertyByName(FName(*Key));
     if (!IsSavedProperty(Property)) {
       TArray<FString> Known;

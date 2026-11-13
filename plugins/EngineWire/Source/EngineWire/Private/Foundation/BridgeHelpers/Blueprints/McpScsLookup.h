@@ -25,6 +25,20 @@ static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
   return nullptr;
 }
 
+// Adds a component of Class named Name to the construction script: under Parent when one is given, else as a root.
+// AddChildNode, not SetParent with AddNode: that leaves a second root whose parent is only a name, which the compile
+// cannot find ("Couldn't find inherited parent component"), and the hierarchy flattens. Null, nothing added, when
+// CreateNode makes no node.
+static inline USCS_Node *McpAddScsNode(USimpleConstructionScript *SCS, UClass *Class, const FName Name,
+                                       USCS_Node *Parent = nullptr) {
+  USCS_Node *Node = SCS->CreateNode(Class, Name);
+  if (Node && Parent)
+    Parent->AddChildNode(Node);
+  else if (Node)
+    SCS->AddNode(Node);
+  return Node;
+}
+
 // Why Class cannot be added to a Blueprint as a component, or empty when it can. USimpleConstructionScript::CreateNode
 // is a check() for a class that is no component (the editor is gone), and an abstract one (PrimitiveComponent,
 // MeshComponent) makes a template the editor warns about and nulls out on save.

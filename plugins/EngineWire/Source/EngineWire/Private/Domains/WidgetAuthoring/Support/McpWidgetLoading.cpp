@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Safety/McpSafeOperations.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetGuidRegistry.h"
@@ -30,10 +31,7 @@ static UWidgetBlueprint* LoadWidgetBlueprintRaw(const FString& WidgetPath)
     {
         return nullptr;
     }
-    if (!Path.StartsWith(TEXT("/")))
-    {
-        Path = TEXT("/Game/") + Path;
-    }
+    Path = McpRootedContentPath(Path);
 
     FString ObjectPath = Path;
     FString PackagePath = Path;
@@ -112,6 +110,16 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
     }
     return WidgetBP;
 }
+UWidgetBlueprint* LoadWidgetBlueprintOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
+                                             const TSharedPtr<FMcpBridgeWebSocket>& Socket, const FString& WidgetPath)
+{
+    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+    if (!WidgetBP)
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+    }
+    return WidgetBP;
+}
 FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP)
 {
     return WidgetBP && WidgetBP->GetOutermost() ? WidgetBP->GetOutermost()->GetName() : FString();
@@ -172,10 +180,9 @@ UWidgetAnimation* ResolveWidgetAnimation(UEngineWireSubsystem& Subsystem, const 
             TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
         return nullptr;
     }
-    OutWidgetBP = LoadWidgetBlueprint(WidgetPath);
+    OutWidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, Socket, WidgetPath);
     if (!OutWidgetBP)
     {
-        Subsystem.SendAutomationError(Socket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
         return nullptr;
     }
     UWidgetAnimation* Animation = FindWidgetAnimation(OutWidgetBP, AnimationName);

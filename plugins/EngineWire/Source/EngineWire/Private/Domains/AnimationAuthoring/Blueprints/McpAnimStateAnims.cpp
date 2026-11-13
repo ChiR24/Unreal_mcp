@@ -27,18 +27,8 @@ UEdGraphPin *SolePin(UEdGraphNode *Node, EEdGraphPinDirection Direction)
 
 TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject> &Params)
 {
-    TArray<FString> Paths;
-    const TArray<TSharedPtr<FJsonValue>> *Values = nullptr;
-    if (Params.IsValid() && Params->TryGetArrayField(TEXT("animations"), Values) && Values)
-    {
-        for (const TSharedPtr<FJsonValue> &Value : *Values)
-        {
-            if (Value.IsValid() && Value->Type == EJson::String && !Value->AsString().IsEmpty())
-            {
-                Paths.Add(Value->AsString());
-            }
-        }
-    }
+    TArray<FString> Paths = McpHandlerUtils::GetStringArrayField(Params, TEXT("animations"));
+    Paths.RemoveAll([](const FString& Path) { return Path.IsEmpty(); });
     return Paths;
 }
 
@@ -85,18 +75,7 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
             Failed.Add(MakeShared<FJsonValueString>(AnimPaths[Index]));
             continue;
         }
-        FGraphNodeCreator<UAnimGraphNode_SequencePlayer> Creator(*StateGraph);
-        UAnimGraphNode_SequencePlayer *Player = Creator.CreateNode();
-        Player->NodePosX = -400;
-        Player->NodePosY = Index * 160;
-        // Write the reflected property, as the details panel does: Node.Sequence is protected, and 5.0's SetSequence
-        // also writes anim-class node data that a graph node, not yet compiled into a class, does not have.
-        const FStructProperty* NodeProperty = FindFProperty<FStructProperty>(Player->GetClass(), TEXT("Node"));
-        if (FObjectPropertyBase* SequenceProperty = NodeProperty ? FindFProperty<FObjectPropertyBase>(NodeProperty->Struct, TEXT("Sequence")) : nullptr)
-        {
-            SequenceProperty->SetObjectPropertyValue_InContainer(&Player->Node, Sequence);
-        }
-        Creator.Finalize();
+        UAnimGraphNode_SequencePlayer *Player = CreateSequencePlayer(*StateGraph, Sequence, -400, Index * 160);
         bool bConnected = false;
         UEdGraphPin *Out = Player->FindPin(TEXT("Pose"), EGPD_Output);
         UEdGraphPin *In = ResultNode ? ResultNode->FindPin(TEXT("Result"), EGPD_Input) : nullptr;

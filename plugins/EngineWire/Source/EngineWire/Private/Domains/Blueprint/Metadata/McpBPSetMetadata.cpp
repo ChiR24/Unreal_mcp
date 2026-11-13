@@ -10,15 +10,8 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("set_metadata"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_set_metadata handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_set_metadata"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_set_metadata requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 

@@ -172,12 +172,9 @@ bool UEngineWireSubsystem::HandleControlActorSetMaterial(
     return true;
   }
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  AActor *Found = FindActorNamedOrReply(TargetName, RequestId, Socket);
+  if (!Found)
     return true;
-  }
 
   TArray<UPrimitiveComponent *> TargetComponents;
   FString ComponentName;

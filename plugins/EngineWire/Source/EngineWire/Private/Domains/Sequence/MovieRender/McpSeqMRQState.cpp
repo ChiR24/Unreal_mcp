@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 
@@ -41,10 +42,7 @@ FString GetJobId(UMoviePipelineExecutorJob *Job) {
 
 bool LoadRequiredModule(const TCHAR *ModuleName, FString &OutMessage,
                         FString &OutCode) {
-  FModuleManager &Modules = FModuleManager::Get();
-  if (Modules.IsModuleLoaded(ModuleName))
-    return true;
-  if (Modules.ModuleExists(ModuleName) && Modules.LoadModule(ModuleName))
+  if (McpLoadOptionalModule(ModuleName))
     return true;
   OutMessage = FString::Printf(
       TEXT("Required Movie Render Queue module is unavailable: %s"),
@@ -58,11 +56,6 @@ UMoviePipelineQueueSubsystem *GetQueueSubsystem(FString &OutMessage,
   if (!LoadRequiredModule(TEXT("MovieRenderPipelineEditor"), OutMessage,
                           OutCode))
     return nullptr;
-  if (!GEditor) {
-    OutMessage = TEXT("Movie Render Queue requires an editor context.");
-    OutCode = TEXT("EDITOR_UNAVAILABLE");
-    return nullptr;
-  }
   UMoviePipelineQueueSubsystem *QueueSubsystem =
       GEditor->GetEditorSubsystem<UMoviePipelineQueueSubsystem>();
   if (!QueueSubsystem) {

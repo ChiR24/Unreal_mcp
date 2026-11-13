@@ -4,6 +4,7 @@
 // the clip's own frames (a foot is down within contactHeight of its lowest point), in one undo step.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/AnimationAuthoring/Analysis/McpAnimLocomotion.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
 #include "Animation/AnimNotifies/AnimNotify_PlaySound.h"
@@ -109,7 +110,7 @@ TSharedPtr<FJsonObject> HandleAddFootsteps(const TSharedPtr<FJsonObject>& Params
     {
         const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("foot"), Step.Foot.ToString());
-        Row->SetNumberField(TEXT("time"), FMath::RoundToDouble(Step.Time * 1000.0) / 1000.0);
+        Row->SetNumberField(TEXT("time"), McpRoundTo(Step.Time, 1000.0));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
     Response->SetArrayField(TEXT("steps"), Rows);

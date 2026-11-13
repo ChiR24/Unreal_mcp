@@ -53,7 +53,7 @@ bool ResolveInstancedLevel(UEngineWireSubsystem* Subsystem, const FString& Reque
             nullptr, TEXT("LEVEL_INSTANCE_LOOP"));
         return false;
     }
-    OutWorld = TSoftObjectPtr<UWorld>(FSoftObjectPath(OutPackage + TEXT(".") + FPackageName::GetShortName(OutPackage)));
+    OutWorld = TSoftObjectPtr<UWorld>(FSoftObjectPath(McpToObjectPath(OutPackage)));
     return true;
 }
 
@@ -203,7 +203,7 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
             TEXT("blueprintPath '%s' is not a valid asset path; pass a /Game path such as /Game/Maps/BPP_Room."), *RequestedBP), nullptr, TEXT("INVALID_ASSET_PATH"));
         return true;
     }
-    const FString BPObjectPath = BPPackage + TEXT(".") + FPackageName::GetShortName(BPPackage);
+    const FString BPObjectPath = McpToObjectPath(BPPackage);
     TSoftObjectPtr<UBlueprint> BPAsset{FSoftObjectPath(BPObjectPath)};
     // An unsaved Blueprint counts too: creating over it would open the editor's modal overwrite dialog.
     const bool bExisted = StaticFindObject(UObject::StaticClass(), nullptr, *BPObjectPath) != nullptr || FPackageName::DoesPackageExist(BPPackage);

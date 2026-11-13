@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 // A raw key reaches Enhanced Input only through a mapping context that maps
 // it. An action no key is mapped to (or an analog value) has to be injected as
@@ -153,8 +154,7 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
   StopActionHoldForMcp(ActionPath);
   const bool bRelease =
       InputType == TEXT("key_up") || InputType == TEXT("keyup");
-  double Scalar = 1.0;
-  Payload->TryGetNumberField(TEXT("value"), Scalar);
+  double Scalar = GetJsonNumberField(Payload, TEXT("value"), 1.0);
   if (bRelease) {
     Scalar = 0.0;
   }
@@ -163,8 +163,7 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
   bSuccess = true;
   bHandledByPIE = true;
 
-  double HoldSeconds = 0.0;
-  Payload->TryGetNumberField(TEXT("holdSeconds"), HoldSeconds);
+  double HoldSeconds = GetJsonNumberField(Payload, TEXT("holdSeconds"), 0.0);
   if (bRelease || HoldSeconds <= 0.0) {
     Message = FString::Printf(TEXT("Injected %s = %s"), *Action->GetName(),
                               *Value.ToString());
@@ -215,9 +214,6 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
 bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   const FString InputType = NormalizeSimulatedInputTypeForMcp(Payload);
   if (InputType == TEXT("widget_list") || InputType == TEXT("widget_click")) {
     TSharedPtr<FJsonObject> WidgetResp = McpHandlerUtils::CreateResultObject();
@@ -264,8 +260,7 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     // second: a press and release inside one frame never reaches an action).
     const bool bTap = InputType == TEXT("key_tap");
     const bool bPress = bTap || InputType == TEXT("key_down") || InputType == TEXT("keydown");
-    double HoldSeconds = 0.0;
-    Payload->TryGetNumberField(TEXT("holdSeconds"), HoldSeconds);
+    double HoldSeconds = GetJsonNumberField(Payload, TEXT("holdSeconds"), 0.0);
     if (bTap && HoldSeconds <= 0.0) {
       HoldSeconds = 0.1;
     }

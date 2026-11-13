@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 #include "Misc/PackageName.h"
@@ -20,8 +21,8 @@ bool BuildSanitizedAssetPath(
   }
 
   FString Directory = InDirectory.TrimStartAndEnd();
-  if (!Directory.IsEmpty() && !Directory.StartsWith(TEXT("/"))) {
-    Directory = TEXT("/Game/") + Directory;
+  if (!Directory.IsEmpty()) {
+    Directory = McpRootedContentPath(Directory);
   }
 
   OutDirectory = SanitizeProjectRelativePath(Directory);

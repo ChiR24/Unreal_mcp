@@ -21,8 +21,6 @@ void CreateLandscapeOnGameThread(
     UEngineWireSubsystem &Subsystem, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FLandscapeCreationRequest &Request) {
-  if (!GEditor)
-    return;
   UWorld *World = GEditor->GetEditorWorldContext().World();
   if (!World)
     return;

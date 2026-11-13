@@ -4,6 +4,7 @@
 // Accessed None, an endless loop) through the engine's exception delegate, and the warnings math and array nodes log (a
 // divide by zero, an index past the end) through the log, each read back to the node running at that moment.
 #include "Domains/Play/McpFuzz.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Dom/JsonObject.h"
 #include "EdGraph/EdGraphNode.h"
@@ -281,7 +282,7 @@ TSharedPtr<FJsonObject> CallAll(const TArray<FPlan>& Plans, UWorld* World, AActo
     {
         Result->SetObjectField(TEXT("stoppedBy"), Run.StoppedBy);
     }
-    Result->SetNumberField(TEXT("seconds"), FMath::RoundToDouble((FPlatformTime::Seconds() - Started) * 100.0) / 100.0);
+    Result->SetNumberField(TEXT("seconds"), McpRoundTo(FPlatformTime::Seconds() - Started, 100.0));
     return Result;
 }
 } // namespace McpFuzz

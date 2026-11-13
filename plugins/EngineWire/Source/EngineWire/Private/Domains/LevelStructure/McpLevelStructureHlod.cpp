@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 #include "Domains/Volume/McpVolumeGeometry.h"
@@ -60,10 +61,7 @@ bool HandleConfigureHlodLayer(
     HlodLayerPath = SafePath;
 
     FString FullPath = HlodLayerPath / HlodLayerName;
-    if (!FullPath.StartsWith(TEXT("/")))
-    {
-        FullPath = TEXT("/Game/") + FullPath;
-    }
+    FullPath = McpRootedContentPath(FullPath);
 
     // An unknown layerType was written as nothing and answered success with layerTypeApplied false: refused before
     // the asset exists.

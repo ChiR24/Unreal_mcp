@@ -26,14 +26,8 @@ bool HandleFunctionInputsOutputs(UEngineWireSubsystem* Bridge, const FString& Re
     Payload->TryGetNumberField(TEXT("y"), Y);
 
     // SECURITY: Validate path BEFORE loading asset
-    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
-    if (ValidatedPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("path"), AssetPath),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
       return true;
-    }
-    AssetPath = ValidatedPath;
 
     UMaterialFunction *Func =
         LoadObject<UMaterialFunction>(nullptr, *AssetPath);

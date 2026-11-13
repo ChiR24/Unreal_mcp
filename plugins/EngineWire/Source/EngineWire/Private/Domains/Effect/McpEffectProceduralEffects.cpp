@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -16,12 +17,7 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
     bool bCleanup = Context.Lower.Equals(TEXT("cleanup"));
     if (bIsCreateEffect)
     {
-        FString SubAction;
-        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
-        }
-        bCleanup = bCleanup || SubAction.ToLower() == TEXT("cleanup");
+        bCleanup = bCleanup || McpConsolidatedActions::GetPayloadSubAction(Context.Payload) == TEXT("cleanup");
     }
     if (!bCleanup)
     {
@@ -40,13 +36,6 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
         return true;
     }
 
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     UEditorActorSubsystem* ActorSubsystem = GetEditorActorSubsystem();
     if (!ActorSubsystem)
     {
@@ -96,13 +85,6 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
 
 static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
 {
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     if (!GetEditorActorSubsystem())
     {
         Context.Bridge.SendAutomationResponse(
@@ -163,12 +145,7 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
     bool bCreateImpact = Context.Lower.Equals(TEXT("create_impact_effect"));
     if (bIsCreateEffect)
     {
-        FString SubAction;
-        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
-        }
-        const FString LowerSubAction = SubAction.ToLower();
+        const FString LowerSubAction = McpConsolidatedActions::GetPayloadSubAction(Context.Payload);
         bCreateRibbon = bCreateRibbon || LowerSubAction == TEXT("create_niagara_ribbon");
         bCreateFog = bCreateFog || LowerSubAction == TEXT("create_volumetric_fog");
         bCreateTrail = bCreateTrail || LowerSubAction == TEXT("create_particle_trail");
@@ -198,13 +175,6 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
     {
         // An existing system was named: place it, never author a duplicate.
         return CreateNiagaraEffectFromPayload(Context, EffectName, SystemPath);
-    }
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
     }
     // No systemPath: the creator authors the effect itself - a new
     // UNiagaraSystem under path/savePath built from the matching engine template

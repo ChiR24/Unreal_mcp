@@ -1,21 +1,12 @@
 // McpSchemaBuilder.cpp — Fluent builder for MCP tool inputSchema JSON
 
 #include "MCP/Registry/McpSchemaBuilder.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 namespace
 {
-TArray<TSharedPtr<FJsonValue>> MakeStringValueArray(const TArray<FString>& Values)
-{
-	TArray<TSharedPtr<FJsonValue>> Result;
-	for (const FString& Value : Values)
-	{
-		Result.Add(MakeShared<FJsonValueString>(Value));
-	}
-	return Result;
-}
-
 TSharedPtr<FJsonObject> MakeTypedProperty(const TCHAR* Type, const FString& Description)
 {
 	auto Prop = MakeShared<FJsonObject>();
@@ -31,7 +22,7 @@ void AddRequiredFields(TSharedPtr<FJsonObject> Schema, const TArray<FString>& Re
 {
 	if (RequiredFields.Num() > 0)
 	{
-		Schema->SetArrayField(TEXT("required"), MakeStringValueArray(RequiredFields));
+		Schema->SetArrayField(TEXT("required"), McpHandlerUtils::ToJsonStringArray(RequiredFields));
 	}
 }
 }
@@ -67,7 +58,7 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::StringEnum(const FString& Name,
 	const TArray<FString>& Values, const FString& Description)
 {
 	auto Prop = MakeTypedProperty(TEXT("string"), Description);
-	Prop->SetArrayField(TEXT("enum"), MakeStringValueArray(Values));
+	Prop->SetArrayField(TEXT("enum"), McpHandlerUtils::ToJsonStringArray(Values));
 
 	AddProperty(Name, Prop);
 	return *this;

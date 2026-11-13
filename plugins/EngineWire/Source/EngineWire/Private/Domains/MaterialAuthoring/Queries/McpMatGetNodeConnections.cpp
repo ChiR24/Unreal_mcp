@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -28,8 +29,7 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
     bool bWantInputs  = (Direction == TEXT("inputs")  || Direction == TEXT("both"));
     bool bWantOutputs = (Direction == TEXT("outputs") || Direction == TEXT("both"));
 
-    double DepthD = 1.0;
-    Payload->TryGetNumberField(TEXT("depth"), DepthD);
+    double DepthD = GetJsonNumberField(Payload, TEXT("depth"), 1.0);
     int32 MaxDepth = (int32)DepthD;
 
     bool bUpstream = false, bDownstream = false;

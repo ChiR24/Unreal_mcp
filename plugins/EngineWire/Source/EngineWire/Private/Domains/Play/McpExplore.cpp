@@ -29,16 +29,6 @@ constexpr int32 NavSamples = 64;
 TSharedPtr<FSession> GSession; // one at a time: a second would steer the same pawn
 bool GRunning = false;
 
-APawn* ResolvePawn(UWorld* World, const FString& Name)
-{
-    if (!Name.IsEmpty())
-    {
-        return Cast<APawn>(FindActorByNameInWorldForMcp(World, Name, false));
-    }
-    const APlayerController* Player = World->GetFirstPlayerController();
-    return Player ? Player->GetPawn() : nullptr;
-}
-
 // Random nav points; those no path from the start reaches are islands (a sealed room, a roof the level never connects).
 void SampleNav(FSession& S, UWorld* World)
 {
@@ -108,7 +98,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     if (Op == TEXT("start"))
     {
         TSharedPtr<FSession> Fresh = MakeShared<FSession>();
-        APawn* Pawn = ResolvePawn(World, GetJsonStringField(Payload, TEXT("actorName")));
+        APawn* Pawn = McpPlaySession::ResolvePawn(World, GetJsonStringField(Payload, TEXT("actorName")));
         if (!Pawn || !Pawn->GetController())
         {
             return Refuse(TEXT("NO_PAWN"), TEXT("No controlled pawn to drive: the player has none, or actorName names no pawn with a controller."));

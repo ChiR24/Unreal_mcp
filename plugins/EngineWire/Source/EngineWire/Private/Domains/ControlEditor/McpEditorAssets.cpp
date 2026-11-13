@@ -19,9 +19,6 @@ bool UEngineWireSubsystem::HandleControlEditorOpenAsset(
     return true;
   }
 
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   UAssetEditorSubsystem *AssetEditorSS =
       GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
   if (!AssetEditorSS) {
@@ -108,9 +105,7 @@ bool UEngineWireSubsystem::HandleControlEditorCloseAsset(
 
   // Only an asset already in memory can have an editor open, so it is found,
   // never loaded: loading it just to close it cost a full load for nothing.
-  const FString ObjectPath = AssetPath.Contains(TEXT("."))
-                                 ? AssetPath
-                                 : AssetPath + TEXT(".") + FPackageName::GetShortName(AssetPath);
+  const FString ObjectPath = McpToObjectPath(AssetPath);
   UObject* Asset = FindObject<UObject>(nullptr, *ObjectPath);
   // CloseAllEditorsForAsset returns how many it closed; "Asset editor closed"
   // used to come back whether or not one was open.

@@ -6,6 +6,7 @@
 // Every decal of the call is one undo step; points that find no surface (or not one of onActors) are listed, not placed.
 
 #include "Domains/Environment/Decals/McpDecalPlacement.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Components/DecalComponent.h"
 #include "Dom/JsonObject.h"
@@ -76,7 +77,7 @@ TSharedPtr<FJsonValue> DecalVector(const FVector& Value)
     TArray<TSharedPtr<FJsonValue>> Parts;
     for (const double Part : {Value.X, Value.Y, Value.Z})
     {
-        Parts.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Part * 10.0) / 10.0));
+        Parts.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Part, 10.0)));
     }
     return MakeShared<FJsonValueArray>(Parts);
 }

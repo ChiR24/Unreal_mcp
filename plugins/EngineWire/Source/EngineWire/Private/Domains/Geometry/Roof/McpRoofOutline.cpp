@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/Geometry/Roof/McpRoofOutline.h"
+#include "Foundation/Solvers/McpUnionFind.h"
 
 #include "Algo/Reverse.h"
 
@@ -36,16 +37,6 @@ bool OutlineSegmentsMeet(const FVector2D& P, const FVector2D& Q, const FVector2D
         return true;
     }
     return OutlineOnSegment(P, Q, R, D1) || OutlineOnSegment(P, Q, S, D2) || OutlineOnSegment(R, S, P, D3) || OutlineOnSegment(R, S, Q, D4);
-}
-
-int32 OutlineRoot(TArray<int32>& Root, int32 I)
-{
-    while (Root[I] != I)
-    {
-        Root[I] = Root[Root[I]];
-        I = Root[I];
-    }
-    return I;
 }
 } // namespace
 
@@ -128,7 +119,7 @@ bool Faces(const TArray<McpRoofSkeleton::FNode>& Nodes, const TArray<FArc>& Arcs
         Root.Add(I);
         for (int32 J = 0; J < I; ++J)
         {
-            const int32 A = OutlineRoot(Root, I), B = OutlineRoot(Root, J);
+            const int32 A = McpUnionFindRoot(Root, I), B = McpUnionFindRoot(Root, J);
             if (A != B && FVector2D::Distance(Nodes[I].Point, Nodes[J].Point) < Weld)
             {
                 Root[FMath::Max(A, B)] = FMath::Min(A, B); // the lowest index leads, so the corners keep theirs
@@ -139,7 +130,7 @@ bool Faces(const TArray<McpRoofSkeleton::FNode>& Nodes, const TArray<FArc>& Arcs
     Map.Init(INDEX_NONE, Nodes.Num());
     for (int32 I = 0; I < Nodes.Num(); ++I)
     {
-        const int32 Lead = OutlineRoot(Root, I);
+        const int32 Lead = McpUnionFindRoot(Root, I);
         if (I < EdgeCount && Lead != I)
         {
             return false; // two corners welded

@@ -180,11 +180,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		const FMcpCompletionResult Outcome = McpComplete(RefType, RefId, ArgName, Value,
 			[this](const FString& Parent) { return ToolManager.IsToolEnabled(Parent); });
 		auto Completion = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Values;
-		for (const FString& Candidate : Outcome.Values)
-		{
-			Values.Add(MakeShared<FJsonValueString>(Candidate));
-		}
+		TArray<TSharedPtr<FJsonValue>> Values = McpHandlerUtils::ToJsonStringArray(Outcome.Values);
 		Completion->SetArrayField(TEXT("values"), Values);
 		Completion->SetNumberField(TEXT("total"), Outcome.Total);
 		Completion->SetBoolField(TEXT("hasMore"), Outcome.bHasMore);

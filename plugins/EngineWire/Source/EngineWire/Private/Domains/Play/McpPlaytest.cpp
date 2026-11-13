@@ -13,13 +13,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Navigation/PathFollowingComponent.h" // EPathFollowingRequestResult: AIController.h only declares it from 5.x on
 
-namespace McpPlaytest
+namespace McpPlaySession
 {
-namespace PlaytestParts
-{
-constexpr int32 MaxChecks = 16;
-bool GRunning = false; // one leg at a time: two would steer the same game
-
 APawn* ResolvePawn(UWorld* World, const FString& Name)
 {
     if (!Name.IsEmpty())
@@ -29,6 +24,14 @@ APawn* ResolvePawn(UWorld* World, const FString& Name)
     const APlayerController* Player = World->GetFirstPlayerController();
     return Player ? Player->GetPawn() : nullptr;
 }
+} // namespace McpPlaySession
+
+namespace McpPlaytest
+{
+namespace PlaytestParts
+{
+constexpr int32 MaxChecks = 16;
+bool GRunning = false; // one leg at a time: two would steer the same game
 
 bool ReadGoal(const TSharedPtr<FJsonObject>& Payload, UWorld* World, FVector& Out, FString& OutError)
 {
@@ -95,7 +98,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
                       "pause), so nothing would move: resume it (control_editor play with control resume and unpauseGame true), then run the leg."));
     }
     TSharedPtr<FRun> Run = MakeShared<FRun>();
-    APawn* Pawn = ResolvePawn(World, GetJsonStringField(Payload, TEXT("actorName")));
+    APawn* Pawn = McpPlaySession::ResolvePawn(World, GetJsonStringField(Payload, TEXT("actorName")));
     AController* Controller = Pawn ? Pawn->GetController() : nullptr;
     FString Error;
     if (!Controller)

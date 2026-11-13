@@ -33,6 +33,12 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
                                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path,
                                       const FString& Name);
 
+// A new generic data asset (UMcpGenericDataAsset: UDataAsset and UPrimaryDataAsset are abstract) named Name in Package.
+// Fill writes its first values; then it is dirtied, registered and, unless the payload's save is false, saved (OutSaved).
+// Null when NewObject makes nothing.
+UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const FString& Name, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
+                                            TFunctionRef<void(UMcpGenericDataAsset&)> Fill = [](UMcpGenericDataAsset&) {});
+
 // False after replying ASSET_NOT_FOUND when Path, a reference the action stores (item, category, icon,
 // ingredient), names no asset. Those paths used to be stored unchecked, so a typo saved a dead reference.
 bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,

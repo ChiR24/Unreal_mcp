@@ -1,4 +1,5 @@
 #include "MCP/Protocol/McpModernConsent.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Foundation/BridgeHelpers/Security/McpCapToken.h"
 #include "Foundation/McpSecureTokenCompare.h"
@@ -44,7 +45,7 @@ FString DescribeArguments(const TSharedPtr<FJsonObject>& Arguments)
     {
         for (const auto& Pair : Arguments->Values)
         {
-            const FString Key(Pair.Key.Len(), *Pair.Key);
+            const FString Key = McpJsonKey(Pair.Key);
             FString Text;
             if (Key == TEXT("action") || Key == TEXT("subAction") || !Pair.Value.IsValid() ||
                 !Pair.Value->TryGetString(Text))

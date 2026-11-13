@@ -1,4 +1,5 @@
 #include "Domains/PCG/McpPCGPrivate.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 bool UEngineWireSubsystem::HandleManagePCGAction(
     const FString& RequestId, const FString& Action,
@@ -15,8 +16,7 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
         return true;
     }
 
-    if (!FModuleManager::Get().IsModuleLoaded(TEXT("PCG")) &&
-        (!FModuleManager::Get().ModuleExists(TEXT("PCG")) || !FModuleManager::Get().LoadModulePtr<IModuleInterface>(TEXT("PCG"))))
+    if (!McpLoadOptionalModule(TEXT("PCG")))
     {
         SendAutomationError(Socket, RequestId, TEXT("PCG plugin is not enabled in this project. Enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins) and restart the editor."), TEXT("PCG_PLUGIN_NOT_ENABLED"));
         return true;

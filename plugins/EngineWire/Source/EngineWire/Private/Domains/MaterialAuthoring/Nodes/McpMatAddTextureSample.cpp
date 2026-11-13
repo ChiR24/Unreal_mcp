@@ -13,14 +13,8 @@ bool HandleAddTextureSample(UEngineWireSubsystem* Bridge, const FString& Request
 
     // SECURITY: Validate texturePath if provided
     if (!TexturePath.IsEmpty()) {
-      FString ValidatedTexturePath = SanitizeProjectRelativePath(TexturePath);
-      if (ValidatedTexturePath.IsEmpty()) {
-        Bridge->SendAutomationError(Socket, RequestId,
-                            McpPathRefusalMessage(TEXT("texturePath"), TexturePath),
-                            TEXT("INVALID_PATH"));
+      if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("texturePath"), TexturePath))
         return true;
-      }
-      TexturePath = ValidatedTexturePath;
     }
 
     // Resolve shared texture/sampler options first

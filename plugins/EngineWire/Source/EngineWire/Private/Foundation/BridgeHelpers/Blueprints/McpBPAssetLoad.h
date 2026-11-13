@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AssetRegistry/AssetData.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "CoreMinimal.h"
 #include "EditorAssetLibrary.h"
@@ -49,10 +50,7 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
   }
 
   // Build normalized paths
-  FString Path = Req;
-  if (!Path.StartsWith(TEXT("/"))) {
-    Path = TEXT("/Game/") + Path;
-  }
+  FString Path = McpRootedContentPath(Req);
 
   FString ObjectPath = Path;
   FString PackagePath = Path;

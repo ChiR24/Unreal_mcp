@@ -7,6 +7,7 @@
 // - Returns the normalized path and whether it's valid
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
 #include "Misc/PackageName.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/McpCapabilityPrincipal.h"
@@ -58,9 +59,7 @@ static inline FNormalizedAssetPath NormalizeAssetPath(const FString &InPath) {
   }
 
   // If path doesn't start with '/', try prepending /Game/
-  if (!CleanPath.StartsWith(TEXT("/"))) {
-    CleanPath = TEXT("/Game/") + CleanPath;
-  }
+  CleanPath = McpRootedContentPath(CleanPath);
 
   // Validate using engine API
   FText Reason;

@@ -1,6 +1,7 @@
 // manage_blueprint arrange_widgets (see McpWidgetArrange.h): the widgets the relations name, children of one Canvas
 // Panel, solved at a reference screen size, written to their slots as one undo step, and checked again at each size.
 #include "Domains/WidgetAuthoring/Arrange/McpWidgetArrange.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
@@ -218,7 +219,7 @@ bool HandleWidgetAuthoringArrange(UEngineWireSubsystem& Subsystem, const FString
         Row->SetStringField(TEXT("relation"), Relations[Index].Text);
         TArray<TSharedPtr<FJsonValue>> Met = McpHandlerUtils::ToJsonStringArray(MetAt[Index]);
         Row->SetArrayField(TEXT("metAt"), Met);
-        Row->SetNumberField(TEXT("worstMiss"), FMath::RoundToDouble(Worst[Index] * 10.0) / 10.0);
+        Row->SetNumberField(TEXT("worstMiss"), McpRoundTo(Worst[Index], 10.0));
         RelationRows.Add(MakeShared<FJsonValueObject>(Row));
         Holding += MetAt[Index].Num() == Sizes.Num() ? 1 : 0;
     }

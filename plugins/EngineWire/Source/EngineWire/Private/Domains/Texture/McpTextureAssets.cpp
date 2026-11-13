@@ -139,4 +139,36 @@ bool SaveTextureAsset(UTexture2D* Texture)
     // still on disk, so a texture whose five saves all failed was reported saved.
     return McpSafeAssetSave(Texture);
 }
+
+bool ReadGeneratedTextureTarget(const TSharedPtr<FJsonObject>& Params, FString& OutPath, FString& OutName, int32& OutWidth,
+                                int32& OutHeight, FString& OutError)
+{
+    return ResolveOutputTarget(Params, TEXT("/Game/Textures"), FString(), OutPath, OutName, OutError) &&
+           ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
+                                              GetJsonNumberField(Params, TEXT("height"), 1024),
+                                              TEXT("width"), TEXT("height"), OutWidth, OutHeight, OutError);
+}
+
+TSharedPtr<FJsonObject> FinishGeneratedTexture(TSharedPtr<FJsonObject> Response, const FString& Path, const FString& Name,
+                                               int32 Width, int32 Height, const TArray<uint8>& Pixels, const TCHAR* Kind)
+{
+    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
+    if (!NewTexture)
+    {
+        TEXTURE_ERROR_RESPONSE(TEXT("Failed to create texture"));
+    }
+    if (!UpdateTextureBGRA8(NewTexture, Width, Height, Pixels))
+    {
+        TEXTURE_ERROR_RESPONSE(TEXT("Failed to update texture pixel data"));
+    }
+    if (!SaveTextureAsset(NewTexture))
+    {
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to save %s texture"), *FString(Kind).ToLower()));
+    }
+
+    Response->SetBoolField(TEXT("success"), true);
+    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("%s texture '%s' created"), Kind, *Name));
+    McpHandlerUtils::AddVerification(Response, NewTexture);
+    return Response;
+}
 }

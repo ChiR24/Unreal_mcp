@@ -1,6 +1,7 @@
 // McpFoldVariantRules.cpp — see header for the contract.
 
 #include "MCP/Execute/Request/McpFoldVariantRules.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Dom/JsonValue.h"
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -119,7 +120,7 @@ TSharedPtr<FJsonObject> McpVariantRequired(const FMcpCapabilityRecord& Record)
 		const TArray<FString> Group = RequirementNames(Requirement, TEXT("oneOf"));
 		// A one-name group the variant also requires ("blueprintPath", "blueprintPath") is listed once.
 		if (Group.Num() > 0) Names.AddUnique(FString::Join(Group, TEXT("|")));
-		Out->SetArrayField(Entry.Key, GatewayStringArray(Names));
+		Out->SetArrayField(Entry.Key, McpHandlerUtils::ToJsonStringArray(Names));
 	}
 	return Out->Values.Num() > 0 ? Out : nullptr;
 }
@@ -149,7 +150,7 @@ void McpSetVariantRequirementViews(
 	}
 	if (RequiredFor.Num() > 0)
 	{
-		View->SetArrayField(TEXT("requiredFor"), GatewayStringArray(RequiredFor));
+		View->SetArrayField(TEXT("requiredFor"), McpHandlerUtils::ToJsonStringArray(RequiredFor));
 	}
 }
 
@@ -200,7 +201,7 @@ TSharedPtr<FJsonObject> McpSearchSignature(const FMcpCapabilityRecord& Record)
 		if (Pinned) Example->Values = Pinned->FoldedPins->Values;
 		for (const auto& Field : (*ExampleInput)->Values)
 		{
-			const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			const FString Key = McpJsonKey(Field.Key);
 			if (!IsControl(Key)) Example->SetField(Key, Field.Value);
 		}
 	}

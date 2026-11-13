@@ -37,8 +37,7 @@ bool HandleSnapToGrid(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));
     double Grid = GEditor ? static_cast<double>(GEditor->GetGridSize()) : 10.0;
     Payload->TryGetNumberField(TEXT("gridCm"), Grid);
-    double RotationStep = 0.0;
-    Payload->TryGetNumberField(TEXT("rotationDeg"), RotationStep);
+    double RotationStep = GetJsonNumberField(Payload, TEXT("rotationDeg"), 0.0);
     const FString Axes = GetJsonStringField(Payload, TEXT("axes"), TEXT("xyz")).ToLower();
     const bool bDryRun = GetJsonBoolField(Payload, TEXT("dryRun"), false);
     bool bAxesValid = !Axes.IsEmpty();

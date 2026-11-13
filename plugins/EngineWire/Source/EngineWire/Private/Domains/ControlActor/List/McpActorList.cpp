@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Debug/DebugDrawComponent.h"
@@ -40,25 +41,20 @@ double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, doubl
 bool UEngineWireSubsystem::HandleControlActorList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   FString Filter, TagFilter, ClassFilter, FolderFilter;
   Payload->TryGetStringField(TEXT("filter"), Filter);
   Payload->TryGetStringField(TEXT("tag"), TagFilter);
   Payload->TryGetStringField(TEXT("className"), ClassFilter);
   Payload->TryGetStringField(TEXT("folder"), FolderFilter);
 
-  double LimitValue = 0.0;
-  Payload->TryGetNumberField(TEXT("limit"), LimitValue);
+  double LimitValue = GetJsonNumberField(Payload, TEXT("limit"), 0.0);
   // Default page size: a bare list of a big level used to return every actor.
   const int32 Limit = LimitValue > 0.0
       ? FMath::Max(1, static_cast<int32>(LimitValue))
       : 100;
   // The next page: the reply said hasMore with no way to ask for the rest, so
   // the 90th stair of a staircase could not be listed at all.
-  double OffsetValue = 0.0;
-  Payload->TryGetNumberField(TEXT("offset"), OffsetValue);
+  double OffsetValue = GetJsonNumberField(Payload, TEXT("offset"), 0.0);
   const int32 Offset = FMath::Max(0, static_cast<int32>(OffsetValue));
   // Variable values across many actors in one call (which ? blocks hold what took one inspect per block).
   // A name is an actor property, or "Component.Property" for one of its components (StaticMeshComponent.LDMaxDrawDistance).
@@ -192,7 +188,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
                                              ? Actor->GetClass()->GetPathName()
                                              : TEXT(""));
     if (bNear)
-      Entry->SetNumberField(TEXT("distance"), FMath::RoundToDouble(Item.Distance * 10.0) / 10.0);
+      Entry->SetNumberField(TEXT("distance"), McpRoundTo(Item.Distance, 10.0));
     // The layout in one call: without these, reading N placements took N get_transform calls.
     if (Actor->GetRootComponent()) {
       const FTransform Transform = Actor->GetActorTransform();

@@ -54,6 +54,15 @@ FAssetData GetTextureAssetDataByObjectPath(const FString& ObjectPath);
 UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& TextureName, int32 Width, int32 Height, bool bHDR);
 bool UpdateTextureBGRA8(UTexture2D* Texture, int32 Width, int32 Height, const TArray<uint8>& Pixels);
 bool SaveTextureAsset(UTexture2D* Texture);
+// What every generated texture reads first: its target (path and name, the folder /Game/Textures by default) and its
+// size (width and height, 1024 each by default). False with OutError, the refusal, when either is refused.
+bool ReadGeneratedTextureTarget(const TSharedPtr<FJsonObject>& Params, FString& OutPath, FString& OutName, int32& OutWidth,
+                                int32& OutHeight, FString& OutError);
+// A generated texture's last steps: an 8-bit texture at Path/Name holding Pixels (BGRA8, Width x Height), saved, and the
+// reply "<Kind> texture '<Name>' created" with its verification; Response refused at the step that failed. Always 8-bit:
+// the pixel writer fills BGRA8 source data, so an hdr request made an 8-bit texture labelled HDR, and hdr is not read.
+TSharedPtr<FJsonObject> FinishGeneratedTexture(TSharedPtr<FJsonObject> Response, const FString& Path, const FString& Name,
+                                               int32 Width, int32 Height, const TArray<uint8>& Pixels, const TCHAR* Kind);
 float FBMNoise(float X, float Y, int32 Octaves, float Persistence, float Lacunarity, int32 Seed);
 
 TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& Params);

@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Editor/EditorPerformanceSettings.h"
 #include "Misc/App.h"
 
@@ -76,8 +77,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewMode(
 bool UEngineWireSubsystem::HandleControlEditorSetCameraFov(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  double Fov = 90.0;
-  Payload->TryGetNumberField(TEXT("fov"), Fov);
+  double Fov = GetJsonNumberField(Payload, TEXT("fov"), 90.0);
   if (Fov <= 1.0 || Fov >= 179.0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("fov must be between 1 and 179 degrees"), nullptr);
@@ -122,9 +122,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetCameraFov(
 bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   // Accept both documented spellings. Reading only `realtime` made a schema-
   // valid {enabled: false} behave as absent/default-true.
   bool bRealtime = true;

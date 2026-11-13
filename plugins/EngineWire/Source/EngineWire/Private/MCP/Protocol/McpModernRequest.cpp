@@ -102,11 +102,7 @@ FString UnsupportedVersionError(const TSharedPtr<FJsonValue>& Id, const FString&
                                 const TArray<FString>& Supported)
 {
     TSharedPtr<FJsonObject> Data = MakeShared<FJsonObject>();
-    TArray<TSharedPtr<FJsonValue>> Versions;
-    for (const FString& Each : Supported)
-    {
-        Versions.Add(MakeShared<FJsonValueString>(Each));
-    }
+    TArray<TSharedPtr<FJsonValue>> Versions = McpHandlerUtils::ToJsonStringArray(Supported);
     Data->SetArrayField(TEXT("supported"), Versions);
     Data->SetStringField(TEXT("requested"), Requested);
     return FMcpJsonRpc::BuildError(Id, ErrorUnsupportedProtocolVersion, TEXT("Unsupported protocol version"), Data);

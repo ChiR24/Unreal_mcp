@@ -125,8 +125,7 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
         return false;
     }
     const FString TrackType = McpWidgetKeyTrackType(Payload);
-    double Time = 0.0;
-    Payload->TryGetNumberField(TEXT("time"), Time);
+    double Time = GetJsonNumberField(Payload, TEXT("time"), 0.0);
     FString Interp = TEXT("auto");
     Payload->TryGetStringField(TEXT("interpolation"), Interp);
     const FFrameNumber Frame = (Time * MovieScene->GetTickResolution()).RoundToFrame();

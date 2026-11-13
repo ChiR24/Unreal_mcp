@@ -1,4 +1,5 @@
 #include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Dom/JsonValue.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
@@ -93,11 +94,7 @@ TSharedPtr<FJsonObject> McpBuildDirectCallMigration(
 			TEXT("Direct tool calls are removed. '%s' is not a known tool; call the 'unreal' gateway with operation 'search' to discover the right capability."),
 			*ToolName);
 		TSharedPtr<FJsonObject> Result = MigrationReceipt(ToolName, Message, NextCall);
-		TArray<TSharedPtr<FJsonValue>> Suggestions;
-		for (const FString& Name : GatewayClosestMatches(ToolName, ParentNames, McpMigrationMaxSuggestions))
-		{
-			Suggestions.Add(MakeShared<FJsonValueString>(Name));
-		}
+		TArray<TSharedPtr<FJsonValue>> Suggestions = McpHandlerUtils::ToJsonStringArray(GatewayClosestMatches(ToolName, ParentNames, McpMigrationMaxSuggestions));
 		Result->SetArrayField(TEXT("suggestions"), Suggestions);
 		return Result;
 	}

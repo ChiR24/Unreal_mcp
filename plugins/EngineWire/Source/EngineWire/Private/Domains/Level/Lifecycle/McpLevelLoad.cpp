@@ -56,13 +56,6 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
         }
       }
 
-      if (!GEditor) {
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Editor not available"), nullptr,
-                               TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-      }
-
       FString Filename;
       bool bGotFilename = false;
       if (FPackageName::IsPackageFilename(LevelPath)) {

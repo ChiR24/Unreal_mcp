@@ -80,9 +80,6 @@ bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
 bool UEngineWireSubsystem::HandleControlEditorSetPreferences(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
-
   TArray<FString> AppliedSettings;
   TArray<FString> FailedSettings;
   FString Category;

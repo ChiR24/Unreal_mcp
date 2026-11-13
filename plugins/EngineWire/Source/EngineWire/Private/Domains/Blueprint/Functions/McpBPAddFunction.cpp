@@ -17,15 +17,8 @@ namespace McpBlueprintHandlers {
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("add_function"))) {
-    UE_LOG(LogEngineWireSubsystem, Verbose,
-           TEXT("Entered blueprint_add_function handler: RequestId=%s"),
-           *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    FString Path = RequireBlueprintPath(Context, TEXT("blueprint_add_function"));
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_add_function requires a blueprint path."), nullptr,
-          TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }
 
@@ -77,17 +70,9 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
 
 
     FString Normalized;
-    FString LoadErr;
-    UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, LoadErr);
+    UBlueprint *Blueprint = LoadBlueprintOrReply(Context, Path, Normalized);
     const FString RegistryKey = !Normalized.IsEmpty() ? Normalized : Path;
     if (!Blueprint) {
-      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
-      if (!LoadErr.IsEmpty()) {
-        Err->SetStringField(TEXT("error"), LoadErr);
-      }
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to load blueprint"), Err,
-                             TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 

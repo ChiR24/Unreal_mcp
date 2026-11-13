@@ -47,9 +47,7 @@ TAsset* LoadInputAsset(const FString& RawPath, FString& OutNormalizedPath)
     {
         return nullptr;
     }
-    const FString ObjectPath = OutNormalizedPath.Contains(TEXT("."))
-        ? OutNormalizedPath
-        : OutNormalizedPath + TEXT(".") + FPackageName::GetShortName(OutNormalizedPath);
+    const FString ObjectPath = McpToObjectPath(OutNormalizedPath);
     return Cast<TAsset>(StaticLoadObject(TAsset::StaticClass(), nullptr, *ObjectPath, nullptr, LOAD_NoWarn));
 }
 }

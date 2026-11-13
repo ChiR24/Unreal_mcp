@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 #include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
 
 #include "EditorAssetLibrary.h"
@@ -18,12 +19,9 @@ bool HandleAddAIPerceptionComponent(UEngineWireSubsystem* Self, const FString& R
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("NOT_FOUND"));
         return true;
     }
 

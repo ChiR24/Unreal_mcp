@@ -74,8 +74,7 @@ bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     TArray<TSharedPtr<FJsonValue>> RemovedArr = McpHandlerUtils::ToJsonStringArray(Removed);
     Result->SetArrayField(TEXT("removed"), RemovedArr);
     Result->SetNumberField(TEXT("removedCount"), Removed.Num());
-    TArray<TSharedPtr<FJsonValue>> NotFoundArr;
-    for (const FString &Missing : NotFound) { NotFoundArr.Add(MakeShared<FJsonValueString>(Missing)); }
+    TArray<TSharedPtr<FJsonValue>> NotFoundArr = McpHandlerUtils::ToJsonStringArray(NotFound);
     Result->SetArrayField(TEXT("notFound"), NotFoundArr);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Deleted %d node(s)."), Removed.Num()),

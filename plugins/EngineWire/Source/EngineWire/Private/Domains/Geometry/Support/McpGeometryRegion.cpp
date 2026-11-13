@@ -13,18 +13,7 @@ namespace McpGeometryHandlers
 // A {x, y, z} object field of Object; false when it is missing, not an object, or not three finite numbers.
 static bool ReadRegionVector(const TSharedPtr<FJsonObject>& Object, const TCHAR* Name, FVector3d& OutVector)
 {
-    const TSharedPtr<FJsonObject>* Vector = nullptr;
-    double X = 0.0;
-    double Y = 0.0;
-    double Z = 0.0;
-    if (!Object->TryGetObjectField(Name, Vector) || !Vector->IsValid()
-        || !(*Vector)->TryGetNumberField(TEXT("x"), X) || !(*Vector)->TryGetNumberField(TEXT("y"), Y)
-        || !(*Vector)->TryGetNumberField(TEXT("z"), Z) || !FMath::IsFinite(X) || !FMath::IsFinite(Y) || !FMath::IsFinite(Z))
-    {
-        return false;
-    }
-    OutVector = FVector3d(X, Y, Z);
-    return true;
+    return ReadPointValue(Object->TryGetField(Name), OutVector);
 }
 
 // An integer-list field of Object into OutIds; false when an entry is not a whole number or the list is empty.

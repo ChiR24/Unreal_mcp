@@ -85,11 +85,7 @@ void FilterRowsByListedNames(
     Rows = MoveTemp(Kept);
     if (Wanted.Num() > 0 && Result.IsValid())
     {
-        TArray<TSharedPtr<FJsonValue>> Missing;
-        for (const FString& Name : Wanted)
-        {
-            Missing.Add(MakeShared<FJsonValueString>(Name));
-        }
+        TArray<TSharedPtr<FJsonValue>> Missing = McpHandlerUtils::ToJsonStringArray(Wanted);
         Result->SetArrayField(MissingField, Missing);
     }
 }

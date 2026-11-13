@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "ContentStreaming.h"
 #include "Misc/PackageName.h"
@@ -29,7 +30,7 @@ void McpReplyWhenLevelSettles(TWeakObjectPtr<UEngineWireSubsystem> WeakThis, TSh
     if (++Frames < McpLevelSettleFrames || (Streaming > 0 && Waited < McpLevelSettleMaxSeconds)) {
       return true;
     }
-    Resp->SetNumberField(TEXT("settledSeconds"), FMath::RoundToDouble(Waited * 100.0) / 100.0);
+    Resp->SetNumberField(TEXT("settledSeconds"), McpRoundTo(Waited, 100.0));
     if (Streaming > 0) {
       Resp->SetNumberField(TEXT("texturesStillStreaming"), Streaming);
     }
@@ -66,9 +67,6 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
   }
   // An asset listing hands out object paths (/Game/Maps/Demo.Demo); one was looked for as a file and not found.
   LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
-
-  if (!McpRequireEditor(this, Socket, RequestId))
-    return true;
 
   // Unreal stores levels in two path patterns:
   // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap

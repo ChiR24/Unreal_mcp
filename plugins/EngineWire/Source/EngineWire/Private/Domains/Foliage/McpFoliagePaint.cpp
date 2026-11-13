@@ -53,11 +53,9 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
     return true;
   }
 
-  double PaintDensity = 1.0;
-  Payload->TryGetNumberField(TEXT("density"), PaintDensity);
+  double PaintDensity = GetJsonNumberField(Payload, TEXT("density"), 1.0);
   PaintDensity = FMath::Clamp(PaintDensity, 0.0, 1.0);
-  double CountValue = 0.0;
-  Payload->TryGetNumberField(TEXT("count"), CountValue);
+  double CountValue = GetJsonNumberField(Payload, TEXT("count"), 0.0);
   // count overrides density; otherwise one instance per ~(300uu)^2 at full
   // density. Capped so a huge brush cannot spawn an unbounded number.
   auto TargetFor = [&](double SurfaceArea) {
@@ -65,8 +63,7 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
                                          : FMath::RoundToInt(SurfaceArea / (300.0 * 300.0) * PaintDensity), 1, 2000);
   };
   FRandomStream Stream(GetTypeHash(RequestId));
-  double BrushRadius = 0.0;
-  Payload->TryGetNumberField(TEXT("radius"), BrushRadius);
+  double BrushRadius = GetJsonNumberField(Payload, TEXT("radius"), 0.0);
   if (bHasArea) {
     const FBox2D Box(FVector2D(FMath::Min(AreaMin.X, AreaMax.X), FMath::Min(AreaMin.Y, AreaMax.Y)),
                      FVector2D(FMath::Max(AreaMin.X, AreaMax.X), FMath::Max(AreaMin.Y, AreaMax.Y)));

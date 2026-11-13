@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EnvironmentQuery/EnvQuery.h"
@@ -143,8 +144,7 @@ bool HandleAddEQSGenerator(UEngineWireSubsystem* Self, const FString& RequestId,
     const TArray<FString> Keys = GeneratorSettingKeys(GeneratorClass);
     for (const auto& Pair : Settings->Values)
     {
-        // 5.8 keys are not FString: copy the text first.
-        const FString Key(Pair.Key.Len(), *Pair.Key);
+        const FString Key = McpJsonKey(Pair.Key);
         if (!Keys.Contains(Key))
         {
             return Fail(FString::Printf(TEXT("generatorSettings.%s does not apply to %s, which reads %s; add_eqs_context sets where it centers. Nothing was added."),

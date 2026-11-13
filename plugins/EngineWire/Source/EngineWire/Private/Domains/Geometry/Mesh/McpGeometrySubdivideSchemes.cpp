@@ -7,6 +7,7 @@
 // themselves and needs no groups. FSubdividePoly keeps each polygroup id and gives every output triangle the
 // material id most common in its cage face, so set_material_id before subdividing carries through.
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -19,13 +20,6 @@
 namespace McpGeometryHandlers
 {
 #if MCP_HAS_SUBDIVIDE_POLY
-static bool SubdivPolyModuleReady()
-{
-    FModuleManager& Modules = FModuleManager::Get();
-    return Modules.IsModuleLoaded(TEXT("ModelingComponentsEditorOnly"))
-        || (Modules.ModuleExists(TEXT("ModelingComponentsEditorOnly")) && Modules.LoadModule(TEXT("ModelingComponentsEditorOnly")) != nullptr);
-}
-
 static const TCHAR* SubdivCageProblem(FSubdividePoly::ETopologyCheckResult Check)
 {
     switch (Check)
@@ -57,7 +51,7 @@ bool SubdivideByScheme(UEngineWireSubsystem* Self, const FString& RequestId, TSh
                        const FMcpGeometryTarget& Target, const FString& ActorName, const FString& Scheme, int32 Level)
 {
 #if MCP_HAS_SUBDIVIDE_POLY
-    if (!SubdivPolyModuleReady())
+    if (!McpLoadOptionalModule(TEXT("ModelingComponentsEditorOnly")))
     {
         Self->SendAutomationError(Socket, RequestId,
             TEXT("catmull_clark, loop and bilinear subdivision need the engine's ModelingComponentsEditorOnly module (the MeshModelingToolset plugin, "

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -14,12 +15,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     bool bSpawnNiagara = Context.Lower.Equals(TEXT("spawn_niagara"));
     if (bIsCreateEffect)
     {
-        FString SubAction;
-        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
-        }
-        const FString LowerSubAction = SubAction.ToLower();
+        const FString LowerSubAction = McpConsolidatedActions::GetPayloadSubAction(Context.Payload);
         bSpawnNiagara =
             bSpawnNiagara || LowerSubAction == TEXT("niagara") ||
             LowerSubAction == TEXT("spawn_niagara");
@@ -47,13 +43,6 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
             Context.Socket, Context.RequestId, false,
             FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
             nullptr, TEXT("SYSTEM_NOT_FOUND"));
-        return true;
-    }
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
 

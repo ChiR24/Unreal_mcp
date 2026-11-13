@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Domains/Render/McpRenderPrivate.h"
@@ -120,8 +121,7 @@ bool HandleSystemExtrasAction(UEngineWireSubsystem &Bridge,
         break;
       }
     }
-    double Level = 1.0;
-    Payload->TryGetNumberField(TEXT("level"), Level);
+    double Level = GetJsonNumberField(Payload, TEXT("level"), 1.0);
     return RunConsole(Bridge, RequestId, FString::Printf(TEXT("%s %d"), Cvar, FMath::Clamp(FMath::RoundToInt32(Level), 0, 4)), Socket);
   }
   if (LowerSub == TEXT("set_resolution")) {
@@ -183,8 +183,7 @@ bool HandleSystemExtrasAction(UEngineWireSubsystem &Bridge,
       return true;
     }
     FNotificationInfo Info(FText::FromString(Message.IsEmpty() ? TEXT("MCP notification") : Message));
-    double Duration = 4.0;
-    Payload->TryGetNumberField(TEXT("duration"), Duration);
+    double Duration = GetJsonNumberField(Payload, TEXT("duration"), 4.0);
     Info.ExpireDuration = static_cast<float>(FMath::Clamp(Duration, 0.5, 60.0));
     FSlateNotificationManager::Get().AddNotification(Info);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

@@ -2,6 +2,7 @@
 // timelines read back. The marks live in editor memory until cleared or the editor closes; each play session starts
 // their timelines empty, and the last one stays readable after Play stops.
 #include "Domains/Debug/Logpoints/McpLogpoints.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
@@ -69,7 +70,7 @@ TSharedPtr<FJsonObject> Describe(const FPoint& Point, int32 Last)
     {
         const FHit& Hit = Point.Hits[Index];
         TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-        Entry->SetNumberField(TEXT("t"), FMath::RoundToDouble(Hit.GameSeconds * 1000.0) / 1000.0);
+        Entry->SetNumberField(TEXT("t"), McpRoundTo(Hit.GameSeconds, 1000.0));
         Entry->SetStringField(TEXT("object"), Hit.ObjectName);
         Entry->SetObjectField(TEXT("in"), Hit.Inputs.IsValid() ? Hit.Inputs : MakeShared<FJsonObject>());
         if (Hit.Outputs.IsValid())

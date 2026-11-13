@@ -96,7 +96,7 @@ void SetVariants(const TSharedPtr<FJsonObject>& Out, const FMcpCapabilityRecord&
 {
 	if (const TArray<FString>* Variants = Record.DispatchByDeclaredBy.Find(Name))
 	{
-		Out->SetArrayField(TEXT("variants"), GatewayStringArray(*Variants));
+		Out->SetArrayField(TEXT("variants"), McpHandlerUtils::ToJsonStringArray(*Variants));
 	}
 	McpSetVariantRequirementViews(Out, Record, Name);
 }
@@ -144,7 +144,7 @@ TSharedPtr<FJsonObject> CapabilityContract(
 {
 	auto Out = MakeShared<FJsonObject>();
 	Out->SetStringField(TEXT("action"), McpCapabilityPublicAction(Record));
-	Out->SetArrayField(TEXT("aliases"), GatewayStringArray(Record.Aliases));
+	Out->SetArrayField(TEXT("aliases"), McpHandlerUtils::ToJsonStringArray(Record.Aliases));
 	Out->SetObjectField(TEXT("availability"), McpCapabilityAvailabilityView(Record, bAvailable));
 	SetObjectOrEmpty(Out, TEXT("behavior"), Record.Behavior);
 	Out->SetStringField(TEXT("capability"), Record.Id);
@@ -202,8 +202,8 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetStringField(TEXT("scope"), TEXT("capability"));
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetStringField(TEXT("summary"), Record.Summary);
-	Out->SetArrayField(TEXT("whenNotToUse"), GatewayStringArray(Record.WhenNotToUse));
-	Out->SetArrayField(TEXT("whenToUse"), GatewayStringArray(Record.WhenToUse));
+	Out->SetArrayField(TEXT("whenNotToUse"), McpHandlerUtils::ToJsonStringArray(Record.WhenNotToUse));
+	Out->SetArrayField(TEXT("whenToUse"), McpHandlerUtils::ToJsonStringArray(Record.WhenToUse));
 	return Out;
 }
 }
@@ -222,7 +222,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_TOOL"),
 			TEXT("Unknown tool. Call search to retrieve canonical tool names."));
 		const TArray<FString> Suggestions = GatewayClosestMatches(Input.Tool, Parents, 3);
-		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+		Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
 		Error->SetObjectField(TEXT("nextCall"), Suggestions.Num() > 0
 			? GatewayBuildNextCall(TEXT("describe"), Suggestions[0], FString(), FString())
 			: GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
@@ -247,9 +247,9 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 			Input.Tool, Input.Action, Actions, Store.GetParentsWithAction(Input.Action));
 		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_ACTION"),
 			FString::Printf(TEXT("Unknown action '%s' for %s.%s"), *Input.Action, *Input.Tool, *Guide.Hint));
-		Error->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
+		Error->SetArrayField(TEXT("availableActions"), McpHandlerUtils::ToJsonStringArray(Actions));
 		Error->SetObjectField(TEXT("nextCall"), Guide.NextCall);
-		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Guide.Suggestions));
+		Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Guide.Suggestions));
 		Error->SetStringField(TEXT("tool"), Input.Tool);
 		return Error;
 	}
@@ -262,13 +262,13 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 			TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_PARAM"),
 				FString::Printf(TEXT("Unknown parameter '%s' for capability '%s'."), *Input.Param, *Record->Id));
 			const TArray<FString> Suggestions = GatewayClosestMatches(Input.Param, Names, 3);
-			Error->SetArrayField(TEXT("availableParameters"), GatewayStringArray(Names));
+			Error->SetArrayField(TEXT("availableParameters"), McpHandlerUtils::ToJsonStringArray(Names));
 			Error->SetStringField(TEXT("capability"), Record->Id);
 			const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("describe"), FString(), FString(),
 				Suggestions.Num() > 0 ? Suggestions[0] : FString());
 			Next->SetStringField(TEXT("capability"), Record->Id);
 			Error->SetObjectField(TEXT("nextCall"), Next);
-			Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
+			Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
 			return Error;
 		}
 		auto Out = MakeShared<FJsonObject>();

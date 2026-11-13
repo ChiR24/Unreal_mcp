@@ -123,11 +123,6 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             return true;
         }
         const FString Command = bForceRecompile ? FString(TEXT("recompileshaders all")) : TEXT("recompileshaders ") + Mode.ToLower();
-        if (!GEditor)
-        {
-            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Editor not available"), TEXT("NO_EDITOR"));
-            return true;
-        }
         if (!GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command))
         {
             Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,

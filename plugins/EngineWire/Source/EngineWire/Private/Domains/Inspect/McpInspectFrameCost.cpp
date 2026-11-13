@@ -3,6 +3,7 @@
 // The thread times are the same process-wide timers get_performance_stats reads (McpInspectStats.cpp).
 
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
@@ -238,8 +239,7 @@ bool HandleInspectFrameCostAction(
         Row->SetNumberField(TEXT("count"), Entry.Value.Count);
         TArray<FString> Sources = Entry.Value.Sources.Array();
         Sources.Sort();
-        TArray<TSharedPtr<FJsonValue>> Ticks;
-        for (const FString& Source : Sources) Ticks.Add(MakeShared<FJsonValueString>(Source));
+        TArray<TSharedPtr<FJsonValue>> Ticks = McpHandlerUtils::ToJsonStringArray(Sources);
         Row->SetArrayField(TEXT("ticks"), Ticks);
         ClassRows.Emplace(Entry.Value.Count, Row);
     }

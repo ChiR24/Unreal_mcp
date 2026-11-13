@@ -1,6 +1,7 @@
 // Anchors of arrange_widgets (see McpWidgetArrange.h): which edge or centre of the panel each widget holds on to, and
 // its Canvas Panel slot written from its box with them.
 #include "Domains/WidgetAuthoring/Arrange/McpWidgetArrange.h"
+#include "Foundation/Solvers/McpUnionFind.h"
 
 #include "Components/CanvasPanelSlot.h"
 
@@ -51,30 +52,22 @@ TArray<TPair<EAnchor, EAnchor>> InferAnchors(const TArray<FRelation>& Relations,
         {
             Group.Add(Index);
         }
-        const auto Root = [&Group](int32 Index)
-        {
-            while (Group[Index] != Index)
-            {
-                Index = Group[Index] = Group[Group[Index]];
-            }
-            return Index;
-        };
         for (const FRelation& R : Relations)
         {
             Pins[R.Widgets[0]] |= ArrangePin(R, Axis);
             for (int32 Member = 1; ArrangeTies(R.Type, Axis) && Member < R.Widgets.Num(); ++Member)
             {
-                Group[Root(R.Widgets[Member])] = Root(R.Widgets[0]);
+                Group[McpUnionFindRoot(Group, R.Widgets[Member])] = McpUnionFindRoot(Group, R.Widgets[0]);
             }
         }
         TMap<int32, uint8> GroupPins;
         for (int32 Index = 0; Index < Boxes.Num(); ++Index)
         {
-            GroupPins.FindOrAdd(Root(Index)) |= Pins[Index];
+            GroupPins.FindOrAdd(McpUnionFindRoot(Group, Index)) |= Pins[Index];
         }
         for (int32 Index = 0; Index < Boxes.Num(); ++Index)
         {
-            const uint8 Shared = GroupPins[Root(Index)];
+            const uint8 Shared = GroupPins[McpUnionFindRoot(Group, Index)];
             const bool bOneKind = Shared == ArrangeStartPin || Shared == ArrangeEndPin || Shared == ArrangeMiddlePin;
             // Held by nothing, or by a group pulled both ways: the third of the panel its centre sits in decides.
             const double Start = Axis == 0 ? Boxes[Index].Left : Boxes[Index].Top;

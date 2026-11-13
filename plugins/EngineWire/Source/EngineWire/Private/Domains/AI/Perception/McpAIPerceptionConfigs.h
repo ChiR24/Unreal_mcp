@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Dom/JsonObject.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Damage.h"
@@ -123,8 +124,7 @@ inline TSharedPtr<FJsonObject> MergedSenseSettings(const TSharedPtr<FJsonObject>
     {
         for (const auto& Pair : (*Nested)->Values)
         {
-            // 5.8 keys are not FString: copy the text first.
-            Merged->SetField(FString(Pair.Key.Len(), *Pair.Key), Pair.Value);
+            Merged->SetField(McpJsonKey(Pair.Key), Pair.Value);
         }
     }
     return Merged;

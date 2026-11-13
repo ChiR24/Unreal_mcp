@@ -50,15 +50,7 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   }
   bool bConnectToOutput = true;
   Payload->TryGetBoolField(TEXT("connectToOutput"), bConnectToOutput);
-  TArray<FString> AnimationPaths;
-  const TArray<TSharedPtr<FJsonValue>> *AnimationValues = nullptr;
-  if (Payload->TryGetArrayField(TEXT("animations"), AnimationValues) && AnimationValues) {
-    for (const TSharedPtr<FJsonValue> &Value : *AnimationValues) {
-      if (Value.IsValid() && Value->Type == EJson::String) {
-        AnimationPaths.Add(Value->AsString());
-      }
-    }
-  }
+  TArray<FString> AnimationPaths = McpHandlerUtils::GetStringArrayField(Payload, TEXT("animations"));
   UAnimBlueprint *AnimBP = LoadObject<UAnimBlueprint>(nullptr, *BlueprintPath);
   if (!AnimBP) {
     Context.Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath));
@@ -90,18 +82,7 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
       Warnings.Add(FString::Printf(TEXT("animation not found: %s"), *AnimationPaths[Index]));
       continue;
     }
-    FGraphNodeCreator<UAnimGraphNode_SequencePlayer> PlayerCreator(*AnimGraph);
-    UAnimGraphNode_SequencePlayer *Player = PlayerCreator.CreateNode();
-    Player->NodePosX = -700;
-    Player->NodePosY = Index * 160;
-    // Write the reflected property, as the details panel does: Node.Sequence is protected, and 5.0's SetSequence
-    // also writes anim-class node data that a graph node, not yet compiled into a class, does not have.
-    const FStructProperty* NodeProperty = FindFProperty<FStructProperty>(Player->GetClass(), TEXT("Node"));
-    if (FObjectPropertyBase* SequenceProperty = NodeProperty ? FindFProperty<FObjectPropertyBase>(NodeProperty->Struct, TEXT("Sequence")) : nullptr)
-    {
-        SequenceProperty->SetObjectPropertyValue_InContainer(&Player->Node, Sequence);
-    }
-    PlayerCreator.Finalize();
+    UAnimGraphNode_SequencePlayer *Player = McpAnimationAuthoring::CreateSequencePlayer(*AnimGraph, Sequence, -700, Index * 160);
     UEdGraphPin *Out = Player->FindPin(TEXT("Pose"), EGPD_Output);
     UEdGraphPin *In = BlendNode->FindPin(FString::Printf(TEXT("BlendPose_%d"), Index), EGPD_Input);
     const bool bLinked = Out && In && Schema && Schema->TryCreateConnection(Out, In);

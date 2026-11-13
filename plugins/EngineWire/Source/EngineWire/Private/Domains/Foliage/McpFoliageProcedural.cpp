@@ -47,13 +47,6 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
   int32 Seed = 12345;
   Payload->TryGetNumberField(TEXT("seed"), Seed);
 
-  if (!GEditor) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Editor not available"),
-                        TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
-
   // Every mesh loads before any asset exists: one that did not was skipped, and a spawner with no types placed nothing.
   TArray<TPair<UStaticMesh *, double>> Types;
   for (const TSharedPtr<FJsonValue> &Val : FoliageTypesArr ? *FoliageTypesArr : TArray<TSharedPtr<FJsonValue>>()) {
@@ -111,8 +104,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
     return true;
   }
 
-  double TileSize = 1000.0;
-  Payload->TryGetNumberField(TEXT("tileSize"), TileSize);
+  double TileSize = GetJsonNumberField(Payload, TEXT("tileSize"), 1000.0);
   Spawner->TileSize = static_cast<float>(FMath::Max(1.0, TileSize));
   Spawner->NumUniqueTiles = 10;
   Spawner->RandomSeed = Seed;

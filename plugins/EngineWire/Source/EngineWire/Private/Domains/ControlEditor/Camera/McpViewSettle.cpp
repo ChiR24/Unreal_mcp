@@ -78,8 +78,7 @@ bool ViewFrameSettledForMcp(FViewport* Viewport, const TSharedPtr<FJsonObject>& 
     const FIntPoint Size = Viewport ? Viewport->GetSizeXY() : FIntPoint::ZeroValue;
     if (!Viewport || !Viewport->ReadPixels(Pixels, FReadSurfaceDataFlags(RCM_UNorm)) || Pixels.Num() < Size.X * Size.Y) return true;
     const FString Signature = FrameSignature(Pixels, Size);
-    double Round = 0.0;
-    Payload->TryGetNumberField(TEXT("_settleRound"), Round);
+    double Round = GetJsonNumberField(Payload, TEXT("_settleRound"), 0.0);
     if (SignaturesMatch(Signature, GetJsonStringField(Payload, TEXT("_settleFrame"))) || Round >= MaxSettleRounds) return true;
     Payload->SetStringField(TEXT("_settleFrame"), Signature);
     Payload->SetNumberField(TEXT("_settleRound"), Round + 1.0);

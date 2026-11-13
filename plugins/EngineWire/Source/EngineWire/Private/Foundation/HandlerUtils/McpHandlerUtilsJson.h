@@ -5,6 +5,14 @@
 // GetJsonStringField / GetJsonIntField / GetJsonNumberField / GetJsonBoolField.
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
+// A JSON object key as an FString. FJsonObject::Values is keyed by FString up to 5.7 and by a shared-string type from
+// 5.8 that no FString method or conversion takes, so a key is copied from its length and its text.
+template <typename KeyType>
+FString McpJsonKey(const KeyType& Key)
+{
+    return FString(Key.Len(), *Key);
+}
+
 namespace McpHandlerUtils
 {
 /**
@@ -27,9 +35,22 @@ inline bool TryGetJsonValueString(const TSharedPtr<FJsonValue>& Value, FString& 
 inline TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& Strings)
 {
     TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Reserve(Strings.Num());
     for (const FString& String : Strings)
     {
         Values.Add(MakeShared<FJsonValueString>(String));
+    }
+    return Values;
+}
+
+// FNames as a JSON string array (its own name: an overload would make ToJsonStringArray({TEXT("...")}) ambiguous).
+inline TArray<TSharedPtr<FJsonValue>> NamesToJsonStringArray(const TArray<FName>& Names)
+{
+    TArray<TSharedPtr<FJsonValue>> Values;
+    Values.Reserve(Names.Num());
+    for (const FName& Name : Names)
+    {
+        Values.Add(MakeShared<FJsonValueString>(Name.ToString()));
     }
     return Values;
 }

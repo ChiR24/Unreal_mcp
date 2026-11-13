@@ -16,14 +16,8 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
     }
 
     // SECURITY: Validate path BEFORE loading asset
-    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
-    if (ValidatedPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          McpPathRefusalMessage(TEXT("path"), AssetPath),
-                          TEXT("INVALID_PATH"));
+    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
       return true;
-    }
-    AssetPath = ValidatedPath;
 
     UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Material) {

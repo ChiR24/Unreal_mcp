@@ -185,7 +185,7 @@ void McpAddMotionPointStats(const FMcpMotionPoints &Points, FJsonObject &Data) {
       }
       One->SetNumberField(TEXT("minAboveGround"), McpRoundTo(Low, 10.0));
       One->SetNumberField(TEXT("maxAboveGround"), McpRoundTo(High, 10.0));
-      One->SetNumberField(TEXT("contactSeconds"), FMath::RoundToDouble(Seconds * 1000.0) / 1000.0);
+      One->SetNumberField(TEXT("contactSeconds"), McpRoundTo(Seconds, 1000.0));
       One->SetNumberField(TEXT("contactSlip"), McpRoundTo(Slip, 10.0));
     }
     Stats->SetObjectField(Point.Label, One);

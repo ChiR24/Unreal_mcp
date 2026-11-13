@@ -8,20 +8,16 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     FString Path;
     FString Name;
     FString Error;
-    if (!ResolveOutputTarget(Params, TEXT("/Game/Textures"), FString(), Path, Name, Error))
+    int32 Width = 0;
+    int32 Height = 0;
+    if (!ReadGeneratedTextureTarget(Params, Path, Name, Width, Height, Error))
     {
         TEXTURE_ERROR_RESPONSE(Error);
     }
 
-    int32 Width = 0;
-    int32 Height = 0;
     int32 TilesX = 0;
     int32 TilesY = 0;
-    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
-                                            GetJsonNumberField(Params, TEXT("height"), 1024),
-                                            TEXT("width"), TEXT("height"),
-                                            Width, Height, Error) ||
-        !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesX"), 8),
+    if (!ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesX"), 8),
                                        TEXT("tilesX"), 1, 1024, TilesX, Error) ||
         !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesY"), 8),
                                        TEXT("tilesY"), 1, 1024, TilesY, Error))
@@ -36,12 +32,6 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     const FLinearColor PrimaryColor = ExtractLinearColorField(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1));
     const FLinearColor SecondaryColor = ExtractLinearColorField(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1));
 
-
-    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
-    if (!NewTexture)
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to create texture"));
-    }
 
     TArray<uint8> PixelData;
     PixelData.SetNumZeroed(Width * Height * 4);
@@ -92,18 +82,6 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
         }
     }
 
-    if (!UpdateTextureBGRA8(NewTexture, Width, Height, PixelData))
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to update texture pixel data"));
-    }
-    if (!SaveTextureAsset(NewTexture))
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to save pattern texture"));
-    }
-
-    Response->SetBoolField(TEXT("success"), true);
-    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Pattern texture '%s' created"), *Name));
-    McpHandlerUtils::AddVerification(Response, NewTexture);
-    return Response;
+    return FinishGeneratedTexture(Response, Path, Name, Width, Height, PixelData, TEXT("Pattern"));
 }
 }

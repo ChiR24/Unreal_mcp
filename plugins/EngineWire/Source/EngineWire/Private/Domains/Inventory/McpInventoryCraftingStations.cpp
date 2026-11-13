@@ -1,5 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Domains/Inventory/McpInventoryShared.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 
 bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -21,25 +23,13 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       return true;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = AActor::StaticClass();
-
-    UBlueprint* StationBlueprint = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name,
-                                  RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* StationBlueprint = McpNewBlueprint(Package, *Name, AActor::StaticClass());
 
     if (StationBlueprint) {
       USimpleConstructionScript* SCS = StationBlueprint->SimpleConstructionScript;
       if (SCS) {
-        USCS_Node* MeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("StationMesh"));
-        if (MeshNode) {
-          SCS->AddNode(MeshNode);
-        }
-
-        USCS_Node* BoxNode = SCS->CreateNode(UBoxComponent::StaticClass(), TEXT("InteractionBox"));
-        if (BoxNode) {
-          SCS->AddNode(BoxNode);
-        }
+        McpAddScsNode(SCS, UStaticMeshComponent::StaticClass(), TEXT("StationMesh"));
+        McpAddScsNode(SCS, UBoxComponent::StaticClass(), TEXT("InteractionBox"));
       }
 
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(StationBlueprint);
@@ -50,7 +40,7 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("stationPath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
+      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
       Result->SetStringField(TEXT("stationType"), StationType);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Crafting station created"), Result);

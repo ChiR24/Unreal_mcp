@@ -17,12 +17,6 @@ bool UEngineWireSubsystem::HandleBulkRenameAssets(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("bulk_rename_assets"), ESearchCase::IgnoreCase) &&
-      !Lower.Equals(TEXT("bulk_rename"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
   // Get rename options
   FString Prefix, Suffix, SearchText, ReplaceText;
   Payload->TryGetStringField(TEXT("prefix"), Prefix);

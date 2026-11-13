@@ -51,8 +51,7 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     Payload->TryGetNumberField(TEXT("maxY"), MaxY);
   }
 
-  double Strength = 1.0;
-  Payload->TryGetNumberField(TEXT("strength"), Strength);
+  double Strength = GetJsonNumberField(Payload, TEXT("strength"), 1.0);
   Strength = FMath::Clamp(Strength, 0.0, 1.0);
   bool bSkipFlush = false;
   Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);

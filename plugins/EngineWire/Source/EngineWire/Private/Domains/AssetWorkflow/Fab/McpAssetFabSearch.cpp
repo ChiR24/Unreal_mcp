@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "EngineWireSubsystem.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/AssetWorkflow/Fab/McpFabImportJson.h"
 #include "McpFabProvider.h"
@@ -36,8 +37,7 @@ bool UEngineWireSubsystem::HandleSearchFabListings(
   Payload->TryGetStringField(TEXT("seller"), Request.Seller);
   Payload->TryGetStringField(TEXT("listingType"), Request.ListingType);
   Payload->TryGetBoolField(TEXT("freeOnly"), Request.bFreeOnly);
-  double Limit = 12;
-  Payload->TryGetNumberField(TEXT("limit"), Limit);
+  double Limit = GetJsonNumberField(Payload, TEXT("limit"), 12);
   Request.Limit = FMath::Clamp(static_cast<int32>(Limit), 1, 50);
 
   TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);

@@ -128,13 +128,6 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
             TEXT("preset or systemPath is required for particle"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!GEditor)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-        return true;
-    }
     TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
     if (!Preset.IsEmpty())
     {

@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -152,8 +153,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
     Payload->TryGetStringField(TEXT("toolName"), ToolName);
     Payload->TryGetStringField(TEXT("query"), Query);
     Payload->TryGetStringField(TEXT("toolset"), OnlyToolset);
-    double LimitValue = 50.0;
-    Payload->TryGetNumberField(TEXT("limit"), LimitValue);
+    double LimitValue = GetJsonNumberField(Payload, TEXT("limit"), 50.0);
     const int32 Limit = FMath::Clamp(static_cast<int32>(LimitValue), 1, 200);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

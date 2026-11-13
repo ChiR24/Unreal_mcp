@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/Audio/McpAudioPrivate.h"
 
 DEFINE_LOG_CATEGORY(LogMcpAudioHandlers);
@@ -12,13 +13,9 @@ bool UEngineWireSubsystem::HandleAudioAction(
   // Tool-name dispatch hands this handler Action == "manage_audio"; the real verb then
   // lives in the payload (every runtime audio action fell through).
   FString Lower = Action.ToLower();
-  if (Lower == TEXT("manage_audio") && Payload.IsValid())
+  if (Lower == TEXT("manage_audio"))
   {
-    FString SubAction;
-    if (Payload->TryGetStringField(TEXT("subAction"), SubAction) || Payload->TryGetStringField(TEXT("action"), SubAction))
-    {
-      Lower = SubAction.ToLower();
-    }
+    Lower = McpConsolidatedActions::GetPayloadSubAction(Payload);
   }
   if (!Lower.StartsWith(TEXT("create_sound_")) &&
       !Lower.StartsWith(TEXT("play_sound_")) &&

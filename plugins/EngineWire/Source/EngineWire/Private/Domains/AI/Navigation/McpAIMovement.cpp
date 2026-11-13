@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -19,11 +20,9 @@ bool HandleSetAIMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
         return true;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 

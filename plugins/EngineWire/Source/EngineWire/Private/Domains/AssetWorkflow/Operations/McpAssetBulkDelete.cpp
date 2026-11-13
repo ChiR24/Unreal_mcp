@@ -15,12 +15,6 @@ bool UEngineWireSubsystem::HandleBulkDeleteAssets(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("bulk_delete_assets"), ESearchCase::IgnoreCase) &&
-      !Lower.Equals(TEXT("bulk_delete"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
   bool bFixupRedirectors = true;
   Payload->TryGetBoolField(TEXT("fixupRedirectors"), bFixupRedirectors);
 

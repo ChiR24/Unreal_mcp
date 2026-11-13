@@ -1,22 +1,10 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Foundation/Solvers/McpWatershed.h"
+#include "Foundation/Solvers/McpUnionFind.h"
 
 namespace McpWatershed
 {
-namespace
-{
-int32 McpBasinRoot(TArray<int32>& Parent, int32 Basin)
-{
-    while (Parent[Basin] != Basin)
-    {
-        Parent[Basin] = Parent[Parent[Basin]];
-        Basin = Parent[Basin];
-    }
-    return Basin;
-}
-} // namespace
-
 TArray<int32> Basins(const TArray<TArray<int32>>& Adjacency, const TArray<int32>& Height, double MergeRatio,
                      int32& OutCount)
 {
@@ -42,7 +30,7 @@ TArray<int32> Basins(const TArray<TArray<int32>>& Adjacency, const TArray<int32>
             {
                 continue;
             }
-            const int32 Basin = McpBasinRoot(Parent, Label[Next]);
+            const int32 Basin = McpUnionFindRoot(Parent, Label[Next]);
             if (Best == INDEX_NONE || Basin == Best)
             {
                 Best = Basin;
@@ -67,7 +55,7 @@ TArray<int32> Basins(const TArray<TArray<int32>>& Adjacency, const TArray<int32>
     TMap<int32, int32> Compact; // roots to 0..n-1 in the order their first node appears
     for (int32& Basin : Label)
     {
-        const int32 Root = McpBasinRoot(Parent, Basin);
+        const int32 Root = McpUnionFindRoot(Parent, Basin);
         const int32* Found = Compact.Find(Root);
         Basin = Found ? *Found : Compact.Add(Root, Compact.Num());
     }

@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 
 #include "Animation/MovieScene2DTransformTrack.h"
@@ -92,7 +93,7 @@ TSharedPtr<FJsonObject> McpDescribeWidgetTrack(UMovieSceneTrack* Track, const FF
             for (int32 Key = 0; Key < FMath::Min(Data.GetTimes().Num(), McpMaxKeysPerChannel); ++Key)
             {
                 Keys.Add(MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
-                    MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Resolution.AsSeconds(Data.GetTimes()[Key]) * 1000.0) / 1000.0),
+                    MakeShared<FJsonValueNumber>(McpRoundTo(Resolution.AsSeconds(Data.GetTimes()[Key]), 1000.0)),
                     MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Data.GetValues()[Key].Value * 10000.0) / 10000.0)}));
             }
             if (Keys.Num() > 0)
@@ -151,10 +152,9 @@ bool HandleWidgetAuthoringAnimationQueries(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprintOrReply(Subsystem, RequestId, RequestingSocket, WidgetPath);
         if (!WidgetBP)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
             return true;
         }
 

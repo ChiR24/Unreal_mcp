@@ -1,6 +1,7 @@
 // McpNativeGatewayGuidance.cpp — see header.
 
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace
 {
@@ -126,7 +127,7 @@ FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FStr
 TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool)
 {
 	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-	Params->SetArrayField(TEXT("tools"), GatewayStringArray({ ParentTool }));
+	Params->SetArrayField(TEXT("tools"), McpHandlerUtils::ToJsonStringArray({ ParentTool }));
 	TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(TEXT("configure"), FString(), TEXT("enable_tools"), FString());
 	Next->SetObjectField(TEXT("params"), Params);
 	return Next;
@@ -164,7 +165,7 @@ TSharedPtr<FJsonObject> GatewaySchemaViolationGuidance(const FString& ParentTool
 	{
 		for (const auto& Field : (*Properties)->Values)
 		{
-			const FString Name(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+			const FString Name = McpJsonKey(Field.Key);
 			if (!Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) && !Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive)) Declared.Add(Name);
 		}
 	}
@@ -174,8 +175,8 @@ TSharedPtr<FJsonObject> GatewaySchemaViolationGuidance(const FString& ParentTool
 	Pointer.ParseIntoArray(Segments, TEXT("/"), /*InCullEmpty=*/true);
 	const TArray<FString> Suggestions = GatewayClosestMatches(Segments.Num() > 0 ? Segments.Last() : FString(), Declared, 3);
 	TSharedPtr<FJsonObject> Guidance = GatewaySchemaGuidance(ParentTool, Action, Pointer);
-	Guidance->SetArrayField(TEXT("suggestions"), GatewayStringArray(Suggestions));
-	Guidance->SetArrayField(TEXT("allowedParameters"), GatewayStringArray(Declared));
+	Guidance->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
+	Guidance->SetArrayField(TEXT("allowedParameters"), McpHandlerUtils::ToJsonStringArray(Declared));
 	Guidance->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), ParentTool, Action,
 		Suggestions.Num() > 0 ? Suggestions[0] : FString()));
 	return Guidance;

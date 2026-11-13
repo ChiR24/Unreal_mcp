@@ -1,5 +1,7 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Foundation/BridgeHelpers/Responses/McpMutationEvidence.h"
 
 #include "EditorAssetLibrary.h"
@@ -110,10 +112,7 @@ UBlueprint* CreateInteractableBlueprint(
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
         return nullptr;
     }
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* Blueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
-        UBlueprint::StaticClass(), Package, *FPackageName::GetShortName(PackageName), RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* Blueprint = McpNewBlueprint(Package, *FPackageName::GetShortName(PackageName), AActor::StaticClass());
     if (!Blueprint)
     {
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Failed to create %s blueprint"), Noun), TEXT("BLUEPRINT_CREATE_FAILED"));
@@ -127,18 +126,10 @@ UBlueprint* CreateInteractableBlueprint(
     USCS_Node* Root = nullptr;
     for (const FInteractionNode& Spec : Nodes)
     {
-        USCS_Node* Node = SCS->CreateNode(Spec.Class, Spec.Name);
+        USCS_Node** Parent = Spec.Parent ? Created.Find(Spec.Parent) : nullptr;
+        USCS_Node* Node = McpAddScsNode(SCS, Spec.Class, Spec.Name, Root ? (Parent ? *Parent : Root) : nullptr);
         ConfigureInteractionShape(Node->ComponentTemplate, Spec.TriggerSize);
-        if (!Root)
-        {
-            SCS->AddNode(Node);
-            Root = Node;
-        }
-        else
-        {
-            USCS_Node** Parent = Spec.Parent ? Created.Find(Spec.Parent) : nullptr;
-            (Parent ? *Parent : Root)->AddChildNode(Node);
-        }
+        Root = Root ? Root : Node;
         Created.Add(Spec.Name, Node);
     }
     return Blueprint;

@@ -26,7 +26,6 @@ struct FEffectActionContext
 
 FString NormalizeNativeSubAction(
     const FString& Lower,
-    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload);
 bool IsNiagaraAuthoringSubAction(const FString& SubAction);
 bool IsNiagaraGraphSubAction(const FString& SubAction);

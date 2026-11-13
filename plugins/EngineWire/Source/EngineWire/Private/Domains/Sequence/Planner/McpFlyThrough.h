@@ -50,6 +50,9 @@ FPlan PlanCorners(const FSpace& Space, const TArray<FVector>& Through, FSearchBu
 bool Fly(const FSpace& Space, FPlan& Plan, double Seconds, const FSearchBudget& Budget, TArray<McpMinSnap::FLeg>& OutLegs,
          FString& OutError);
 
+/** The length of the polyline through Points, in cm. */
+double PathLength(const TArray<FVector>& Points);
+
 /** Where the flight is T seconds in. */
 FVector Position(const TArray<McpMinSnap::FLeg>& Legs, double T);
 

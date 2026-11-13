@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
@@ -28,9 +29,9 @@ bool UEngineWireSubsystem::HandleManageWidgetAuthoringAction(
             {
                 Payload->TryGetStringField(TEXT("path"), TemplateFolder);
             }
-            if (!TemplateFolder.IsEmpty() && !TemplateFolder.StartsWith(TEXT("/")))
+            if (!TemplateFolder.IsEmpty())
             {
-                TemplateFolder = TEXT("/Game/") + TemplateFolder;
+                TemplateFolder = McpRootedContentPath(TemplateFolder);
             }
             if (!TemplateFolder.IsEmpty())
             {

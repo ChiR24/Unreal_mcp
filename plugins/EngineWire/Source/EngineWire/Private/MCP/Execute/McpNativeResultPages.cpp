@@ -6,6 +6,7 @@
 // the first call) returns the same page instead of the one after.
 
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 
 #include "HAL/CriticalSection.h"
@@ -127,7 +128,7 @@ bool McpFirstResultPage(const TSharedPtr<FJsonObject>& Result, int64 Budget, con
 		if (Chars > Largest)
 		{
 			Largest = Chars;
-			Field = FString(Pair.Key.Len(), *Pair.Key);
+			Field = McpJsonKey(Pair.Key);
 		}
 	}
 	if (Field.IsEmpty())

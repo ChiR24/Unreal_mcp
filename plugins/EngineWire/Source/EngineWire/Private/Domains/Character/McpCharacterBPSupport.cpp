@@ -1,5 +1,7 @@
 #include "Domains/Character/McpCharacterHandlers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 
 namespace McpCharacterHandlers
 {
@@ -24,10 +26,7 @@ UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Na
         return nullptr;
     }
 
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = ParentClass ? ParentClass : ACharacter::StaticClass();
-    UBlueprint* Blueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
-        UBlueprint::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* Blueprint = McpNewBlueprint(Package, FName(*Name), ParentClass ? ParentClass : ACharacter::StaticClass());
     if (!Blueprint)
     {
         OutError = TEXT("Failed to create character blueprint");
@@ -47,11 +46,9 @@ UBlueprint* LoadCharacterBlueprint(UEngineWireSubsystem* Self, const FString& Re
         return nullptr;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, Socket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return nullptr;
     }
     // Every character action edits the Character defaults: on another Blueprint the movement, jump, rotation, mesh

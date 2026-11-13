@@ -8,17 +8,9 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
     FString Path;
     FString Name;
     FString Error;
-    if (!ResolveOutputTarget(Params, TEXT("/Game/Textures"), FString(), Path, Name, Error))
-    {
-        TEXTURE_ERROR_RESPONSE(Error);
-    }
-
     int32 Width = 0;
     int32 Height = 0;
-    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
-                                            GetJsonNumberField(Params, TEXT("height"), 1024),
-                                            TEXT("width"), TEXT("height"),
-                                            Width, Height, Error))
+    if (!ReadGeneratedTextureTarget(Params, Path, Name, Width, Height, Error))
     {
         TEXTURE_ERROR_RESPONSE(Error);
     }
@@ -36,14 +28,6 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
     const FLinearColor StartColor = ExtractLinearColorField(Params, TEXT("startColor"), FLinearColor(0, 0, 0, 1));
     const FLinearColor EndColor = ExtractLinearColorField(Params, TEXT("endColor"), FLinearColor(1, 1, 1, 1));
 
-
-    // Always 8-bit: the pixel writer fills BGRA8 source data, so an hdr request
-    // produced an 8-bit texture labelled HDR. hdr is not read for that reason.
-    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
-    if (!NewTexture)
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to create texture"));
-    }
 
     TArray<uint8> PixelData;
     PixelData.SetNumZeroed(Width * Height * 4);
@@ -77,18 +61,6 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
         }
     }
 
-    if (!UpdateTextureBGRA8(NewTexture, Width, Height, PixelData))
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to update texture pixel data"));
-    }
-    if (!SaveTextureAsset(NewTexture))
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to save gradient texture"));
-    }
-
-    Response->SetBoolField(TEXT("success"), true);
-    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Gradient texture '%s' created"), *Name));
-    McpHandlerUtils::AddVerification(Response, NewTexture);
-    return Response;
+    return FinishGeneratedTexture(Response, Path, Name, Width, Height, PixelData, TEXT("Gradient"));
 }
 }

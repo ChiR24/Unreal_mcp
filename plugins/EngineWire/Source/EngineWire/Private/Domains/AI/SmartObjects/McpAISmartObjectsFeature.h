@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "GameplayTagContainer.h"
@@ -16,9 +17,7 @@ namespace McpAIHandlers
 // present but not loaded yet; nullptr when the SmartObjects plugin is not enabled.
 inline UClass* FindSmartObjectClass(const TCHAR* ClassName)
 {
-    FModuleManager& Modules = FModuleManager::Get();
-    if (!Modules.IsModuleLoaded(TEXT("SmartObjectsModule"))
-        && (!Modules.ModuleExists(TEXT("SmartObjectsModule")) || !Modules.LoadModule(TEXT("SmartObjectsModule"))))
+    if (!McpLoadOptionalModule(TEXT("SmartObjectsModule")))
     {
         return nullptr;
     }

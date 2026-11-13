@@ -7,6 +7,7 @@
 // a table nobody named. What rests on the ground is reported only for an actor asked about; roles.ground counts it.
 
 #include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Domains/ControlActor/McpActorSupport.h"
@@ -155,8 +156,7 @@ bool HandleDescribeRelations(UEngineWireSubsystem* Bridge, const FString& Reques
     }
     FString NameFilter;
     Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
-    double MaxActors = 300.0;
-    Payload->TryGetNumberField(TEXT("maxActors"), MaxActors);
+    double MaxActors = GetJsonNumberField(Payload, TEXT("maxActors"), 300.0);
     const TSet<AActor*> Named(NamedList);
     int32 InScope = 0;
     const TArray<FItem> Items = CollectItems(World, Named, bArea, ExtractVectorField(Payload, TEXT("center"), FVector::ZeroVector),

@@ -4,6 +4,7 @@
 // (EditorUtilities::GetSimWorldCounterpartActor), but only the transform is kept, where Keep Simulation Changes copies
 // every edited property.
 #include "Domains/Play/McpSettle.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Editor.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
@@ -176,7 +177,7 @@ TSharedPtr<FJsonObject> Reply(const FRun& Run, const int32 Kept, FString& OutMes
     }
     Result->SetNumberField(TEXT("kept"), Kept);
     Result->SetStringField(TEXT("endedBecause"), Run.EndedBecause);
-    Result->SetNumberField(TEXT("physicsSeconds"), FMath::RoundToDouble(Run.PhysicsSeconds * 100.0) / 100.0);
+    Result->SetNumberField(TEXT("physicsSeconds"), McpRoundTo(Run.PhysicsSeconds, 100.0));
     Result->SetNumberField(TEXT("fps"), FMath::RoundToDouble(Run.Frames / FMath::Max(Run.SettleEnd - Run.SettleStart, 0.001)));
     if (Run.bDryRun)
     {

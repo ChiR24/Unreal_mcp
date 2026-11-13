@@ -19,20 +19,12 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
       return true;
     }
 
-    // UMcpGenericDataAsset (UDataAsset/UPrimaryDataAsset are abstract in UE5)
-    UMcpGenericDataAsset* CategoryAsset =
-        NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
-
-    if (CategoryAsset) {
-      CategoryAsset->MarkPackageDirty();
-      FAssetRegistryModule::AssetCreated(CategoryAsset);
-
-      const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(CategoryAsset);
-
+    bool bSaved = false;
+    if (NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // consistent object path
+      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item category created"), Result);
     } else {

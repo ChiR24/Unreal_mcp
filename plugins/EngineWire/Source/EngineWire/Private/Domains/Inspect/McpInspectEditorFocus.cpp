@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Log/McpLogHistory.h"
 #include "Domains/Log/McpScriptErrors.h"
 #include "Foundation/McpScreenshotResample.h"
@@ -117,11 +118,7 @@ bool HandleInspectEditorFocusAction(UEngineWireSubsystem &Bridge, const FString 
             }
         }
     }
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    for (const FString &Line : FMcpLogHistory::Get().WarningsSince(FMcpLogHistory::Now() - 60.0, 10))
-    {
-        Warnings.Add(MakeShared<FJsonValueString>(Line));
-    }
+    TArray<TSharedPtr<FJsonValue>> Warnings = McpHandlerUtils::ToJsonStringArray(FMcpLogHistory::Get().WarningsSince(FMcpLogHistory::Now() - 60.0, 10));
 
     const TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     const int32 OpenCount = Open.Num();

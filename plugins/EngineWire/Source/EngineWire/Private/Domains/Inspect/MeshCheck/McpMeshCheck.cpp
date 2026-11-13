@@ -1,25 +1,16 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "Domains/Inspect/MeshCheck/McpMeshCheck.h"
+#include "Foundation/Solvers/McpUnionFind.h"
 
 namespace McpMeshCheck
 {
 namespace
 {
 // Union-find over welded corners, for the parts and the hole outlines.
-int32 FindRoot(TArray<int32>& Parent, int32 Index)
-{
-    while (Parent[Index] != Index)
-    {
-        Parent[Index] = Parent[Parent[Index]];
-        Index = Parent[Index];
-    }
-    return Index;
-}
-
 void Join(TArray<int32>& Parent, int32 A, int32 B)
 {
-    Parent[FindRoot(Parent, A)] = FindRoot(Parent, B);
+    Parent[McpUnionFindRoot(Parent, A)] = McpUnionFindRoot(Parent, B);
 }
 
 uint64 EdgeKey(int32 A, int32 B)
@@ -124,7 +115,7 @@ FReport Analyze(const TArray<FVector3f>& Positions, const TArray<int32>& Corners
         if (Use.Faces > 2)
         {
             ++Report.NonManifoldEdges;
-            Unclosed.Add(FindRoot(PartParent, From));
+            Unclosed.Add(McpUnionFindRoot(PartParent, From));
         }
         else if (Use.Faces == 2)
         {
@@ -143,7 +134,7 @@ FReport Analyze(const TArray<FVector3f>& Positions, const TArray<int32>& Corners
         {
             ++Report.OpenEdges;
             Join(HoleParent, Pair.Value.From, Pair.Value.To);
-            Unclosed.Add(FindRoot(PartParent, Pair.Value.From));
+            Unclosed.Add(McpUnionFindRoot(PartParent, Pair.Value.From));
         }
         else
         {
@@ -155,7 +146,7 @@ FReport Analyze(const TArray<FVector3f>& Positions, const TArray<int32>& Corners
     {
         if (Pair.Value.Count == 1)
         {
-            Holes.Add(FindRoot(HoleParent, Pair.Value.From));
+            Holes.Add(McpUnionFindRoot(HoleParent, Pair.Value.From));
         }
     }
     Report.Holes = Holes.Num();
@@ -169,7 +160,7 @@ FReport Analyze(const TArray<FVector3f>& Positions, const TArray<int32>& Corners
     {
         const int32* Corner = &Corners[Triangle * 3];
         const FVector A(Positions[Corner[0]]), B(Positions[Corner[1]]), C(Positions[Corner[2]]);
-        const int32 Root = FindRoot(PartParent, Weld[Corner[0]]);
+        const int32 Root = McpUnionFindRoot(PartParent, Weld[Corner[0]]);
         const int32* Known = PartOf.Find(Root);
         const int32 Index = Known ? *Known : PartOf.Add(Root, Report.Parts.AddDefaulted());
         if (!Known)

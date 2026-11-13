@@ -5,6 +5,7 @@
 // optional, delay-loaded module: nothing here touches its classes before
 // EnhancedInputLoaded() said yes.
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
@@ -27,9 +28,7 @@ namespace Detail
 {
 bool EnhancedInputLoaded()
 {
-    FModuleManager& Modules = FModuleManager::Get();
-    return Modules.IsModuleLoaded(TEXT("EnhancedInput")) ||
-           (Modules.ModuleExists(TEXT("EnhancedInput")) && Modules.LoadModule(TEXT("EnhancedInput")) != nullptr);
+    return McpLoadOptionalModule(TEXT("EnhancedInput"));
 }
 
 FString DefaultActionPath(UBlueprint* Blueprint, const FString& Tag)

@@ -139,11 +139,6 @@ bool UEngineWireSubsystem::HandleLogAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (Action != TEXT("manage_logs"))
-    {
-        return false;
-    }
-
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -233,8 +228,7 @@ bool UEngineWireSubsystem::HandleLogAction(
     // -------------------------------------------------------------------------
     if (SubAction == TEXT("read_log"))
     {
-        double RequestedLines = 100.0;
-        Payload->TryGetNumberField(TEXT("lines"), RequestedLines);
+        double RequestedLines = GetJsonNumberField(Payload, TEXT("lines"), 100.0);
         const int32 MaxLines = FMath::Clamp(static_cast<int32>(RequestedLines), 1, 1000);
         const ELogVerbosity::Type ParsedVerbosity =
             ParseLogVerbosityFromString(GetJsonStringField(Payload, TEXT("minVerbosity")));
@@ -250,8 +244,7 @@ bool UEngineWireSubsystem::HandleLogAction(
         // behind a failure are in UnrealBuildTool's log, since UBT is what the
         // console runs to compile. UBT picks that folder exactly this way.
         const FString Source = GetJsonStringField(Payload, TEXT("source")).ToLower();
-        double RunsBack = 1.0;
-        Payload->TryGetNumberField(TEXT("runsBack"), RunsBack);
+        double RunsBack = GetJsonNumberField(Payload, TEXT("runsBack"), 1.0);
         const int32 Run = FMath::Clamp(static_cast<int32>(RunsBack), 1, 20);
         const FString FilePath = Source == TEXT("livecoding") ? FMcpLogHistory::LiveCodingLogPath()
             : Source == TEXT("previous") ? FMcpLogHistory::PreviousRunLogPath(Run)

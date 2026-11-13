@@ -1,4 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -114,11 +116,9 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
         return SpawnNavModifierVolume(Self, RequestId, Payload, RequestingSocket, AppliedAreaClass);
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, RequestingSocket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -139,15 +139,13 @@ bool HandleCreateNavModifier(UEngineWireSubsystem* Self, const FString& RequestI
     }
 
     // Create nav modifier component
-    USCS_Node* NavModNode = Blueprint->SimpleConstructionScript->CreateNode(
-        UNavModifierComponent::StaticClass(), *ComponentName);
+    USCS_Node* NavModNode = McpAddScsNode(Blueprint->SimpleConstructionScript, UNavModifierComponent::StaticClass(), *ComponentName);
     if (!NavModNode)
     {
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create nav modifier node"), TEXT("CREATION_FAILED"));
         return true;
     }
 
-    Blueprint->SimpleConstructionScript->AddNode(NavModNode);
     if (UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate))
     {
         NavModComp->SetAreaClass(AppliedAreaClass);

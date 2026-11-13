@@ -15,9 +15,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMcpAIHandlers, Log, All);
 // inside namespace McpAIHandlers declares McpAIHandlers::UAIPerceptionComponent
 // and shadows the engine type for every file that includes this header.
 class UAIPerceptionComponent;
+class UBehaviorTree;
 class UBlueprint;
+class UBTNode;
 class UEnvQuery;
 class UEnvQueryTest;
+
+// Whether Node is the Behavior Tree node Id names: its object name, path or node title, any case
+// (BehaviorTree/McpAIBehaviorTreeAssets.cpp).
+bool McpBTNodeMatchesId(const UBTNode* Node, const FString& Id);
 
 namespace McpAIHandlers
 {
@@ -90,6 +96,10 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 
 // The EQS query at QueryPath, or null once NOT_FOUND is sent (EQS/McpAIEQSAssets.cpp).
 UEnvQuery* LoadEnvQueryOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& QueryPath);
+
+// The Behavior Tree at Path, or null once "Behavior Tree not found: <Path>" (NOT_FOUND) is sent
+// (BehaviorTree/McpAIBehaviorTreeAssets.cpp).
+UBehaviorTree* LoadBehaviorTreeOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path);
 
 // The query's test at a flat index counted across its options (empty options and tests are not counted), with the option
 // it sits in and its index there when asked; null past the last test (EQS/McpAIEQSContextTests.cpp).

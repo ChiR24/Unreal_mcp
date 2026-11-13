@@ -1,4 +1,5 @@
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/HandlerUtils/McpOptionalModule.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetDirs.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -8,15 +9,12 @@
 bool UEngineWireSubsystem::HandleSequenceCreate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!FModuleManager::Get().IsModuleLoaded(TEXT("LevelSequenceEditor"))) {
-    if (!FModuleManager::Get().ModuleExists(TEXT("LevelSequenceEditor")) ||
-        !FModuleManager::Get().LoadModule(TEXT("LevelSequenceEditor"))) {
-      SendAutomationError(
-          Socket, RequestId,
-          TEXT("LevelSequenceEditor plugin is not enabled in this project. Enable the Level Sequence Editor plugin to use Sequencer features."),
-          TEXT("LEVELSEQUENCEEDITOR_PLUGIN_NOT_ENABLED"));
-      return true;
-    }
+  if (!McpLoadOptionalModule(TEXT("LevelSequenceEditor"))) {
+    SendAutomationError(
+        Socket, RequestId,
+        TEXT("LevelSequenceEditor plugin is not enabled in this project. Enable the Level Sequence Editor plugin to use Sequencer features."),
+        TEXT("LEVELSEQUENCEEDITOR_PLUGIN_NOT_ENABLED"));
+    return true;
   }
 
   TSharedPtr<FJsonObject> LocalPayload =

@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
 #include "Components/ActorComponent.h"
@@ -69,10 +70,7 @@ bool HandleCreateSublevel(
     {
         FString NormalizedParentPath = FPackageName::ObjectPathToPackageName(ParentLevel);
         NormalizedParentPath.RemoveFromEnd(TEXT(".umap"));
-        if (!NormalizedParentPath.StartsWith(TEXT("/")))
-        {
-            NormalizedParentPath = TEXT("/Game/") + NormalizedParentPath;
-        }
+        NormalizedParentPath = McpRootedContentPath(NormalizedParentPath);
         if (!NormalizedParentPath.Equals(OpenLevel, ESearchCase::IgnoreCase))
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,

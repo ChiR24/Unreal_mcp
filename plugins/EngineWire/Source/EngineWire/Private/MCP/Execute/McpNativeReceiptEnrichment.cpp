@@ -50,11 +50,7 @@ TSharedPtr<FJsonObject> BuildCanonicalError(const FMcpSemanticError& Error)
 	if (Error.bHasRetryable) Object->SetBoolField(TEXT("retryable"), Error.bRetryable);
 	if (Error.Supported.Num() > 0)
 	{
-		TArray<TSharedPtr<FJsonValue>> Supported;
-		for (const FString& Item : Error.Supported)
-		{
-			Supported.Add(MakeShared<FJsonValueString>(Item));
-		}
+		TArray<TSharedPtr<FJsonValue>> Supported = McpHandlerUtils::ToJsonStringArray(Error.Supported);
 		Object->SetArrayField(TEXT("supported"), Supported);
 	}
 	return Object;
