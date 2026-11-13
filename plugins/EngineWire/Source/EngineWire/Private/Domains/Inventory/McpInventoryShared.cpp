@@ -27,10 +27,10 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
   return Package;
 }
 
-UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const FString& Name, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
+UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
                                             TFunctionRef<void(UMcpGenericDataAsset&)> Fill)
 {
-  UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
+  UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, InventoryAssetName(Package), RF_Public | RF_Standalone);
   OutSaved = false;
   if (Asset) {
     Fill(*Asset);
@@ -113,7 +113,7 @@ bool CreateGenericInventoryAsset(UEngineWireSubsystem& Bridge, const FString& Re
     return true;
   }
   bool bSaved = false;
-  if (!NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
+  if (!NewInventoryDataAsset(Package, Payload, bSaved)) {
     Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create %s asset"), What),
                                TEXT("ASSET_CREATE_FAILED"));
     return true;

@@ -35,7 +35,8 @@ bool HandleInteractionComponentAuthoringAction(
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("componentAdded"), true);
-        Result->SetStringField(TEXT("componentName"), ComponentName);
+        // The node's own name: CreateNode renames a taken one (InteractionComponent1).
+        Result->SetStringField(TEXT("componentName"), Node->GetVariableName().ToString());
         SendInteractableResult(Subsystem, RequestId, RequestingSocket, Blueprint, Result,
                                {TEXT("added interaction component")}, TEXT("Interaction component added"));
         return true;

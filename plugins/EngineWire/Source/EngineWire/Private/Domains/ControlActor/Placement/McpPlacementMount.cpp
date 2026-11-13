@@ -13,7 +13,12 @@ bool IsBoundsOnlyActor(const AActor *Actor) {
   if (!Actor) {
     return true;
   }
-  const FString ClassName = Actor->GetClass()->GetName();
+  // The first native class up the chain: a Blueprint's own asset name (BP_Lighthouse) said nothing of what it is.
+  const UClass *Class = Actor->GetClass();
+  while (Class && !Class->HasAnyClassFlags(CLASS_Native)) {
+    Class = Class->GetSuperClass();
+  }
+  const FString ClassName = Class ? Class->GetName() : FString();
   return ClassName.Contains(TEXT("Volume")) ||
          ClassName.Contains(TEXT("Trigger")) ||
          ClassName.Contains(TEXT("Fog")) ||
@@ -30,8 +35,7 @@ bool IsBoundsOnlyActor(const AActor *Actor) {
          // "intersects GameplayDebuggerCategoryReplicator0 by 64 units".
          ClassName.Contains(TEXT("GameplayDebugger")) ||
          // An editor group (Ctrl+G) draws nothing and its bounds are its members': a new group read "nothing below it".
-         ClassName == TEXT("GroupActor") ||
-         ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
+         ClassName == TEXT("GroupActor");
 }
 
 bool IsDrawnPart(const UPrimitiveComponent *Part) {

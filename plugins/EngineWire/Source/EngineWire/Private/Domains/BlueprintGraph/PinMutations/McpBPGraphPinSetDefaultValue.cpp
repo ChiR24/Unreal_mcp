@@ -213,9 +213,6 @@ bool SetPinDefaultValue(FActionContext& Context)
         Schema->TrySetDefaultValue(*Pin, Value);
     }
 
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
-    SaveLoadedAssetThrottled(Context.Blueprint);
-
     // The applied literal, read back off the pin, so a caller can tell an
     // accepted value from one the schema silently rejected.
     const FString AppliedValue =
@@ -237,6 +234,10 @@ bool SetPinDefaultValue(FActionContext& Context)
             TEXT("PIN_VALUE_REJECTED"));
         return true;
     }
+    // Marked and saved only once the literal landed: a value the schema dropped was saved first.
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
+    SaveLoadedAssetThrottled(Context.Blueprint);
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NodeId);
     Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());

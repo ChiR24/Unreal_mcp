@@ -231,6 +231,9 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         return AppliedCount;
     };
 
+    // Recorded before the generic pass writes: after it, the undo record held the new values and undo restored
+    // nothing. false: a call that applies nothing leaves the package clean.
+    Target->Modify(false);
     int32 TotalApplied = SkyApplied + RotationApplied + ApplyObject(Payload);
 
     const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
@@ -241,7 +244,6 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
 
     if (TotalApplied > 0)
     {
-        Target->Modify();
         Target->MarkPackageDirty();
         Target->PostEditChange();
     }

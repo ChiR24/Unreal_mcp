@@ -24,10 +24,17 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
                                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path,
                                       const FString& Name);
 
-// A new generic data asset (UMcpGenericDataAsset: UDataAsset and UPrimaryDataAsset are abstract) named Name in Package.
-// Fill writes its first values; then it is dirtied, registered and, unless the payload's save is false, saved (OutSaved).
-// Null when NewObject makes nothing.
-UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const FString& Name, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
+// The name an asset takes inside Package: the package's own short name. The package is made from the sanitized name,
+// so an object named by the raw one (a space, a leading digit) was not the package's asset, and assetPath named nothing.
+inline FName InventoryAssetName(const UPackage* Package)
+{
+    return FName(*FPackageName::GetShortName(Package->GetName()));
+}
+
+// A new generic data asset (UMcpGenericDataAsset: UDataAsset and UPrimaryDataAsset are abstract) in Package, named after
+// it. Fill writes its first values; then it is dirtied, registered and, unless the payload's save is false, saved
+// (OutSaved). Null when NewObject makes nothing.
+UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
                                             TFunctionRef<void(UMcpGenericDataAsset&)> Fill = [](UMcpGenericDataAsset&) {});
 
 // create_item_category and create_loot_table: a generic data asset named by the payload's name, in its path or

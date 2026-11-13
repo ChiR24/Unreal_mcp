@@ -69,6 +69,9 @@ bool HandleConfigureMovementSpeeds(UEngineWireSubsystem* Self, const FString& Re
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    CharCDO = CharacterDefaultsOf(Blueprint);
+    if (CharCDO && CharCDO->GetCharacterMovement()) AppliedWalkSpeed = CharCDO->GetCharacterMovement()->MaxWalkSpeed;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (CharCDO && CharCDO->GetCharacterMovement())
@@ -125,6 +128,8 @@ bool HandleConfigureJump(UEngineWireSubsystem* Self, const FString& RequestId, c
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    CharCDO = CharacterDefaultsOf(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (CharCDO && CharCDO->GetCharacterMovement())
@@ -160,6 +165,8 @@ bool HandleConfigureRotation(UEngineWireSubsystem* Self, const FString& RequestI
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    CharCDO = CharacterDefaultsOf(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (CharCDO && CharCDO->GetCharacterMovement())
@@ -201,6 +208,8 @@ bool HandleConfigureNavMovement(UEngineWireSubsystem* Self, const FString& Reque
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    CharCDO = CharacterDefaultsOf(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     // Read back from the defaults: it answered "configured" with no value at all.
@@ -233,6 +242,8 @@ bool HandleSetupMovement(UEngineWireSubsystem* Self, const FString& RequestId, c
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    if (const ACharacter* Compiled = CharacterDefaultsOf(Blueprint)) Movement = Compiled->GetCharacterMovement();
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("maxWalkSpeed"), Movement->MaxWalkSpeed);

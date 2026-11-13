@@ -119,7 +119,9 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
             TEXT("Volumetric fog created"), Response);
         return true;
     }
-    return false;
+    // false reached the dispatcher's UNKNOWN_ACTION "Unhandled manage_effect action".
+    Context.SendError(TEXT("Failed to spawn ExponentialHeightFog"), TEXT("SPAWN_FAILED"));
+    return true;
 }
 
 bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsCreateEffect)

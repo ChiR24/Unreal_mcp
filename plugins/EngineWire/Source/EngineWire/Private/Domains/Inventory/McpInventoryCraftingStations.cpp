@@ -2,6 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Domains/Inventory/McpInventoryShared.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
+#include "EdGraphSchema_K2.h"
 
 bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -23,7 +24,7 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
       return true;
     }
 
-    UBlueprint* StationBlueprint = McpNewBlueprint(Package, *Name, AActor::StaticClass());
+    UBlueprint* StationBlueprint = McpNewBlueprint(Package, InventoryAssetName(Package), AActor::StaticClass());
 
     if (StationBlueprint) {
       USimpleConstructionScript* SCS = StationBlueprint->SimpleConstructionScript;
@@ -31,6 +32,10 @@ bool HandleInventoryCraftingStationActions(UEngineWireSubsystem& Bridge, const F
         McpAddScsNode(SCS, UStaticMeshComponent::StaticClass(), TEXT("StationMesh"));
         McpAddScsNode(SCS, UBoxComponent::StaticClass(), TEXT("InteractionBox"));
       }
+      // stationType was echoed and stored nowhere: a Name variable holds it.
+      FEdGraphPinType NameType;
+      NameType.PinCategory = UEdGraphSchema_K2::PC_Name;
+      FBlueprintEditorUtils::AddMemberVariable(StationBlueprint, TEXT("StationType"), NameType, StationType);
 
       FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(StationBlueprint);
       FAssetRegistryModule::AssetCreated(StationBlueprint);

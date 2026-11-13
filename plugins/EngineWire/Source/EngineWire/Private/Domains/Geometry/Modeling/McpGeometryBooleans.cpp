@@ -160,9 +160,8 @@ bool HandleBooleanOperation(UEngineWireSubsystem* Self, const FString& RequestId
         return true;
     }
 
-    Self->SendAutomationResponse(Socket, RequestId, bBooleanSucceeded,
-        bBooleanSucceeded ? FString::Printf(TEXT("Boolean %s completed"), *OpName) : FString::Printf(TEXT("Boolean %s failed - operation produced empty geometry"), *OpName),
-        Result);
+    // Both failures are answered above, and ApplyMeshBoolean hands back the target mesh it was given.
+    Self->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Boolean %s completed"), *OpName), Result);
     return true;
 }
 

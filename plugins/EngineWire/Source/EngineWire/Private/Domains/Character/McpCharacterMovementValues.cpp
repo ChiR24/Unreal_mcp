@@ -119,6 +119,8 @@ bool HandleConfigureCrouch(UEngineWireSubsystem* Self, const FString& RequestId,
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
+    // The compile replaced the defaults object written above: the reply reads the one the class holds now.
+    if (const ACharacter* Compiled = CharacterDefaultsOf(Blueprint)) Movement = Compiled->GetCharacterMovement();
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("crouchSpeed"), Movement->MaxWalkSpeedCrouched);

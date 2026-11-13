@@ -34,7 +34,7 @@ bool HandleGetMeshInfo(UEngineWireSubsystem* Self, const FString& RequestId,
 #else
     Result->SetBoolField(TEXT("hasColors"), bHasColors);
 #endif
-    Result->SetBoolField(TEXT("hasPolygroups"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasMaterialIDs(Mesh));
+    Result->SetBoolField(TEXT("hasPolygroups"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasPolygroups(Mesh));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh info retrieved"), Result);
     return true;
 }

@@ -43,6 +43,13 @@ bool CreateNiagaraEffectFromPayload(
             TEXT("SYSTEM_NOT_FOUND"));
         return true;
     }
+    // Another class's asset was skipped below while the actor spawned and the reply said created.
+    UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(NiagaraObject);
+    if (!NiagaraSystem)
+    {
+        Context.SendError(FString::Printf(TEXT("%s is not a Niagara system asset"), *SystemPath), TEXT("ASSET_TYPE_MISMATCH"));
+        return true;
+    }
 
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
@@ -61,11 +68,8 @@ bool CreateNiagaraEffectFromPayload(
 
     if (UNiagaraComponent* NiagaraComponent = Spawned->FindComponentByClass<UNiagaraComponent>())
     {
-        if (NiagaraObject->IsA<UNiagaraSystem>())
-        {
-            NiagaraComponent->SetAsset(Cast<UNiagaraSystem>(NiagaraObject));
-            NiagaraComponent->Activate(true);
-        }
+        NiagaraComponent->SetAsset(NiagaraSystem);
+        NiagaraComponent->Activate(true);
     }
 
     FString Name;

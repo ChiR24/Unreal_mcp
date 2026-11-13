@@ -21,7 +21,7 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
     }
 
     bool bSaved = false;
-    UMcpGenericDataAsset* ItemAsset = NewInventoryDataAsset(Package, SanitizedName, Payload, bSaved);
+    UMcpGenericDataAsset* ItemAsset = NewInventoryDataAsset(Package, Payload, bSaved);
     if (ItemAsset) {
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetBoolField(TEXT("saved"), bSaved);

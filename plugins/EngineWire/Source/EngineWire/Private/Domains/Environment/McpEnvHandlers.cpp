@@ -40,81 +40,23 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
         // rebuilding the payload used to drop it.
         const FString FoliageTypePath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType"), TEXT("meshPath")});
 
-        TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
+        TSharedPtr<FJsonObject> FoliagePayload = MakeShared<FJsonObject>(*Payload);
         if (!FoliageTypePath.IsEmpty())
         {
             FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
         }
-
-        // Preserve full transform data so callers can specify rotation and scale.
-        const TArray<TSharedPtr<FJsonValue>> *Transforms = nullptr;
-        Payload->TryGetArrayField(TEXT("transforms"), Transforms);
-        if (Transforms)
-        {
-            FoliagePayload->SetArrayField(TEXT("transforms"), *Transforms);
-        }
-
-        const TArray<TSharedPtr<FJsonValue>> *Locations = nullptr;
-        if (Payload->TryGetArrayField(TEXT("locations"), Locations) && Locations)
-        {
-            FoliagePayload->SetArrayField(TEXT("locations"), *Locations);
-        }
-        // They vary bare locations; rebuilding the payload without them dropped all three.
-        for (const TCHAR* Field : {TEXT("minScale"), TEXT("maxScale"), TEXT("randomYaw")})
-        {
-            if (const TSharedPtr<FJsonValue> Value = Payload->TryGetField(Field))
-            {
-                FoliagePayload->SetField(Field, Value);
-            }
-        }
-
         return HandleAddFoliageInstances(RequestId, TEXT("add_foliage_instances"),
                                          FoliagePayload, RequestingSocket);
     }
     else if (LowerSub == TEXT("get_foliage_instances"))
     {
-        // foliageTypePath is the declared spelling too; reading only foliageType
-        // dropped it and silently listed every type's instances instead.
-        const FString FoliageTypePath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType")});
-        TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
-        if (!FoliageTypePath.IsEmpty())
-        {
-            FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
-        }
-        for (const TCHAR* Field : {TEXT("summary"), TEXT("limit")})
-        {
-            if (Payload->HasField(Field)) { FoliagePayload->SetField(Field, Payload->TryGetField(Field)); }
-        }
-        return HandleGetFoliageInstances(RequestId, TEXT("get_foliage_instances"),
-                                         FoliagePayload, RequestingSocket);
+        return HandleGetFoliageInstances(RequestId, TEXT("get_foliage_instances"), Payload, RequestingSocket);
     }
     else if (LowerSub == TEXT("remove_foliage") || LowerSub == TEXT("remove_foliage_instances"))
     {
-        FString FoliageTypePath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType")});
-        bool bRemoveAll = false;
-        Payload->TryGetBoolField(TEXT("removeAll"), bRemoveAll);
-
-        TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
-        if (!FoliageTypePath.IsEmpty())
-        {
-            FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
-        }
-        const TSharedPtr<FJsonObject>* AreaObj = nullptr;
-        const TArray<TSharedPtr<FJsonValue>>* AreaList = nullptr;
-        const bool bHasOneArea = Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj;
-        const bool bHasAreaList = Payload->TryGetArrayField(TEXT("areas"), AreaList) && AreaList->Num() > 0;
-        const bool bHasArea = bHasOneArea || bHasAreaList;
-        if (bHasOneArea)
-        {
-            FoliagePayload->SetObjectField(TEXT("area"), *AreaObj);
-        }
-        if (bHasAreaList)
-        {
-            FoliagePayload->SetArrayField(TEXT("areas"), *AreaList);
-        }
-        FoliagePayload->SetBoolField(TEXT("removeAll"), bRemoveAll);
-        return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"),
-                                   FoliagePayload, RequestingSocket);
+        // Passed through whole: rebuilt, an empty `areas` was dropped before the handler's own refusal could see it,
+        // and the whole-type branch removed every instance of the type.
+        return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"), Payload, RequestingSocket);
     }
     else if (LowerSub == TEXT("paint_foliage") || LowerSub == TEXT("paint_foliage_instances"))
     {

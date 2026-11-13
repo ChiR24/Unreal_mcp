@@ -1,4 +1,5 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
@@ -17,6 +18,7 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
     int32 TrianglesCreated = 0;
     FString BridgeStatus;
     bool bFillHolesInstead = false;
+    bool bBridgeFailed = false;
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     // Get direct access to FDynamicMesh3 for low-level operations
@@ -28,6 +30,7 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
     if (BoundaryLoops.bAborted)
     {
         BridgeStatus = TEXT("Boundary loop computation aborted (mesh topology issue)");
+        bBridgeFailed = true;
     }
     else if (BoundaryLoops.GetLoopCount() < 2)
     {
@@ -104,12 +107,19 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
         else
         {
             BridgeStatus = TEXT("One or both boundary loops have no vertices");
+            bBridgeFailed = true;
         }
     }
 #else
     BridgeStatus = TEXT("Bridging requires UE 5.5+ (FMeshBoundaryLoops). Filling holes instead.");
     bFillHolesInstead = true;
 #endif
+    // Nothing changed here, under a reply that said "Bridge applied".
+    if (bBridgeFailed)
+    {
+        Self->SendAutomationError(Socket, RequestId, BridgeStatus, TEXT("BRIDGE_FAILED"));
+        return true;
+    }
     if (bFillHolesInstead)
     {
         FGeometryScriptFillHolesOptions FillOptions;
@@ -128,7 +138,9 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("trianglesCreated"), TrianglesCreated);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bridge applied"), Result);
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        bFillHolesInstead ? TEXT("Fewer than two open boundaries to bridge: the holes were filled instead") : TEXT("Bridge applied"),
+        Result);
     return true;
 }
 
@@ -138,6 +150,12 @@ bool HandleDuplicateAlongSpline(UEngineWireSubsystem* Self, const FString& Reque
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
     const int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
+    if (Count < 1 || Count > 100)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("count must be 1 to 100 (got %d); nothing was duplicated."), Count),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     ADynamicMeshActor* SourceActor = FindActorOfClassForMcp<ADynamicMeshActor>(McpHandlerUtils::GetEditorWorld(), ActorName);
     if (!SourceActor)
@@ -156,6 +174,9 @@ bool HandleDuplicateAlongSpline(UEngineWireSubsystem* Self, const FString& Reque
 
     const float SplineLength = Spline->GetSplineLength();
     TArray<TSharedPtr<FJsonValue>> CreatedActors;
+    // One undo step for every copy: each DuplicateActor opened its own.
+    const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Duplicate Along Spline")),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     for (int32 i = 0; i < Count; ++i)
     {
         const float Distance = SplineLength * (static_cast<float>(i) / FMath::Max(Count - 1, 1));
@@ -174,6 +195,8 @@ bool HandleDuplicateAlongSpline(UEngineWireSubsystem* Self, const FString& Reque
     Result->SetNumberField(TEXT("count"), Count);
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
     Result->SetArrayField(TEXT("createdActors"), CreatedActors);
+    // The receipt reads the actors a call changed from affectedActors.
+    Result->SetArrayField(TEXT("affectedActors"), CreatedActors);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Duplicates created along spline"), Result);
     return true;
 }

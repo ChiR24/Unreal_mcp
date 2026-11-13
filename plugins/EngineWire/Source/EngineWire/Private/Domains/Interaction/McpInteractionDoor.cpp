@@ -22,11 +22,6 @@ bool HandleDoorAction(
         const double AutoCloseDelay = GetJsonNumberField(Payload, TEXT("autoCloseDelay"), 3.0);
         const bool RequiresKey = GetJsonBoolField(Payload, TEXT("requiresKey"), false);
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetNumberField(TEXT("openAngle"), OpenAngle);
-        Result->SetNumberField(TEXT("openTime"), OpenTime);
-        Result->SetBoolField(TEXT("autoClose"), AutoClose);
-        Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
-        Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
 
         // An existing door answers idempotently instead of being refused.
         const FString Name = GetJsonStringField(Payload, TEXT("name"));
@@ -62,7 +57,13 @@ bool HandleDoorAction(
         {
             return true;
         }
-        // create_door_actor used to echo these five settings and store none of them.
+        // create_door_actor used to echo these five settings and store none of them; an existing door, which this
+        // call does not write them to, answers none.
+        Result->SetNumberField(TEXT("openAngle"), OpenAngle);
+        Result->SetNumberField(TEXT("openTime"), OpenTime);
+        Result->SetBoolField(TEXT("autoClose"), AutoClose);
+        Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
+        Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
         const int32 NotApplied = ApplyInteractionVars(DoorBP, {
             {TEXT("OpenAngle"), EType::Float, MakeShared<FJsonValueNumber>(OpenAngle)},
             {TEXT("OpenTime"), EType::Float, MakeShared<FJsonValueNumber>(OpenTime)},

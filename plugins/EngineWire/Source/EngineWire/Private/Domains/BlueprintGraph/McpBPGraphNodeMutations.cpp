@@ -84,11 +84,6 @@ static bool SetNodeProperty(FActionContext& Context)
         return true;
     }
 
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Set Blueprint Node Property")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
-
     const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
     FString PropertyName;
     Context.Payload->TryGetStringField(
@@ -102,6 +97,68 @@ static bool SetNodeProperty(FActionContext& Context)
         return true;
     }
 
+    // Read before the transaction opens: these refusals left the Blueprint marked changed.
+    const bool bEnabledState = PropertyName.Equals(TEXT("EnabledState"), ESearchCase::IgnoreCase) ||
+        PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase);
+    ENodeEnabledState NewState = ENodeEnabledState::Enabled;
+    if (bEnabledState)
+    {
+        // Enable/disable a node (BUG-d870cf: the set was previously comment/position-only). "bDisabled" takes a
+        // bool; "EnabledState" also accepts the enum names Enabled / Disabled / DevelopmentOnly.
+        if (PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = Value.ToBool()
+                           ? ENodeEnabledState::Disabled
+                           : ENodeEnabledState::Enabled;
+        }
+        else if (Value.Equals(TEXT("Enabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::Enabled;
+        }
+        else if (Value.Equals(TEXT("Disabled"), ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::Disabled;
+        }
+        else if (Value.Equals(
+                     TEXT("DevelopmentOnly"),
+                     ESearchCase::IgnoreCase))
+        {
+            NewState = ENodeEnabledState::DevelopmentOnly;
+        }
+        else
+        {
+            // Reject an unrecognized EnabledState string instead of silently treating it as Enabled, so a typo
+            // (e.g. "Disable") is reported rather than leaving the node in the wrong state under a success reply.
+            Context.SendError(
+                FString::Printf(
+                    TEXT("Invalid EnabledState '%s' (expected Enabled, Disabled, or DevelopmentOnly)"),
+                    *Value),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+
+    // A math expression that does not parse ("-1": there is no unary minus) rebuilt into a node with
+    // no output and answered success; the caller only found out when a later connect failed.
+    const bool bMathExpression = PropertyName.Equals(TEXT("Expression"), ESearchCase::IgnoreCase) &&
+        TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
+    // The node has no unary minus, and every caller writes -150 first: it becomes (0 - 150), the same value.
+    if (bMathExpression) Value = McpBlueprintMathExpression::RewriteUnaryMinus(Value);
+    const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
+    const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
+    // A bool used as a number parses, and only the Blueprint compile refuses it: refused here, the node untouched.
+    if (const FString BoolMath = bMathExpression ? McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)
+                                                 : FString(); !BoolMath.IsEmpty())
+    {
+        Context.SendError(FString::Printf(TEXT("The expression '%s' would not compile; it keeps the old one. %s"), *Value, *BoolMath),
+            TEXT("EXPRESSION_INVALID"));
+        return true;
+    }
+
+    const FScopedTransaction Transaction(
+        FText::FromString(TEXT("Set Blueprint Node Property")));
+    Context.Blueprint->Modify();
+    Context.TargetGraph->Modify();
     TargetNode->Modify();
     bool bHandled = false;
     if (PropertyName.Equals(TEXT("Comment"), ESearchCase::IgnoreCase) ||
@@ -140,44 +197,8 @@ static bool SetNodeProperty(FActionContext& Context)
         TargetNode->bCommentBubblePinned = Value.ToBool();
         bHandled = true;
     }
-    else if (
-        PropertyName.Equals(TEXT("EnabledState"), ESearchCase::IgnoreCase) ||
-        PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase))
+    else if (bEnabledState)
     {
-        // Enable/disable a node (BUG-d870cf: the set was previously comment/position-only). "bDisabled" takes a
-        // bool; "EnabledState" also accepts the enum names Enabled / Disabled / DevelopmentOnly.
-        ENodeEnabledState NewState = ENodeEnabledState::Enabled;
-        if (PropertyName.Equals(TEXT("bDisabled"), ESearchCase::IgnoreCase))
-        {
-            NewState = Value.ToBool()
-                           ? ENodeEnabledState::Disabled
-                           : ENodeEnabledState::Enabled;
-        }
-        else if (Value.Equals(TEXT("Enabled"), ESearchCase::IgnoreCase))
-        {
-            NewState = ENodeEnabledState::Enabled;
-        }
-        else if (Value.Equals(TEXT("Disabled"), ESearchCase::IgnoreCase))
-        {
-            NewState = ENodeEnabledState::Disabled;
-        }
-        else if (Value.Equals(
-                     TEXT("DevelopmentOnly"),
-                     ESearchCase::IgnoreCase))
-        {
-            NewState = ENodeEnabledState::DevelopmentOnly;
-        }
-        else
-        {
-            // Reject an unrecognized EnabledState string instead of silently treating it as Enabled, so a typo
-            // (e.g. "Disable") is reported rather than leaving the node in the wrong state under a success reply.
-            Context.SendError(
-                FString::Printf(
-                    TEXT("Invalid EnabledState '%s' (expected Enabled, Disabled, or DevelopmentOnly)"),
-                    *Value),
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
         TargetNode->SetEnabledState(NewState);
         bHandled = true;
     }
@@ -185,22 +206,6 @@ static bool SetNodeProperty(FActionContext& Context)
     // Anything else may still be a reflected field on the node or on its
     // FAnimNode_* payload -- that is how an AnimGraph player is told which
     // Sequence or BlendSpace to play.
-    // A math expression that does not parse ("-1": there is no unary minus) rebuilt into a node with
-    // no output and answered success; the caller only found out when a later connect failed.
-    const bool bMathExpression = PropertyName.Equals(TEXT("Expression"), ESearchCase::IgnoreCase) &&
-        TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
-    // The node has no unary minus, and every caller writes -150 first: it becomes (0 - 150), the same value.
-    if (bMathExpression) Value = McpBlueprintMathExpression::RewriteUnaryMinus(Value);
-    const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
-    const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
-    // A bool used as a number parses, and only the Blueprint compile refuses it: refused here, the node untouched.
-    if (const FString BoolMath = bMathExpression ? McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)
-                                                 : FString(); !BoolMath.IsEmpty())
-    {
-        Context.SendError(FString::Printf(TEXT("The expression '%s' would not compile; it keeps the old one. %s"), *Value, *BoolMath),
-            TEXT("EXPRESSION_INVALID"));
-        return true;
-    }
     // The failed parse drops the input links, so the restore below puts them back by pin name.
     TArray<TPair<FName, TArray<UEdGraphPin*>>> SavedLinks;
     for (const UEdGraphPin* Pin : bMathExpression ? TargetNode->Pins : TArray<UEdGraphPin*>())

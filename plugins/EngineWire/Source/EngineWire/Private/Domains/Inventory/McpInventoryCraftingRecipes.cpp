@@ -33,7 +33,7 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
         static_cast<int32>(GetJsonNumberField(Payload, TEXT("outputQuantity"), 1));
     const double CraftTime = GetJsonNumberField(Payload, TEXT("craftTime"), 1.0);
     bool bSaved = false;
-    if (NewInventoryDataAsset(Package, Name, Payload, bSaved, [&](UMcpGenericDataAsset& Recipe) {
+    if (NewInventoryDataAsset(Package, Payload, bSaved, [&](UMcpGenericDataAsset& Recipe) {
           Recipe.Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
           Recipe.Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
           Recipe.Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));

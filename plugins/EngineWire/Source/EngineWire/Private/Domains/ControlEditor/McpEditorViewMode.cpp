@@ -155,17 +155,8 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
     return true;
   }
 
-  // Fallback: use console command
-  FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
-  UWorld* World = McpHandlerUtils::GetEditorWorld();
-  GEditor->Exec(World, *Command);
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetBoolField(TEXT("realtime"), bRealtime);
-  Resp->SetStringField(TEXT("message"), bRealtime ? TEXT("Viewport realtime enabled") : TEXT("Viewport realtime disabled"));
-
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Viewport realtime updated"), Resp, FString());
+  // The fallback exec "Viewport Realtime" is a command no editor version has: it changed nothing under a success reply.
+  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_VIEWPORT"),
+                            TEXT("No level viewport is open to set realtime on."), nullptr);
   return true;
 }

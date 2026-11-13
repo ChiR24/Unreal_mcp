@@ -5,6 +5,7 @@
 #include "EdGraph/EdGraphSchema.h"
 #include "K2Node_VariableSet.h"
 #include "ScopedTransaction.h"
+#include "UObject/Package.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -14,11 +15,6 @@ static bool ConnectPins(FActionContext& Context)
     {
         return false;
     }
-
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Connect Blueprint Pins")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
 
     const FString FromNodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("fromNodeId"), TEXT("fromNode"),
@@ -53,6 +49,13 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // Opened once both nodes are found (a missing one left the Blueprint marked changed), and before FindOrGrowPin,
+    // which may add a pin; a pin that is not there cancels it, as create_node cancels.
+    UPackage* Package = Context.Blueprint->GetOutermost();
+    const bool bWasDirty = Package->IsDirty();
+    FScopedTransaction Transaction(FText::FromString(TEXT("Connect Blueprint Pins")));
+    Context.Blueprint->Modify();
+    Context.TargetGraph->Modify();
     FromNode->Modify();
     ToNode->Modify();
     if (FromNode->Pins.Num() == 0)
@@ -88,6 +91,11 @@ static bool ConnectPins(FActionContext& Context)
             {
                 Names.Add(Pin->PinName.ToString());
             }
+        }
+        Transaction.Cancel();
+        if (!bWasDirty)
+        {
+            Package->SetDirtyFlag(false);
         }
         Context.SendError(
             FString::Printf(TEXT("No %s pin '%s' on '%s'. Its pins: %s."), FromPin ? TEXT("target") : TEXT("source"),
