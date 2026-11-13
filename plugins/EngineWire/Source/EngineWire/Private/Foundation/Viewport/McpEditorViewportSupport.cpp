@@ -1,5 +1,4 @@
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
-#include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 #include "Camera/CameraComponent.h"
 #include "Widgets/Docking/SDockTab.h"

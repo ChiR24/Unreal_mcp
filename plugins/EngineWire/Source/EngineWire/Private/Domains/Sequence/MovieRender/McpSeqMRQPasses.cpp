@@ -6,9 +6,7 @@
 
 #include "Dom/JsonValue.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include MCP_MATERIAL_DOMAIN_HEADER
 #include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "EngineWireSubsystem.h"

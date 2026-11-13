@@ -1,5 +1,4 @@
 #include "Domains/Level/McpLevelActions.h"
-#include "Editor.h"
 #include "Engine/LevelStreaming.h"
 #include "Engine/World.h"
 #include "Domains/Level/Copy/McpLevelCopyOperations.h"

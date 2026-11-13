@@ -2,7 +2,6 @@
 #include "Domains/GAS/McpGASPayloadFields.h"
 #include "EngineWireSubsystem.h"
 
-#include "Modules/ModuleManager.h"
 
 bool UEngineWireSubsystem::HandleManageGASAction(
     const FString& RequestId,

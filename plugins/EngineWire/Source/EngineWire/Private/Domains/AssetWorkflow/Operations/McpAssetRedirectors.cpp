@@ -9,7 +9,7 @@
 #include "Dom/JsonObject.h"
 
 bool UEngineWireSubsystem::HandleFixupRedirectors(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   // Implementation of redirector fixup functionality

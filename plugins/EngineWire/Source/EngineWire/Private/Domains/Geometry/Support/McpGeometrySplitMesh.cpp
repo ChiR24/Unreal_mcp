@@ -23,16 +23,6 @@ struct FMcpTriangleGroup
     FBox Box = FBox(ForceInit);
 };
 
-TArray<TSharedPtr<FJsonValue>> VectorJson(const FVector& Value)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    for (const double Axis : {Value.X, Value.Y, Value.Z})
-    {
-        Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Axis, 10.0)));
-    }
-    return Out;
-}
-
 // The objects of Mesh. By material, one per material id. By parts, connected triangles first (an imported mesh is often
 // not welded, so a prop arrives as thousands of loose faces), then every piece whose bounds come within Gap of another
 // (a crate's planks), swept along X so ten thousand pieces stay cheap. Worked on the mesh itself: Geometry Script's split
@@ -227,10 +217,10 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("assetPath"), AssetPaths[Index]);
         Row->SetNumberField(TEXT("triangles"), Group.Triangles.Num());
-        Row->SetArrayField(TEXT("size"), VectorJson(Group.Box.GetSize()));
+        Row->SetArrayField(TEXT("size"), McpHandlerUtils::RoundedVectorToJsonArray(Group.Box.GetSize()));
         // Where the part's pivot sat in the source: a copy placed at the source actor's transform times this offset
         // stands where the part stood.
-        Row->SetArrayField(TEXT("offset"), VectorJson(PivotAt));
+        Row->SetArrayField(TEXT("offset"), McpHandlerUtils::RoundedVectorToJsonArray(PivotAt));
         Row->SetNumberField(TEXT("slots"), FMath::Max(1, PartMaterials.Num()));
         Rows.Add(MakeShared<FJsonValueObject>(Row));
         if (bDryRun)

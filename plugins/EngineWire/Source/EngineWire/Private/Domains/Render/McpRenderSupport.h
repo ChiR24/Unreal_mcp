@@ -7,7 +7,6 @@
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
-#include "Editor.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Scene.h"
 #include "Engine/SceneCapture2D.h"

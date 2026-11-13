@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "EdGraphSchema_K2.h"
+#include "K2Node_Event.h"
 #include "Domains/BlueprintGraph/Code/McpGraphCodeParse.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 

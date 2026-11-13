@@ -1,6 +1,7 @@
 #include "Domains/Debug/Explain/McpExplain.h"
 
 #include "Dom/JsonValue.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace McpExplain
 {
@@ -102,5 +103,14 @@ bool Handle(UEngineWireSubsystem& Self, const FString& RequestId, const FString&
         return ExplainLit(Self, RequestId, Payload, Socket);
     }
     return false;
+}
+
+TSharedPtr<FJsonObject> SetPropertyCall(const UObject* Object, const TCHAR* Property, const TSharedPtr<FJsonValue>& Value)
+{
+    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+    Params->SetStringField(TEXT("objectPath"), Object->GetPathName());
+    Params->SetStringField(TEXT("propertyName"), Property);
+    Params->SetField(TEXT("value"), Value);
+    return McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
 }
 } // namespace McpExplain

@@ -6,7 +6,7 @@
 #include "Domains/Perception/McpPerceptionSheet.h"
 
 #include "Dom/JsonObject.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Texture/McpTextRaster.h"
 #include "Fonts/FontMeasure.h"
 #include "Framework/Application/SlateApplication.h"

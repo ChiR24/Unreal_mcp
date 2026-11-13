@@ -17,13 +17,7 @@ constexpr int32 McpMaxMotionPoints = 8;
 // Traced from above the point, so a foot sunk into the floor is found too.
 constexpr double McpGroundTraceUp = 50.0;
 constexpr double McpGroundTraceDown = 1000.0;
-} // namespace
 
-TArray<TSharedPtr<FJsonValue>> McpPointVec(const FVector &V) {
-  return McpHandlerUtils::VectorToJsonArray(FVector(McpRoundTo(V.X, 10.0), McpRoundTo(V.Y, 10.0), McpRoundTo(V.Z, 10.0)));
-}
-
-namespace {
 // A component by its exact name, then a bone or socket any component has, or Component.Socket.
 bool McpResolveMotionPoint(AActor *Actor, const FString &Label, FMcpMotionPoint &Out) {
   FString Owner, Socket;
@@ -80,9 +74,7 @@ TOptional<double> McpHeightAboveGround(const AActor *Actor, const FVector &Locat
   FCollisionQueryParams Params(SCENE_QUERY_STAT(McpMotionPointGround), false, Actor);
   TArray<AActor *> Attached;
   Actor->GetAttachedActors(Attached);
-  for (AActor *Child : Attached) {
-    Params.AddIgnoredActor(Child);
-  }
+  Params.AddIgnoredActors(Attached);
   FHitResult Hit;
   const FVector Start = Location + FVector(0.0, 0.0, McpGroundTraceUp);
   const FVector End = Location - FVector(0.0, 0.0, McpGroundTraceDown);
@@ -134,7 +126,7 @@ void McpSampleMotionPoints(FMcpMotionPoints &Points, const AActor *Actor, FJsonO
       continue; // a component destroyed during the run drops out of the samples after it
     }
     const FVector Location = Component->GetSocketLocation(Point.Socket);
-    Where->SetArrayField(Point.Label, McpPointVec(Location));
+    Where->SetArrayField(Point.Label, McpHandlerUtils::RoundedVectorToJsonArray(Location));
     const TOptional<double> Height = Points.bGround ? McpHeightAboveGround(Actor, Location) : TOptional<double>();
     if (Height.IsSet()) {
       Above->SetNumberField(Point.Label, McpRoundTo(Height.GetValue(), 10.0));
@@ -168,8 +160,8 @@ void McpAddMotionPointStats(const FMcpMotionPoints &Points, FJsonObject &Data) {
       continue;
     }
     TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
-    One->SetArrayField(TEXT("min"), McpPointVec(Extent.Min));
-    One->SetArrayField(TEXT("max"), McpPointVec(Extent.Max));
+    One->SetArrayField(TEXT("min"), McpHandlerUtils::RoundedVectorToJsonArray(Extent.Min));
+    One->SetArrayField(TEXT("max"), McpHandlerUtils::RoundedVectorToJsonArray(Extent.Max));
     if (Low <= High) {
       // Planted means within contactCm of its own lowest height, so an ankle bone that never reaches the floor
       // still counts as down when the foot is; contactSlip is how far it moved across the ground while planted.

@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_VariableGet.h"
+#include "K2Node_VariableSet.h"
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 

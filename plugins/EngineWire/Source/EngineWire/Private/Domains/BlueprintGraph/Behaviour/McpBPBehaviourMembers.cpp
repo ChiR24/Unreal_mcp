@@ -191,7 +191,7 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
               Where + TEXT(" ") + Name);
         for (int32 Step = 0; Step < Body.Num(); ++Step)
         {
-            TSharedPtr<FJsonObject> Op = CopyObject(Body[Step]);
+            TSharedPtr<FJsonObject> Op = MakeShared<FJsonObject>(*Body[Step]);
             Op->SetStringField(TEXT("graphName"), Name);
             AddOp(Plan, Op, FString::Printf(TEXT("%s.operations[%d]"), *Where, Step));
         }

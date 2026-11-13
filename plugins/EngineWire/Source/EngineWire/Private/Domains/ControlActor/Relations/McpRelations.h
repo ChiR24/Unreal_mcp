@@ -20,6 +20,8 @@ class UWorld;
 namespace McpRelations
 {
 constexpr double SupportTolerance = 3.0; // cm between a bottom and the top it rests on
+constexpr double TouchGap = 2.0;         // cm between sides that touch (nextTo, and an assertion's beside)
+constexpr double FacingGrace = 0.34907;  // 20 degrees in radians: a turn within it still faces
 
 /** One actor of the scene: its bounds (every primitive, as a viewer sees it), whether it is ground, and its shape. */
 struct FItem

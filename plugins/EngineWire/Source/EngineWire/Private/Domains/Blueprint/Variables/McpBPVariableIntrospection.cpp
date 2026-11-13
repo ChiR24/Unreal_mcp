@@ -1,6 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "EdGraphSchema_K2.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
@@ -8,6 +8,43 @@
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintHandlers {
+static FProperty *
+FEngineWire_FindProperty(UBlueprint *Blueprint,
+                                  const FString &PropertyName) {
+  if (!Blueprint || PropertyName.TrimStartAndEnd().IsEmpty()) {
+    return nullptr;
+  }
+
+  const FName PropFName(*PropertyName.TrimStartAndEnd());
+  const TArray<UClass *> CandidateClasses = {Blueprint->GeneratedClass,
+                                             Blueprint->SkeletonGeneratedClass,
+                                             Blueprint->ParentClass};
+
+  for (UClass *Candidate : CandidateClasses) {
+    if (!Candidate) {
+      continue;
+    }
+
+    if (FProperty *Found = Candidate->FindPropertyByName(PropFName)) {
+      return Found;
+    }
+  }
+
+  // SCS component properties are stored with "_GEN_VARIABLE" suffix
+  const FString GenVariableName = PropertyName + TEXT("_GEN_VARIABLE");
+  const FName GenVarFName(*GenVariableName);
+  for (UClass *Candidate : CandidateClasses) {
+    if (!Candidate) {
+      continue;
+    }
+    if (FProperty *Found = Candidate->FindPropertyByName(GenVarFName)) {
+      return Found;
+    }
+  }
+
+  return nullptr;
+}
+
 static bool FEngineWire_CollectVariableMetadata(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc,
     TSharedPtr<FJsonObject> &OutMetadata) {

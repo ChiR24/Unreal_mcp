@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Safety/McpSafeOperationsLevelFile.h"
 
 #include "ContentStreaming.h"
 #include "Misc/PackageName.h"
@@ -68,73 +69,21 @@ bool UEngineWireSubsystem::HandleControlEditorOpenLevel(
   // An asset listing hands out object paths (/Game/Maps/Demo.Demo); one was looked for as a file and not found.
   LevelPath = FPackageName::ObjectPathToPackageName(LevelPath);
 
-  // Unreal stores levels in two path patterns:
-  // 1. Folder-based (standard): /Game/Path/LevelName/LevelName.umap
-  // 2. Flat (legacy): /Game/Path/LevelName.umap
-  // We must check BOTH paths before returning FILE_NOT_FOUND.
-
-  FString FlatMapPath = LevelPath + TEXT(".umap");
-  // Check if path is /Engine/ or /Game/ and extract accordingly
-  int32 PrefixLen = 6; // Default: "/Game/" is 6 chars
-  FString ContentDir = FPaths::ProjectContentDir();
-  if (LevelPath.StartsWith(TEXT("/Engine/"))) {
-    PrefixLen = 8; // "/Engine/" is 8 chars
-    ContentDir = FPaths::EngineContentDir();
-  }
-  FString FullFlatMapPath = ContentDir + FlatMapPath.Mid(PrefixLen);
-  FullFlatMapPath = FPaths::ConvertRelativePathToFull(FullFlatMapPath);
-
-  // Folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
-  FString LevelName = FPaths::GetBaseFilename(LevelPath);
-  FString FolderMapPath = LevelPath + TEXT("/") + LevelName + TEXT(".umap");
-  FString FullFolderMapPath = ContentDir + FolderMapPath.Mid(PrefixLen);
-  FullFolderMapPath = FPaths::ConvertRelativePathToFull(FullFolderMapPath);
-
-  FString MapPathToLoad;
-  FString FullMapPath;
-
-  // Prefer folder-based path (Unreal's standard) if it exists
-  if (FPaths::FileExists(FullFolderMapPath)) {
-    MapPathToLoad = FolderMapPath;
-    FullMapPath = FullFolderMapPath;
-    UE_LOG(LogEngineWireSubsystem, Display,
-           TEXT("OpenLevel: Found level at folder-based path: %s"), *FullFolderMapPath);
-  } else if (FPaths::FileExists(FullFlatMapPath)) {
-    // Fallback to flat path (legacy format)
-    MapPathToLoad = FlatMapPath;
-    FullMapPath = FullFlatMapPath;
-    UE_LOG(LogEngineWireSubsystem, Display,
-           TEXT("OpenLevel: Found level at flat path: %s"), *FullFlatMapPath);
-  } else {
-    TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-    ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-    ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
-    ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
-    ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"),
-                              FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
-                                            *FullFolderMapPath, *FullFlatMapPath),
-                              ErrorDetails);
+  const McpSafeOperations::FMcpLevelFile LevelFile = McpSafeOperations::McpFindLevelFile(LevelPath);
+  if (!LevelFile.bFolder && !LevelFile.bFlat) {
+    TSharedPtr<FJsonObject> ErrorDetails;
+    const FString Missing = McpSafeOperations::McpLevelFileNotFound(LevelPath, LevelFile, ErrorDetails);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("FILE_NOT_FOUND"), Missing, ErrorDetails);
     return true;
   }
+  // The level as the load is handed it and the reply names it: /Game/Path/Name/Name.umap, or /Game/Path/Name.umap.
+  const FString MapPathToLoad = LevelFile.bFolder ? LevelPath + TEXT("/") + FPaths::GetBaseFilename(LevelPath) + TEXT(".umap")
+                                                 : LevelPath + TEXT(".umap");
 
-  if (FApp::IsUnattended() || IsRunningCommandlet() || FParse::Param(FCommandLine::Get(), TEXT("nullrhi"))) {
-    TArray<UPackage*> DirtyWorldPackages;
-    TArray<UPackage*> DirtyContentPackages;
-    FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);
-    FEditorFileUtils::GetDirtyContentPackages(DirtyContentPackages);
+  if (McpSafeOperations::McpIsHeadlessEditor()) {
     int32 BlockingWorldPackages = 0;
     int32 BlockingContentPackages = 0;
-    for (UPackage* Package : DirtyWorldPackages) {
-      if (!McpIsScratchPackage(Package)) {
-        BlockingWorldPackages++;
-      }
-    }
-    for (UPackage* Package : DirtyContentPackages) {
-      if (!McpIsScratchPackage(Package)) {
-        BlockingContentPackages++;
-      }
-    }
+    McpSafeOperations::McpCountBlockingDirtyPackages(BlockingWorldPackages, BlockingContentPackages);
     if (BlockingWorldPackages + BlockingContentPackages > 0) {
       TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
       Details->SetNumberField(TEXT("dirtyWorldPackages"), BlockingWorldPackages);

@@ -161,11 +161,7 @@ TArray<AActor*> FFixRun::Round(const TArray<AActor*>& Check, bool bDryRun, TFunc
         Fixed.FindOrAdd(Body.Actor).Append(RoundKinds.FindRef(Body.Actor));
         if (!bDryRun)
         {
-            Body.Actor->Modify();
-            Body.Actor->SetActorLocation(Body.Actor->GetActorLocation() + Body.Offset, false, nullptr,
-                                         ETeleportType::TeleportPhysics);
-            McpFinishEditorMove(Body.Actor);
-            Body.Actor->MarkPackageDirty();
+            McpMoveActorBy(Body.Actor, Body.Offset);
         }
     }
     return Moved;

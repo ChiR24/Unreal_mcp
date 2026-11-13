@@ -1,6 +1,7 @@
 // What recipe references name: the events hooks attach to (an overridable event, a
 // component delegate, an existing custom event) and the step ids "$id" resolves.
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 
 #include "Components/ActorComponent.h"
 #include "EdGraph/EdGraph.h"
@@ -39,23 +40,11 @@ bool ResolveComponentEvent(UBlueprint* Blueprint, const FString& Component, cons
                            FString& OutError)
 {
     Out.Label = Component + TEXT(".") + Event;
-    UClass* Generated = Blueprint->GeneratedClass;
-    for (TFieldIterator<FObjectProperty> It(Generated); Generated && It && !Out.Component; ++It)
-    {
-        if (It->GetName().Equals(Component, ESearchCase::IgnoreCase) && It->PropertyClass &&
-            It->PropertyClass->IsChildOf(UActorComponent::StaticClass()))
-        {
-            Out.Component = *It;
-        }
-    }
+    Out.Component = McpFindComponentProperty(Blueprint->GeneratedClass, Component, /*bWidgets=*/false);
     UClass* ComponentClass = Out.Component ? static_cast<UClass*>(Out.Component->PropertyClass) : nullptr;
-    for (TFieldIterator<FMulticastDelegateProperty> It(ComponentClass); ComponentClass && It && !Out.Delegate; ++It)
-    {
-        if (It->GetName().Equals(Event, ESearchCase::IgnoreCase) && It->HasAnyPropertyFlags(CPF_BlueprintAssignable))
-        {
-            Out.Delegate = *It;
-        }
-    }
+    TArray<FString> Assignable;
+    FMulticastDelegateProperty* Delegate = ComponentClass ? McpFindMulticastDelegate(ComponentClass, Event, Assignable) : nullptr;
+    Out.Delegate = Delegate && Delegate->HasAnyPropertyFlags(CPF_BlueprintAssignable) ? Delegate : nullptr;
     OutError = FString::Printf(TEXT("no component '%s' with a Blueprint-assignable delegate '%s' on this Blueprint "
                                     "(add the component before the call)."), *Component, *Event);
     TArray<UK2Node_ComponentBoundEvent*> Bound;

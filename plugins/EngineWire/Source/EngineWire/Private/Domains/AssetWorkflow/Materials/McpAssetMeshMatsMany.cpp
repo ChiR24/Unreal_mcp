@@ -14,15 +14,6 @@ namespace McpMeshMaterials
 {
 namespace
 {
-FString JoinCapped(const TArray<FString>& Lines)
-{
-    constexpr int32 MaxQuoted = 3;
-    TArray<FString> Quoted;
-    for (int32 Line = 0; Line < Lines.Num() && Line < MaxQuoted; ++Line) Quoted.Add(Lines[Line]);
-    if (Lines.Num() > MaxQuoted) Quoted.Add(FString::Printf(TEXT("%d more"), Lines.Num() - MaxQuoted));
-    return FString::Join(Quoted, TEXT("; "));
-}
-
 // One mesh of the list: its row, and the entries that named a slot it has.
 void SetOnOneOfMany(const FString& Path, const TArray<TPair<TSharedPtr<FJsonValue>, UMaterialInterface*>>& Wanted, bool bSave,
                     TArray<bool>& Used, TArray<TSharedPtr<FJsonValue>>& Rows, TArray<FString>& Problems, int32& TotalChanged)

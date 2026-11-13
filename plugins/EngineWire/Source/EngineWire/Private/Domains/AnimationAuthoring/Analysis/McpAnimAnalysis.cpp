@@ -13,12 +13,6 @@ constexpr int32 McpMaxAnalysisSamples = 2000;
 constexpr int32 McpMaxContactsReported = 32;
 constexpr int32 McpPopsReported = 3;
 
-TSharedPtr<FJsonValue> McpVectorJson(const FVector& Value)
-{
-    return MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueNumber>(McpRoundTo(Value.X, 10.0)),
-        MakeShared<FJsonValueNumber>(McpRoundTo(Value.Y, 10.0)), MakeShared<FJsonValueNumber>(McpRoundTo(Value.Z, 10.0))});
-}
-
 // One foot over the sampled frames: planted where it is within ContactHeight of its lowest point.
 TSharedPtr<FJsonObject> McpDescribeFoot(const FName Foot, const TArray<FVector>& Path, const TArray<double>& Times, double ContactHeight)
 {
@@ -150,7 +144,7 @@ TSharedPtr<FJsonObject> HandleAnalyzeAnimation(const TSharedPtr<FJsonObject>& Pa
     }
     const TSharedPtr<FJsonObject> RootMotion = MakeShared<FJsonObject>();
     RootMotion->SetBoolField(TEXT("enabled"), Sequence->bEnableRootMotion);
-    RootMotion->SetField(TEXT("displacement"), McpVectorJson(RootPath.Last().GetLocation() - RootPath[0].GetLocation()));
+    RootMotion->SetArrayField(TEXT("displacement"), McpHandlerUtils::RoundedVectorToJsonArray(RootPath.Last().GetLocation() - RootPath[0].GetLocation()));
     RootMotion->SetNumberField(TEXT("distance"), McpRoundTo(Distance, 10.0));
     RootMotion->SetNumberField(TEXT("averageSpeed"), McpRoundTo(Distance / Length, 10.0));
     RootMotion->SetNumberField(TEXT("peakSpeed"), McpRoundTo(TopSpeed, 10.0));

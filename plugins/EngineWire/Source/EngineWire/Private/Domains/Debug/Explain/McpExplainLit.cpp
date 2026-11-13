@@ -16,15 +16,6 @@ namespace McpExplain
 {
 namespace
 {
-TSharedPtr<FJsonObject> LightPropertyFix(const ULightComponent* Light, const TCHAR* Property, const double Value)
-{
-    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-    Params->SetStringField(TEXT("objectPath"), Light->GetPathName());
-    Params->SetStringField(TEXT("propertyName"), Property);
-    Params->SetNumberField(TEXT("value"), Value);
-    return McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
-}
-
 bool SharesChannel(const FLightingChannels& Light, const FLightingChannels& Primitive)
 {
     return (Light.bChannel0 && Primitive.bChannel0) || (Light.bChannel1 && Primitive.bChannel1) || (Light.bChannel2 && Primitive.bChannel2);
@@ -40,7 +31,7 @@ void CheckTarget(FTree& Tree, const ULightComponent* Light, AActor* Target)
         {
             Tree.Fail(TEXT("range"), TEXT("OUT_OF_RANGE"),
                       FString::Printf(TEXT("'%s' is %.0f units away, past the light's attenuation radius of %.0f."), *McpActorRef(Target), Distance, Local->AttenuationRadius),
-                      LightPropertyFix(Light, TEXT("AttenuationRadius"), FMath::CeilToDouble(Distance * 1.25)));
+                      SetPropertyCall(Light, TEXT("AttenuationRadius"), MakeShared<FJsonValueNumber>(FMath::CeilToDouble(Distance * 1.25))));
         }
         else
         {
@@ -97,7 +88,7 @@ bool ExplainLit(UEngineWireSubsystem& Self, const FString& RequestId, const TSha
     }
     if (Light->Intensity <= 0.f)
     {
-        Tree.Fail(TEXT("intensity"), TEXT("NO_INTENSITY"), TEXT("Its intensity is 0."), LightPropertyFix(Light, TEXT("Intensity"), 5000));
+        Tree.Fail(TEXT("intensity"), TEXT("NO_INTENSITY"), TEXT("Its intensity is 0."), SetPropertyCall(Light, TEXT("Intensity"), MakeShared<FJsonValueNumber>(5000)));
     }
     else
     {

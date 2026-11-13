@@ -7,7 +7,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 
-#include "Editor.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/World.h"

@@ -113,7 +113,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     // The way first: with no full path on the nav mesh the leg is not tried, and that is no verdict on the game.
     McpNavigationHandlers::FMcpNavPath Path;
     FString Code;
-    if (!McpNavigationHandlers::FindNavPath(World, Run->Start, Run->Goal, FVector(100.0, 100.0, 250.0), Path, Code, Error))
+    if (!McpNavigationHandlers::FindNavPath(World, Run->Start, Run->Goal, McpNavigationHandlers::McpNavPathExtent, Path, Code, Error))
     {
         return Refuse(*Code, Error);
     }

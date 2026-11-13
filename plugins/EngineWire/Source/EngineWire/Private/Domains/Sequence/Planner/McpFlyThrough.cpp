@@ -169,9 +169,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     TArray<TSharedPtr<FJsonValue>> Corners;
     for (int32 Index = 0; Index < Plan.Points.Num() && Index < 64; ++Index)
     {
-        const FVector& Corner = Plan.Points[Index];
-        const FVector Rounded(McpRoundTo(Corner.X, 10.0), McpRoundTo(Corner.Y, 10.0), McpRoundTo(Corner.Z, 10.0));
-        Corners.Add(MakeShared<FJsonValueArray>(McpHandlerUtils::VectorToJsonArray(Rounded)));
+        Corners.Add(MakeShared<FJsonValueArray>(McpHandlerUtils::RoundedVectorToJsonArray(Plan.Points[Index])));
     }
     const double Length = PathLength(Keys.Locations);
     const bool bSpawn = Camera.Actor == nullptr;

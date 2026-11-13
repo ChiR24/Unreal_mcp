@@ -4,7 +4,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviourNodes.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_FunctionEntry.h"
 #include "Domains/BlueprintGraph/McpBPGraphBatchSteps.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"

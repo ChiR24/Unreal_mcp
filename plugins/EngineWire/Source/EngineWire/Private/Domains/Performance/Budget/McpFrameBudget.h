@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Perception/McpPerceptionDiff.h"
 
 class FEditorViewportClient;

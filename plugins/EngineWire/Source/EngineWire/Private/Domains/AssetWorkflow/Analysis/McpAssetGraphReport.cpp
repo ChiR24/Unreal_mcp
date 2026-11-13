@@ -18,14 +18,9 @@
 #include "Materials/MaterialInstance.h"
 
 bool UEngineWireSubsystem::HandleAnalyzeGraph(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("analyze_graph"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
 
   FString AssetPath;
   if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&

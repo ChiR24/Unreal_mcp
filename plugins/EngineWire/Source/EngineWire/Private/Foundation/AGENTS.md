@@ -35,7 +35,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Match a name with case, spaces and underscores ignored | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpPlainKey` |
 | Extract/coerce JSON fields | `HandlerUtils/McpHandlerUtilsJson.h` |
 | Standard response builders | `HandlerUtils/McpHandlerUtilsResponses.h` |
-| Transform / math helpers; a reply number to the nearest 1 / Scale | `HandlerUtils/McpHandlerUtilsTransforms.h` (`McpRoundTo`) |
+| Transform / math helpers; a reply number, or a vector as [x, y, z], to the nearest 1 / Scale | `HandlerUtils/McpHandlerUtilsTransforms.h` (`McpRoundTo`, `RoundedVectorToJsonArray`) |
 | BP graph node helpers | `Blueprint/McpBlueprintUtils.h` |
 | Resolve / validate `/Game` asset path | `BridgeHelpers/Assets/McpAssetResolve.h` |
 | Load a material the caller named, no fallback | `BridgeHelpers/Assets/McpAssetResolve.h` `LoadMaterialForMcp` |
@@ -57,6 +57,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Refuse a missing field or a bad asset path in one line | `BridgeHelpers/Responses/McpResponses.h` `McpReadRequiredField` ("<field> required"), `McpReadAssetPathOrReply` / `McpSanitizeAssetPathOrReply` (refusal wording, ASSET_NOT_FOUND): `if (!McpReadRequiredField(...)) return true;` |
 | Refuse in one line from a function that hands its refusal to its caller (sets OutError and OutCode, returns false) | `BridgeHelpers/Responses/McpResponses.h` `McpRefuse` |
 | Set a console variable and know it took | `Render/McpConsoleVariableWrite.h` `McpSetConsoleVariable` (console priority by default, read-only refused, read back; `IConsoleVariable::Set` alone loses to a console set silently) |
+| The level viewport and the editor windows: the active viewport client, a frame read at a size, the camera put where a capture asks, the window list, a timed run's window hold, a screenshot's receipt | `Viewport/McpEditorScreenshotSupport.h` |
 | Show or hide a stat overlay without toggling it twice | `Render/McpViewportStats.h` `McpIsStatShown` (the viewport a Stat command lands on: the running game, else the last level viewport; Stat commands toggle) |
 | Give a spawned volume real bounds | `../Domains/Volume/McpVolumeGeometry.h` `VolumeHelpers::CreateBoxBrushForVolume` (a volume from `SpawnActor` has no brush; scaling it leaves zero bounds) |
 | Everything at once | `BridgeHelpers/McpHelpers.h` (umbrella) |

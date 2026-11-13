@@ -12,6 +12,8 @@
 #include "K2Node_Literal.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "UObject/UnrealType.h"
+#include "Components/ActorComponent.h"
+#include "Components/Widget.h"
 
 namespace
 {
@@ -85,6 +87,20 @@ FMulticastDelegateProperty* McpFindMulticastDelegate(const UClass* Class, const 
         }
     }
     return Found;
+}
+
+FObjectProperty* McpFindComponentProperty(const UClass* Class, const FString& Name, bool bWidgets)
+{
+    for (TFieldIterator<FObjectProperty> It(Class); Class && It; ++It)
+    {
+        const UClass* Held = It->PropertyClass;
+        if (It->GetName().Equals(Name, ESearchCase::IgnoreCase) && Held &&
+            (Held->IsChildOf(UActorComponent::StaticClass()) || (bWidgets && Held->IsChildOf(UWidget::StaticClass()))))
+        {
+            return *It;
+        }
+    }
+    return nullptr;
 }
 
 bool McpBindLevelActorNode(UK2Node* Node, ULevel* Level, const FString& ActorName, const FString& EventName,

@@ -4,7 +4,7 @@
 // that no amount of drawing inside one call completes; a capture taken at once drew a just-built or just-framed
 // Nanite mesh as blobs of its coarsest clusters, which read as a broken mesh. The capture compares the frame with
 // the one it recorded on its previous pass and takes the picture again a beat later until two in a row match.
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 #include "EditorViewportClient.h"
 #include "Misc/Parse.h"

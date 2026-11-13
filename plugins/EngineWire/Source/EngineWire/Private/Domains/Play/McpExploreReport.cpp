@@ -52,7 +52,7 @@ TSharedPtr<FJsonObject> Report(const FSession& S, bool bDetail)
         McpNavigationHandlers::FMcpNavPath Path;
         FString Code;
         FString Message;
-        const bool bReach = McpNavigationHandlers::FindNavPath(World, S.Start, Point, FVector(100.0, 100.0, 250.0), Path, Code, Message) &&
+        const bool bReach = McpNavigationHandlers::FindNavPath(World, S.Start, Point, McpNavigationHandlers::McpNavPathExtent, Path, Code, Message) &&
                             Path.Reason == TEXT("ok");
         if (!bReach && Islands.Num() < 32)
         {

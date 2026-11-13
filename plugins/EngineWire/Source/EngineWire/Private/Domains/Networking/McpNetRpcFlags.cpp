@@ -1,4 +1,5 @@
 #include "Domains/Networking/McpNetPrivate.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "K2Node_CustomEvent.h"
 
@@ -32,15 +33,9 @@ struct FRpcNode
 FRpcNode FindRpcNode(UBlueprint* Blueprint, const FName Name)
 {
     FRpcNode Found;
-    if (UEdGraph* Graph = FindFunctionGraph(Blueprint, Name))
+    if ((Found.Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(FindFunctionGraph(Blueprint, Name))) != nullptr)
     {
-        for (UEdGraphNode* Node : Graph->Nodes)
-        {
-            if ((Found.Entry = Cast<UK2Node_FunctionEntry>(Node)) != nullptr)
-            {
-                return Found;
-            }
-        }
+        return Found;
     }
     for (UEdGraph* Graph : Blueprint->UbergraphPages)
     {

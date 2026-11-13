@@ -14,7 +14,7 @@
 #include "SourceControlHelpers.h"
 
 bool UEngineWireSubsystem::HandleBulkRenameAssets(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   // Get rename options

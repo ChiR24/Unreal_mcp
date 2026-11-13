@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_Event.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCallers.h"

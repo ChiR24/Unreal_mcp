@@ -2,7 +2,7 @@
 #include "Domains/Audio/McpAudioPrivate.h"
 #include "Containers/Ticker.h"
 #include "Sound/SoundWave.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 // play_sound playback measure: plays a sound and reads the level the mixer's own per-sound meter (its envelope
 // follower) reports while it plays, so a caller that cannot hear tells a working sound from a silent one.

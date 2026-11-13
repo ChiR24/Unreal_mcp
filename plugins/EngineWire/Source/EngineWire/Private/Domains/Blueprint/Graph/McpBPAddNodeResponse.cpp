@@ -1,6 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Domains/Blueprint/Timeline/McpBPTimeline.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {

@@ -119,8 +119,7 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Bluepri
                 Components.Add(MakeShared<FJsonValueObject>(Entry));
             }
         }
-        UClass *ParentClass = Current->ParentClass;
-        Current = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
+        Current = UBlueprint::GetBlueprintFromClass(Current->ParentClass);
     }
     AActor *DefaultActor = (Blueprint && Blueprint->GeneratedClass)
         ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;

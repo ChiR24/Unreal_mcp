@@ -18,9 +18,7 @@
 #include "Materials/MaterialExpressionSine.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialInstanceConstant.h"
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include MCP_MATERIAL_DOMAIN_HEADER
 
 namespace McpLightFlicker
 {

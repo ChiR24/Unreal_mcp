@@ -11,7 +11,7 @@
 #include "Engine/StaticMesh.h"
 
 bool UEngineWireSubsystem::HandleGenerateLODs(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   // Support both landscapePath (single) and assetPaths (array)

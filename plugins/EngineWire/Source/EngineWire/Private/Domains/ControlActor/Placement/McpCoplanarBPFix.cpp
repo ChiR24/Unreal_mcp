@@ -30,15 +30,10 @@ struct FMcpBlueprintNudge
     TArray<FString> Off;
 };
 
-UBlueprint* McpBlueprintOf(const AActor* Actor)
-{
-    return Cast<UBlueprint>(Actor->GetClass()->ClassGeneratedBy);
-}
-
 // The part's template in its actor's Blueprint, or null when the Blueprint does not define it.
 const USceneComponent* McpPartTemplate(const AActor* Actor, const FString& Part)
 {
-    UBlueprint* Blueprint = McpBlueprintOf(Actor);
+    UBlueprint* Blueprint = UBlueprint::GetBlueprintFromClass(Actor->GetClass());
     UObject* Defaults = Blueprint && Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
     return Defaults ? Cast<USceneComponent>(McpPropertyCdoComponents::FindCdoComponent(Blueprint, Defaults, Part, false))
                     : nullptr;
@@ -98,7 +93,7 @@ void PrepareParts(TArray<FMcpCoplanarPiece>& Pieces, TArray<FMcpCoplanarPair>& P
     Pairs.RemoveAll([&Pieces, &FirstCopy](const FMcpCoplanarPair& Pair)
     {
         const AActor* Actor = Pieces[Pair.Piece].Actor;
-        return Actor == Pieces[Pair.Other].Actor && McpBlueprintOf(Actor) &&
+        return Actor == Pieces[Pair.Other].Actor && UBlueprint::GetBlueprintFromClass(Actor->GetClass()) &&
                FirstCopy.FindOrAdd(Actor->GetClass(), Actor) != Actor;
     });
     TSet<int32> Checked;
@@ -144,7 +139,7 @@ void MovePartsInBlueprints(const TArray<FMcpPartMove>& Moves, bool bDryRun, TMap
         {
             ByPart.Add(Move.Component, Nudges.Num() - 1);
             Nudge.ClassPath = Move.Actor->GetClass()->GetPathName();
-            Nudge.BlueprintPath = McpBlueprintOf(Move.Actor)->GetOutermost()->GetName();
+            Nudge.BlueprintPath = UBlueprint::GetBlueprintFromClass(Move.Actor->GetClass())->GetOutermost()->GetName();
             Nudge.Component = Part;
             Nudge.Location = Template->GetRelativeLocation();
         }

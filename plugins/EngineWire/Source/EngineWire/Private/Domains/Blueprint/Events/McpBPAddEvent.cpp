@@ -1,5 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "EdGraphSchema_K2.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 

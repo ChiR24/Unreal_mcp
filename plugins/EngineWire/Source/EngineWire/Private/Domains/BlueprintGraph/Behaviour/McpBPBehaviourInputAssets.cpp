@@ -113,7 +113,7 @@ bool AppendRegistration(FPlan& Plan, bool bPawn, FString& OutError)
     }
     for (const TSharedPtr<FJsonObject>& Step : Steps)
     {
-        AddOp(Plan, CopyObject(Step), TEXT("input registration"));
+        AddOp(Plan, MakeShared<FJsonObject>(*Step), TEXT("input registration"));
         const FString Id = GetJsonStringField(Step, TEXT("id"));
         if (!Id.IsEmpty())
         {

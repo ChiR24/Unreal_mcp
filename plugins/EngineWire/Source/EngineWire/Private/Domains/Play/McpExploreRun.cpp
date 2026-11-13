@@ -109,7 +109,7 @@ void BeginReturn(FSession& S, APawn* Pawn, UWorld* World)
     McpNavigationHandlers::FMcpNavPath Path;
     FString Code;
     FString Message;
-    const bool bWalk = McpNavigationHandlers::FindNavPath(World, Pawn->GetActorLocation(), Cell.Where, FVector(100.0, 100.0, 250.0),
+    const bool bWalk = McpNavigationHandlers::FindNavPath(World, Pawn->GetActorLocation(), Cell.Where, McpNavigationHandlers::McpNavPathExtent,
                                                           Path, Code, Message) && Path.Reason == TEXT("ok");
     AController* Controller = Pawn->GetController();
     AAIController* AI = Cast<AAIController>(Controller);
@@ -218,7 +218,7 @@ bool Step(FSession& S, UWorld* World, double Until, FString& OutStop)
             McpNavigationHandlers::FMcpNavPath Back;
             FString Code;
             FString Message;
-            const bool bBack = McpNavigationHandlers::FindNavPath(World, From.Where, S.Start, FVector(100.0, 100.0, 250.0), Back, Code,
+            const bool bBack = McpNavigationHandlers::FindNavPath(World, From.Where, S.Start, McpNavigationHandlers::McpNavPathExtent, Back, Code,
                                                                   Message) && Back.Reason == TEXT("ok");
             if (!bBack)
             {

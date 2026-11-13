@@ -1,6 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "EngineWireSubsystem.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/Input/McpInputActionRouting.h"
 #include "Domains/Input/McpInputAssetResolve.h"
 #include "Domains/Input/McpInputKeyResolve.h"
 #include "Domains/Input/McpInputMappingSummaries.h"
@@ -32,6 +34,27 @@ FEnhancedActionKeyMapping* FindInputMapping(UInputMappingContext* Context, const
         }
     }
     return nullptr;
+}
+
+bool EnsureInputMapping(UEngineWireSubsystem& Bridge, const FString& Id, const FString& Context, const FString& Action,
+                        const FString& Key, bool& bOutAlready, FString& OutMessage)
+{
+    FString Normalized;
+    UInputMappingContext* ContextAsset = LoadInputMappingContextAsset(Context, Normalized);
+    UInputAction* ActionAsset = LoadInputActionAsset(Action, Normalized);
+    bOutAlready = ContextAsset && ActionAsset && FindInputMapping(ContextAsset, ActionAsset, InputKeyFromName(Key));
+    if (bOutAlready)
+    {
+        return true;
+    }
+    TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
+    Payload->SetStringField(TEXT("contextPath"), Context);
+    Payload->SetStringField(TEXT("actionPath"), Action);
+    Payload->SetStringField(TEXT("key"), Key);
+    const FMcpCapturedResponse Reply =
+        McpCaptureResponse(Id, [&] { HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr); });
+    OutMessage = Reply.Message;
+    return Reply.bSuccess;
 }
 
 bool HandleSetInputTrigger(

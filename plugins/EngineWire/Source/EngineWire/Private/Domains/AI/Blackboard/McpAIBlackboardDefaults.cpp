@@ -16,6 +16,7 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 #include "Misc/DefaultValueHelper.h"
 
@@ -65,26 +66,23 @@ bool ReadRotatorValue(const TSharedPtr<FJsonValue>& Value, FRotator& Out)
 #endif
 
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
-// An enumerator by name, display name or value; the key stores it in a byte.
+// An enumerator by name, display name (McpParseEnumToken) or value; the key stores it in a byte.
 bool ReadEnumValue(const UEnum* Enum, const TSharedPtr<FJsonValue>& Value, uint8& Out)
 {
     FString Text;
-    int32 Number = INDEX_NONE;
+    int64 Number = INDEX_NONE;
+    int32 Typed = INDEX_NONE;
     if (!McpJsonScalarToString(Value, Text))
     {
         return false;
     }
-    for (int32 Index = 0; Index < Enum->NumEnums() && Number == INDEX_NONE; ++Index)
+    if (!McpParseEnumToken(Enum, Text, Number))
     {
-        if (Enum->GetNameStringByIndex(Index).Equals(Text, ESearchCase::IgnoreCase) ||
-            Enum->GetDisplayNameTextByIndex(Index).ToString().Equals(Text, ESearchCase::IgnoreCase))
+        if (!FDefaultValueHelper::ParseInt(Text, Typed) || !Enum->IsValidEnumValue(Typed))
         {
-            Number = static_cast<int32>(Enum->GetValueByIndex(Index));
+            return false;
         }
-    }
-    if (Number == INDEX_NONE && !(FDefaultValueHelper::ParseInt(Text, Number) && Enum->IsValidEnumValue(Number)))
-    {
-        return false;
+        Number = Typed;
     }
     Out = static_cast<uint8>(Number);
     return Number >= 0 && Number <= MAX_uint8;

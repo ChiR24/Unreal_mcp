@@ -183,28 +183,16 @@ bool EnsureKeyMapping(UEngineWireSubsystem& Bridge, const FString& RequestId, co
     {
         return true;
     }
-    FString Normalized;
-    UInputMappingContext* Context = McpInputHandlers::LoadInputMappingContextAsset(Plan.ContextPath, Normalized);
-    UInputAction* Action = McpInputHandlers::LoadInputActionAsset(Plan.ActionPath, Normalized);
-    const FKey Key = FKey(FName(*Plan.Key));
-    // add_mapping on a pair that exists resets its triggers and modifiers, so a mapped pair is left alone.
-    const bool bMapped = Context && Action && McpInputHandlers::FindInputMapping(Context, Action, Key);
+    bool bMapped = false;
+    FString Message;
+    const bool bOk = McpInputHandlers::EnsureInputMapping(Bridge, RequestId + TEXT("#keymapping"), Plan.ContextPath,
+                                                          Plan.ActionPath, Plan.Key, bMapped, Message);
     Plan.Input->SetBoolField(TEXT("keyAlreadyMapped"), bMapped);
-    if (bMapped)
+    Plan.Input->SetBoolField(TEXT("keyMapped"), bOk);
+    if (!bMapped)
     {
-        Plan.Input->SetBoolField(TEXT("keyMapped"), true);
-        return true;
+        OutError = FString::Printf(TEXT("Mapping key %s to %s failed: %s"), *Plan.Key, *Plan.ActionPath, *Message);
     }
-    TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
-    Payload->SetStringField(TEXT("contextPath"), Plan.ContextPath);
-    Payload->SetStringField(TEXT("actionPath"), Plan.ActionPath);
-    Payload->SetStringField(TEXT("key"), Plan.Key);
-    const FString Id = RequestId + TEXT("#keymapping");
-    const FMcpCapturedResponse Reply = McpCaptureResponse(Id, [&] {
-        McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
-    });
-    Plan.Input->SetBoolField(TEXT("keyMapped"), Reply.bSuccess);
-    OutError = FString::Printf(TEXT("Mapping key %s to %s failed: %s"), *Plan.Key, *Plan.ActionPath, *Reply.Message);
-    return Reply.bSuccess;
+    return bOk;
 }
 } // namespace McpBlueprintBehaviour::Detail

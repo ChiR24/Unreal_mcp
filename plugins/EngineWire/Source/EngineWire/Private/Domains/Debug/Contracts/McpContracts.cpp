@@ -6,7 +6,6 @@
 #include "Domains/Debug/Contracts/McpContracts.h"
 
 #include "Dom/JsonValue.h"
-#include "Editor.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Solvers/McpPratt.h"

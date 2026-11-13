@@ -6,6 +6,7 @@
 // call changes (McpChangeWatch.cpp).
 
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
+#include "Domains/ControlActor/Placement/McpPlacementMount.h"
 
 #include "Components/MeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -16,20 +17,13 @@
 #include "EngineUtils.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "GameFramework/Actor.h"
-// EMaterialDomain's own header exists only on the engines that split it out; 5.0 declares it in MaterialShared.h.
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_MATERIAL_DOMAIN_HEADER
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 
 namespace
 {
-bool DrawnInGame(const UPrimitiveComponent* Part)
-{
-    return Part && Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly();
-}
-
 double ContentPartSize(const UPrimitiveComponent* Part)
 {
     return 2.0 * Part->Bounds.BoxExtent.GetMax();
@@ -43,7 +37,7 @@ FString DrawnKey(const AActor* Actor)
     TInlineComponentArray<UStaticMeshComponent*> Parts(Actor);
     for (const UStaticMeshComponent* Part : Parts)
     {
-        if (DrawnInGame(Part) && Part->GetStaticMesh())
+        if (McpPlacement::IsDrawnPart(Part) && Part->GetStaticMesh())
         {
             Meshes.Add(Part->GetStaticMesh()->GetPathName());
         }
@@ -113,7 +107,7 @@ void FindUnfinished(const AActor* Actor, TArray<FIssue>& Out)
     TInlineComponentArray<UPrimitiveComponent*> Parts(Actor);
     for (const UPrimitiveComponent* Part : Parts)
     {
-        if (!DrawnInGame(Part))
+        if (!McpPlacement::IsDrawnPart(Part))
         {
             continue;
         }

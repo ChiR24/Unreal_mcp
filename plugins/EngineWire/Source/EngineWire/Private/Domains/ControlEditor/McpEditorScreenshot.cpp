@@ -1,4 +1,4 @@
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/ControlEditor/Viewport/McpPathTracedShot.h"
 
 bool UEngineWireSubsystem::HandleControlEditorScreenshot(
@@ -247,30 +247,14 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   // "resolution" was declared on this capability but never read, so a 4K
   // viewport could only ever answer IMAGE_TOO_LARGE no matter what the caller
   // asked for. Resample here and the parameter means what the schema says.
-  FIntPoint OutputSize = FrameSize;
+  FIntPoint OutputSize;
+  TArray64<uint8> PngData;
   FString ResolutionError;
-  if (!ResolveScreenshotResolutionForMcp(Payload, FrameSize, OutputSize,
-                                         ResolutionError)) {
+  if (!EncodeViewShotForMcp(Payload, Bitmap, FrameSize, OutputSize, PngData, ResolutionError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               ResolutionError, nullptr);
     return true;
   }
-
-  TArray<FColor> ResampledBitmap;
-  if (OutputSize != FrameSize &&
-      Bitmap.Num() >= FrameSize.X * FrameSize.Y) {
-    ResampleBitmapForMcp(Bitmap, FrameSize, ResampledBitmap, OutputSize);
-    Bitmap = MoveTemp(ResampledBitmap);
-  } else {
-    OutputSize = FrameSize;
-  }
-
-  TArray64<uint8> PngData;
-  FImageUtils::PNGCompressImageArray(
-      OutputSize.X,
-      OutputSize.Y,
-      TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()),
-      PngData);
   if (PngData.Num() == 0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
                               TEXT("Failed to encode viewport screenshot as PNG"), nullptr);
@@ -291,12 +275,7 @@ bool UEngineWireSubsystem::HandleControlEditorScreenshot(
   // width/height describe the PNG actually returned. When a resample happened
   // the size the frame was taken at rides alongside, so a caller comparing the
   // two can tell a downscaled frame from a native-resolution one.
-  Resp->SetNumberField(TEXT("width"), OutputSize.X);
-  Resp->SetNumberField(TEXT("height"), OutputSize.Y);
-  if (OutputSize != FrameSize) {
-    Resp->SetNumberField(TEXT("viewportWidth"), FrameSize.X);
-    Resp->SetNumberField(TEXT("viewportHeight"), FrameSize.Y);
-  }
+  AddViewShotSizeForMcp(Resp, OutputSize, FrameSize);
   // Ship the camera with the picture. Without it a caller cannot tell a correct
   // frame from a frame taken somewhere else entirely, which is exactly how a
   // camera handler that silently ignored its arguments stayed hidden.

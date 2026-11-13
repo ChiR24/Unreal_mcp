@@ -1,7 +1,9 @@
 #include "Domains/Blueprint/McpBPSnapshot.h"
 
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_Event.h"
+#include "K2Node_FunctionEntry.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Blueprint/UserWidget.h"

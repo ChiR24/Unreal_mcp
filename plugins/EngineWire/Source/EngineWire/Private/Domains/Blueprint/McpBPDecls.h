@@ -36,8 +36,6 @@ void FEngineWire_AddUserPins(UK2Node_EditablePinBase *Node, const TArray<TShared
 UEdGraph *FindFunctionGraph(UBlueprint *Blueprint, const FString &Name);
 UFunction *FEngineWire_ResolveFunction(UBlueprint *Blueprint,
                                                 const FString &FunctionName);
-FProperty *FEngineWire_FindProperty(UBlueprint *Blueprint,
-                                             const FString &PropertyName);
 UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      const FString &NodeTypeLower,
                                      const FString &VariableName,

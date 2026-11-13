@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Editor/EditorPerformanceSettings.h"
 #include "Misc/App.h"
 
@@ -8,25 +9,15 @@
 #include "GameFramework/PlayerController.h"
 #include "ShowFlags.h"
 
-// Any engine view mode by its enum name without VMI_ (PathTracing, CollisionPawn, VisualizeNanite) or its display name
-// ("Path Tracing"), spaces, underscores and case ignored. Ten names were known; the rest went to a console command the
-// editor does not run, so a path-traced or collision view could not be shown.
+// Any engine view mode by its enum name with or without VMI_ (PathTracing, CollisionPawn, VisualizeNanite) or its display
+// name ("Path Tracing"), spaces, underscores and case ignored (McpParseEnum). Ten names were known; the rest went to a
+// console command the editor does not run, so a path-traced or collision view could not be shown.
 static bool FindViewModeByName(const FString &Name, EViewModeIndex &OutMode, FString &OutName) {
-  const FString Wanted = McpPlainKey(Name);
-  const UEnum *Enum = StaticEnum<EViewModeIndex>();
-  for (int32 Index = 0; Enum && Index < Enum->NumEnums() - 1; ++Index) {
-    if (Enum->HasMetaData(TEXT("Hidden"), Index) || Enum->GetValueByIndex(Index) == VMI_Unknown) {
-      continue;
-    }
-    const FString Short = Enum->GetNameStringByIndex(Index).RightChop(4);
-    if (!Wanted.IsEmpty() && (McpPlainKey(Short).Equals(Wanted, ESearchCase::IgnoreCase) ||
-                              McpPlainKey(Enum->GetDisplayNameTextByIndex(Index).ToString()).Equals(Wanted, ESearchCase::IgnoreCase))) {
-      OutMode = static_cast<EViewModeIndex>(Enum->GetValueByIndex(Index));
-      OutName = Short;
-      return true;
-    }
+  if (!McpParseEnum(Name, OutMode, /*bHidden=*/false) || OutMode == VMI_Unknown) {
+    return false;
   }
-  return false;
+  OutName = McpEnumName(OutMode).RightChop(4);
+  return true;
 }
 
 bool UEngineWireSubsystem::HandleControlEditorSetViewMode(

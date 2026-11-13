@@ -170,8 +170,7 @@ TSharedPtr<FJsonObject> DescribeShot(const FProblem& Problem, const FShot& Shot,
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("camera"), Camera.Label);
     Result->SetBoolField(TEXT("spawned"), Camera.Actor == nullptr);
-    const FVector Location(McpRoundTo(Shot.Location.X, 10.0), McpRoundTo(Shot.Location.Y, 10.0), McpRoundTo(Shot.Location.Z, 10.0));
-    Result->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Location));
+    Result->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Shot.Location));
     Result->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(FRotator(McpRoundTo(Shot.Rotation.Pitch, 100.0), McpRoundTo(Shot.Rotation.Yaw, 100.0), 0.0)));
     Result->SetNumberField(TEXT("fieldOfView"), McpRoundTo(FieldOfView(Camera.Lens), 10.0));
     if (Camera.bCine)

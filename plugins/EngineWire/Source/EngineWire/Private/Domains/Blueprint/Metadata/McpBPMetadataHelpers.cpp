@@ -1,6 +1,8 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_CustomEvent.h"
+#include "K2Node_FunctionEntry.h"
+#include "K2Node_FunctionResult.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
@@ -146,40 +148,4 @@ FEngineWire_ResolveFunction(UBlueprint *Blueprint,
   return nullptr;
 }
 
-FProperty *
-FEngineWire_FindProperty(UBlueprint *Blueprint,
-                                  const FString &PropertyName) {
-  if (!Blueprint || PropertyName.TrimStartAndEnd().IsEmpty()) {
-    return nullptr;
-  }
-
-  const FName PropFName(*PropertyName.TrimStartAndEnd());
-  const TArray<UClass *> CandidateClasses = {Blueprint->GeneratedClass,
-                                             Blueprint->SkeletonGeneratedClass,
-                                             Blueprint->ParentClass};
-
-  for (UClass *Candidate : CandidateClasses) {
-    if (!Candidate) {
-      continue;
-    }
-
-    if (FProperty *Found = Candidate->FindPropertyByName(PropFName)) {
-      return Found;
-    }
-  }
-
-  // SCS component properties are stored with "_GEN_VARIABLE" suffix
-  const FString GenVariableName = PropertyName + TEXT("_GEN_VARIABLE");
-  const FName GenVarFName(*GenVariableName);
-  for (UClass *Candidate : CandidateClasses) {
-    if (!Candidate) {
-      continue;
-    }
-    if (FProperty *Found = Candidate->FindPropertyByName(GenVarFName)) {
-      return Found;
-    }
-  }
-
-  return nullptr;
-}
 } // namespace McpBlueprintHandlers

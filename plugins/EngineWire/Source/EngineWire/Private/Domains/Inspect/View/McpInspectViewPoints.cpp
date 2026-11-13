@@ -1,5 +1,5 @@
 #include "Domains/Inspect/View/McpInspectViewIds.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Inspect/McpInspectShared.h"
 
 #include "CollisionQueryParams.h"

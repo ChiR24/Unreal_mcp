@@ -31,7 +31,7 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
         // LocalOnly / LocalPredicted / ServerOnly / ServerInitiated. An unknown value used to become
         // LocalPredicted while the caller's value was echoed back as applied.
         EGameplayAbilityNetExecutionPolicy::Type NetPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-        if (!TryParseGASEnum(Policy, NetPolicy))
+        if (!McpParseEnum(Policy, NetPolicy))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Unknown activationPolicy '%s'; use LocalOnly, LocalPredicted, ServerOnly or ServerInitiated."), *Policy),
@@ -84,7 +84,7 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
         // NonInstanced (deprecated on newer engines) / InstancedPerActor / InstancedPerExecution,
         // matched by name so the deprecated enumerator is never named in code.
         EGameplayAbilityInstancingPolicy::Type InstPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-        if (!TryParseGASEnum(Policy, InstPolicy))
+        if (!McpParseEnum(Policy, InstPolicy))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Unknown instancingPolicy '%s'; use NonInstanced, InstancedPerActor or InstancedPerExecution."), *Policy),

@@ -3,8 +3,10 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/Reflection/McpReflectedInvoke.h"
 
 #include "Dom/JsonObject.h"
+#include "Editor/EditorPerformanceSettings.h"
 
 #include "Framework/Docking/TabManager.h"
 #include "UObject/Package.h"
@@ -27,15 +29,8 @@ static bool TryOpenFabByReflection(FString &OutDiagnostic) {
   }
   UObject *Api = NewObject<UObject>(GetTransientPackage(), ApiClass);
   // Default-initialised parameters: an empty URL is Fab's own landing page.
-  uint8 *Params = static_cast<uint8 *>(FMemory_Alloca(Open->ParmsSize));
-  FMemory::Memzero(Params, Open->ParmsSize);
-  for (TFieldIterator<FProperty> It(Open); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) {
-    It->InitializeValue_InContainer(Params);
-  }
-  Api->ProcessEvent(Open, Params);
-  for (TFieldIterator<FProperty> It(Open); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) {
-    It->DestroyValue_InContainer(Params);
-  }
+  FMcpScopedParamBlock Params(Open);
+  Api->ProcessEvent(Open, Params.Data());
   return true;
 }
 
@@ -149,5 +144,59 @@ bool HandleCloseEditorTabForMcp(UEngineWireSubsystem *Self, const FString &Reque
       bClosed ? FString::Printf(TEXT("Tab '%s' closed."), *TabId)
               : FString::Printf(TEXT("Tab '%s' kept itself open (unsaved work or a locked tab)."), *TabId),
       Result, bClosed ? TEXT("") : TEXT("TAB_CLOSE_REFUSED"));
+  return true;
+}
+
+// configure_editor window: restores the main frame, or with `minimize` puts it away, never
+// taking focus. A minimized editor runs PIE at about 3 fps however the throttle preference
+// is set, so timed tests need the frame back on screen; restoring it by hand from outside
+// the editor is exactly the kind of side channel the tool exists to replace. The rest of the
+// time a minimized, throttled editor costs the machine next to nothing, so `minimize` also
+// turns the background throttle back on.
+bool UEngineWireSubsystem::HandleControlEditorRestoreWindow(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+  const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+  const TSharedPtr<FGenericWindow> Native = Root.IsValid() ? Root->GetNativeWindow() : nullptr;
+  if (!Native.IsValid()) {
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("WINDOW_NOT_FOUND"),
+                              TEXT("The main editor window is not open."), nullptr);
+    return true;
+  }
+  const bool bWasMinimized = Native->IsMinimized();
+  bool bMinimize = false;
+  Payload->TryGetBoolField(TEXT("minimize"), bMinimize);
+  bool bUnthrottle = true;
+  Payload->TryGetBoolField(TEXT("unthrottle"), bUnthrottle);
+  if (bMinimize) {
+    MinimizeWindowForMcp(Root.ToSharedRef());
+  } else {
+    CountWindowRestoreRequestForMcp();
+    RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  }
+  UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
+  // minimize wants the throttle on and saves it; a restore with unthrottle turns it off for this editor
+  // session only. Saved, it left every later launch running flat out in the background.
+  if (Performance && (bMinimize || bUnthrottle) && Performance->bThrottleCPUWhenNotForeground != bMinimize) {
+    Performance->bThrottleCPUWhenNotForeground = bMinimize;
+    if (bMinimize) {
+      Performance->SaveConfig();
+    }
+  }
+  const bool bMinimizedNow = Native->IsMinimized();
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetBoolField(TEXT("wasMinimized"), bWasMinimized);
+  Data->SetBoolField(TEXT("minimized"), bMinimizedNow);
+  Data->SetBoolField(TEXT("restored"), !bMinimizedNow);
+  Data->SetBoolField(TEXT("throttleOff"), Performance && !Performance->bThrottleCPUWhenNotForeground);
+  const TCHAR *Message = TEXT("Editor window was already on screen");
+  if (bMinimize) {
+    Message = !bMinimizedNow ? TEXT("Editor window could not be minimized without taking focus")
+              : bWasMinimized ? TEXT("Editor window was already minimized")
+                              : TEXT("Editor window minimized without taking focus");
+  } else if (bWasMinimized) {
+    Message = TEXT("Editor window restored without taking focus");
+  }
+  SendAutomationResponse(RequestingSocket, RequestId, true, Message, Data);
   return true;
 }

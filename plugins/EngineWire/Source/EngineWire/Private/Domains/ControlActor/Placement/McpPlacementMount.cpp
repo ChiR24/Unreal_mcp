@@ -34,11 +34,9 @@ bool IsBoundsOnlyActor(const AActor *Actor) {
          ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
 }
 
-namespace {
 bool IsDrawnPart(const UPrimitiveComponent *Part) {
-  return Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly();
+  return Part && Part->IsRegistered() && Part->IsVisible() && !Part->bHiddenInGame && !Part->IsEditorOnly();
 }
-} // namespace
 
 FBox DrawnBounds(const AActor &Actor) {
   FBox Box(ForceInit);

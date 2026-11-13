@@ -19,9 +19,8 @@
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Materials/Material.h"
 #include "Math/RandomStream.h"
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include MCP_MATERIAL_DOMAIN_HEADER
 #include MCP_HIT_RESULT_HEADER
 
 namespace McpDecalPlacement
@@ -70,16 +69,6 @@ void FindSurface(UWorld* World, const FVector& Direction, double TraceCm, const 
         return;
     }
     Spot.Normal = Hit.ImpactNormal;
-}
-
-TSharedPtr<FJsonValue> DecalVector(const FVector& Value)
-{
-    TArray<TSharedPtr<FJsonValue>> Parts;
-    for (const double Part : {Value.X, Value.Y, Value.Z})
-    {
-        Parts.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Part, 10.0)));
-    }
-    return MakeShared<FJsonValueArray>(Parts);
 }
 
 // Label_01, Label_02 ... skipping every label the level already holds, so each decal can be named in a later call.
@@ -212,7 +201,7 @@ bool HandlePlaceDecals(UEngineWireSubsystem& Bridge, const FString& RequestId, c
             if (!Spot.HitActor.IsEmpty()) Row->SetStringField(TEXT("hitActor"), Spot.HitActor);
             if (!Spot.Missed.IsEmpty())
             {
-                Row->SetField(TEXT("point"), DecalVector(Spot.Point));
+                Row->SetArrayField(TEXT("point"), McpHandlerUtils::RoundedVectorToJsonArray(Spot.Point));
                 Row->SetStringField(TEXT("reason"), Spot.Missed);
                 Missed.Add(MakeShared<FJsonValueObject>(Row));
                 continue;
@@ -248,9 +237,9 @@ bool HandlePlaceDecals(UEngineWireSubsystem& Bridge, const FString& RequestId, c
                 Name = Decal->GetActorLabel();
             }
             Row->SetStringField(TEXT("name"), Name);
-            Row->SetField(TEXT("location"), DecalVector(Spot.Location));
-            Row->SetField(TEXT("normal"), DecalVector(Spot.Normal));
-            Row->SetField(TEXT("rotation"), DecalVector(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
+            Row->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Spot.Location));
+            Row->SetArrayField(TEXT("normal"), McpHandlerUtils::RoundedVectorToJsonArray(Spot.Normal));
+            Row->SetArrayField(TEXT("rotation"), McpHandlerUtils::RoundedVectorToJsonArray(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
             Placed.Add(MakeShared<FJsonValueObject>(Row));
         }
         if (Transaction.IsSet() && Placed.Num() > 0) Transaction->DescribeInto(Result);

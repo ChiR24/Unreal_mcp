@@ -1,6 +1,6 @@
 #include "Domains/Inspect/McpInspectShared.h"
 #include "Domains/Inspect/View/McpInspectViewIds.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Perception/McpPerception.h"
 #include "Foundation/McpScreenshotResample.h"
 

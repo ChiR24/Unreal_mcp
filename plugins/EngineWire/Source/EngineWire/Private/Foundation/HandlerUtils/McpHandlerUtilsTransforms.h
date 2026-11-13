@@ -4,6 +4,13 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
+// Value to the nearest 1 / Scale (Scale 10: tenths). Divided by Scale, not multiplied by 1 / Scale: 594 x 0.1 is
+// 59.400000000000006, 594 / 10 is 59.4.
+inline double McpRoundTo(double Value, double Scale)
+{
+    return FMath::RoundToDouble(Value * Scale) / Scale;
+}
+
 namespace McpHandlerUtils
 {
 // Transform math leaves noise in the last digits: a 90 degree yaw read 89.99999999999999 and a camera y
@@ -25,6 +32,13 @@ inline TArray<TSharedPtr<FJsonValue>> VectorToJsonArray(const FVector& Vector)
 {
     return {MakeShared<FJsonValueNumber>(ReadableDouble(Vector.X)), MakeShared<FJsonValueNumber>(ReadableDouble(Vector.Y)),
             MakeShared<FJsonValueNumber>(ReadableDouble(Vector.Z))};
+}
+
+// VectorToJsonArray of the vector with each axis to the nearest 1 / Scale (Scale 10: tenths).
+inline TArray<TSharedPtr<FJsonValue>> RoundedVectorToJsonArray(const FVector& Vector, double Scale = 10.0)
+{
+    return VectorToJsonArray(
+        FVector(McpRoundTo(Vector.X, Scale), McpRoundTo(Vector.Y, Scale), McpRoundTo(Vector.Z, Scale)));
 }
 
 // [pitch, yaw, roll], the array counterpart of RotatorToJson.
@@ -71,11 +85,4 @@ inline TSharedPtr<FJsonObject> LinearColorToJson(const FLinearColor& Color)
     Obj->SetNumberField(TEXT("a"), ReadableFloat(Color.A));
     return Obj;
 }
-}
-
-// Value to the nearest 1 / Scale (Scale 10: tenths). Divided by Scale, not multiplied by 1 / Scale: 594 x 0.1 is
-// 59.400000000000006, 594 / 10 is 59.4.
-inline double McpRoundTo(double Value, double Scale)
-{
-    return FMath::RoundToDouble(Value * Scale) / Scale;
 }

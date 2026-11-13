@@ -1,5 +1,6 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/SlateWrapperTypes.h"
@@ -64,23 +65,21 @@ UEdGraph* BuildGetter(UWidgetBlueprint* WidgetBP, const FString& WidgetName, FNa
         WidgetBP, FString::Printf(TEXT("Get_%s_%s"), *WidgetName, *Property.ToString()));
     UEdGraph* Graph = FBlueprintEditorUtils::CreateNewGraph(WidgetBP, GraphName, UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
     FBlueprintEditorUtils::AddFunctionGraph<UFunction>(WidgetBP, Graph, true, Signature);
-    TArray<UK2Node_FunctionEntry*> Entries;
-    TArray<UK2Node_FunctionResult*> Results;
-    Graph->GetNodesOfClass(Entries);
-    Graph->GetNodesOfClass(Results);
-    UEdGraphPin* ReturnPin = Results.Num() > 0 ? Results[0]->FindPin(UEdGraphSchema_K2::PN_ReturnValue) : nullptr;
-    if (Entries.Num() == 0 || !ReturnPin)
+    UK2Node_FunctionEntry* Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph);
+    UK2Node_FunctionResult* Result = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionResult>(Graph);
+    UEdGraphPin* ReturnPin = Result ? Result->FindPin(UEdGraphSchema_K2::PN_ReturnValue) : nullptr;
+    if (!Entry || !ReturnPin)
     {
         OutError = TEXT("the binding signature has no return value to fill");
         FBlueprintEditorUtils::RemoveGraph(WidgetBP, Graph);
         return nullptr;
     }
-    Entries[0]->AddExtraFlags(FUNC_BlueprintPure | FUNC_Const);
+    Entry->AddExtraFlags(FUNC_BlueprintPure | FUNC_Const);
     FGraphNodeCreator<UK2Node_VariableGet> GetCreator(*Graph);
     UK2Node_VariableGet* Get = GetCreator.CreateNode();
     Get->VariableReference.SetSelfMember(Source);
-    Get->NodePosX = Results[0]->NodePosX - 420;
-    Get->NodePosY = Results[0]->NodePosY + 140;
+    Get->NodePosX = Result->NodePosX - 420;
+    Get->NodePosY = Result->NodePosY + 140;
     GetCreator.Finalize();
     const UEdGraphSchema_K2* Schema = GetDefault<UEdGraphSchema_K2>();
     UEdGraphPin* ValuePin = Get->FindPin(Source);
@@ -90,8 +89,8 @@ UEdGraph* BuildGetter(UWidgetBlueprint* WidgetBP, const FString& WidgetName, FNa
     {
         FGraphNodeCreator<UK2Node_Select> SelectCreator(*Graph);
         UK2Node_Select* Select = SelectCreator.CreateNode();
-        Select->NodePosX = Results[0]->NodePosX - 200;
-        Select->NodePosY = Results[0]->NodePosY + 120;
+        Select->NodePosX = Result->NodePosX - 200;
+        Select->NodePosY = Result->NodePosY + 120;
         SelectCreator.Finalize();
         bLinked = Schema->TryCreateConnection(ValuePin, Select->GetIndexPin()) &&
                   Schema->TryCreateConnection(Select->GetReturnValuePin(), ReturnPin);

@@ -81,9 +81,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
         MeshObj = LoadObject<UObject>(nullptr, *SafeMeshPath);
       }
       if (!MeshObj && !SafeMeshPath.Contains(TEXT("."))) {
-        const FString ObjectPath =
-            SafeMeshPath + TEXT(".") +
-            FPackageName::GetShortName(SafeMeshPath);
+        const FString ObjectPath = McpToObjectPath(SafeMeshPath);
         MeshObj = LoadObject<UObject>(nullptr, *ObjectPath);
       }
       if (!MeshObj) {

@@ -119,14 +119,9 @@ FString McpNaniteRebuildOne(const FString &Given, double TrianglePercent, const 
 } // namespace
 
 bool UEngineWireSubsystem::HandleNaniteRebuildMesh(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("nanite_rebuild_mesh"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
 
   // Percent of the source triangles Nanite keeps (the record's default: all of them).
   double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 100.0);

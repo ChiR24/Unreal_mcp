@@ -56,20 +56,17 @@ UEdGraph* FindFunctionGraph(UBlueprint* Blueprint, FName Name);
 // Otherwise replies NAME_TAKEN (a member already has it) or INVALID_ARGUMENT (not a valid name) and returns false.
 // FBlueprintEditorUtils::CreateNewGraph does not refuse a taken name: it renames the graph holding it out of the way.
 bool CheckFreeMemberNameOrReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Name, const TCHAR* Field);
-// Parses Name as a value of TEnum ("COND_OwnerOnly", "DORM_Awake", "ROLE_Authority", "Exponential"; case
-// ignored). An unknown name used to fall back to a default (COND_None, DORM_Never, ROLE_None) while the reply
-// echoed the caller's string, so it now fails and OutValidNames lists the accepted spellings.
+// Parses Name as a value of TEnum ("COND_OwnerOnly", "DORM_Awake", "ROLE_Authority", "Exponential"; any spelling
+// McpParseEnum reads). An unknown name used to fall back to a default (COND_None, DORM_Never, ROLE_None) while the
+// reply echoed the caller's string, so it now fails and OutValidNames lists the accepted spellings.
 template <typename TEnum>
 bool TryParseNetEnum(const FString& Name, TEnum& OutValue, FString& OutValidNames)
 {
-    const UEnum* Enum = StaticEnum<TEnum>();
-    const int64 Value = Name.IsEmpty() ? INDEX_NONE : Enum->GetValueByNameString(Name);
-    const FString Resolved = Value == INDEX_NONE ? FString() : Enum->GetNameStringByValue(Value);
-    if (Value != INDEX_NONE && !Resolved.EndsWith(TEXT("_MAX"), ESearchCase::IgnoreCase))
+    if (McpParseEnum(Name, OutValue))
     {
-        OutValue = static_cast<TEnum>(Value);
         return true;
     }
+    const UEnum* Enum = StaticEnum<TEnum>();
     TArray<FString> Names;
     for (int32 Index = 0; Index < Enum->NumEnums(); ++Index)
     {

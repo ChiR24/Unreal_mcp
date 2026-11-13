@@ -12,7 +12,7 @@ namespace
 {
 constexpr double SideShare = 10.0;      // cm two sides must share to stand side by side
 constexpr double HeightGrace = 1.0;     // cm of height two boxes may share without overlapping (one rests on the other)
-constexpr double FacingGrace = 0.34907; // 20 degrees in radians: a turn within it holds
+using McpRelations::FacingGrace;
 constexpr double HairGap = 0.5;         // cm a snapped contact keeps: touching shapes read as intersecting
 constexpr double EdgeMargin = 10.0;     // cm from a support's edges a subject keeps where the top has room (a lamp on a table)
 constexpr double FlushWeight = 0.1;     // per radian squared two sides that touch stand off square: furniture stands flush

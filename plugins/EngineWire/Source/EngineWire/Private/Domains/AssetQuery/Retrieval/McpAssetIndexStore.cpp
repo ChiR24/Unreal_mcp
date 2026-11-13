@@ -6,6 +6,7 @@
 
 #include "Domains/AssetQuery/Retrieval/McpAssetIndex.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -55,7 +56,7 @@ TArray<TSharedPtr<FJsonValue>> StoreNumbers(const TArray<float>& Values)
     TArray<TSharedPtr<FJsonValue>> Out;
     for (const float Value : Values)
     {
-        Out.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value * 1e4) / 1e4));
+        Out.Add(MakeShared<FJsonValueNumber>(McpRoundTo(Value, 1e4)));
     }
     return Out;
 }

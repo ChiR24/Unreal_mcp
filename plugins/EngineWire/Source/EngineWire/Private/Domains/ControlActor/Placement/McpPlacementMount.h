@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 class AActor;
+class UPrimitiveComponent;
 class UWorld;
 
 namespace McpPlacement {
@@ -21,6 +22,9 @@ bool IsBoundsOnlyActor(const AActor *Actor);
  * a small prop: an 84 cm robot read as a 256 cm cube round its pivot.
  */
 FBox DrawnBounds(const AActor &Actor);
+
+/** A part the game draws: registered, visible, not hidden in game and not editor-only. False for none. */
+bool IsDrawnPart(const UPrimitiveComponent *Part);
 
 /** The same parts' box measured in Frame (an actor's own turned frame, say): invalid when nothing is drawn. */
 FBox DrawnBoundsIn(const AActor &Actor, const FTransform &Frame);

@@ -173,4 +173,14 @@ inline UMaterialInterface* LoadMaterial(const FString& Text, FString& OutReason,
     }
     return Material;
 }
+
+// The first three lines joined with "; ", then "N more" and MoreSuffix when there are more.
+inline FString JoinCapped(const TArray<FString>& Lines, const TCHAR* MoreSuffix = TEXT(""))
+{
+    constexpr int32 MaxQuoted = 3;
+    TArray<FString> Quoted;
+    for (int32 Line = 0; Line < Lines.Num() && Line < MaxQuoted; ++Line) Quoted.Add(Lines[Line]);
+    if (Lines.Num() > MaxQuoted) Quoted.Add(FString::Printf(TEXT("%d more%s"), Lines.Num() - MaxQuoted, MoreSuffix));
+    return FString::Join(Quoted, TEXT("; "));
+}
 }

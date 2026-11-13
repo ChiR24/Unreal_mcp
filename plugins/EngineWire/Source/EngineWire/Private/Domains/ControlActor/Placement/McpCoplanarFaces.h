@@ -123,6 +123,9 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
 // clean. Returns the rows that had no warning before.
 int32 AddCoplanarToRows(const TMap<AActor*, TSharedPtr<FJsonObject>>& Rows);
 
+// The world axis (0 X, 1 Y, 2 Z) a face normal points along (|Normal[Axis]| > 0.99), or INDEX_NONE for a slanted face.
+int32 McpCoplanarWorldAxis(const FVector& Normal);
+
 // "+X" for a face that points along an axis, so it reads like the gizmo arrows.
 FString DescribeDirection(const FVector& Normal);
 

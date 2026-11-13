@@ -9,12 +9,6 @@
 namespace McpInspectHandlers {
 namespace {
 constexpr int32 McpMaxListedParts = 8;
-
-TArray<TSharedPtr<FJsonValue>> McpRoundedVec(const FVector &V)
-{
-    return McpHandlerUtils::VectorToJsonArray(FVector(McpRoundTo(V.X, 10.0),
-        McpRoundTo(V.Y, 10.0), McpRoundTo(V.Z, 10.0)));
-}
 } // namespace
 
 bool HandleInspectMeshCheckAction(
@@ -39,8 +33,8 @@ bool HandleInspectMeshCheckAction(
         const McpMeshCheck::FPart &Part = Report.Parts[Index];
         TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
         Entry->SetNumberField(TEXT("triangles"), Part.Triangles);
-        Entry->SetArrayField(TEXT("size"), McpRoundedVec(Part.Box.GetSize()));
-        Entry->SetArrayField(TEXT("center"), McpRoundedVec(Part.Box.GetCenter()));
+        Entry->SetArrayField(TEXT("size"), McpHandlerUtils::RoundedVectorToJsonArray(Part.Box.GetSize()));
+        Entry->SetArrayField(TEXT("center"), McpHandlerUtils::RoundedVectorToJsonArray(Part.Box.GetCenter()));
         if (Part.bInsideOut)
         {
             Entry->SetBoolField(TEXT("insideOut"), true);
@@ -53,7 +47,7 @@ bool HandleInspectMeshCheckAction(
     Result->SetStringField(TEXT("meshPath"), Mesh->GetPathName());
     Result->SetNumberField(TEXT("triangles"), Report.Triangles);
     Result->SetNumberField(TEXT("vertices"), Report.Vertices);
-    Result->SetArrayField(TEXT("size"), McpRoundedVec(Report.Bounds.IsValid ? Report.Bounds.GetSize() : FVector::ZeroVector));
+    Result->SetArrayField(TEXT("size"), McpHandlerUtils::RoundedVectorToJsonArray(Report.Bounds.IsValid ? Report.Bounds.GetSize() : FVector::ZeroVector));
     Result->SetNumberField(TEXT("surfaceArea"), FMath::RoundToDouble(Report.SurfaceArea));
     Result->SetBoolField(TEXT("closed"), bClosed);
     if (bClosed)

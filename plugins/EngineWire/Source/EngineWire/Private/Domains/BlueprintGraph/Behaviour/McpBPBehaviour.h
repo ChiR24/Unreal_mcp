@@ -178,7 +178,6 @@ bool CheckKeys(const TSharedPtr<FJsonObject>& Object, std::initializer_list<cons
                FString& OutError);
 bool ObjectsIn(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, TArray<TSharedPtr<FJsonObject>>& Out,
                FString& OutError);
-TSharedPtr<FJsonObject> CopyObject(const TSharedPtr<FJsonObject>& Source);
 void AddOp(FPlan& Plan, const TSharedPtr<FJsonObject>& Step, const FString& Label);
 bool BuildPlan(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprint* Blueprint,
                const TSharedPtr<FJsonObject>& Recipe, FPlan& Plan, const TSharedPtr<FJsonObject>& Report,

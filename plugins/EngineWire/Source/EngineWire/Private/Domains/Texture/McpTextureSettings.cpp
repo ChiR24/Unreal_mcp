@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpTextureShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpTextureHandlers
 {
@@ -29,22 +30,6 @@ UTexture2D* LoadTextureChecked(const TSharedPtr<FJsonObject>& Params, TSharedPtr
         return nullptr;
     }
     return Texture;
-}
-
-// An engine enum value by its name, with or without the prefix (TC_Normalmap or Normalmap). An unknown compression name
-// became TC_Default and a group was matched by substring ("Building" landed in UI), each answering success.
-template <typename TEnum>
-bool ParseEngineEnum(const FString& Value, const TCHAR* Prefix, TEnum& Out)
-{
-    const UEnum* Enum = StaticEnum<TEnum>();
-    int64 Found = Value.IsEmpty() ? INDEX_NONE : Enum->GetValueByNameString(Value);
-    Found = Found == INDEX_NONE && !Value.IsEmpty() ? Enum->GetValueByNameString(Prefix + Value) : Found;
-    if (Found == INDEX_NONE || Found >= Enum->GetMaxEnumValue())
-    {
-        return false;
-    }
-    Out = static_cast<TEnum>(Found);
-    return true;
 }
 
 // The names a refusal offers, hidden entries left out and Prefix cut off: every group with its TEXTUREGROUP_ ran past
@@ -92,7 +77,9 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
     {
         const FString CompressionSettingsStr = GetJsonStringField(Params, TEXT("compressionSettings"));
         TextureCompressionSettings Compression = TC_Default;
-        if (!ParseEngineEnum(CompressionSettingsStr, TEXT("TC_"), Compression))
+        // TC_Normalmap or Normalmap (McpParseEnum). An unknown compression name became TC_Default and a group was matched
+        // by substring ("Building" landed in UI), each answering success.
+        if (!McpParseEnum(CompressionSettingsStr, Compression))
         {
             const TArray<FString> Valid = EngineEnumNames<TextureCompressionSettings>(TEXT("TC_"));
             return Refuse(Response, FString::Printf(TEXT("compressionSettings '%s' is not a texture compression setting; use one of %s "
@@ -115,7 +102,7 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
     {
         const FString TextureGroup = GetJsonStringField(Params, TEXT("textureGroup"));
         ::TextureGroup Group = TEXTUREGROUP_World;
-        if (!ParseEngineEnum(TextureGroup, TEXT("TEXTUREGROUP_"), Group))
+        if (!McpParseEnum(TextureGroup, Group))
         {
             return Refuse(Response, FString::Printf(TEXT("textureGroup '%s' is not a texture group; use an engine group such as World, "
                 "WorldNormalMap, Character, Weapon, Vehicle, Cinematic, Effects, Skybox, UI, Lightmap, Shadowmap, Pixels2D or "

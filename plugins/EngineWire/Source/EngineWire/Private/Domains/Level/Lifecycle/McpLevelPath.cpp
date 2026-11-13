@@ -3,12 +3,12 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonObject.h"
-#include "Editor.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
+#include "UObject/Package.h"
 
 namespace McpLevelHandlers {
 bool TryGetAbsoluteMapFilename(const FString& PackagePath, FString& OutFilename) {

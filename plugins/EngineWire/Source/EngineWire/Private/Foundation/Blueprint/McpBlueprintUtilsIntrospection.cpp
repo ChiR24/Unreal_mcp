@@ -36,10 +36,7 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables(UBlueprint* Blueprint)
         while (Current)
         {
             Chain.Add(Current);
-            UClass* ParentClass = Current->ParentClass;
-            UBlueprint* ParentBP = ParentClass
-                ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy)
-                : nullptr;
+            UBlueprint* ParentBP = UBlueprint::GetBlueprintFromClass(Current->ParentClass);
             if (!ParentBP || ParentBP == Current || Chain.Contains(ParentBP))
             {
                 break;

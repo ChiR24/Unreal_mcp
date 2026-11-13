@@ -1,4 +1,4 @@
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 #include "EngineWireLog.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
@@ -123,6 +123,30 @@ void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
       : FString::Printf(TEXT("%s captured."), What);
   Resp->SetStringField(TEXT("message"), Message);
   Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
+}
+
+bool EncodeViewShotForMcp(const TSharedPtr<FJsonObject> &Payload, TArray<FColor> &Bitmap, FIntPoint FrameSize,
+                          FIntPoint &OutSize, TArray64<uint8> &OutPng, FString &OutError) {
+  OutSize = FrameSize;
+  const bool bResolved = ResolveScreenshotResolutionForMcp(Payload, FrameSize, OutSize, OutError);
+  if (bResolved && OutSize != FrameSize && Bitmap.Num() >= FrameSize.X * FrameSize.Y) {
+    TArray<FColor> Resampled;
+    ResampleBitmapForMcp(Bitmap, FrameSize, Resampled, OutSize);
+    Bitmap = MoveTemp(Resampled);
+  } else {
+    OutSize = FrameSize;
+  }
+  FImageUtils::PNGCompressImageArray(OutSize.X, OutSize.Y, TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()), OutPng);
+  return bResolved;
+}
+
+void AddViewShotSizeForMcp(const TSharedPtr<FJsonObject> &Resp, FIntPoint Size, FIntPoint FrameSize) {
+  Resp->SetNumberField(TEXT("width"), Size.X);
+  Resp->SetNumberField(TEXT("height"), Size.Y);
+  if (Size != FrameSize) {
+    Resp->SetNumberField(TEXT("viewportWidth"), FrameSize.X);
+    Resp->SetNumberField(TEXT("viewportHeight"), FrameSize.Y);
+  }
 }
 
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,

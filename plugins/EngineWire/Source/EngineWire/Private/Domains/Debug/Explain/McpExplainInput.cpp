@@ -9,7 +9,6 @@
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphPin.h"
-#include "Editor.h"
 #include "Engine/Blueprint.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputSubsystems.h"

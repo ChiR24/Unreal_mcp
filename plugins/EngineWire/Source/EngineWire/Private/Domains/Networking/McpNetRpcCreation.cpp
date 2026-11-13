@@ -90,18 +90,14 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
     // and the public, callable, overridable flags. Without it the function had none of them.
     FBlueprintEditorUtils::AddFunctionGraph<UFunction>(Blueprint, NewGraph, true, static_cast<UFunction*>(nullptr));
 
-    for (UEdGraphNode* Node : NewGraph->Nodes)
+    if (UK2Node_FunctionEntry* EntryNode = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(NewGraph))
     {
-        if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
+        EntryNode->AddExtraFlags(FUNC_Net | DirectionFlag | (bReliable ? FUNC_NetReliable : 0));
+        for (const TSharedPtr<FJsonValue>& Input : Inputs)
         {
-            EntryNode->AddExtraFlags(FUNC_Net | DirectionFlag | (bReliable ? FUNC_NetReliable : 0));
-            for (const TSharedPtr<FJsonValue>& Input : Inputs)
-            {
-                const TSharedPtr<FJsonObject> Pin = Input->AsObject();
-                EntryNode->CreateUserDefinedPin(FName(*GetJsonStringField(Pin, TEXT("name")).TrimStartAndEnd()),
-                    McpBlueprintUtils::MakePinType(GetJsonStringField(Pin, TEXT("type"))), EGPD_Output);
-            }
-            break;
+            const TSharedPtr<FJsonObject> Pin = Input->AsObject();
+            EntryNode->CreateUserDefinedPin(FName(*GetJsonStringField(Pin, TEXT("name")).TrimStartAndEnd()),
+                McpBlueprintUtils::MakePinType(GetJsonStringField(Pin, TEXT("type"))), EGPD_Output);
         }
     }
 

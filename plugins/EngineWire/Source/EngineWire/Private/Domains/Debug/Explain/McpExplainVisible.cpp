@@ -144,13 +144,9 @@ void CheckView(FTree& Tree, AActor* Actor, const TArray<UPrimitiveComponent*>& P
     {
         if (Part->CachedMaxDrawDistance > 0.f && Distance > Part->CachedMaxDrawDistance)
         {
-            TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-            Params->SetStringField(TEXT("objectPath"), Part->GetPathName());
-            Params->SetStringField(TEXT("propertyName"), TEXT("LDMaxDrawDistance"));
-            Params->SetNumberField(TEXT("value"), 0);
             Tree.Fail(TEXT("drawDistance"), TEXT("CULLED_BY_DISTANCE"),
                       FString::Printf(TEXT("%s stops drawing beyond %.0f units and the camera is %.0f away."), *Part->GetName(), Part->CachedMaxDrawDistance, Distance),
-                      McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params));
+                      SetPropertyCall(Part, TEXT("LDMaxDrawDistance"), MakeShared<FJsonValueNumber>(0)));
             return;
         }
     }

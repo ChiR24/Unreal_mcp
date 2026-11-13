@@ -10,16 +10,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Modules/ModuleManager.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
-#define MCP_GET_EMITTER_DATA(Handle) (Handle).GetEmitterData()
-#define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)->GetLatestEmitterData()
-#else
-#define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
-#define MCP_GET_EMITTER_DATA(Handle) (&(Handle))->GetInstance()
-#define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)
-#endif
-
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
@@ -205,7 +195,7 @@ inline FName PinStructName(const UEdGraphPin& Pin)
     const UObject* Struct = Pin.PinType.PinSubCategoryObject.Get();
     return Struct ? Struct->GetFName() : NAME_None;
 }
-// In ...HandlersStackGraph.cpp: writes Value (an enum entry by display name, name or value; a bool; an int) to the
+// In McpNiagaraStackGraph.cpp: writes Value (an enum entry by display name, name or value; a bool; an int) to the
 // switch ParamName ("InitializeParticle.Ribbon Width Mode") on every match in the named emitter, or in the system
 // and every emitter, and returns the count written; OutError names what the switch takes when Value fits none.
 int32 SetModuleStaticSwitch(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonValue>& Value, FString& OutError);
@@ -214,7 +204,7 @@ void CollectNiagaraSystemStackIssues(
     TArray<TSharedPtr<FJsonValue>>& OutErrors,
     TArray<TSharedPtr<FJsonValue>>& OutWarnings);
 #if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
-// In ...HandlersModuleInfo.cpp: EmitterObj's modules and moduleCount, and in its moduleInputs each input wired to a
+// In McpNiagaraModuleInfo.cpp: EmitterObj's modules and moduleCount, and in its moduleInputs each input wired to a
 // parameter or a dynamic input as {linkedTo}, which the literal stored for the input does not show.
 void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmitterHandle& Handle);
 #endif
@@ -247,7 +237,7 @@ bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction
 bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
-// set_parameter_value: one parameter, or every entry of a parameters list. In ...HandlersParameterValues.cpp.
+// set_parameter_value: one parameter, or every entry of a parameters list. In McpNiagaraParamValues.cpp.
 bool SetParameterValue(FActionContext& Context);
 // In McpNiagaraInputOwner.cpp. The emitter a module input or static switch ParamName is written in when the caller
 // names none: the one emitter it matches in (a full "Constants.<Emitter>.<Module>.<Input>" names its own), or empty

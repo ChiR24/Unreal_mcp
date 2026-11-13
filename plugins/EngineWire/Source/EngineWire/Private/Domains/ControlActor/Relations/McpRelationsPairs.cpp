@@ -21,8 +21,6 @@ namespace McpRelations
 {
 namespace
 {
-constexpr double TouchGap = 2.0;         // cm between faces that touch
-constexpr double FacingGrace = 0.34907;  // 20 degrees in radians
 constexpr int32 MaxCellsPerItem = 256;   // an item wider than this many cells is checked against every item
 
 // The items whose boxes reach each cell of a grid over X and Y; an item too wide for it is near everything.

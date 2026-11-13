@@ -1,5 +1,7 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "EdGraphSchema_K2.h"
+#include "K2Node_CallFunction.h"
+#include "K2Node_CustomEvent.h"
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"

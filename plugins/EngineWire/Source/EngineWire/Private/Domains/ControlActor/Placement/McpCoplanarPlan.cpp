@@ -41,18 +41,6 @@ FMcpTouch McpTouch(int32 Piece, int32 Face, int32 Other, int32 OtherFace)
     return Piece < Other ? FMcpTouch{Piece, Face, Other, OtherFace} : FMcpTouch{Other, OtherFace, Piece, Face};
 }
 
-int32 McpCoplanarWorldAxis(const FVector& Normal)
-{
-    for (int32 Axis = 0; Axis < 3; ++Axis)
-    {
-        if (FMath::Abs(Normal[Axis]) > 0.99)
-        {
-            return Axis;
-        }
-    }
-    return INDEX_NONE;
-}
-
 // What moves Piece of Pair: its actor, or the part alone when both pieces belong to one actor.
 int32 McpMover(const TArray<FMcpCoplanarPiece>& Pieces, const FMcpCoplanarPair& Pair, int32 Piece)
 {

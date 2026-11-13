@@ -14,38 +14,10 @@ using McpSafeOperations::McpSafeAssetSave;
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-namespace {
-// The dirty packages that block a level load, each once: world packages first, OutWorldCount of them.
-TArray<UPackage*> CollectBlockingDirtyPackages(int32& OutWorldCount) {
-  TArray<UPackage*> WorldPackages;
-  TArray<UPackage*> ContentPackages;
-  FEditorFileUtils::GetDirtyWorldPackages(WorldPackages);
-  FEditorFileUtils::GetDirtyContentPackages(ContentPackages);
-  TArray<UPackage*> Blocking;
-  for (UPackage* Package : WorldPackages) {
-    if (!McpSafeOperations::McpIsScratchPackage(Package)) {
-      Blocking.AddUnique(Package);
-    }
-  }
-  OutWorldCount = Blocking.Num();
-  for (UPackage* Package : ContentPackages) {
-    if (!McpSafeOperations::McpIsScratchPackage(Package)) {
-      Blocking.AddUnique(Package);
-    }
-  }
-  return Blocking;
-}
-} // namespace
-
-void CountBlockingDirtyPackages(int32& OutWorldPackages,
-                                int32& OutContentPackages) {
-  OutContentPackages = CollectBlockingDirtyPackages(OutWorldPackages).Num() - OutWorldPackages;
-}
-
 void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const ULevel* Level) {
   // "Is the level saved?" had no read answer; restart_editor validateOnly was the only one.
   int32 WorldCount = 0;
-  const TArray<UPackage*> Packages = CollectBlockingDirtyPackages(WorldCount);
+  const TArray<UPackage*> Packages = McpSafeOperations::McpBlockingDirtyPackages(WorldCount);
   TArray<TSharedPtr<FJsonValue>> Names;
   for (int32 Index = 0; Index < Packages.Num() && Index < 100; ++Index) {
     Names.Add(MakeShared<FJsonValueString>(Packages[Index]->GetName()));
@@ -72,7 +44,7 @@ bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,
                                            int32& OutRemainingContentPackages,
                                            int32& OutFailedPackages) {
   OutFailedPackages = 0;
-  const TArray<UPackage*> Packages = CollectBlockingDirtyPackages(OutInitialWorldPackages);
+  const TArray<UPackage*> Packages = McpSafeOperations::McpBlockingDirtyPackages(OutInitialWorldPackages);
   OutInitialContentPackages = Packages.Num() - OutInitialWorldPackages;
   for (UPackage* Package : Packages) {
     UWorld* PackageWorld = UWorld::FindWorldInPackage(Package);
@@ -83,7 +55,7 @@ bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,
   }
 
   FlushRenderingCommands();
-  CountBlockingDirtyPackages(OutRemainingWorldPackages, OutRemainingContentPackages);
+  McpSafeOperations::McpCountBlockingDirtyPackages(OutRemainingWorldPackages, OutRemainingContentPackages);
   return OutFailedPackages == 0 && OutRemainingWorldPackages + OutRemainingContentPackages == 0;
 }
 } // namespace McpLevelHandlers

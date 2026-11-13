@@ -2,7 +2,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Containers/Ticker.h"
 #include "Domains/ControlActor/McpActorSupport.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 // A thrown block, a projectile or an enemy of a wave lives a second or two: by the time a call could name it, it was

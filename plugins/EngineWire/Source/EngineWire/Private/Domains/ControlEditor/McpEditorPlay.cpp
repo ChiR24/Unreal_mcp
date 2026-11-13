@@ -53,13 +53,11 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     // runs a tenth as fast as the game clock: a crate fell off the platform that moved out from under it.
     const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
     if (bStarted && Root.IsValid() && Root->IsWindowMinimized()) {
-      TArray<TSharedPtr<FJsonValue>> Warnings;
-      Warnings.Add(MakeShared<FJsonValueString>(TEXT(
+      McpHandlerUtils::AppendWarning(Resp, TEXT(
           "The editor window is minimized: the game runs at about 3 fps, physics at a tenth of the game clock (a body "
           "falls off a platform that moves out from under it) and no widget is painted, so a title screen that clears "
           "itself on a timer stands still and a game it paused stays paused. Restore it (control_editor "
-          "configure_editor setting window) before testing physics or timing, or lift such a pause with resume unpauseGame.")));
-      Resp->SetArrayField(TEXT("warnings"), Warnings);
+          "configure_editor setting window) before testing physics or timing, or lift such a pause with resume unpauseGame."));
     }
     WeakThis->SendAutomationResponse(Socket, RequestId, bStarted,
         bStarted ? TEXT("Play in Editor started") : TEXT("Play in Editor was requested but no play world began within 20 s"),
@@ -189,13 +187,11 @@ bool UEngineWireSubsystem::HandleControlEditorResume(
   // Unpausing does not close the menu that paused the game: its focused button kept taking the jump key.
   const FString Focused = FocusedPieWidgetForMcp();
   if (!Focused.IsEmpty()) {
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+    McpHandlerUtils::AppendWarning(Resp, FString::Printf(
         TEXT("%s holds keyboard focus, so keys reach it before the game (a focused button takes Space and Enter as a "
              "press). If it belongs to a title or pause menu, the menu is still up: press its button with "
              "simulate_input type \"widget_click\" to go on as a player would."),
-        *Focused)));
-    Resp->SetArrayField(TEXT("warnings"), Warnings);
+        *Focused));
   }
 
   SendAutomationResponse(Socket, RequestId, true,

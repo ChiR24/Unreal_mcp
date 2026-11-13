@@ -29,7 +29,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
             Payload->HasField(TEXT("duration")) ? TEXT("HasDuration") : TEXT("Instant"));
         // Checked before the asset exists: an unknown policy made an Instant effect and answered with the token asked for.
         EGameplayEffectDurationType Policy = EGameplayEffectDurationType::Instant;
-        if (!TryParseGASEnum(DurationType, Policy))
+        if (!McpParseEnum(DurationType, Policy))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unsupported durationType '%s'. Expected one "
                 "of: Instant, Infinite, HasDuration. Nothing was created."), *DurationType), TEXT("INVALID_ARGUMENT"));
@@ -99,7 +99,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // every branch, leave the previous policy in place, pass a read-back that only checked that SOME
         // policy was present, and report success for a request that changed nothing.
         EGameplayEffectDurationType ExpectedPolicyValue = EGameplayEffectDurationType::Instant;
-        if (!TryParseGASEnum(DurationType, ExpectedPolicyValue))
+        if (!McpParseEnum(DurationType, ExpectedPolicyValue))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Unsupported durationType '%s'. Expected one of: Instant, Infinite, HasDuration. Nothing was changed."), *DurationType),

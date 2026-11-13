@@ -49,7 +49,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             {TEXT("multiplicative"), TEXT("Multiplicitive")}, {TEXT("divide"), TEXT("Division")}};
         const FString* OpVerb = OpVerbs.Find(NormalizeGASToken(Operation));
         EGameplayModOp::Type ModOp = EGameplayModOp::Additive;
-        if (!TryParseGASEnum(OpVerb ? *OpVerb : Operation, ModOp) || ModOp >= EGameplayModOp::Max)
+        if (!McpParseEnum(OpVerb ? *OpVerb : Operation, ModOp) || ModOp >= EGameplayModOp::Max)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("modifierOperation '%s' is not a modifier "
                 "operation: use Add (a negative magnitude subtracts), Multiply, Divide or Override; newer engines also take AddBase, "

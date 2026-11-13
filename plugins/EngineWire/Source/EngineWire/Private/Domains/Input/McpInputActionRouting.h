@@ -27,6 +27,11 @@ bool HandleAddInputMapping(
     const FString& SubAction,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+// Maps Key to Action in Context through add_mapping run in process (its reply captured as Id), unless the pair is
+// mapped already: add_mapping on a mapped pair resets its triggers and modifiers. bOutAlready says which; false, with
+// add_mapping's message in OutMessage, when add_mapping refused.
+bool EnsureInputMapping(UEngineWireSubsystem& Bridge, const FString& Id, const FString& Context, const FString& Action,
+                        const FString& Key, bool& bOutAlready, FString& OutMessage);
 bool HandleRemoveInputMapping(
     UEngineWireSubsystem& Bridge,
     const FString& RequestId,

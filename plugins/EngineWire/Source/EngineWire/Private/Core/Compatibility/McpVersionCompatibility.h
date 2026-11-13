@@ -77,6 +77,14 @@
 #define MCP_HIT_RESULT_HEADER "Engine/EngineTypes.h"
 #endif
 
+// EMaterialDomain has its own header from 5.2 (StaticEnum<EMaterialDomain>() needs it there); 5.0 and 5.1 declare it
+// in MaterialShared.h.
+#if __has_include("MaterialDomain.h")
+#define MCP_MATERIAL_DOMAIN_HEADER "MaterialDomain.h"
+#else
+#define MCP_MATERIAL_DOMAIN_HEADER "MaterialShared.h"
+#endif
+
 // These macros are only defined when Movie Render Pipeline is actually enabled
 // (MCP_HAS_MOVIE_RENDER_PIPELINE=1). When MRP is disabled, callers gate the
 // related #include with the same flag, so the macros being undefined is safe.
@@ -199,8 +207,12 @@
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
+  #define MCP_GET_EMITTER_DATA(Handle) (Handle).GetEmitterData()
+  #define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)->GetLatestEmitterData()
 #else
   #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
+  #define MCP_GET_EMITTER_DATA(Handle) (&(Handle))->GetInstance()
+  #define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)
 #endif
 
 // =============================================================================

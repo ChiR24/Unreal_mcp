@@ -13,7 +13,10 @@
 #include "HAL/PlatformFileManager.h"
 #include "Materials/MaterialInterface.h"
 #include "RenderingThread.h"
+#include "Misc/App.h"
+#include "Misc/CommandLine.h"
 #include "Misc/PackageName.h"
+#include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UObjectHash.h"
@@ -31,6 +34,45 @@ inline bool McpIsScratchPackage(const UPackage* Package)
     const FString PackagePath = Package->GetPathName();
     return PackagePath.StartsWith(TEXT("/Temp/")) || PackagePath.StartsWith(TEXT("/Transient/")) ||
            PackagePath.StartsWith(TEXT("/Engine/Transient"));
+}
+
+// The dirty packages that block a level load, each once and none of them scratch: world packages first, OutWorldCount
+// of them.
+inline TArray<UPackage*> McpBlockingDirtyPackages(int32& OutWorldCount)
+{
+    TArray<UPackage*> WorldPackages;
+    TArray<UPackage*> ContentPackages;
+    FEditorFileUtils::GetDirtyWorldPackages(WorldPackages);
+    FEditorFileUtils::GetDirtyContentPackages(ContentPackages);
+    TArray<UPackage*> Blocking;
+    for (UPackage* Package : WorldPackages)
+    {
+        if (!McpIsScratchPackage(Package))
+        {
+            Blocking.AddUnique(Package);
+        }
+    }
+    OutWorldCount = Blocking.Num();
+    for (UPackage* Package : ContentPackages)
+    {
+        if (!McpIsScratchPackage(Package))
+        {
+            Blocking.AddUnique(Package);
+        }
+    }
+    return Blocking;
+}
+
+inline void McpCountBlockingDirtyPackages(int32& OutWorldPackages, int32& OutContentPackages)
+{
+    OutContentPackages = McpBlockingDirtyPackages(OutWorldPackages).Num() - OutWorldPackages;
+}
+
+// An editor with no one to answer a save prompt: unattended, a commandlet, or no renderer (-nullrhi). A level load
+// there refuses over dirty packages instead of asking.
+inline bool McpIsHeadlessEditor()
+{
+    return FApp::IsUnattended() || IsRunningCommandlet() || FParse::Param(FCommandLine::Get(), TEXT("nullrhi"));
 }
 
 // Refreshes the Asset Registry for one package or folder path right away.

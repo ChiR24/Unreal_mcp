@@ -81,15 +81,6 @@ TSharedPtr<FJsonObject> CollisionFix(AActor* Actor, const UPrimitiveComponent* C
     return McpHandlerUtils::MakeExecuteCall(TEXT("control_actor"), TEXT("set_actor_collision"), Params);
 }
 
-TSharedPtr<FJsonObject> PropertyFix(const UObject* Object, const TCHAR* Property)
-{
-    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
-    Params->SetStringField(TEXT("objectPath"), Object->GetPathName());
-    Params->SetStringField(TEXT("propertyName"), Property);
-    Params->SetBoolField(TEXT("value"), true);
-    return McpHandlerUtils::MakeExecuteCall(TEXT("inspect"), TEXT("set_property"), Params);
-}
-
 // How Self answers Other's object type, and whether that is enough for the expected event.
 void CheckResponse(FTree& Tree, AActor* SelfActor, const UPrimitiveComponent* Self, const UPrimitiveComponent* Other, const bool bHit)
 {
@@ -182,7 +173,7 @@ bool ExplainCollision(UEngineWireSubsystem& Self, const FString& RequestId, cons
             {
                 Tree.Fail(TEXT("events"), TEXT("OVERLAP_EVENTS_OFF"),
                           FString::Printf(TEXT("%s does not generate overlap events (Generate Overlap Events), and both sides must."), *Part->GetName()),
-                          PropertyFix(Part, TEXT("bGenerateOverlapEvents")));
+                          SetPropertyCall(Part, TEXT("bGenerateOverlapEvents"), MakeShared<FJsonValueBoolean>(true)));
             }
             else if (bHit && Part->IsSimulatingPhysics() && !Part->BodyInstance.bNotifyRigidBodyCollision)
             {

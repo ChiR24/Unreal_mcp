@@ -6,6 +6,7 @@
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 
 #include "EdGraph/EdGraph.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_CustomEvent.h"
 #include "K2Node_FunctionEntry.h"
@@ -59,12 +60,8 @@ bool IsBehaviourOwned(const UEdGraphNode& Node)
 
 bool IsFunctionOwnedBy(const UEdGraph* Graph, const FString& Tag)
 {
-    TArray<UK2Node_FunctionEntry*> Entries;
-    if (Graph)
-    {
-        Graph->GetNodesOfClass(Entries);
-    }
-    return Entries.Num() > 0 && IsOwnedBy(*Entries[0], Tag);
+    const UK2Node_FunctionEntry* Entry = McpBlueprintUtils::FirstNodeOfClass<UK2Node_FunctionEntry>(Graph);
+    return Entry && IsOwnedBy(*Entry, Tag);
 }
 
 FString CheckRemovable(UBlueprint* Blueprint, const FString& Tag, const TSet<FName>& Rebuilt)

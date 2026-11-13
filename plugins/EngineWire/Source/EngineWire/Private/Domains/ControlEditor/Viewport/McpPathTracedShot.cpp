@@ -1,7 +1,7 @@
 #include "Domains/ControlEditor/Viewport/McpPathTracedShot.h"
 
 #include "Containers/Ticker.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Foundation/Render/McpConsoleVariableWrite.h"
 #include "HAL/IConsoleManager.h"
 #include "RHI.h"
@@ -132,20 +132,10 @@ void Capture(FShot& Shot, uint32 Done)
         Reply(Shot, [&](UEngineWireSubsystem& Self) { Self.SendAutomationResponse(Shot.Socket, Shot.RequestId, false, Error, nullptr, Code); });
         return;
     }
-    FIntPoint OutputSize = FrameSize;
-    FString ResolutionError;
-    if (ResolveScreenshotResolutionForMcp(Shot.Payload, FrameSize, OutputSize, ResolutionError) && OutputSize != FrameSize)
-    {
-        TArray<FColor> Resampled;
-        ResampleBitmapForMcp(Bitmap, FrameSize, Resampled, OutputSize);
-        Bitmap = MoveTemp(Resampled);
-    }
-    else
-    {
-        OutputSize = FrameSize;
-    }
+    FIntPoint OutputSize;
     TArray64<uint8> Png;
-    FImageUtils::PNGCompressImageArray(OutputSize.X, OutputSize.Y, TArrayView64<const FColor>(Bitmap.GetData(), Bitmap.Num()), Png);
+    FString ResolutionError; // the resolution was checked when the shot began
+    EncodeViewShotForMcp(Shot.Payload, Bitmap, FrameSize, OutputSize, Png, ResolutionError);
 
     const bool bAll = Done >= Shot.Wanted;
     TSharedPtr<FJsonObject> Traced = McpHandlerUtils::CreateResultObject();
@@ -153,17 +143,11 @@ void Capture(FShot& Shot, uint32 Done)
     Traced->SetNumberField(TEXT("samplesAsked"), Shot.Wanted);
     // The renderer denoises on the frame that renders the last sample, so a shot cut short is not denoised.
     Traced->SetBoolField(TEXT("denoised"), Shot.bDenoise && bAll);
-    Traced->SetNumberField(TEXT("seconds"), FMath::RoundToInt((FPlatformTime::Seconds() - Shot.Started) * 10.0) / 10.0);
+    Traced->SetNumberField(TEXT("seconds"), McpRoundTo(FPlatformTime::Seconds() - Shot.Started, 10.0));
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("filename"), FPaths::GetCleanFilename(Shot.FullPath));
     Resp->SetStringField(TEXT("view"), TEXT("editor_viewport"));
-    Resp->SetNumberField(TEXT("width"), OutputSize.X);
-    Resp->SetNumberField(TEXT("height"), OutputSize.Y);
-    if (OutputSize != FrameSize)
-    {
-        Resp->SetNumberField(TEXT("viewportWidth"), FrameSize.X);
-        Resp->SetNumberField(TEXT("viewportHeight"), FrameSize.Y);
-    }
+    AddViewShotSizeForMcp(Resp, OutputSize, FrameSize);
     Resp->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(Location));
     Resp->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(Rotation));
     Resp->SetObjectField(TEXT("pathTraced"), Traced);

@@ -1,6 +1,43 @@
 #pragma once
 
-#include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireSubsystem.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+
+#include "Async/Async.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Components/InputComponent.h"
+#include "Dom/JsonObject.h"
+#include "Editor.h"
+#include "EditorAssetLibrary.h"
+#include "EditorViewportClient.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
+#include "Exporters/Exporter.h"
+#include "FileHelpers.h"
+#include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerInput.h"
+#include "IAssetViewport.h"
+#include "LevelEditor.h"
+#include "LevelEditorSubsystem.h"
+#include "Misc/App.h"
+#include "Misc/CommandLine.h"
+#include "Misc/DateTime.h"
+#include "Misc/OutputDevice.h"
+#include "Misc/Paths.h"
+#include "Misc/ScopeExit.h"
+#include "Modules/ModuleManager.h"
+#include "RenderingThread.h"
+#include "Settings/LevelEditorPlaySettings.h"
+#include "Slate/SceneViewport.h"
+#include "Subsystems/AssetEditorSubsystem.h"
+#include "Subsystems/UnrealEditorSubsystem.h"
+#include "UnrealClient.h"
 #include "Foundation/McpScreenshotResample.h"
 
 #include "Framework/Application/SlateApplication.h"
@@ -10,6 +47,18 @@
 #include "IImageWrapperModule.h"
 #include "Misc/Base64.h"
 #include "Widgets/SWindow.h"
+
+// The viewport, editor-window and capture primitives the screenshot, inspect, perception, play, audio and timed-run
+// handlers share. ControlEditor's handlers drive them; none of them is a handler.
+FEditorViewportClient *GetActiveEditorViewportClientForMcp();
+// The editor viewport that draws the play world while the player is ejected from its pawn (Simulate in Editor);
+// null when Play In Editor is not running or the player still possesses a pawn.
+FEditorViewportClient *GetEjectedPieViewportClientForMcp();
+// Play In Editor runs and the player is still in its pawn: the game draws that pawn's camera, so no editor viewport
+// camera can be moved. Sends the refusal (PIE_VIEW_NOT_EJECTED, naming the fix) and returns true; false otherwise.
+bool RefuseCameraMoveWhilePieFollowsPawnForMcp(UEngineWireSubsystem *Bridge,
+                                               TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                               const FString &RequestId, const TCHAR *What);
 
 constexpr int32 MaxScreenshotPngBytesForBase64ForMcp = 3 * 1024 * 1024;
 
@@ -65,6 +114,9 @@ struct FMcpEditorRunHold {
   uint32 RestoreCount = 0;
 };
 FMcpEditorRunHold BeginEditorRunForMcp();
+// A configure_editor request to restore the window, counted even when the window is up already: the startup hold and
+// the end of a timed run then leave the window as the caller asked.
+void CountWindowRestoreRequestForMcp();
 void EndEditorRunForMcp(const FMcpEditorRunHold &Hold);
 void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
 // Draws the viewport Frames times, each after World sends its pending render updates, so a component edited or a
@@ -111,6 +163,14 @@ bool ReadViewFrameForMcp(FViewport *Viewport, const TSharedPtr<FJsonObject> &Pay
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,
                                                 FString &OutError);
+
+// A viewport frame made into the picture a capture returns: resampled to the payload's resolution when that asks for
+// another size (a frame shorter than FrameSize is left as it is), then PNG-encoded at OutSize; OutPng is empty when the
+// encoder made nothing. False, with the frame encoded at its own size, when resolution is not one (OutError says why).
+bool EncodeViewShotForMcp(const TSharedPtr<FJsonObject> &Payload, TArray<FColor> &Bitmap, FIntPoint FrameSize,
+                          FIntPoint &OutSize, TArray64<uint8> &OutPng, FString &OutError);
+// width and height of the picture, and viewportWidth and viewportHeight (the frame's) when it was resampled.
+void AddViewShotSizeForMcp(const TSharedPtr<FJsonObject> &Resp, FIntPoint Size, FIntPoint FrameSize);
 
 // OutSize is the PNG's size; OutSourceSize, when given, the window's before any downscale.
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,

@@ -22,3 +22,12 @@ static inline void McpFinishEditorMove(AActor *Actor) {
       Primitive->RecreatePhysicsState();
   }
 }
+
+// Actor moved by Offset as a fix moves it: recorded for undo, teleported (no sweep), the move ended as above and its
+// package marked changed.
+static inline void McpMoveActorBy(AActor *Actor, const FVector &Offset) {
+  Actor->Modify();
+  Actor->SetActorLocation(Actor->GetActorLocation() + Offset, false, nullptr, ETeleportType::TeleportPhysics);
+  McpFinishEditorMove(Actor);
+  Actor->MarkPackageDirty();
+}

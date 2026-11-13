@@ -11,6 +11,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 // UEditorAssetLibrary is used below. It reached this header only through the
 // PCH, which an installed-engine build does not guarantee; include it here with
 // the same guard the PCH uses so the header is self-contained.
@@ -147,7 +148,7 @@ static inline UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath
     Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
   }
   if (!Material && !SafeMaterialPath.Contains(TEXT("."))) {
-    const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *SafeMaterialPath, *FPaths::GetBaseFilename(SafeMaterialPath));
+    const FString ObjectPath = McpToObjectPath(SafeMaterialPath);
     Material = LoadObject<UMaterialInterface>(nullptr, *ObjectPath);
     if (Material) {
       OutResolvedPath = ObjectPath;

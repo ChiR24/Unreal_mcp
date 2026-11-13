@@ -190,16 +190,6 @@ bool ObjectsIn(const TSharedPtr<FJsonObject>& Object, const TCHAR* Field, TArray
     return true;
 }
 
-TSharedPtr<FJsonObject> CopyObject(const TSharedPtr<FJsonObject>& Source)
-{
-    TSharedPtr<FJsonObject> Copy = MakeShared<FJsonObject>();
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Source->Values)
-    {
-        Copy->SetField(Pair.Key, Pair.Value);
-    }
-    return Copy;
-}
-
 void AddOp(FPlan& Plan, const TSharedPtr<FJsonObject>& Step, const FString& Label)
 {
     Plan.Ops.Add(MakeShared<FJsonValueObject>(Step));
@@ -237,7 +227,7 @@ bool BuildPlan(UEngineWireSubsystem& Bridge, const FString& RequestId, UBlueprin
     }
     for (int32 Index = 0; Index < EventGraph.Num(); ++Index)
     {
-        AddOp(Plan, CopyObject(EventGraph[Index]), FString::Printf(TEXT("eventGraph[%d]"), Index));
+        AddOp(Plan, MakeShared<FJsonObject>(*EventGraph[Index]), FString::Printf(TEXT("eventGraph[%d]"), Index));
     }
     OutCode = TEXT("INVALID_RECIPE");
     if (Plan.Ops.Num() > MaxAuthorSteps)

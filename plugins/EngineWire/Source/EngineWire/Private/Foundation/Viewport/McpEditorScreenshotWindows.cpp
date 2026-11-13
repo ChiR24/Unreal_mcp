@@ -1,4 +1,4 @@
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 #include "Containers/Ticker.h"
 #include "Editor/EditorPerformanceSettings.h"
@@ -153,6 +153,10 @@ TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
 // end of a timed run) stands down once the count moved past what it saw, since a caller wanted the window up.
 static uint32 GMcpWindowRestoreCount = 0;
 
+void CountWindowRestoreRequestForMcp() {
+  ++GMcpWindowRestoreCount;
+}
+
 bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   if (!Window->IsWindowMinimized()) {
     return false;
@@ -266,60 +270,6 @@ void EndEditorRunForMcp(const FMcpEditorRunHold &Hold) {
       MinimizeWindowForMcp(Root.ToSharedRef());
     }
   }
-}
-
-// configure_editor window: restores the main frame, or with `minimize` puts it away, never
-// taking focus. A minimized editor runs PIE at about 3 fps however the throttle preference
-// is set, so timed tests need the frame back on screen; restoring it by hand from outside
-// the editor is exactly the kind of side channel the tool exists to replace. The rest of the
-// time a minimized, throttled editor costs the machine next to nothing, so `minimize` also
-// turns the background throttle back on.
-bool UEngineWireSubsystem::HandleControlEditorRestoreWindow(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
-  const TSharedPtr<FGenericWindow> Native = Root.IsValid() ? Root->GetNativeWindow() : nullptr;
-  if (!Native.IsValid()) {
-    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("WINDOW_NOT_FOUND"),
-                              TEXT("The main editor window is not open."), nullptr);
-    return true;
-  }
-  const bool bWasMinimized = Native->IsMinimized();
-  bool bMinimize = false;
-  Payload->TryGetBoolField(TEXT("minimize"), bMinimize);
-  bool bUnthrottle = true;
-  Payload->TryGetBoolField(TEXT("unthrottle"), bUnthrottle);
-  if (bMinimize) {
-    MinimizeWindowForMcp(Root.ToSharedRef());
-  } else {
-    ++GMcpWindowRestoreCount;
-    RestoreWindowForCaptureForMcp(Root.ToSharedRef());
-  }
-  UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
-  // minimize wants the throttle on and saves it; a restore with unthrottle turns it off for this editor
-  // session only. Saved, it left every later launch running flat out in the background.
-  if (Performance && (bMinimize || bUnthrottle) && Performance->bThrottleCPUWhenNotForeground != bMinimize) {
-    Performance->bThrottleCPUWhenNotForeground = bMinimize;
-    if (bMinimize) {
-      Performance->SaveConfig();
-    }
-  }
-  const bool bMinimizedNow = Native->IsMinimized();
-  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetBoolField(TEXT("wasMinimized"), bWasMinimized);
-  Data->SetBoolField(TEXT("minimized"), bMinimizedNow);
-  Data->SetBoolField(TEXT("restored"), !bMinimizedNow);
-  Data->SetBoolField(TEXT("throttleOff"), Performance && !Performance->bThrottleCPUWhenNotForeground);
-  const TCHAR *Message = TEXT("Editor window was already on screen");
-  if (bMinimize) {
-    Message = !bMinimizedNow ? TEXT("Editor window could not be minimized without taking focus")
-              : bWasMinimized ? TEXT("Editor window was already minimized")
-                              : TEXT("Editor window minimized without taking focus");
-  } else if (bWasMinimized) {
-    Message = TEXT("Editor window restored without taking focus");
-  }
-  SendAutomationResponse(RequestingSocket, RequestId, true, Message, Data);
-  return true;
 }
 
 void DrawViewportFramesForMcp(FViewport *Viewport, UWorld *World, int32 Frames) {

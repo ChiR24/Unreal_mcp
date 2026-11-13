@@ -35,6 +35,9 @@ private:
     int32 Unknowns = 0;
 };
 
+// The inspect set_property call that writes Value to Object's Property: the nextCall of a fix.
+TSharedPtr<FJsonObject> SetPropertyCall(const UObject* Object, const TCHAR* Property, const TSharedPtr<FJsonValue>& Value);
+
 // The Blueprints that set a player up: the game mode's player controller, pawn and HUD, the level's own Blueprint, and
 // during Play the classes actually running.
 TArray<UBlueprint*> PlayerBlueprints(UWorld* World);

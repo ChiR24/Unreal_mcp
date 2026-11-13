@@ -15,7 +15,7 @@
 #include "ObjectTools.h"
 
 bool UEngineWireSubsystem::HandleGenerateThumbnail(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   FString AssetPath;

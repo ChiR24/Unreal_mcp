@@ -1,5 +1,4 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
@@ -53,21 +52,10 @@ bool McpBlueprintAddEventComponentBound(
     return PropertyClass && (PropertyClass->IsChildOf(UActorComponent::StaticClass()) ||
                              PropertyClass->IsChildOf(UWidget::StaticClass()));
   };
-  auto FindComponentProperty = [BP, &ComponentName, &IsBindable]() -> FObjectProperty * {
-    if (!BP->GeneratedClass) {
-      return nullptr;
-    }
-    for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass); PropIt; ++PropIt) {
-      if (PropIt->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) && IsBindable(PropIt->PropertyClass)) {
-        return *PropIt;
-      }
-    }
-    return nullptr;
-  };
-  FObjectProperty *ComponentProp = FindComponentProperty();
+  FObjectProperty *ComponentProp = McpFindComponentProperty(BP->GeneratedClass, ComponentName, /*bWidgets=*/true);
   if (!ComponentProp) {
     McpSafeCompileBlueprint(BP);
-    ComponentProp = FindComponentProperty();
+    ComponentProp = McpFindComponentProperty(BP->GeneratedClass, ComponentName, /*bWidgets=*/true);
   }
   if (!ComponentProp) {
     TArray<FString> Known;

@@ -128,7 +128,7 @@ bool UEngineWireSubsystem::HandleAssetAction(
   if (Lower == TEXT("diff_asset"))
     return McpAssetDiff::HandleDiffAsset(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_thumbnail") || Lower == TEXT("generate_thumbnail"))
-    return HandleGenerateThumbnail(RequestId, Lower, Payload, RequestingSocket);
+    return HandleGenerateThumbnail(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("add_material_parameter"))
     return HandleAddMaterialParameter(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_instances"))
@@ -158,17 +158,17 @@ bool UEngineWireSubsystem::HandleAssetAction(
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))
-    return HandleFixupRedirectors(RequestId, Lower, Payload, RequestingSocket);
+    return HandleFixupRedirectors(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("refresh_blueprints"))
     return McpAssetRename::HandleRefreshBlueprints(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_rename"))
-    return HandleBulkRenameAssets(RequestId, Lower, Payload, RequestingSocket);
+    return HandleBulkRenameAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_delete"))
-    return HandleBulkDeleteAssets(RequestId, Lower, Payload, RequestingSocket);
+    return HandleBulkDeleteAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("generate_lods"))
-    return HandleGenerateLODs(RequestId, Lower, Payload, RequestingSocket);
+    return HandleGenerateLODs(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
-    return HandleNaniteRebuildMesh(RequestId, Lower, Payload, RequestingSocket);
+    return HandleNaniteRebuildMesh(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("set_mesh_materials"))
     return McpMeshMaterials::HandleSetMeshMaterials(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("set_mesh_collision"))
@@ -178,20 +178,20 @@ bool UEngineWireSubsystem::HandleAssetAction(
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))
-    return HandleSourceControlCheckout(RequestId, Lower, Payload, RequestingSocket);
+    return HandleSourceControlCheckout(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_submit"))
-    return HandleSourceControlSubmit(RequestId, Lower, Payload, RequestingSocket);
+    return HandleSourceControlSubmit(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_source_control_state"))
-    return HandleGetSourceControlState(RequestId, Lower, Payload, RequestingSocket);
+    return HandleGetSourceControlState(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
-    return HandleSourceControlEnable(RequestId, Lower, Payload, RequestingSocket);
+    return HandleSourceControlEnable(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_init") ||
       Lower == TEXT("source_control_commit_all"))
     return HandleSourceControlRepo(RequestId, Lower, Payload, RequestingSocket);
 
   // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))
-    return HandleAnalyzeGraph(RequestId, Lower, Payload, RequestingSocket);
+    return HandleAnalyzeGraph(RequestId, Payload, RequestingSocket);
   // Assets by asset-registry tag (actor tags are control_actor find_by_tag).
   if (Lower == TEXT("find_by_tag"))
     return McpAssetQueryHandlers::HandleFindByMetadataTag(this, RequestId, Payload, RequestingSocket);

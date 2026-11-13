@@ -12,14 +12,9 @@
 #include "ISourceControlProvider.h"
 
 bool UEngineWireSubsystem::HandleGetSourceControlState(
-    const FString &RequestId, const FString &Action,
+    const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("get_source_control_state"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
 
   TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 

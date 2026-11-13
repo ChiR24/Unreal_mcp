@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h" // FMcpEditorRunHold
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h" // FMcpEditorRunHold
 #include "Domains/Play/McpPlaySession.h"
 
 class AController;

@@ -99,7 +99,7 @@ bool HandleGetNavigationPath(UEngineWireSubsystem* Self, const FString& RequestI
     FString Code = TEXT("INVALID_ARGUMENT");
     FMcpNavPath Path;
     if (!ReadEnd(Payload, TEXT("from"), TEXT("fromActor"), World, From, Error) || !ReadEnd(Payload, TEXT("to"), TEXT("toActor"), World, To, Error) ||
-        !FindNavPath(World, From, To, ExtractVectorField(Payload, TEXT("projectExtent"), FVector(100.0, 100.0, 250.0)), Path, Code, Error))
+        !FindNavPath(World, From, To, ExtractVectorField(Payload, TEXT("projectExtent"), McpNavPathExtent), Path, Code, Error))
     {
         Self->SendAutomationResponse(Socket, RequestId, false, Error, nullptr, Code);
         return true;

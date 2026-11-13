@@ -21,10 +21,8 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeLock.h"
-// EMaterialDomain's own header exists only on the engines that split it out; 5.0 declares it in MaterialShared.h.
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include "UObject/Package.h"
+#include MCP_MATERIAL_DOMAIN_HEADER
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"

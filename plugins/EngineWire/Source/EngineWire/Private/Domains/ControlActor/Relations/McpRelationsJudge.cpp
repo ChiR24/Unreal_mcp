@@ -20,7 +20,6 @@ namespace
 constexpr double FacingDegrees = 20.0;
 constexpr double NearDefault = 100.0;
 constexpr double JudgeReach = 500.0; // cm around the pair whose actors may be what the subject rests on
-constexpr double SideTouch = 2.0;    // cm between sides that touch, as describe_relations' nextTo allows
 
 // fix_placement for the one actor, for its sunk and floating kinds.
 TSharedPtr<FJsonObject> PlacementFix(const AActor* Actor)
@@ -84,8 +83,8 @@ bool JudgePair(UWorld* World, AActor* A, const FString& Kind, AActor* B, double 
     {
         const FContact Met = Contact(DrawnFootprint(*A), BoxA, DrawnFootprint(*B), BoxB);
         OutActual = Met.bTouching ? FString::Printf(TEXT("touching %s"), *Met.Side)
-            : Met.Gap < -SideTouch ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
-            : Met.Gap > SideTouch ? FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Met.Gap)
+            : Met.Gap < -TouchGap ? FString(TEXT("seen from above they overlap: one stands on, over or in the other, not beside it"))
+            : Met.Gap > TouchGap ? FString::Printf(TEXT("they do not touch side by side (%.0f cm apart)"), Met.Gap)
             : FString(TEXT("they meet only at an edge or a corner, or at different heights"));
         if (!Met.bTouching || Kind == TEXT("nextTo"))
         {

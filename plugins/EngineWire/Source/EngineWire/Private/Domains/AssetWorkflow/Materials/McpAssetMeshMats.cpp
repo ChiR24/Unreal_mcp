@@ -175,17 +175,9 @@ bool HandleSetMeshMaterials(UEngineWireSubsystem* Bridge, const FString& Request
 
     if (Refused.Num() > 0)
     {
-        constexpr int32 MaxQuoted = 3;
-        FString Quoted;
-        for (int32 Line = 0; Line < RefusalLines.Num() && Line < MaxQuoted; ++Line)
-        {
-            if (Line > 0) Quoted += TEXT("; ");
-            Quoted += RefusalLines[Line];
-        }
-        if (RefusalLines.Num() > MaxQuoted) Quoted += FString::Printf(TEXT("; %d more (see refused)"), RefusalLines.Num() - MaxQuoted);
         Bridge->SendAutomationResponse(Socket, RequestId, false,
                                        FString::Printf(TEXT("Set %d of %d material slot(s) on %s; refused %s"), Assignments.Num(),
-                                                       Entries->Num(), *SafePath, *Quoted),
+                                                       Entries->Num(), *SafePath, *JoinCapped(RefusalLines, TEXT(" (see refused)"))),
                                        Resp, Assignments.Num() > 0 ? TEXT("MATERIAL_SLOTS_PARTIAL") : TEXT("MATERIAL_SLOTS_REFUSED"));
         return true;
     }

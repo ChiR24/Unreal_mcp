@@ -8,7 +8,7 @@
 #include "Domains/Perception/McpPerception.h"
 
 #include "Components/PrimitiveComponent.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "EditorViewportClient.h"
 #include "GameFramework/Actor.h"
 #include "HAL/PlatformTime.h"

@@ -6,17 +6,9 @@
 // the InputAction itself, which is what InjectInputForAction exists for. One
 // inject lasts a single frame, so a hold has to re-inject every tick or the
 // pawn twitches a few units and stops.
-#if __has_include("EnhancedInputSubsystems.h") && \
-    __has_include("InputAction.h")
-#define MCP_HAS_ENHANCED_INPUT_INJECT 1
 #include "Containers/Ticker.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
-#else
-#define MCP_HAS_ENHANCED_INPUT_INJECT 0
-#endif
-
-#include "Containers/Ticker.h"
 #include "GameFramework/WorldSettings.h"
 namespace {
 // A raw key held for holdSeconds of GAME time, then released. key_down used to
@@ -79,7 +71,6 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds, bool bPres
 }
 } // namespace
 
-#if MCP_HAS_ENHANCED_INPUT_INJECT
 namespace {
 // Wall-clock headroom on top of the requested game seconds. Slowing the clock
 // stretches a hold in real time, so this has to be generous enough not to cut a
@@ -209,7 +200,6 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
                             *Action->GetName(), *Value.ToString(), HoldSeconds);
 }
 } // namespace
-#endif
 
 bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -243,7 +233,6 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
 
   FString ActionPath;
   Payload->TryGetStringField(TEXT("inputAction"), ActionPath);
-#if MCP_HAS_ENHANCED_INPUT_INJECT
   // Only an inputAction that names a real asset takes this path; the field has
   // long doubled as an alias for `type`, and those spellings must keep working.
   UInputAction *Action =
@@ -254,7 +243,6 @@ bool UEngineWireSubsystem::HandleControlEditorSimulateInput(
     InjectActionForMcp(Payload, InputType, ActionPath, Action, bSuccess,
                        bRoutedToPIE, bHandledByPIE, Message);
   } else
-#endif
   {
     // key_tap presses and lets go after holdSeconds (default a tenth of a game
     // second: a press and release inside one frame never reaches an action).
@@ -313,11 +301,9 @@ void StopAllEnhancedInputHoldsForMcp() {
     FTSTicker::GetCoreTicker().RemoveTicker(Release.Value);
   }
   McpKeyReleases().Empty();
-#if MCP_HAS_ENHANCED_INPUT_INJECT
   for (const TPair<FString, FTSTicker::FDelegateHandle> &Hold :
        McpActionHolds()) {
     FTSTicker::GetCoreTicker().RemoveTicker(Hold.Value);
   }
   McpActionHolds().Empty();
-#endif
 }

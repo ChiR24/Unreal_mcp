@@ -16,15 +16,6 @@ namespace McpCoplanar
 {
 namespace
 {
-// Moves one actor, ending the move as the editor ends its own.
-void McpCoplanarMove(AActor* Actor, const FVector& Offset)
-{
-    Actor->Modify();
-    Actor->SetActorLocation(Actor->GetActorLocation() + Offset, false, nullptr, ETeleportType::TeleportPhysics);
-    McpFinishEditorMove(Actor);
-    Actor->MarkPackageDirty();
-}
-
 TSharedPtr<FJsonValue> McpCoplanarText(const FString& Text)
 {
     return MakeShared<FJsonValueString>(Text);
@@ -137,7 +128,7 @@ bool HandleFixCoplanar(UEngineWireSubsystem* Bridge, const FString& RequestId,
         {
             if (!bDryRun)
             {
-                McpCoplanarMove(Entry.Key, Entry.Value); // each actor once, by the sum of its moves
+                McpMoveActorBy(Entry.Key, Entry.Value); // each actor once, by the sum of its moves
             }
         }
         // After the actor moves: from here on, the actors of every Blueprint that changes are new ones.

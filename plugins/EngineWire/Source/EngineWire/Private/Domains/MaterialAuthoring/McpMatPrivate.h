@@ -33,10 +33,7 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Engine/Texture.h"
 
-// MaterialDomain.h is split out in UE 5.2; earlier engines declare it via Materials/Material.h
-#if __has_include("MaterialDomain.h")
-#include "MaterialDomain.h"
-#endif
+#include MCP_MATERIAL_DOMAIN_HEADER
 
 // Material Expressions (Basic)
 #include "Materials/MaterialExpression.h"

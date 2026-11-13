@@ -52,7 +52,7 @@ void McpTrackMotionPasses(FMcpMotionPasses &Passes, AActor *Actor) {
   Entry->SetNumberField(TEXT("t"), At);
   Entry->SetStringField(TEXT("actorName"), Name);
   Entry->SetStringField(TEXT("componentName"), Part);
-  Entry->SetArrayField(TEXT("location"), McpPointVec(Hit.ImpactPoint));
+  Entry->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Hit.ImpactPoint));
   Entry->SetNumberField(TEXT("speed"), Speed);
   Passes.Found.Add(MakeShared<FJsonValueObject>(Entry));
   if (Passes.Warning.IsEmpty()) {

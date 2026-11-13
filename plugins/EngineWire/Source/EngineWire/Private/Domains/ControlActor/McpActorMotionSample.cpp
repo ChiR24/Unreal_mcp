@@ -3,7 +3,7 @@
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Log/McpLogHistory.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
@@ -41,16 +41,16 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   const FVector Location = Actor->GetActorLocation();
   TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
   Sample->SetNumberField(TEXT("t"), McpRoundTo(GameTime - Run.StartGame, 1000.0));
-  Sample->SetArrayField(TEXT("location"), McpPointVec(Location));
+  Sample->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Location));
   // GetVelocity reads a movement component or a physics body, so an actor moved by setting its location (a scripted
   // cart, a tweened platform) read as standing still while it crossed 570 cm/s; it takes what its positions show.
   const FVector Moved = Run.Samples.Num() > 0 && GameTime > Run.LastSampleGame ? (Location - Run.Last) / (GameTime - Run.LastSampleGame) : FVector::ZeroVector;
-  Sample->SetArrayField(TEXT("velocity"), McpPointVec(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
+  Sample->SetArrayField(TEXT("velocity"), McpHandlerUtils::RoundedVectorToJsonArray(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
   // A floating hull's roll or a turning pawn's heading was unreadable over time. The rotation rides on the first
   // sample and on each one where it moved, so an actor that never turns adds nothing.
   const FRotator Rotation = Actor->GetActorRotation();
   if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {
-    Sample->SetArrayField(TEXT("rotation"), McpPointVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
+    Sample->SetArrayField(TEXT("rotation"), McpHandlerUtils::RoundedVectorToJsonArray(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
     Run.LastRotation = Rotation;
   }
   if (Run.Properties.Num() > 0) {
@@ -85,10 +85,10 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   Data->SetNumberField(TEXT("realSeconds"), McpRoundTo(FPlatformTime::Seconds() - Run.StartReal, 100.0));
   Data->SetStringField(TEXT("endedBecause"), Ended);
   if (Run.Samples.Num() > 0) {
-    Data->SetArrayField(TEXT("start"), McpPointVec(Run.First));
-    Data->SetArrayField(TEXT("end"), McpPointVec(Run.Last));
-    Data->SetArrayField(TEXT("min"), McpPointVec(Run.Extent.Min));
-    Data->SetArrayField(TEXT("max"), McpPointVec(Run.Extent.Max));
+    Data->SetArrayField(TEXT("start"), McpHandlerUtils::RoundedVectorToJsonArray(Run.First));
+    Data->SetArrayField(TEXT("end"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Last));
+    Data->SetArrayField(TEXT("min"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Extent.Min));
+    Data->SetArrayField(TEXT("max"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Extent.Max));
   }
   if (Run.Missing.Num() > 0) {
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);

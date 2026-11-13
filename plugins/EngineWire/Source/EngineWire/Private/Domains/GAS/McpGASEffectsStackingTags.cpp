@@ -47,10 +47,10 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
         auto NewReset = EffectCDO->StackPeriodResetPolicy;
         auto NewExpiration = EffectCDO->StackExpirationPolicy;
         TArray<FString> Invalid;
-        if (!StackingType.IsEmpty() && !TryParseGASEnum(StackingType, NewStackingType)) { Invalid.Add(TEXT("stackingType=") + StackingType); }
-        if (!StackDurationRefreshPolicy.IsEmpty() && !TryParseGASEnum(StackDurationRefreshPolicy, NewRefresh)) { Invalid.Add(TEXT("stackDurationRefreshPolicy=") + StackDurationRefreshPolicy); }
-        if (!StackPeriodResetPolicy.IsEmpty() && !TryParseGASEnum(StackPeriodResetPolicy, NewReset)) { Invalid.Add(TEXT("stackPeriodResetPolicy=") + StackPeriodResetPolicy); }
-        if (!StackExpirationPolicy.IsEmpty() && !TryParseGASEnum(StackExpirationPolicy, NewExpiration)) { Invalid.Add(TEXT("stackExpirationPolicy=") + StackExpirationPolicy); }
+        if (!StackingType.IsEmpty() && !McpParseEnum(StackingType, NewStackingType)) { Invalid.Add(TEXT("stackingType=") + StackingType); }
+        if (!StackDurationRefreshPolicy.IsEmpty() && !McpParseEnum(StackDurationRefreshPolicy, NewRefresh)) { Invalid.Add(TEXT("stackDurationRefreshPolicy=") + StackDurationRefreshPolicy); }
+        if (!StackPeriodResetPolicy.IsEmpty() && !McpParseEnum(StackPeriodResetPolicy, NewReset)) { Invalid.Add(TEXT("stackPeriodResetPolicy=") + StackPeriodResetPolicy); }
+        if (!StackExpirationPolicy.IsEmpty() && !McpParseEnum(StackExpirationPolicy, NewExpiration)) { Invalid.Add(TEXT("stackExpirationPolicy=") + StackExpirationPolicy); }
         if (Invalid.Num() > 0)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,

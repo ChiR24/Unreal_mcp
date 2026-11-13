@@ -53,7 +53,7 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
             TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     const auto Refuse = [&](const TCHAR* Code, const FString& Message) {
-        Self->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Self->SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     double Budget = 0.0;

@@ -6,13 +6,13 @@
 #include "Editor.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
-#include "HAL/FileManager.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "RenderingThread.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
+#include "Safety/McpSafeOperationsLevelFile.h"
 #include "Safety/McpSafeOperationsMapLoad.h"
 
 using McpSafeOperations::McpSafeLoadMap;
@@ -56,74 +56,16 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
         }
       }
 
-      FString Filename;
-      bool bGotFilename = false;
-      if (FPackageName::IsPackageFilename(LevelPath)) {
-        Filename = LevelPath;
-        bGotFilename = true;
-      } else {
-        // Assume package path
-        if (FPackageName::TryConvertLongPackageNameToFilename(
-                LevelPath, Filename, FPackageName::GetMapPackageExtension())) {
-          bGotFilename = true;
-        }
-      }
-
-      // If conversion failed, it might be a short name? But LoadMap usually
-      // needs full path. Let's try to load what we have if conversion returned
-      // something, else fallback to input.
-      const FString FileToLoad = bGotFilename ? Filename : LevelPath;
-      FString ResolvedFileToLoad = FileToLoad;
-      FString ExpectedLoadedPath = LevelPath;
-
-      // Verify file exists before attempting load to avoid false positives
-      // CRITICAL: Unreal stores levels in TWO possible path patterns:
-      // 1. Folder-based (standard UE 5.x): /Game/Path/LevelName/LevelName.umap
-      // 2. Flat (legacy): /Game/Path/LevelName.umap
-      // We must check BOTH paths before returning FILE_NOT_FOUND to prevent
-      // the "Pure virtual not implemented" crash when LoadMap fails.
-
-      bool bFileExists = false;
-
-      FString FlatMapPath, FullFlatMapPath, FolderMapPath, FullFolderMapPath;
-      if (FPackageName::TryConvertLongPackageNameToFilename(
-              LevelPath, FlatMapPath, FPackageName::GetMapPackageExtension())) {
-        FullFlatMapPath = FPaths::ConvertRelativePathToFull(FlatMapPath);
-
-        // Also build folder-based path: /Game/Path/LevelName -> /Game/Path/LevelName/LevelName.umap
-        FString LevelName = FPaths::GetBaseFilename(LevelPath);
-        FolderMapPath = FPaths::GetPath(FlatMapPath) / LevelName / (LevelName + FPackageName::GetMapPackageExtension());
-        FullFolderMapPath = FPaths::ConvertRelativePathToFull(FolderMapPath);
-      }
-
-      // Check both paths - prefer folder-based (UE 5.x standard)
-      if (!FullFolderMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFolderMapPath)) {
-        bFileExists = true;
-        ResolvedFileToLoad = FolderMapPath;
-        const FString LevelName = FPaths::GetBaseFilename(LevelPath);
-        ExpectedLoadedPath = FPaths::GetPath(LevelPath) / LevelName / LevelName;
-      } else if (!FullFlatMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFlatMapPath)) {
-        bFileExists = true;
-        ResolvedFileToLoad = FlatMapPath;
-        ExpectedLoadedPath = LevelPath;
-      }
-
-      // Also check if it's a valid package path (for levels in memory but not on disk yet)
-      if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
-        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-        ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-        if (!FullFolderMapPath.IsEmpty()) {
-          ErrorDetails->SetStringField(TEXT("checkedFolderBased"), FullFolderMapPath);
-        }
-        if (!FullFlatMapPath.IsEmpty()) {
-          ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
-        }
-        ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
-                          *FullFolderMapPath, *FullFlatMapPath),
-            ErrorDetails, TEXT("FILE_NOT_FOUND"));
+      // The folder form is loaded when it exists, else the flat one; a package with neither file is loaded by name
+      // when the engine still knows it.
+      const McpSafeOperations::FMcpLevelFile LevelFile = McpSafeOperations::McpFindLevelFile(LevelPath);
+      const FString ResolvedFileToLoad = LevelFile.bFolder ? LevelFile.Folder : LevelFile.Flat.IsEmpty() ? LevelPath : LevelFile.Flat;
+      const FString LevelName = FPaths::GetBaseFilename(LevelPath);
+      const FString ExpectedLoadedPath = LevelFile.bFolder ? FPaths::GetPath(LevelPath) / LevelName / LevelName : LevelPath;
+      if (!LevelFile.bFolder && !LevelFile.bFlat && !FPackageName::DoesPackageExist(LevelPath)) {
+        TSharedPtr<FJsonObject> ErrorDetails;
+        const FString Missing = McpSafeOperations::McpLevelFileNotFound(LevelPath, LevelFile, ErrorDetails);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Missing, ErrorDetails, TEXT("FILE_NOT_FOUND"));
         return true;
       }
 
@@ -133,7 +75,7 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
       // counted, while get_summary listed the open level under unsavedPackages.
       int32 DirtyWorldPackagesBeforeLoad = 0;
       int32 DirtyContentPackagesBeforeLoad = 0;
-      CountBlockingDirtyPackages(DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad);
+      McpSafeOperations::McpCountBlockingDirtyPackages(DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad);
 
       // The level that is already open is not loaded again (McpSafeLoadMap skips it as "already loaded"). The reply used to
       // say "Level loaded" for a call that did nothing, with the unsaved changes of that very level still pending.
@@ -144,7 +86,7 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
       int32 DirtyWorldPackagesAfterSave = 0;
       int32 DirtyContentPackagesAfterSave = 0;
       int32 FailedDirtyPackageSaves = 0;
-      const bool bHeadless = FApp::IsUnattended() || IsRunningCommandlet() || FParse::Param(FCommandLine::Get(), TEXT("nullrhi"));
+      const bool bHeadless = McpSafeOperations::McpIsHeadlessEditor();
       if (bHeadless && !bAlreadyOpen && DirtyWorldPackagesBeforeLoad + DirtyContentPackagesBeforeLoad > 0 && !bSaveDirtyPackages) {
         TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
         ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesBeforeLoad);

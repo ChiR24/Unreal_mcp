@@ -11,7 +11,7 @@
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
 #include "Domains/ControlEditor/Checkpoint/McpEditorCheckpoint.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/Log/McpLogHistory.h"
 #include "Domains/Log/McpScriptErrors.h"
 #include "Domains/SystemControl/McpSystemPrivate.h"

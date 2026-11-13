@@ -4,7 +4,7 @@
 #include "Domains/ControlEditor/EditorUi/McpEditorUi.h"
 
 #include "Dom/JsonObject.h"
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Widgets/SWindow.h"

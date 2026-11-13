@@ -6,7 +6,7 @@
 
 #include "Domains/Perception/McpPerception.h"
 
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "EditorViewportClient.h"
 #include "Engine/Engine.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"

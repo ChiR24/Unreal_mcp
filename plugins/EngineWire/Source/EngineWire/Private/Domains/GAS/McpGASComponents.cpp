@@ -158,7 +158,7 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
         // Full / Mixed / Minimal. An unknown mode used to leave the template alone while it was echoed
         // back as applied, and the edit was never saved.
         EGameplayEffectReplicationMode Mode = EGameplayEffectReplicationMode::Full;
-        if (!TryParseGASEnum(ReplicationMode, Mode))
+        if (!McpParseEnum(ReplicationMode, Mode))
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Unknown replicationMode '%s'; use Full, Mixed or Minimal."), *ReplicationMode), TEXT("INVALID_ARGUMENT"));

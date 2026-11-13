@@ -7,6 +7,7 @@
 #include "Domains/AssetQuery/Retrieval/McpAssetRank.h"
 #include "Domains/Perception/McpPerception.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponses.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "HAL/PlatformTime.h"
 
 namespace McpAssetQueryHandlers
@@ -54,7 +55,7 @@ TSharedPtr<FJsonObject> FindRow(const McpAssetRetrieval::FIndex& Index, const Mc
     TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
     Row->SetStringField(TEXT("assetPath"), Ranked.Path);
     Row->SetStringField(TEXT("class"), Entry.Class);
-    Row->SetNumberField(TEXT("score"), FMath::RoundToDouble(Ranked.Score * 1e4) / 1e4);
+    Row->SetNumberField(TEXT("score"), McpRoundTo(Ranked.Score, 1e4));
     Row->SetArrayField(TEXT("why"), McpHandlerUtils::ToJsonStringArray(Ranked.Why));
     if (const McpAssetRetrieval::FCaption* Caption = Index.Captions.Find(Ranked.Path))
     {
@@ -62,12 +63,7 @@ TSharedPtr<FJsonObject> FindRow(const McpAssetRetrieval::FIndex& Index, const Mc
     }
     if (!Entry.Size.IsZero())
     {
-        TArray<TSharedPtr<FJsonValue>> Size;
-        for (const double Axis : {Entry.Size.X, Entry.Size.Y, Entry.Size.Z})
-        {
-            Size.Add(MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Axis)));
-        }
-        Row->SetArrayField(TEXT("sizeCm"), Size);
+        Row->SetArrayField(TEXT("sizeCm"), McpHandlerUtils::RoundedVectorToJsonArray(Entry.Size, 1.0));
     }
     return Row;
 }

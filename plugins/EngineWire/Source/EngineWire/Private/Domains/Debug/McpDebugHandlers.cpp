@@ -39,7 +39,6 @@
 #endif
 #include "Modules/ModuleManager.h"
 
-#include "Editor.h"
 
 // =============================================================================
 // Handler Implementation

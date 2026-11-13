@@ -5,7 +5,7 @@
 // and bottom off). The engine's high resolution screenshot draws the viewport's view (its camera, show flags, post
 // process, exposure) into an off-screen viewport of any size with the same horizontal field of view, so the frame is
 // what a game window of that size shows.
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"

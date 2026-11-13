@@ -20,6 +20,9 @@ struct FMcpNavPath
     FString NavData;
 };
 
+// How far off the nav mesh each end of a path is looked for: get_ai_info's projectExtent default, and Play's pawns.
+inline const FVector McpNavPathExtent(100.0, 100.0, 250.0);
+
 /** From to To on World's nav mesh, each end found within Extent; false with OutCode (NAV_DATA_MISSING,
  *  NAV_BUILD_IN_PROGRESS) and OutMessage when the nav mesh cannot answer. */
 bool FindNavPath(UWorld* World, const FVector& From, const FVector& To, const FVector& Extent, FMcpNavPath& Out,

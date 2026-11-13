@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
-#include "Domains/Sequence/Metadata/McpSeqMetadata.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetReferencers.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 

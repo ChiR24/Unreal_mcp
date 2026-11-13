@@ -2,6 +2,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -230,7 +231,7 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
     Result->SetArrayField(TEXT("unresolvedColumnTypes"), Done.Unresolved);
     Result->SetBoolField(TEXT("syncTriggered"), WaitedSeconds >= 0.0);
     if (WaitedSeconds >= 0.0) {
-      Result->SetNumberField(TEXT("syncWaitedSeconds"), FMath::RoundToInt(WaitedSeconds * 10.0) / 10.0);
+      Result->SetNumberField(TEXT("syncWaitedSeconds"), McpRoundTo(WaitedSeconds, 10.0));
     }
     if (!SkippedWhy.IsEmpty()) {
       Result->SetStringField(TEXT("syncSkipped"), SkippedWhy);

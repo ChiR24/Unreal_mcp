@@ -55,7 +55,7 @@ describe('plugin security contracts', () => {
       ['Domains', 'Landscape', 'McpLandscapeHeightmapFile.cpp'],
       ['Domains', 'Inspect', 'McpInspectActorQuery.cpp'],
       ['Domains', 'Inspect', 'View', 'McpInspectCapturePasses.cpp'],
-      ['Domains', 'ControlEditor', 'McpEditorScreenshotSupport.cpp'],
+      ['Foundation', 'Viewport', 'McpEditorScreenshotSupport.cpp'],
       ['Domains', 'Ui', 'McpUiScreenshot.cpp'],
       ['Domains', 'SystemControl', 'McpSystemGameTarget.cpp'],
     ];

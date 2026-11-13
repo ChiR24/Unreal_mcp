@@ -1,7 +1,6 @@
 #include "Domains/Level/McpLevelActions.h"
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
 
-#include "Editor.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "RenderingThread.h"

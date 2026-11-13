@@ -9,6 +9,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
@@ -56,20 +57,11 @@
 
 bool IsSafeConsoleArgumentToken(const FString &Value);
 FString MakeSafeConsoleName(const FString &RawName, const TCHAR *Prefix);
-FEditorViewportClient *GetActiveEditorViewportClientForMcp();
 // Sends a level-load reply once the level has settled (some frames, texture streaming quiet, a few seconds at most),
 // with settledSeconds; bRestoreGameView puts back the game view the load switched off.
 void McpReplyWhenLevelSettles(TWeakObjectPtr<UEngineWireSubsystem> WeakThis, TSharedPtr<FMcpBridgeWebSocket> Socket,
                               const FString &RequestId, const FString &Message, TSharedPtr<FJsonObject> Resp,
                               bool bRestoreGameView);
-// The editor viewport that draws the play world while the player is ejected from its pawn (Simulate in Editor);
-// null when Play In Editor is not running or the player still possesses a pawn.
-FEditorViewportClient *GetEjectedPieViewportClientForMcp();
-// Play In Editor runs and the player is still in its pawn: the game draws that pawn's camera, so no editor viewport
-// camera can be moved. Sends the refusal (PIE_VIEW_NOT_EJECTED, naming the fix) and returns true; false otherwise.
-bool RefuseCameraMoveWhilePieFollowsPawnForMcp(UEngineWireSubsystem *Bridge,
-                                               TSharedPtr<FMcpBridgeWebSocket> Socket,
-                                               const FString &RequestId, const TCHAR *What);
 FString NormalizeSimulatedInputTypeForMcp(
     const TSharedPtr<FJsonObject> &Payload);
 // Where a simulated key may go. Any: the running game, else the editor widget with keyboard focus. Game: the game

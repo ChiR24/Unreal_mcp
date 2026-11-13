@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
-#include "Domains/BlueprintGraph/McpBPGraphCompatibility.h"
+#include "K2Node_CallFunction.h"
+#include "K2Node_VariableGet.h"
 #include "Kismet/KismetMathLibrary.h"
 
 namespace McpAnimationAuthoring {

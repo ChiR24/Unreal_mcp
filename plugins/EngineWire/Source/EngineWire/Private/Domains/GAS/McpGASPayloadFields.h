@@ -53,21 +53,4 @@ static inline double GetGASNumberFieldWithFallback(
     return DefaultValue;
 }
 
-// A token ("has_duration", "HasDuration", "local predicted") matched against the enumerators' own short
-// names under the same normalization; false (Out untouched) when none matches. The _MAX entry never does.
-template <typename TEnum>
-bool TryParseGASEnum(const FString& Value, TEnum& Out)
-{
-    const UEnum* Enum = StaticEnum<TEnum>();
-    const FString Token = NormalizeGASToken(Value);
-    for (int32 Index = 0; Enum && Index < Enum->NumEnums() - 1; ++Index)
-    {
-        if (NormalizeGASToken(Enum->GetNameStringByIndex(Index)) == Token)
-        {
-            Out = static_cast<TEnum>(Enum->GetValueByIndex(Index));
-            return true;
-        }
-    }
-    return false;
-}
 }

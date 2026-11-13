@@ -9,17 +9,24 @@
 
 namespace McpCoplanar
 {
-FString DescribeDirection(const FVector& Normal)
+int32 McpCoplanarWorldAxis(const FVector& Normal)
 {
-    const TCHAR* Axes[] = {TEXT("X"), TEXT("Y"), TEXT("Z")};
     for (int32 Axis = 0; Axis < 3; ++Axis)
     {
         if (FMath::Abs(Normal[Axis]) > 0.99)
         {
-            return FString::Printf(TEXT("%s%s"), Normal[Axis] > 0.0 ? TEXT("+") : TEXT("-"), Axes[Axis]);
+            return Axis;
         }
     }
-    return FString::Printf(TEXT("(%.2f, %.2f, %.2f)"), Normal.X, Normal.Y, Normal.Z);
+    return INDEX_NONE;
+}
+
+FString DescribeDirection(const FVector& Normal)
+{
+    const TCHAR* Axes[] = {TEXT("X"), TEXT("Y"), TEXT("Z")};
+    const int32 Axis = McpCoplanarWorldAxis(Normal);
+    return Axis != INDEX_NONE ? FString::Printf(TEXT("%s%s"), Normal[Axis] > 0.0 ? TEXT("+") : TEXT("-"), Axes[Axis])
+                              : FString::Printf(TEXT("(%.2f, %.2f, %.2f)"), Normal.X, Normal.Y, Normal.Z);
 }
 
 TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter)

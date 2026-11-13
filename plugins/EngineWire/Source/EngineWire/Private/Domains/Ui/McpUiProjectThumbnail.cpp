@@ -4,7 +4,7 @@
 #include "Domains/Ui/McpUiPrivate.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
-#include "Domains/ControlEditor/McpEditorScreenshotSupport.h"
+#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "Domains/ControlEditor/McpEditorSupport.h"
 #include "Editor.h"
 #include "EditorViewportClient.h"

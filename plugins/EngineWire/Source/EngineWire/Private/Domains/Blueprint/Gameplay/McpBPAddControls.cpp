@@ -30,19 +30,16 @@ bool RunInputStep(UEngineWireSubsystem &Bridge, const FString &Id, const TShared
 // Maps Key to Action with Modifiers in order, unless that pair is mapped already (a re-run keeps it as it is).
 bool MapKey(UEngineWireSubsystem &Bridge, const FString &Id, const FString &Context, const FString &Action,
             const TCHAR *Key, std::initializer_list<const TCHAR *> Modifiers) {
-  FString Normalized;
-  UInputMappingContext *Imc = McpInputHandlers::LoadInputMappingContextAsset(Context, Normalized);
-  UInputAction *Ia = McpInputHandlers::LoadInputActionAsset(Action, Normalized);
-  if (Imc && Ia && McpInputHandlers::FindInputMapping(Imc, Ia, McpInputHandlers::InputKeyFromName(Key))) {
+  bool bMapped = false;
+  FString Message;
+  bool bOk = McpInputHandlers::EnsureInputMapping(Bridge, Id, Context, Action, Key, bMapped, Message);
+  if (bMapped) {
     return true;
   }
   TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
   Payload->SetStringField(TEXT("contextPath"), Context);
   Payload->SetStringField(TEXT("actionPath"), Action);
   Payload->SetStringField(TEXT("key"), Key);
-  bool bOk = McpCaptureResponse(Id, [&] {
-    McpInputHandlers::HandleAddInputMapping(Bridge, Id, TEXT("add_mapping"), Payload, nullptr);
-  }).bSuccess;
   for (const TCHAR *Modifier : Modifiers) {
     Payload->SetStringField(TEXT("modifierType"), Modifier);
     bOk = bOk && RunInputStep(Bridge, Id + TEXT(".") + Modifier, Payload, McpInputHandlers::HandleSetInputModifier);

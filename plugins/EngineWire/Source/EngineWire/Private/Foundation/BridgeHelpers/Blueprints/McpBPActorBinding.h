@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 
 class FMulticastDelegateProperty;
+class FObjectProperty;
 class UClass;
 class UEdGraphNode;
 class UK2Node;
@@ -13,6 +14,10 @@ class ULevel;
 // The multicast delegate of Class named Name (OnActorBeginOverlap, or its OnActorBeginOverlap__ spelling), or null.
 // OutAssignable gets the BlueprintAssignable ones, the only events a node can bind.
 FMulticastDelegateProperty* McpFindMulticastDelegate(const UClass* Class, const FString& Name, TArray<FString>& OutAssignable);
+
+// The object property of Class named Name (any case) that holds a component, or with bWidgets a widget too (a widget
+// variable is a property of its Blueprint's generated class); null when there is none, or no Class.
+FObjectProperty* McpFindComponentProperty(const UClass* Class, const FString& Name, bool bWidgets);
 
 // A K2Node_ActorBoundEvent or K2Node_Literal is about one placed actor of Level (null outside a level Blueprint),
 // named by ActorName; a bound event also takes EventName, one of that actor's event dispatchers. Bound here, before

@@ -203,8 +203,7 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
     }
     else if (LowerSub == TEXT("generate_lods"))
     {
-        return HandleGenerateLODs(RequestId, TEXT("generate_lods"), Payload,
-                                  RequestingSocket);
+        return HandleGenerateLODs(RequestId, Payload, RequestingSocket);
     }
     else if (LowerSub == TEXT("bake_lightmap"))
     {
