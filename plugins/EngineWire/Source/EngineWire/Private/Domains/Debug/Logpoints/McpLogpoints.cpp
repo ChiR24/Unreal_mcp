@@ -92,8 +92,8 @@ bool Set(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPt
     const TArray<FString> Ids = McpHandlerUtils::GetStringArrayField(Payload, TEXT("nodeIds"));
     if (!Blueprint || Ids.Num() == 0)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Blueprint ? TEXT("nodeIds lists the nodes to mark.") : Error, nullptr,
-                                      Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
+        Bridge.SendAutomationError(Socket, RequestId, Blueprint ? TEXT("nodeIds lists the nodes to mark.") : Error,
+                                   Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
         return true;
     }
     const int32 MaxHits = FMath::Clamp(static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxHits"), 100.0)), 1, 500);
@@ -107,10 +107,10 @@ bool Set(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPt
                           : (!K2 || K2->IsNodePure()) ? TEXT("PURE_NODE") : nullptr;
         if (Code)
         {
-            Bridge.SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("%s: %s"), *Id,
+            Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s: %s"), *Id,
                 MatchCount > 1 ? TEXT("the tag matches several nodes; give more of the GUID")
                 : !Node ? TEXT("no node of the Blueprint has this id (read_graph_as_code or get_graph_details lists them)")
-                        : TEXT("a pure node runs inside the impure node that reads it, which is the one to mark")), nullptr, Code);
+                        : TEXT("a pure node runs inside the impure node that reads it, which is the one to mark")), Code);
             return true;
         }
         Nodes.AddUnique(Node);
@@ -119,8 +119,8 @@ bool Set(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPt
     All.RemoveAll([&Nodes](const FPoint& Point) { return !Point.Node.IsValid() || Nodes.Contains(Point.Node.Get()); });
     if (All.Num() + Nodes.Num() > MaxPoints)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("At most %d nodes can be marked at once: "
-            "clear_logpoints some first."), MaxPoints), nullptr, TEXT("TOO_MANY_LOGPOINTS"));
+        Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("At most %d nodes can be marked at once: "
+            "clear_logpoints some first."), MaxPoints), TEXT("TOO_MANY_LOGPOINTS"));
         return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -161,7 +161,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const FStrin
     const UBlueprint* Filter = BlueprintPath.IsEmpty() ? nullptr : LoadBlueprintAsset(BlueprintPath, Normalized, Error);
     if (!BlueprintPath.IsEmpty() && !Filter)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+        Bridge.SendAutomationError(Socket, RequestId, Error, TEXT("BLUEPRINT_NOT_FOUND"));
         return true;
     }
     const TArray<FString> Ids = McpHandlerUtils::GetStringArrayField(Payload, TEXT("nodeIds"));

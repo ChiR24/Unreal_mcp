@@ -1,5 +1,6 @@
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
 
+#include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpSequenceCinematics {
@@ -14,6 +15,22 @@ TSharedPtr<FJsonObject> MakeResult(bool bSuccess, const FString &Action,
     Result->SetStringField(TEXT("errorCode"), ErrorCode);
   }
   return Result;
+}
+
+ULevelSequence *LoadSequenceOrSend(UEngineWireSubsystem &Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                   const FString &RequestId, const TSharedPtr<FJsonObject> &Params) {
+  TSharedPtr<FJsonObject> Failure;
+  ULevelSequence *Sequence = LoadSequence(Params, Failure);
+  if (!Sequence) {
+    FString Message;
+    FString Code = TEXT("INVALID_SEQUENCE");
+    if (Failure.IsValid()) {
+      Failure->TryGetStringField(TEXT("error"), Message);
+      Failure->TryGetStringField(TEXT("errorCode"), Code);
+    }
+    Bridge.SendAutomationError(Socket, RequestId, Message.IsEmpty() ? TEXT("sequencePath names no Level Sequence.") : Message, Code);
+  }
+  return Sequence;
 }
 
 bool TryHandleCinematics(const FString &Action,

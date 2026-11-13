@@ -80,7 +80,7 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (ActorName.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
     }
     else if (!IsValidActorName(ActorName))
     {
@@ -89,7 +89,7 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     }
     else if (!World)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
     }
     else if (ANavLinkProxy* NavLink = FindActorOfClassForMcp<ANavLinkProxy>(World, ActorName))
     {
@@ -97,8 +97,8 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     }
     else
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("NavLinkProxy not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("NavLinkProxy not found: %s"), *ActorName), TEXT("NOT_FOUND"));
     }
     return nullptr;
 }
@@ -112,7 +112,7 @@ bool SpawnNavLink(
 {
     const auto Fail = [&](const FString& Message, const TCHAR* Code)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Self->SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     const TCHAR* Action = bSmart ? TEXT("create_smart_link") : TEXT("create_nav_link_proxy");
@@ -208,7 +208,7 @@ bool HandleConfigureNavLink(
     }
     if (!Error.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

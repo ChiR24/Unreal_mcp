@@ -36,12 +36,6 @@ namespace PlaytestRunParts
 constexpr int32 MaxTimeline = 50;
 constexpr double ProgressCm = 10.0;  // nearer by less than this is no progress
 constexpr double ReachHeight = 250.0; // the goal counts within this height too (a pawn's half height and a step)
-
-TArray<TSharedPtr<FJsonValue>> Point(const FVector& Value)
-{
-    return {MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.X)), MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Y)),
-            MakeShared<FJsonValueNumber>(FMath::RoundToDouble(Value.Z))};
-}
 } // namespace PlaytestRunParts
 
 using namespace PlaytestRunParts;
@@ -71,7 +65,7 @@ FString Advance(FRun& Run)
     {
         TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
         Sample->SetNumberField(TEXT("t"), McpRoundTo(Now, 100.0));
-        Sample->SetArrayField(TEXT("location"), Point(Here));
+        Sample->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Here, 1.0));
         Run.Timeline.Add(MakeShared<FJsonValueObject>(Sample));
         Run.NextSample = Now + Run.Interval;
     }
@@ -137,7 +131,7 @@ TSharedPtr<FJsonObject> Judge(FRun& Run, const FString& Ended, FString& OutVerdi
     TArray<TSharedPtr<FJsonValue>> ErrorRows = McpHandlerUtils::ToJsonStringArray(Errors);
     Result->SetArrayField(TEXT("scriptErrors"), ErrorRows);
     Result->SetArrayField(TEXT("timeline"), Run.Timeline);
-    Result->SetArrayField(TEXT("last"), Point(Run.Last));
+    Result->SetArrayField(TEXT("last"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Last, 1.0));
     Result->SetNumberField(TEXT("bestDistance"), FMath::RoundToDouble(Run.BestDistance));
     Result->SetNumberField(TEXT("traveled"), FMath::RoundToDouble(Run.Traveled));
     Result->SetNumberField(TEXT("frames"), Run.Frames);

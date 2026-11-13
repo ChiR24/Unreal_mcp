@@ -6,6 +6,7 @@
 
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Factories/BlueprintFactory.h"
@@ -118,6 +119,19 @@ inline bool AddBlueprintVariableCombat(
 
     FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarName, PinType);
     return true;
+}
+
+// Value, on the class default object, for a variable the last compile put on Blueprint's generated class (a later
+// compile keeps it). Nothing when the class or the variable is not there.
+template <typename TProperty, typename TValue>
+void SetVariableDefaultCombat(UBlueprint* Blueprint, const TCHAR* VarName, const TValue& Value)
+{
+    UBlueprintGeneratedClass* Class = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass);
+    UObject* Defaults = Class ? Class->GetDefaultObject() : nullptr;
+    if (TProperty* Property = Defaults ? FindFProperty<TProperty>(Class, VarName) : nullptr)
+    {
+        Property->SetPropertyValue_InContainer(Defaults, Value);
+    }
 }
 
 inline FEdGraphPinType MakeFloatPinType()

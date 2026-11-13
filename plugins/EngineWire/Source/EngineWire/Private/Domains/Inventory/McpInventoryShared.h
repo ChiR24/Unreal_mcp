@@ -39,6 +39,13 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
 UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const FString& Name, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
                                             TFunctionRef<void(UMcpGenericDataAsset&)> Fill = [](UMcpGenericDataAsset&) {});
 
+// create_item_category and create_loot_table: a generic data asset named by the payload's name, in its path or
+// DefaultPath, answered with saved, PathField and assetPath under Created; "Failed to create <What> asset" when none was
+// made, the name and package refusals as CreateInventoryAssetPackage gives them. True: the request is answered.
+bool CreateGenericInventoryAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                 const TSharedPtr<FJsonObject>& Payload, const TCHAR* DefaultPath, const TCHAR* PathField,
+                                 const TCHAR* Created, const TCHAR* What);
+
 // False after replying ASSET_NOT_FOUND when Path, a reference the action stores (item, category, icon,
 // ingredient), names no asset. Those paths used to be stored unchecked, so a typo saved a dead reference.
 bool RequireReferencedAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,

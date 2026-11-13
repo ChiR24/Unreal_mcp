@@ -29,8 +29,8 @@ bool UEngineWireSubsystem::HandleGetFabListingDetails(
 
   FString ListingId;
   if (!Payload->TryGetStringField(TEXT("listingId"), ListingId) || ListingId.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("'listingId' is required."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("'listingId' is required."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -58,10 +58,10 @@ bool UEngineWireSubsystem::HandleGetFabListingDetails(
           if (!bParsed) {
             const FString Code = PageError.IsEmpty() ? TEXT("DETAILS_FAILED") : PageError;
             // The adapter words its own failures (page not ready, page busy, timed out).
-            Self->SendAutomationResponse(
-                Socket, RequestId, false,
+            Self->SendAutomationError(
+                Socket, RequestId,
                 PageMessage.IsEmpty() ? FString(TEXT("Could not describe that listing.")) : PageMessage,
-                nullptr, Code);
+                Code);
             return;
           }
 
@@ -125,9 +125,9 @@ bool UEngineWireSubsystem::HandleGetFabListingDetails(
       });
 
   if (!bStarted) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("The Fab adapter refused the request."), nullptr,
-                           TEXT("NOT_SUPPORTED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("The Fab adapter refused the request."),
+                        TEXT("NOT_SUPPORTED"));
   }
   return true;
 }

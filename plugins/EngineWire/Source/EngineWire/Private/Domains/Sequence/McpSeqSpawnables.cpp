@@ -10,8 +10,8 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
   FString ClassName;
   LocalPayload->TryGetStringField(TEXT("className"), ClassName);
   if (ClassName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("className required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("className required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString SeqPath;
@@ -22,8 +22,8 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
 
   UClass *ResolvedClass = ResolveClassByName(ClassName);
   if (!ResolvedClass) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Class not found"),
-                           nullptr, TEXT("CLASS_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, TEXT("Class not found"),
+                        TEXT("CLASS_NOT_FOUND"));
     return true;
   }
 
@@ -41,14 +41,14 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
       SendAutomationResponse(Socket, RequestId, true, TEXT("Spawnable added to sequence"), SpawnableResp, FString());
       return true;
     }
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to create spawnable binding"), nullptr,
-                           TEXT("SPAWNABLE_CREATION_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to create spawnable binding"),
+                        TEXT("SPAWNABLE_CREATION_FAILED"));
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Sequence object is not a LevelSequence"),
-                         nullptr, TEXT("INVALID_SEQUENCE_TYPE"));
+  SendAutomationError(Socket, RequestId,
+                      TEXT("Sequence object is not a LevelSequence"),
+                      TEXT("INVALID_SEQUENCE_TYPE"));
   return true;
 }
 

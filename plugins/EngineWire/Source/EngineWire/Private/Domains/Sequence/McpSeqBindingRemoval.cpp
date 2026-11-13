@@ -10,9 +10,9 @@ bool UEngineWireSubsystem::HandleSequenceRemoveActors(
   const TArray<TSharedPtr<FJsonValue>> *Arr = nullptr;
   LocalPayload->TryGetArrayField(TEXT("actorNames"), Arr);
   if (!Arr || Arr->Num() == 0) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("actorNames required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("actorNames required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString SeqPath;

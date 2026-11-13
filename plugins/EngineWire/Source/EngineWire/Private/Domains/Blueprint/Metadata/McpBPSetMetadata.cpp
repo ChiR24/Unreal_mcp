@@ -18,8 +18,8 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     const TSharedPtr<FJsonObject>* MetadataObj = nullptr;
     if (!LocalPayload->TryGetObjectField(TEXT("metadata"), MetadataObj) ||
         !MetadataObj || !(*MetadataObj).IsValid()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("metadata object required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("metadata object required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -51,9 +51,9 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     // Class metadata lives on the generated class; with none there is nowhere
     // to write it (every key used to be reported as set anyway).
     if (!BP->GeneratedClass) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("The Blueprint has no generated class yet, so no metadata was written; compile it (manage_blueprint compile) and retry"),
-                             nullptr, TEXT("BLUEPRINT_NOT_COMPILED"));
+                             TEXT("BLUEPRINT_NOT_COMPILED"));
       return true;
     }
 

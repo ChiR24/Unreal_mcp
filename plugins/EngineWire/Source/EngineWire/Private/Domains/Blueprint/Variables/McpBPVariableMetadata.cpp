@@ -55,8 +55,8 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
     // ExposeOnSpawn flags used to be five calls, five compiles, five saves).
     TArray<FString> VarNames = McpReadVariableNames(LocalPayload);
     if (VarNames.Num() == 0) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("variableName or variableNames required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("variableName or variableNames required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -68,8 +68,8 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
             ? MetaVal->AsObject()
             : nullptr;
     if (!MetaObjPtr.IsValid()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("metadata object required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("metadata object required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }

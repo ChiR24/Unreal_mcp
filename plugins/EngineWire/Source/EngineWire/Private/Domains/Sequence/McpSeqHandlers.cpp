@@ -27,8 +27,8 @@ bool UEngineWireSubsystem::HandleSequenceAction(
   FString IntegerError;
   if (!McpSequenceIntegerValidation::ValidateSequenceIntegerFields(
           LocalPayload, IntegerError)) {
-    SendAutomationResponse(RequestingSocket, RequestId, false, IntegerError,
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(RequestingSocket, RequestId, IntegerError,
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -163,10 +163,10 @@ bool UEngineWireSubsystem::HandleSequenceAction(
                                          LocalPayload, RequestingSocket))
     return true;
 
-  SendAutomationResponse(
-      RequestingSocket, RequestId, false,
+  SendAutomationError(
+      RequestingSocket, RequestId,
       FString::Printf(TEXT("Sequence action not implemented by plugin: %s"),
                       *SubAction),
-      nullptr, TEXT("NOT_IMPLEMENTED"));
+      TEXT("NOT_IMPLEMENTED"));
   return true;
 }

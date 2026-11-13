@@ -72,13 +72,6 @@ struct FParameterWrite
     FString Error;
 };
 
-static const FNiagaraVariableWithOffset* FindUserParameter(UNiagaraSystem* System, const FString& ParamName)
-{
-    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
-    return System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
-        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
-}
-
 // A module input belongs to one emitter, or to the system stage. User parameters need no emitter.
 static bool NamesModuleInput(UNiagaraSystem* System, const TArray<FString>& Names)
 {

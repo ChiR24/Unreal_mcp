@@ -21,8 +21,8 @@ bool ReadDependencyAssetOrReply(UEngineWireSubsystem *Subsystem, const TSharedPt
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                                      nullptr, TEXT("INVALID_ARGUMENT"));
+    Subsystem->SendAutomationError(Socket, RequestId, TEXT("assetPath required"),
+                                   TEXT("INVALID_ARGUMENT"));
     return false;
   }
   OutSafePath = SanitizeProjectRelativePath(AssetPath);
@@ -216,8 +216,8 @@ bool UEngineWireSubsystem::HandleDoesAssetExist(
     return true;
   }
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath or assetPaths required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("assetPath or assetPaths required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

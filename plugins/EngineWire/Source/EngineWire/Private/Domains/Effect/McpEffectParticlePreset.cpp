@@ -79,9 +79,7 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
         ExtractRotatorField(Context.Payload, TEXT("rotation"), FRotator::ZeroRotator)));
     if (!Emitter)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Failed to spawn Emitter actor"), nullptr, TEXT("SPAWN_FAILED"));
+        Context.SendError(TEXT("Failed to spawn Emitter actor"), TEXT("SPAWN_FAILED"));
         return true;
     }
     Emitter->SetTemplate(Template);
@@ -123,9 +121,7 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
     }
     if (SystemPath.IsEmpty() && Preset.IsEmpty())
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("preset or systemPath is required for particle"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Context.SendError(TEXT("preset or systemPath is required for particle"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();

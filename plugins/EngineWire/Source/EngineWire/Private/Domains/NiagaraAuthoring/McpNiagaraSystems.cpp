@@ -4,19 +4,21 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
-static bool CreateNiagaraSystem(FActionContext& Context)
+// The package a new system or emitter goes in: its name given, its path checked, nothing there yet. Null once the
+// refusal is sent.
+static UPackage* NewNiagaraAssetPackage(FActionContext& Context)
 {
     if (Context.Name.IsEmpty())
     {
         Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
-        return true;
+        return nullptr;
     }
     FString PathError;
     const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
     if (PackageName.IsEmpty())
     {
         Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
-        return true;
+        return nullptr;
     }
     // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
     // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
@@ -25,25 +27,26 @@ static bool CreateNiagaraSystem(FActionContext& Context)
     if (!Package)
     {
         Context.SendError(CreateError, CreateCode);
+    }
+    return Package;
+}
+
+static bool CreateNiagaraSystem(FActionContext& Context)
+{
+    UPackage* Package = NewNiagaraAssetPackage(Context);
+    if (!Package)
+    {
         return true;
     }
     // RF_Transactional as the asset factory gives it: without it undo skipped the system and every Niagara stack
     // read reported "Object is not transctional, undo won't work for it!".
     UNiagaraSystem* NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Context.Name), RF_Public | RF_Standalone | RF_Transactional);
-    if (NewSystem)
-    {
 #if MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW
-        FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
-        UNiagaraSystemFactoryNew::InitializeSystem(NewSystem, true);
+    FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
+    UNiagaraSystemFactoryNew::InitializeSystem(NewSystem, true);
 #endif
-        // The factory compiles a new system; built here without it, it was saved with no compiled scripts.
-        NewSystem->RequestCompile(false);
-    }
-    if (!NewSystem)
-    {
-        Context.SendError(TEXT("Failed to create Niagara System."), TEXT("CREATE_FAILED"));
-        return true;
-    }
+    // The factory compiles a new system; built here without it, it was saved with no compiled scripts.
+    NewSystem->RequestCompile(false);
     FAssetRegistryModule::AssetCreated(NewSystem);
     if (Context.bSave)
     {
@@ -65,25 +68,9 @@ static bool CreateNiagaraSystem(FActionContext& Context)
 
 static bool CreateNiagaraEmitter(FActionContext& Context)
 {
-    if (Context.Name.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'name' parameter."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    FString PathError;
-    const FString PackageName = McpNiagaraCreatePackageName(Context.Path, Context.Name, PathError);
-    if (PackageName.IsEmpty())
-    {
-        Context.SendError(PathError, TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    // CreatePackage hands back a package already there, and NewObject under a taken name rebuilt the asset in place
-    // (a system's emitters gone) or, for another class, stopped the editor with a fatal error: refuse it instead.
-    FString CreateError, CreateCode;
-    UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
+    UPackage* Package = NewNiagaraAssetPackage(Context);
     if (!Package)
     {
-        Context.SendError(CreateError, CreateCode);
         return true;
     }
     const EObjectFlags EmitterFlags = RF_Public | RF_Standalone | RF_Transactional;
@@ -183,7 +170,7 @@ static bool AddEmitterToSystem(FActionContext& Context)
     // Honor a caller-supplied 'emitterName' for the handle. Upstream derives the handle name
     // from the source emitter asset, silently ignoring the requested name; renaming here also
     // keeps the handle name consistent with the 'emitterName' that module actions resolve
-    // against (the dispatch layer sends the same default for both add-emitter and modules).
+    // against.
     if (!Context.EmitterName.IsEmpty())
     {
         AddedHandle->SetName(FName(*Context.EmitterName), *System);
@@ -192,8 +179,7 @@ static bool AddEmitterToSystem(FActionContext& Context)
 #else
     AddedEmitterName = System->AddEmitterHandle(*Emitter, Context.EmitterName.IsEmpty() ? FName(*Emitter->GetName()) : FName(*Context.EmitterName)).GetName().ToString();
 #endif
-    // The engine's add leaves the system uncompiled; compile it as the other stack edits do.
-    System->RequestCompile(false);
+    // The engine's add leaves the system uncompiled: MarkDirtyAndVerify compiles it, as for the other stack edits.
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("emitterName"), AddedEmitterName);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added emitter '%s' to system."), *AddedEmitterName));
@@ -263,11 +249,7 @@ static bool SetEmitterProperties(FActionContext& Context)
     {
         Handle->SetIsEnabled(bEnabled, *System, false);
     }
-    if (bHasModules)
-    {
-        System->RequestCompile(false);
-    }
-    MarkDirtyAndVerify(Context, System);
+    MarkDirtyAndVerify(Context, System); // compiles the system: a module switched runs only once it is
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Updated properties for emitter '%s'."), *Context.EmitterName));
     Context.SendSuccess(true, TEXT("Emitter properties updated."));
     return true;

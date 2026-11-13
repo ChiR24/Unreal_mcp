@@ -86,9 +86,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     // Collision goes through the setters, as control_actor and modify_scs do.
     FString CollisionError;
     if (!McpApplyCollisionSetterKey(TemplateComponent, PropertyName, PropertyValue, CollisionError)) {
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(TEXT("error"), CollisionError);
-      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_APPLY_FAILED"));
+      SCSFail(Result, CollisionError, TEXT("SCS_PROPERTY_APPLY_FAILED"));
       CreatedOverride.Rollback();
       return Result;
     }
@@ -117,20 +115,13 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     Defaults.Capture(ResolvedPath);
     if (!ApplyJsonValueToProperty(ContainerPtr, TargetProp, PropertyValue,
                                   FailureMessage)) {
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(TEXT("error"),
-                             FailureMessage.IsEmpty()
-                                 ? TEXT("Failed to apply property value")
-                                 : FailureMessage);
-      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_APPLY_FAILED"));
+      SCSFail(Result, FailureMessage.IsEmpty() ? TEXT("Failed to apply property value") : FailureMessage,
+              TEXT("SCS_PROPERTY_APPLY_FAILED"));
       CreatedOverride.Rollback();
       return Result;
     }
   } else {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), TEXT("Property value is invalid"));
-    Result->SetStringField(TEXT("errorCode"),
-                           TEXT("SCS_PROPERTY_INVALID_VALUE"));
+    SCSFail(Result, TEXT("Property value is invalid"), TEXT("SCS_PROPERTY_INVALID_VALUE"));
     CreatedOverride.Rollback();
     return Result;
   }

@@ -36,25 +36,6 @@ FString MakeSafeUiScreenshotFilenameForMcp(
   return Filename;
 }
 
-void AddScreenshotMetadataForUiMcp(const TSharedPtr<FJsonObject> &Resp,
-                                   const TSharedPtr<FJsonObject> &Payload) {
-  if (!Resp.IsValid() || !Payload.IsValid()) {
-    return;
-  }
-
-  bool bIncludeMetadata = false;
-  if (!Payload->TryGetBoolField(TEXT("includeMetadata"), bIncludeMetadata) ||
-      !bIncludeMetadata) {
-    return;
-  }
-
-  const TSharedPtr<FJsonObject> *Metadata = nullptr;
-  if (Payload->TryGetObjectField(TEXT("metadata"), Metadata) && Metadata &&
-      Metadata->IsValid()) {
-    Resp->SetObjectField(TEXT("metadata"), *Metadata);
-  }
-}
-
 FString MakeScreenshotTooLargeMessageForUiMcp(int32 SizeBytes) {
   return FString::Printf(
       TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with returnBase64=false or a smaller viewport/window."),

@@ -34,11 +34,11 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       }
     }
     if (FuncName.TrimStartAndEnd().IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           TEXT("functionName, name, or memberName required. Example: "
                "{\"functionName\": \"MyFunction\"}"),
-          nullptr, TEXT("INVALID_ARGUMENT"));
+          TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
@@ -122,8 +122,8 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
         Blueprint, FName(*FuncName), UEdGraph::StaticClass(),
         UEdGraphSchema_K2::StaticClass());
     if (!NewGraph) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to create function graph"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Failed to create function graph"),
                              TEXT("GRAPH_UNAVAILABLE"));
       return true;
     }
@@ -159,10 +159,10 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     // instead of silently dropping the outputs (no silent no-op).
     if (Outputs.Num() > 0 && !ResultNode) {
       FBlueprintEditorUtils::RemoveGraph(Blueprint, NewGraph, EGraphRemoveFlags::MarkTransient);
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           TEXT("Failed to create function result node for declared outputs."),
-          nullptr, TEXT("GRAPH_UNAVAILABLE"));
+          TEXT("GRAPH_UNAVAILABLE"));
       return true;
     }
 

@@ -12,9 +12,6 @@ constexpr int32 MaxScreenshotPngBytesForBase64ForMcp = 3 * 1024 * 1024;
 FString MakeSafeUiScreenshotFilenameForMcp(
     const TSharedPtr<FJsonObject> &Payload);
 
-void AddScreenshotMetadataForUiMcp(const TSharedPtr<FJsonObject> &Resp,
-                                   const TSharedPtr<FJsonObject> &Payload);
-
 FString MakeScreenshotTooLargeMessageForUiMcp(int32 SizeBytes);
 
 void AddViewportDetailsForUiScreenshot(

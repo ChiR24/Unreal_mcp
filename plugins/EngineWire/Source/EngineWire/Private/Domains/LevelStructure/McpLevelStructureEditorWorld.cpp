@@ -224,7 +224,7 @@ bool ResolveLevelBlueprintGraph(
     OutLevel = World ? ResolveTargetLevelForBlueprintRequest(World, Payload, LevelError) : nullptr;
     if (!OutLevel)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, LevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
+        Subsystem->SendAutomationError(Socket, RequestId, LevelError, TEXT("LEVEL_NOT_OPEN"));
         return false;
     }
     const FString LevelName = OutLevel->GetOutermost()->GetName();
@@ -233,22 +233,22 @@ bool ResolveLevelBlueprintGraph(
     {
         if (bCreate)
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Failed to create the level Blueprint of %s."), *LevelName), nullptr, TEXT("CREATE_FAILED"));
+            Subsystem->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Failed to create the level Blueprint of %s."), *LevelName), TEXT("CREATE_FAILED"));
         }
         else
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            Subsystem->SendAutomationError(Socket, RequestId,
                 FString::Printf(TEXT("Level %s has no level Blueprint yet; add a node first (edit_level_blueprint edit add_node)."), *LevelName),
-                nullptr, TEXT("NOT_FOUND"));
+                TEXT("NOT_FOUND"));
         }
         return false;
     }
     OutGraph = FBlueprintEditorUtils::FindEventGraph(OutBlueprint);
     if (!OutGraph)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("The level Blueprint of %s has no event graph."), *LevelName), nullptr, TEXT("GRAPH_NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("The level Blueprint of %s has no event graph."), *LevelName), TEXT("GRAPH_NOT_FOUND"));
         return false;
     }
     return true;

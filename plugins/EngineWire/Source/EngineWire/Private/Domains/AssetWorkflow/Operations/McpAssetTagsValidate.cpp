@@ -30,16 +30,16 @@ bool UEngineWireSubsystem::HandleSetTags(
   }
 
   if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, TEXT("Asset not found"),
+                        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
   UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to load asset"),
+                        TEXT("LOAD_FAILED"));
     return true;
   }
 
@@ -81,9 +81,9 @@ bool UEngineWireSubsystem::HandleValidateAsset(
 
   UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to load asset"),
+                        TEXT("LOAD_FAILED"));
     return true;
   }
 

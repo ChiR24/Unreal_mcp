@@ -130,8 +130,6 @@ bool McpBlueprintAddEventStandard(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
-// An event the parent class chain or an implemented interface declares under Name, or null.
-UFunction *McpFindOverridableEvent(const UBlueprint *BP, const FString &Name);
 // EntryNodeGuid goes out as nodeGuid, ResultNodeGuid (when the function has a
 // return node) as resultNodeGuid: build_graph aliases them "$id" and "$id_return".
 // OverrideClass names the parent function the new one overrides, as overrides.

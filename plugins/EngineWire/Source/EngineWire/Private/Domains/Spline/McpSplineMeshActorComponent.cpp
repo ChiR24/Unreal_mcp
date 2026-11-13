@@ -37,23 +37,23 @@ bool HandleCreateSplineMeshComponentOnActor(
         Mesh = SafeMeshPath.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
         if (!Mesh)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Mesh not found: %s"), *MeshPath), TEXT("MESH_NOT_FOUND"));
             return true;
         }
     }
     if (FindObject<UObject>(Actor, *ComponentName))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), nullptr, TEXT("ALREADY_EXISTS"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), TEXT("ALREADY_EXISTS"));
         return true;
     }
     Actor->Modify();
     USplineMeshComponent* MeshComp = NewObject<USplineMeshComponent>(Actor, FName(*ComponentName), RF_Transactional);
     if (!MeshComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create spline mesh component"), nullptr, TEXT("CREATE_FAILED"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to create spline mesh component"), TEXT("CREATE_FAILED"));
         return true;
     }
     if (Mesh)

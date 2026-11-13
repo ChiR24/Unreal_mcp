@@ -40,8 +40,8 @@ bool HandleOpenLevelBlueprint(
     ULevel* PersistentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, OpenLevelError, true);
     if (!PersistentLevel)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            OpenLevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            OpenLevelError, TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
 

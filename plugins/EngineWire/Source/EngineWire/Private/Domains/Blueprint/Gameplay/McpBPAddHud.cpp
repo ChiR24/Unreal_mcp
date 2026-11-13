@@ -40,8 +40,8 @@ bool HandleBlueprintAddHealthHud(const FBlueprintActionContext &Context) {
                               ? FString(TEXT("The Blueprint has no health to show: add_behaviour behaviour=health first"))
                           : Hud.Element.IsEmpty() ? FString(TEXT("barName must not be empty")) : FString();
   if (!Refusal.IsEmpty()) {
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, Refusal, nullptr,
-                                          TEXT("INVALID_ARGUMENT"));
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, Refusal,
+                                       TEXT("INVALID_ARGUMENT"));
     return true;
   }
   SetHudString(Hud, TEXT("BarName"), Hud.Element);
@@ -66,11 +66,11 @@ bool HandleBlueprintAddCounterHud(const FBlueprintActionContext &Context) {
   const FProperty *Number = Variable.IsEmpty() ? nullptr : FindFProperty<FProperty>(Blueprint->GeneratedClass, *Variable);
   if (!Number || !(Number->IsA<FIntProperty>() || Number->IsA<FInt64Property>() || Number->IsA<FFloatProperty>() ||
                    Number->IsA<FDoubleProperty>())) {
-    Context.Bridge.SendAutomationResponse(
-        Context.RequestingSocket, Context.RequestId, false,
+    Context.Bridge.SendAutomationError(
+        Context.RequestingSocket, Context.RequestId,
         FString::Printf(TEXT("variableName must name an Int or Float variable of the Blueprint (Coins, Score); '%s' %s"),
                         *Variable, Number ? TEXT("is not a number") : TEXT("is not one of its variables")),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   const FString Label = Payload->HasField(TEXT("label")) ? GetJsonStringField(Payload, TEXT("label")) : Variable;
@@ -111,8 +111,8 @@ bool HandleBlueprintAddCounterHud(const FBlueprintActionContext &Context) {
   Tree->SetObjectField(TEXT("slot"), Slot);
   Hud.AddPayload->SetObjectField(TEXT("tree"), Tree);
   if (Hud.Element.IsEmpty()) {
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
-                                          TEXT("textName must not be empty"), nullptr, TEXT("INVALID_ARGUMENT"));
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                                       TEXT("textName must not be empty"), TEXT("INVALID_ARGUMENT"));
     return true;
   }
   SetHudString(Hud, TEXT("Tag"), TEXT("CounterHud_") + Variable);

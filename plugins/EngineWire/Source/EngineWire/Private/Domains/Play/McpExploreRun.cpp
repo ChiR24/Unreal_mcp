@@ -42,16 +42,6 @@ FVector DirOf(uint8 Dir)
     return FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.0);
 }
 
-FCellKey KeyOf(const FSession& S, const FVector& At, uint32 Flags)
-{
-    FCellKey Key;
-    Key.X = FMath::FloorToInt32(At.X / S.CellCm);
-    Key.Y = FMath::FloorToInt32(At.Y / S.CellCm);
-    Key.Z = FMath::FloorToInt32(At.Z / S.HeightCm);
-    Key.Flags = Flags;
-    return Key;
-}
-
 void Teleport(APawn* Pawn, const FVector& Where)
 {
     if (AController* Controller = Pawn->GetController())
@@ -100,6 +90,14 @@ int32 Choose(FSession& S)
     return S.Cells.Num() - 1;
 }
 
+void BeginExplore(FSession& S)
+{
+    S.Stage = EStage::Explore;
+    S.ExploreLeft = RoundFrames;
+    S.Trail.Reset();
+    S.Move = FMove();
+}
+
 void BeginReturn(FSession& S, APawn* Pawn, UWorld* World)
 {
     FCell& Cell = S.Cells[S.From];
@@ -124,10 +122,7 @@ void BeginReturn(FSession& S, APawn* Pawn, UWorld* World)
         return;
     }
     Teleport(Pawn, Cell.Where);
-    S.Stage = EStage::Explore;
-    S.ExploreLeft = RoundFrames;
-    S.Trail.Reset();
-    S.Move = FMove();
+    BeginExplore(S);
 }
 } // namespace ExploreRunParts
 
@@ -136,6 +131,16 @@ using namespace ExploreRunParts;
 FIntPoint FloorCell(const FSession& S, const FVector& At)
 {
     return FIntPoint(FMath::FloorToInt32(At.X / S.CellCm), FMath::FloorToInt32(At.Y / S.CellCm));
+}
+
+FCellKey KeyOf(const FSession& S, const FVector& At, uint32 Flags)
+{
+    FCellKey Key;
+    Key.X = FMath::FloorToInt32(At.X / S.CellCm);
+    Key.Y = FMath::FloorToInt32(At.Y / S.CellCm);
+    Key.Z = FMath::FloorToInt32(At.Z / S.HeightCm);
+    Key.Flags = Flags;
+    return Key;
 }
 
 uint32 FlagsNow(const FSession& S, UWorld* World)
@@ -203,10 +208,7 @@ bool Step(FSession& S, UWorld* World, double Until, FString& OutStop)
         {
             Controller->StopMovement();
         }
-        S.Stage = EStage::Explore;
-        S.ExploreLeft = RoundFrames;
-        S.Trail.Reset();
-        S.Move = FMove();
+        BeginExplore(S);
         return true;
     }
     // Explore: the last move again with p = 0.95, else a new one (a jump 1 time in 5).

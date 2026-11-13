@@ -118,9 +118,9 @@ bool UEngineWireSubsystem::HandleSearchFabListings(
       });
 
   if (!bStarted) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("The Fab adapter refused the search."), nullptr,
-                           TEXT("NOT_SUPPORTED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("The Fab adapter refused the search."),
+                        TEXT("NOT_SUPPORTED"));
   }
   return true;
 }

@@ -27,9 +27,9 @@ bool HandleSetMetadataAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
     if (!IFileManager::Get().FileExists(*MapFilename) &&
         !FPackageName::DoesPackageExist(AssetPath)) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              FString::Printf(TEXT("Level not found: %s"), *AssetPath),
-                             nullptr, TEXT("NOT_FOUND"));
+                             TEXT("NOT_FOUND"));
       return true;
     }
 
@@ -38,9 +38,9 @@ bool HandleSetMetadataAction(UEngineWireSubsystem& Subsystem, const FString& Req
     const TSharedPtr<FJsonObject>* Metadata = nullptr;
     if (!Payload->TryGetObjectField(TEXT("metadata"), Metadata) ||
         !Metadata || !(*Metadata).IsValid() || (*Metadata)->Values.Num() == 0) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("metadata must be an object with at least one key to write, e.g. {\"author\": \"MCP\"}"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

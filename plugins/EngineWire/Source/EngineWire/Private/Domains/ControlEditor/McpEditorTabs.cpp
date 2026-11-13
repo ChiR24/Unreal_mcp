@@ -56,9 +56,9 @@ bool UEngineWireSubsystem::HandleOpenEditorTab(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TabId;
   if (!Payload->TryGetStringField(TEXT("tabId"), TabId) || TabId.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("'tabId' is required (for example 'BridgeTab' or 'Fab')."), nullptr,
+    SendAutomationError(
+        Socket, RequestId,
+        TEXT("'tabId' is required (for example 'BridgeTab' or 'Fab')."),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -81,12 +81,12 @@ bool UEngineWireSubsystem::HandleOpenEditorTab(
       SendAutomationResponse(Socket, RequestId, bOpened, Message, Result, bOpened ? TEXT("") : TEXT("TAB_INVOKE_FAILED"));
       return true;
     }
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("No registered tab spawner named '%s'. Tab ids are exact (for example "
                              "'BridgeTab'); Fab opens with tabId 'Fab'. The owning plugin may be disabled."),
                         *TabId),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 
@@ -114,9 +114,9 @@ bool HandleCloseEditorTabForMcp(UEngineWireSubsystem *Self, const FString &Reque
                                 TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString TabId;
   if (!Payload->TryGetStringField(TEXT("tabId"), TabId) || TabId.IsEmpty()) {
-    Self->SendAutomationResponse(Socket, RequestId, false,
-                                 TEXT("'tabId' is required (for example 'MessageLog' or 'OutputLog')."), nullptr,
-                                 TEXT("INVALID_ARGUMENT"));
+    Self->SendAutomationError(Socket, RequestId,
+                              TEXT("'tabId' is required (for example 'MessageLog' or 'OutputLog')."),
+                              TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // The global manager holds nomad and floating tabs only: one the level editor docked (the Output Log, opened by id)
@@ -126,12 +126,12 @@ bool HandleCloseEditorTabForMcp(UEngineWireSubsystem *Self, const FString &Reque
   const TSharedPtr<FTabManager> LevelTabs = Tab.IsValid() ? nullptr : LevelEditorTabsForMcp();
   Tab = LevelTabs.IsValid() ? LevelTabs->FindExistingLiveTab(Id) : Tab;
   if (!Tab.IsValid()) {
-    Self->SendAutomationResponse(
-        Socket, RequestId, false,
+    Self->SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("No open tab has the id '%s'. Tab ids are exact (for example 'MessageLog', "
                              "'OutputLog'); read_editor_ui lists the open windows."),
                         *TabId),
-        nullptr, TEXT("TAB_NOT_OPEN"));
+        TEXT("TAB_NOT_OPEN"));
     return true;
   }
   // The tab's own answer: an asset editor holding unsaved work, or a locked tab, may keep itself open.

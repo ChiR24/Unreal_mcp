@@ -37,8 +37,8 @@ bool HandleCreateSublevel(
 
     if (SublevelName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("sublevelName is required for create_sublevel"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("sublevelName is required for create_sublevel"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -50,16 +50,16 @@ bool HandleCreateSublevel(
     UClass* StreamingClass = ResolveLevelStreamingClass(StreamingMethod);
     if (!StreamingClass)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -73,10 +73,10 @@ bool HandleCreateSublevel(
         NormalizedParentPath = McpRootedContentPath(NormalizedParentPath);
         if (!NormalizedParentPath.Equals(OpenLevel, ESearchCase::IgnoreCase))
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            Subsystem->SendAutomationError(Socket, RequestId,
                 FString::Printf(TEXT("parentLevel %s is not the level open in the editor (%s); open it first (control_editor "
                     "open_level), then create the sublevel. Nothing was created."), *NormalizedParentPath, *OpenLevel),
-                nullptr, TEXT("PARENT_LEVEL_NOT_LOADED"));
+                TEXT("PARENT_LEVEL_NOT_LOADED"));
             return true;
         }
     }
@@ -122,8 +122,8 @@ bool HandleCreateSublevel(
     // name CreatePackage is a Fatal log for, as it is for a sublevelName holding two slashes.
     if (!FullSublevelPath.StartsWith(TEXT("/Game/")) || !FPackageName::IsValidLongPackageName(FullSublevelPath))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("A sublevel is created under /Game: %s is not a level "
-            "path there. Nothing was created."), *FullSublevelPath), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("A sublevel is created under /Game: %s is not a level "
+            "path there. Nothing was created."), *FullSublevelPath), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -163,10 +163,10 @@ bool HandleCreateSublevel(
     UWorld* NewSublevelWorld = CreateLevelWorld(SublevelPackageName, SublevelName, SublevelPackage);
     if (!NewSublevelWorld)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             SublevelPackage ? FString::Printf(TEXT("Failed to create world for sublevel: %s"), *SublevelName)
                             : FString::Printf(TEXT("Failed to create package for sublevel: %s"), *SublevelPackageName),
-            nullptr, SublevelPackage ? TEXT("WORLD_CREATION_FAILED") : TEXT("PACKAGE_CREATION_FAILED"));
+            SublevelPackage ? TEXT("WORLD_CREATION_FAILED") : TEXT("PACKAGE_CREATION_FAILED"));
         return true;
     }
 

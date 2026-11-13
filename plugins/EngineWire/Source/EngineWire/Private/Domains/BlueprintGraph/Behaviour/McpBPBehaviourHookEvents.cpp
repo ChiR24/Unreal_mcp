@@ -18,24 +18,6 @@ namespace McpBlueprintBehaviour::Detail
 {
 namespace
 {
-UFunction* FindOverridableEvent(UBlueprint* Blueprint, FString Name)
-{
-    Name.RemoveFromStart(TEXT("Event "));
-    // The editor shows AActor's Receive<Name> events without the prefix.
-    for (const FString& Candidate : {Name, FString(TEXT("Receive")) + Name})
-    {
-        for (UClass* Class = Blueprint->ParentClass; Class; Class = Class->GetSuperClass())
-        {
-            UFunction* Function = Class->FindFunctionByName(FName(*Candidate), EIncludeSuperFlag::ExcludeSuper);
-            if (Function && Function->HasAnyFunctionFlags(FUNC_BlueprintEvent) && !Function->GetReturnProperty())
-            {
-                return Function;
-            }
-        }
-    }
-    return nullptr;
-}
-
 bool ResolveComponentEvent(UBlueprint* Blueprint, const FString& Component, const FString& Event, FHookTarget& Out,
                            FString& OutError)
 {
@@ -93,7 +75,7 @@ bool ResolveHookTarget(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Hoo
         return ResolveComponentEvent(Blueprint, Component, Event, Out, OutError);
     }
     Out.Label = Event;
-    Out.Function = FindOverridableEvent(Blueprint, Event);
+    Out.Function = McpFindOverridableEvent(Blueprint, Event);
     const UClass* Parent = Blueprint->ParentClass;
     // A new override hides what implements the event above this Blueprint (a parent
     // Blueprint's graph, a BlueprintNativeEvent's C++), so it calls that first, as the

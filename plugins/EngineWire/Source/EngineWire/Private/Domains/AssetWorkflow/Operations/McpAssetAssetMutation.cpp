@@ -34,9 +34,9 @@ bool UEngineWireSubsystem::HandleRenameAsset(
   }
 
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sourcePath and destinationPath (or newName) required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sourcePath and destinationPath (or newName) required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -87,17 +87,17 @@ bool UEngineWireSubsystem::HandleRenameAsset(
   }
 
   if (!McpAssetExists(ResolvedSourcePath)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
-        nullptr, TEXT("ASSET_NOT_FOUND"));
+        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
   if (McpAssetExists(DestinationPath)) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("'%s' already exists"), *DestinationPath),
-                           nullptr, TEXT("DESTINATION_EXISTS"));
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("'%s' already exists"), *DestinationPath),
+                        TEXT("DESTINATION_EXISTS"));
     return true;
   }
   // Settings that point at the asset (default map, game mode, input contexts) follow it; the plain
@@ -144,8 +144,8 @@ bool UEngineWireSubsystem::HandleDeleteAssets(
   }
 
   if (PathsToDelete.Num() == 0) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("No paths provided"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("No paths provided"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

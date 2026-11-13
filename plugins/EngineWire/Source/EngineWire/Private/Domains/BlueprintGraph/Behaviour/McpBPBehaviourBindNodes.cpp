@@ -45,7 +45,7 @@ bool CreateBindEventNode(FActionContext& Context, float X, float Y)
 {
     const FString Member = GetJsonStringField(Context.Payload, TEXT("memberName"));
     const FString MemberClass = McpGetFirstStringField(Context.Payload, {TEXT("memberClass"), TEXT("targetClass")});
-    UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveBehaviourClass(MemberClass);
+    UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveClassByName(MemberClass);
     FMulticastDelegateProperty* Dispatcher = FindBehaviourDispatcher(Context.Blueprint, Member, Owner);
     if (!Dispatcher || (!MemberClass.IsEmpty() && !Owner))
     {

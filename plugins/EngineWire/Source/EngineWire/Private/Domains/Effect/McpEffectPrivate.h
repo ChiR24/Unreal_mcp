@@ -22,6 +22,11 @@ struct FEffectActionContext
     const FString& Lower;
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> Socket;
+
+    void SendError(const FString& Message, const FString& ErrorCode) const
+    {
+        Bridge.SendAutomationError(Socket, RequestId, Message, ErrorCode);
+    }
 };
 
 FString NormalizeNativeSubAction(

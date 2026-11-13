@@ -31,38 +31,38 @@ bool UEngineWireSubsystem::HandleInvokeReflectedFunction(
   FString ClassName, FunctionName;
   if (!Payload->TryGetStringField(TEXT("className"), ClassName) || ClassName.IsEmpty() ||
       !Payload->TryGetStringField(TEXT("functionName"), FunctionName) || FunctionName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("'className' and 'functionName' are both required."), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("'className' and 'functionName' are both required."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   UObject *Instance = McpFindReflectedInstance(ClassName);
   if (Instance == nullptr) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("No reflected class named '%s'."), *ClassName), nullptr,
+    SendAutomationError(
+        Socket, RequestId,
+        FString::Printf(TEXT("No reflected class named '%s'."), *ClassName),
         TEXT("NOT_FOUND"));
     return true;
   }
   UFunction *Function = Instance->FindFunction(FName(*FunctionName));
   if (Function == nullptr) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("'%s' has no reflected function '%s'. Call describe_reflected_api for the current surface."),
                         *ClassName, *FunctionName),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
   // Invoking on a template -- the CDO or any subobject it owns -- mutates shared
   // default state and never reaches the running instance the caller meant, so
   // refuse rather than appear to work.
   if (Instance->IsTemplate()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Only the class default object of '%s' exists. Open the owning window first so a live instance is created."),
                         *ClassName),
-        nullptr, TEXT("NO_LIVE_INSTANCE"));
+        TEXT("NO_LIVE_INSTANCE"));
     return true;
   }
 
@@ -75,8 +75,8 @@ bool UEngineWireSubsystem::HandleInvokeReflectedFunction(
   TArray<TSharedPtr<FJsonValue>> Unset;
   FString BindError;
   if (!McpBindJsonArgsToParams(Function, Args, Params.Data(), Unset, BindError)) {
-    SendAutomationResponse(Socket, RequestId, false, BindError, nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, BindError,
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

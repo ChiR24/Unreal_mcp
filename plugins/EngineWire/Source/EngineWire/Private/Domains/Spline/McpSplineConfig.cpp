@@ -20,8 +20,8 @@ bool HandleConfigureMeshSpacing(
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);
     if (!Target)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -33,14 +33,14 @@ bool HandleConfigureMeshSpacing(
     const double RandomOffsetRange = GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0);
     if (!bHasSpacing && !bHasUseOffset && !bHasOffsetRange)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Pass spacing, useRandomOffset or randomOffsetRange. Nothing was stored."), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Pass spacing, useRandomOffset or randomOffsetRange. Nothing was stored."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if ((bHasSpacing && Spacing <= 0.0) || (bHasOffsetRange && RandomOffsetRange < 0.0))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("spacing must be greater than 0 and randomOffsetRange must be non-negative"), nullptr, TEXT("INVALID_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("spacing must be greater than 0 and randomOffsetRange must be non-negative"), TEXT("INVALID_PARAM"));
         return true;
     }
 
@@ -75,8 +75,8 @@ bool HandleConfigureMeshRandomization(
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);
     if (!Target)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Spline configuration target not found: %s"), *ActorName), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -89,8 +89,8 @@ bool HandleConfigureMeshRandomization(
     }
     if (!bAnySent)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Pass randomizeScale, minScale, maxScale, randomizeRotation or "
-            "rotationRange. Nothing was stored."), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Pass randomizeScale, minScale, maxScale, randomizeRotation or "
+            "rotationRange. Nothing was stored."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     const double MinScale = Payload->HasField(TEXT("minScale")) ? GetJsonNumberField(Payload, TEXT("minScale"), 0.8)
@@ -101,8 +101,8 @@ bool HandleConfigureMeshRandomization(
 
     if (MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Scale values must be positive, minScale must not exceed maxScale, and rotationRange must be non-negative"), nullptr, TEXT("INVALID_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Scale values must be positive, minScale must not exceed maxScale, and rotationRange must be non-negative"), TEXT("INVALID_PARAM"));
         return true;
     }
 

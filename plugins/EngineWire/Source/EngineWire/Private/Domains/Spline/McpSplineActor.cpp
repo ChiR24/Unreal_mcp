@@ -31,8 +31,8 @@ bool HandleCreateSplineActor(
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, Rotation);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to spawn spline actor"), nullptr, TEXT("SPAWN_FAILED"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to spawn spline actor"), TEXT("SPAWN_FAILED"));
         return true;
     }
     AActor* NewActor = SplineComp->GetOwner();

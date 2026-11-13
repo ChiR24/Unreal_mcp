@@ -43,9 +43,9 @@ bool UEngineWireSubsystem::HandleImportAsset(
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
 
   if (DestinationPath.IsEmpty() || SourcePath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sourcePath and destinationPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sourcePath and destinationPath required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -61,10 +61,10 @@ bool UEngineWireSubsystem::HandleImportAsset(
 
   // Verify source file exists
   if (!FPaths::FileExists(ResolvedSourcePath)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Source file not found: %s"), *SourcePath),
-        nullptr, TEXT("SOURCE_NOT_FOUND"));
+        TEXT("SOURCE_NOT_FOUND"));
     return true;
   }
 
@@ -172,18 +172,18 @@ bool UEngineWireSubsystem::HandleImportAsset(
                                  : TEXT("Asset imported but rename failed"),
                 Resp, FString());
           } else {
-            StrongThis->SendAutomationResponse(
-                Socket, RequestId, false,
+            StrongThis->SendAutomationError(
+                Socket, RequestId,
                 FString::Printf(TEXT("Failed to import asset from '%s'"),
                                  *ResolvedSourcePath),
-                nullptr, TEXT("IMPORT_FAILED"));
+                TEXT("IMPORT_FAILED"));
           }
         });
   } else {
     // Fallback: GEditor not available (shouldn't happen in editor context)
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor not available for deferred import"),
-                           nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Editor not available for deferred import"),
+                        TEXT("EDITOR_NOT_AVAILABLE"));
   }
 
   return true;
@@ -203,9 +203,9 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   if (DestinationPath.IsEmpty() && !NewName.IsEmpty()) DestinationPath = FPaths::GetPath(SourcePath);
 
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sourcePath and destinationPath (or newName) required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sourcePath and destinationPath (or newName) required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -319,19 +319,19 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
 
   // Fallback: single-asset duplication
   if (!McpAssetExists(SourcePath)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
-        nullptr, TEXT("ASSET_NOT_FOUND"));
+        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
   if (McpAssetExists(DestinationPath)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Destination asset already exists: %s"),
                         *DestinationPath),
-        nullptr, TEXT("DESTINATION_EXISTS"));
+        TEXT("DESTINATION_EXISTS"));
     return true;
   }
 
@@ -345,8 +345,8 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
                            Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Duplicate failed"),
-                           nullptr, TEXT("DUPLICATE_FAILED"));
+    SendAutomationError(Socket, RequestId, TEXT("Duplicate failed"),
+                        TEXT("DUPLICATE_FAILED"));
   }
   return true;
 }

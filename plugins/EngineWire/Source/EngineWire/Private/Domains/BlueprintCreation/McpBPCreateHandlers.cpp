@@ -19,9 +19,9 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   FString Name;
   LocalPayload->TryGetStringField(TEXT("name"), Name);
   if (Name.TrimStartAndEnd().IsEmpty()) {
-    Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                 TEXT("blueprint_create requires a name."),
-                                 nullptr, TEXT("INVALID_ARGUMENT"));
+    Self->SendAutomationError(RequestingSocket, RequestId,
+                              TEXT("blueprint_create requires a name."),
+                              TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

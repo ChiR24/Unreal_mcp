@@ -62,8 +62,8 @@ bool HandleConfigureRuntimeHashSetGrid(
     // Without a Name field no row can be matched, and a created row could never be found again.
     if (!NameProp)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("RuntimePartitions rows have no Name field on this engine version"), nullptr, TEXT("INVALID_PARTITION_STRUCTURE"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("RuntimePartitions rows have no Name field on this engine version"), TEXT("INVALID_PARTITION_STRUCTURE"));
         return true;
     }
     int32 Index = INDEX_NONE;
@@ -77,9 +77,9 @@ bool HandleConfigureRuntimeHashSetGrid(
     }
     if (Index == INDEX_NONE && !bCreateIfMissing)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Grid '%s' not found in RuntimeHashSet; pass createIfMissing true to add it"), *TargetPartitionName.ToString()),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     // An existing row changes only in what was sent: the defaults of the fields left out overwrote its own values.
@@ -87,9 +87,9 @@ bool HandleConfigureRuntimeHashSetGrid(
     const bool bSetCellSize = Index == INDEX_NONE || Payload->HasField(TEXT("gridCellSize"));
     if (!bSetRange && !bSetCellSize)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Partition '%s' found; pass "
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Partition '%s' found; pass "
             "gridCellSize or loadingRange to change it. Nothing was changed."), *TargetPartitionName.ToString()),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     HashSet->Modify();
@@ -150,10 +150,10 @@ bool HandleConfigureRuntimeHashSetGrid(
         {
             ArrayHelper.RemoveValues(Index);
         }
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Partition '%s' has no grid layer to hold a "
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Partition '%s' has no grid layer to hold a "
             "cell size or loading range%s. Give it a Main Layer under World Settings > World Partition > Runtime Partitions, then "
             "retry."), *TargetPartitionName.ToString(), bCreated ? TEXT(" (a new row is made without one, so it was taken back)") : TEXT("")),
-            nullptr, TEXT("PARTITION_HAS_NO_LAYER"));
+            TEXT("PARTITION_HAS_NO_LAYER"));
         return true;
     }
 

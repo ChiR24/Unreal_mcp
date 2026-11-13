@@ -40,7 +40,6 @@ describe('actor finders keep a path-restricted caller inside its prefixes', () =
 
   it('sites that walk the world for an unnamed or labelled target ask the rule', () => {
     for (const file of [
-      'Domains/Environment/Runtime/McpEnvActorComponents.cpp',
       'Domains/GameFramework/McpGameFrameworkPlayerFlow.cpp',
       'Domains/Landscape/McpLandscapeLookup.cpp',
       'Domains/Lighting/McpLightingSky.cpp',
@@ -48,6 +47,7 @@ describe('actor finders keep a path-restricted caller inside its prefixes', () =
       'Domains/Performance/Budget/McpFrameBudgetKnobs.cpp',
       'Domains/Render/McpRenderSupport.h',
       'Domains/Render/McpRenderReflectResolve.cpp',
+      'Foundation/BridgeHelpers/Actors/McpActorSpawnHelpers.cpp',
       'Foundation/Render/McpPostProcessVolumeResolution.cpp',
     ]) {
       expect(code(file), file).toContain(RULE);

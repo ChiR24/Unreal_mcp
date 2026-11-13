@@ -36,16 +36,16 @@ bool UEngineWireSubsystem::HandleSequenceSetMetadata(
     Pending.Emplace(Key, SingleValue);
   }
   if (Pending.Num() == 0) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("sequence_set_metadata requires a metadata object or key + value"),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
+    SendAutomationError(Socket, RequestId, TEXT("Sequence not found"),
+                        TEXT("INVALID_SEQUENCE"));
     return true;
   }
   TArray<FString> WrittenKeys;

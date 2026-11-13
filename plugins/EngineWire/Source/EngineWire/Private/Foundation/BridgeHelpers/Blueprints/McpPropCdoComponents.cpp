@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -111,50 +112,16 @@ UActorComponent* FindCdoComponent(
         *bOutFoundComponent = false;
     }
 
-    if (AActor* DefaultActor = Cast<AActor>(CDO))
+    // A native component goes by its object name or, usually, by the UPROPERTY that holds it: ACharacter's skeletal
+    // mesh is declared as `Mesh` but constructed as `CharacterMesh0`, and CapsuleComponent is `CollisionCylinder`.
+    const AActor* DefaultActor = Cast<AActor>(CDO);
+    if (UActorComponent* Comp = DefaultActor ? McpFindActorComponent(DefaultActor, ComponentName, UActorComponent::StaticClass()) : nullptr)
     {
-        TInlineComponentArray<UActorComponent*> Components;
-        DefaultActor->GetComponents(Components);
-        for (UActorComponent* Comp : Components)
+        if (bOutFoundComponent)
         {
-            if (Comp && Comp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
-            {
-                if (bOutFoundComponent)
-                {
-                    *bOutFoundComponent = true;
-                }
-                return Comp;
-            }
+            *bOutFoundComponent = true;
         }
-
-        // Native components are usually referred to by the UPROPERTY that holds
-        // them, not by their object name: ACharacter's skeletal mesh is declared
-        // as `Mesh` but is constructed as `CharacterMesh0`, and
-        // ACharacter::CapsuleComponent is `CollisionCylinder`. Matching only the
-        // object name above made the documented, discoverable name fail with
-        // COMPONENT_NOT_FOUND. Resolve the property name too.
-        for (TFieldIterator<FObjectProperty> It(DefaultActor->GetClass()); It; ++It)
-        {
-            FObjectProperty* ObjProp = *It;
-            if (!ObjProp || !ObjProp->PropertyClass ||
-                !ObjProp->PropertyClass->IsChildOf(UActorComponent::StaticClass()))
-            {
-                continue;
-            }
-            if (!ObjProp->GetName().Equals(ComponentName, ESearchCase::IgnoreCase))
-            {
-                continue;
-            }
-            if (UActorComponent* Comp = Cast<UActorComponent>(
-                    ObjProp->GetObjectPropertyValue_InContainer(DefaultActor)))
-            {
-                if (bOutFoundComponent)
-                {
-                    *bOutFoundComponent = true;
-                }
-                return Comp;
-            }
-        }
+        return Comp;
     }
 
     UBlueprintGeneratedClass* ActualBPGC = Blueprint

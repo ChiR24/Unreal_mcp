@@ -10,8 +10,8 @@ bool HandleValidateLevelAction(UEngineWireSubsystem& Subsystem, const FString& R
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
     }
     if (LevelPath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("levelPath required for validate_level"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("levelPath required for validate_level"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }

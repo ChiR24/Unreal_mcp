@@ -28,7 +28,7 @@ bool HandleSetNavLinkType(
     const bool bSmart = LinkType.Equals(TEXT("smart"), ESearchCase::IgnoreCase);
     if (!bSmart && !LinkType.Equals(TEXT("simple"), ESearchCase::IgnoreCase))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("linkType must be simple or smart."), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("linkType must be simple or smart."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -70,8 +70,8 @@ bool HandleConfigureSmartLinkBehavior(
     UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp();
     if (!SmartComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("NavLinkProxy has no smart link component"), nullptr, TEXT("NO_SMART_LINK"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("NavLinkProxy has no smart link component"), TEXT("NO_SMART_LINK"));
         return true;
     }
 
@@ -102,14 +102,14 @@ bool HandleConfigureSmartLinkBehavior(
     }
     if (BadField)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("%s is not a NavArea class: %s. Nothing was changed."),
-            BadField, *GetJsonStringField(Payload, BadField)), nullptr, TEXT("INVALID_AREA_CLASS"));
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is not a NavArea class: %s. Nothing was changed."),
+            BadField, *GetJsonStringField(Payload, BadField)), TEXT("INVALID_AREA_CLASS"));
         return true;
     }
     if (!Payload->HasField(TEXT("linkEnabled")) && !EnabledArea && !DisabledArea && !bBroadcast && !bObstacle)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Nothing to set: send linkEnabled, enabledAreaClass, disabledAreaClass, "
-            "broadcastRadius, broadcastInterval or bCreateBoxObstacle true."), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Nothing to set: send linkEnabled, enabledAreaClass, disabledAreaClass, "
+            "broadcastRadius, broadcastInterval or bCreateBoxObstacle true."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

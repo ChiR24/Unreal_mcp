@@ -45,8 +45,8 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No editor world available"), TEXT("NO_WORLD"));
       return true;
     }
 
@@ -124,9 +124,9 @@ bool HandleGetLevelInfoAction(UEngineWireSubsystem& Subsystem, const FString& Re
       }
     }
 
-    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+    Subsystem.SendAutomationError(RequestingSocket, RequestId,
                            FString::Printf(TEXT("Level not found: %s"), *LevelPath),
-                           nullptr, TEXT("LEVEL_NOT_FOUND"));
+                           TEXT("LEVEL_NOT_FOUND"));
     return true;
 }
 } // namespace McpLevelHandlers

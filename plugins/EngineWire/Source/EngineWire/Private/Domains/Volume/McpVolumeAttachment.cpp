@@ -20,7 +20,7 @@ bool ResolveAttachmentTarget(UEngineWireSubsystem* Subsystem, const FString& Req
     const FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
     if (ActorPath.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("actorPath is required"), nullptr, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("actorPath is required"), TEXT("MISSING_PARAMETER"));
         return false;
     }
     if (ActorPath.Contains(TEXT("..")) || ActorPath.Contains(TEXT("\\")))
@@ -36,7 +36,7 @@ bool ResolveAttachmentTarget(UEngineWireSubsystem* Subsystem, const FString& Req
     OutArgs.TargetActor = FindActorByNameInWorldForMcp(OutArgs.World, ActorPath, true);
     if (!OutArgs.TargetActor)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Actor not found: %s"), *ActorPath), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorPath), TEXT("NOT_FOUND"));
         return false;
     }
     OutArgs.Location = OutArgs.TargetActor->GetActorLocation();

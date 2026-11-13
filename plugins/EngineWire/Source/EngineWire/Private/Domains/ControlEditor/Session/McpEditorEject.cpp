@@ -128,13 +128,13 @@ bool UEngineWireSubsystem::HandleControlEditorPossess(
         APlayerController *Controller = World ? World->GetFirstPlayerController() : nullptr;
         APawn *Pawn = WeakTarget.Get();
         if (!World || GEditor->bIsSimulatingInEditor || !Controller || (bHasTarget && !Pawn)) {
-          WeakThis->SendAutomationResponse(
-              Socket, RequestId, false,
+          WeakThis->SendAutomationError(
+              Socket, RequestId,
               !World ? TEXT("Play In Editor ended before the player was back in the game")
               : GEditor->bIsSimulatingInEditor ? TEXT("The ejected player did not return to the game within 5 s")
               : !Controller ? TEXT("The running game has no player controller to possess with")
                             : TEXT("The pawn to possess was destroyed"),
-              nullptr, !World ? TEXT("NO_ACTIVE_SESSION") : TEXT("POSSESS_FAILED"));
+              !World ? TEXT("NO_ACTIVE_SESSION") : TEXT("POSSESS_FAILED"));
           return false;
         }
         if (Pawn && Controller->GetPawn() != Pawn) {

@@ -156,20 +156,8 @@ bool FCombatActionContext::HandleDamageExecution() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FBoolProperty* HeadProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsHeadshotZone")))
-                {
-                    HeadProp->SetPropertyValue_InContainer(CDO, bIsDamageZoneHead);
-                }
-                if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitboxDamageMultiplier")))
-                {
-                    MultProp->SetPropertyValue_InContainer(CDO, DamageMultiplier);
-                }
-            }
-        }
+        SetVariableDefaultCombat<FBoolProperty>(Blueprint, TEXT("bIsHeadshotZone"), bIsDamageZoneHead);
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("HitboxDamageMultiplier"), DamageMultiplier);
 
         if (!SaveOrReply(Blueprint))
         {
@@ -230,16 +218,7 @@ bool FCombatActionContext::HandleDamageExecution() const
         // damageMultiplier was read and then dropped -- the variable was created
         // but never given the requested value, unlike setup_hitbox_component
         // above, which writes the same variable through the CDO.
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitboxDamageMultiplier")))
-                {
-                    MultProp->SetPropertyValue_InContainer(CDO, DamageMultiplier);
-                }
-            }
-        }
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("HitboxDamageMultiplier"), DamageMultiplier);
 
         if (!SaveOrReply(Blueprint))
         {

@@ -49,10 +49,10 @@ bool HandleSetLevelBlueprintPinDefault(
     }
     if (Matches.Num() > 1)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); pass one node's nodeId (guid) or node name."),
                 *Wanted, Matches.Num(), *FString::Join(Matches, TEXT(", "))),
-            nullptr, TEXT("AMBIGUOUS_NODE"));
+            TEXT("AMBIGUOUS_NODE"));
         return true;
     }
     TSharedPtr<FJsonObject> Request = Payload;

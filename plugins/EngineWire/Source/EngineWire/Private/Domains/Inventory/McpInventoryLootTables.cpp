@@ -4,35 +4,8 @@
 bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_loot_table")) {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Data/LootTables"));
-
-    if (Name.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: name"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UPackage* Package = CreateInventoryAssetPackage(Bridge, RequestId, RequestingSocket, Path, Name);
-    if (!Package) {
-      return true;
-    }
-
-    bool bSaved = false;
-    if (NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
-      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      Result->SetBoolField(TEXT("saved"), bSaved);
-      Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Loot table created"), Result);
-    } else {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create loot table asset"),
-                          TEXT("ASSET_CREATE_FAILED"));
-    }
-    return true;
+    return CreateGenericInventoryAsset(Bridge, RequestId, RequestingSocket, Payload, TEXT("/Game/Data/LootTables"), TEXT("lootTablePath"),
+                                       TEXT("Loot table created"), TEXT("loot table"));
   }
 
   if (SubAction == TEXT("add_loot_entry")) {

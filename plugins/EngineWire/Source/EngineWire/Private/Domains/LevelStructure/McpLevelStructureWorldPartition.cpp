@@ -129,9 +129,9 @@ bool HandleConfigureGridSize(
             {
                 if (!bHasValue)
                 {
-                    Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Grid '%s' found; pass "
+                    Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Grid '%s' found; pass "
                         "gridCellSize, loadingRange, bBlockOnSlowStreaming or priority to change it. Nothing was changed."),
-                        *Grid->GridName.ToString()), nullptr, TEXT("INVALID_ARGUMENT"));
+                        *Grid->GridName.ToString()), TEXT("INVALID_ARGUMENT"));
                     return true;
                 }
                 // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new

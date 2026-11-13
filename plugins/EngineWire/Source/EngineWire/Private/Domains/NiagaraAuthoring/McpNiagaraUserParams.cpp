@@ -25,18 +25,11 @@ bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamN
     return UserStore.GetDataInterface(Param) == DataInterface;
 }
 
-bool HasUserParameterNamed(UNiagaraSystem* System, const FString& ParamName)
+const FNiagaraVariableWithOffset* FindUserParameter(UNiagaraSystem* System, const FString& ParamName)
 {
-    const FName Plain(*ParamName);
-    const FName User(*(TEXT("User.") + ParamName));
-    for (const FNiagaraVariableWithOffset& Variable : System->GetExposedParameters().ReadParameterVariables())
-    {
-        if (Variable.GetName() == Plain || Variable.GetName() == User)
-        {
-            return true;
-        }
-    }
-    return false;
+    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
+    return System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
+        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
 }
 
 // A placed effect's own colour or rate read back only as the raw bytes of its component's override store. Each user

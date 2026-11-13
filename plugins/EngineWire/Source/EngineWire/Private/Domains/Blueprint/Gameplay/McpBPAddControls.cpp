@@ -58,10 +58,10 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
   UBlueprint *Blueprint = Path.IsEmpty() ? nullptr : LoadBlueprintAsset(Path, Normalized, Error);
   const UClass *Parent = Blueprint ? Blueprint->ParentClass.Get() : nullptr;
   if (!Parent || !Parent->IsChildOf(ACharacter::StaticClass())) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  Blueprint ? TEXT("Controls need a Character Blueprint (it jumps and walks)")
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               Blueprint ? TEXT("Controls need a Character Blueprint (it jumps and walks)")
                                             : (Error.IsEmpty() ? TEXT("blueprintPath must name a Blueprint") : *Error),
-                                  nullptr, Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
+                               Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
     return true;
   }
   // IA_Move and IA_Look next to the Blueprint, Axis2D (an existing one is turned Axis2D).
@@ -72,9 +72,9 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
     ActionPayload->SetStringField(TEXT("path"), Folder);
     ActionPayload->SetStringField(TEXT("valueType"), TEXT("axis2d"));
     if (!RunInputStep(Bridge, RequestId + TEXT("#") + Name, ActionPayload, McpInputHandlers::HandleCreateInputAction)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    FString::Printf(TEXT("Could not make %s/%s"), *Folder, Name), nullptr,
-                                    TEXT("ASSET_CREATE_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                                 FString::Printf(TEXT("Could not make %s/%s"), *Folder, Name),
+                                 TEXT("ASSET_CREATE_FAILED"));
       return true;
     }
   }
@@ -102,7 +102,7 @@ bool HandleBlueprintAddControls(const FBlueprintActionContext &Context) {
     }
     const TSharedPtr<FJsonObject> Recipe = McpBlueprintBehaviour::LoadRecipe(TEXT("Character"), Part.Recipe, Values, Error);
     if (!Recipe) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_RECIPE"));
       return true;
     }
     const McpBlueprintBehaviour::FAuthorResult Result = McpBlueprintBehaviour::Author(

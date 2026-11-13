@@ -136,9 +136,8 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
     const bool bList = Context.Payload->TryGetArrayField(TEXT("parameters"), List) && List && List->Num() > 0;
     if (bList == !ParameterName.IsEmpty())
     {
-        Context.Bridge.SendAutomationResponse(Context.Socket, Context.RequestId, false,
-            bList ? TEXT("Send parameters or parameterName with value, not both.") : TEXT("parameterName (with value) or parameters required"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+        Context.SendError(bList ? TEXT("Send parameters or parameterName with value, not both.") : TEXT("parameterName (with value) or parameters required"),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     AActor* Actor = FindActorByLabel(ActorName);
@@ -149,7 +148,7 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
         const FString Message = !Actor ? FString::Printf(TEXT("Actor '%s' not found"), *ActorName)
             : ComponentNames.Num() > 0 ? FString::Printf(TEXT("Actor '%s' has no Niagara component '%s'; it has: %s"), *ActorName, *ComponentName, *FString::Join(ComponentNames, TEXT(", ")))
             : FString::Printf(TEXT("Actor '%s' has no Niagara component"), *ActorName);
-        Context.Bridge.SendAutomationResponse(Context.Socket, Context.RequestId, false, Message, nullptr,
+        Context.SendError(Message,
             Actor ? TEXT("COMPONENT_NOT_FOUND") : TEXT("ACTOR_NOT_FOUND"));
         return true;
     }

@@ -38,8 +38,8 @@ bool HandleConfigureHlodLayer(
 
     if (HlodLayerName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("hlodLayerName is required for configure_hlod_layer"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("hlodLayerName is required for configure_hlod_layer"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -71,8 +71,8 @@ bool HandleConfigureHlodLayer(
     const FString ResolvedLayerType = LayerTypeAlias ? *LayerTypeAlias : LayerType;
     if (StaticEnum<EHLODLayerType>()->GetValueByNameString(ResolvedLayerType) == INDEX_NONE)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("layerType '%s' is not an HLOD layer type: use "
-            "Instancing, MeshMerge, MeshSimplify or MeshApproximate. Nothing was created."), *LayerType), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("layerType '%s' is not an HLOD layer type: use "
+            "Instancing, MeshMerge, MeshSimplify or MeshApproximate. Nothing was created."), *LayerType), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -88,8 +88,8 @@ bool HandleConfigureHlodLayer(
     UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone);
     if (!NewHLODLayer)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create UHLODLayer object"), nullptr, TEXT("ASSET_CREATION_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to create UHLODLayer object"), TEXT("ASSET_CREATION_FAILED"));
         return true;
     }
 
@@ -112,8 +112,8 @@ bool HandleConfigureHlodLayer(
     // save (default true) persists the new layer asset; a failed save is reported, not hidden.
     if (GetJsonBoolField(Payload, TEXT("save"), true) && !McpSafeAssetSave(NewHLODLayer))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("HLOD layer created but saving %s failed; it exists only in this editor session."), *FullPath), nullptr, TEXT("SAVE_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("HLOD layer created but saving %s failed; it exists only in this editor session."), *FullPath), TEXT("SAVE_FAILED"));
         return true;
     }
 
@@ -161,8 +161,8 @@ bool HandleCreateMinimapVolume(
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     if (!WorldPartition)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled. AWorldPartitionMiniMapVolume requires World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("World Partition is not enabled. AWorldPartitionMiniMapVolume requires World Partition."), TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
 
@@ -183,8 +183,8 @@ bool HandleCreateMinimapVolume(
 
     if (!MiniMapVolume)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), nullptr, TEXT("ACTOR_SPAWN_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
 

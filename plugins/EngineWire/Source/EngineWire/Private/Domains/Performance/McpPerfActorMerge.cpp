@@ -42,18 +42,18 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         !NamesArray ||
         NamesArray->Num() < 2)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
             TEXT("merge_actors requires an 'actors' array with at least 2 entries"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     if (!GEditor || !GEditor->GetEditorWorldContext().World())
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
-            TEXT("Editor world not available for merge_actors"), nullptr,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
+            TEXT("Editor world not available for merge_actors"),
             TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
@@ -77,17 +77,17 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     // A name that matched no actor was skipped, and the merge went ahead without it.
     if (Unresolved.Num() > 0)
     {
-        Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
             FString::Printf(TEXT("No actor named %s in the level; nothing was merged."), *FString::Join(Unresolved, TEXT(", "))),
-            nullptr, TEXT("ACTOR_NOT_FOUND"));
+            TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
 
     if (ActorsToMerge.Num() < 2)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
-            TEXT("merge_actors resolved fewer than 2 valid actors"), nullptr,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
+            TEXT("merge_actors resolved fewer than 2 valid actors"),
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -114,10 +114,10 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     }
     if (!FPackageName::IsValidLongPackageName(RequestedPackageName))
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
             TEXT("merge_actors requires packageName/outputPath to be a valid long package name"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -135,10 +135,10 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     }
     if (!FPackageName::IsValidLongPackageName(MergeBasePackageName))
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
             TEXT("merge_actors normalized packageName/outputPath to an invalid merge base package name"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -146,8 +146,8 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     const FString FinalPackageName = FPackageName::GetLongPackagePath(MergeBasePackageName) / (TEXT("SM_") + FPackageName::GetShortName(MergeBasePackageName));
     if (FPackageName::DoesPackageExist(FinalPackageName) || FindObject<UPackage>(nullptr, *FinalPackageName))
     {
-        Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
-            FString::Printf(TEXT("%s already exists; pick another packageName. Nothing was merged."), *FinalPackageName), nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("%s already exists; pick another packageName. Nothing was merged."), *FinalPackageName), TEXT("ASSET_ALREADY_EXISTS"));
         return true;
     }
 
@@ -155,10 +155,10 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     CollectMergeComponents(ActorsToMerge, ComponentsToMerge);
     if (ComponentsToMerge.Num() < 2)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
             TEXT("merge_actors requires at least 2 static mesh components"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -199,9 +199,9 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
 
     if (!MergedMesh)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, false,
-            TEXT("Actor merge produced no static mesh asset"), nullptr,
+        Context.Bridge.SendAutomationError(
+            Context.RequestingSocket, Context.RequestId,
+            TEXT("Actor merge produced no static mesh asset"),
             TEXT("MERGE_FAILED"));
         return true;
     }
@@ -251,8 +251,8 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         AStaticMeshActor* Merged = World->SpawnActor<AStaticMeshActor>(MergedActorLocation, FRotator::ZeroRotator, SpawnParams);
         if (!Merged)
         {
-            Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
-                TEXT("The merged mesh was saved but its actor could not be placed; the source actors were kept."), nullptr, TEXT("SPAWN_FAILED"));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("The merged mesh was saved but its actor could not be placed; the source actors were kept."), TEXT("SPAWN_FAILED"));
             return true;
         }
         Merged->GetStaticMeshComponent()->SetStaticMesh(MergedMesh);

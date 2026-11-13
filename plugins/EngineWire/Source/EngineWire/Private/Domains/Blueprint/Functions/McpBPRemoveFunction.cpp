@@ -40,11 +40,11 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
     }
     FuncName = FuncName.TrimStartAndEnd();
     if (FuncName.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           TEXT("functionName (or name/memberName) required. Example: "
                "{\"functionName\": \"MyFunction\"}"),
-          nullptr, TEXT("INVALID_ARGUMENT"));
+          TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

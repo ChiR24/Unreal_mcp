@@ -58,10 +58,10 @@ bool RespondIfBlueprintExists(UEngineWireSubsystem *Self,
   const UBlueprintFactory *Wanted = Context.ParentClassSpec.IsEmpty() && Context.BlueprintTypeSpec.IsEmpty()
       ? nullptr : Cast<UBlueprintFactory>(CreateBlueprintFactory(Context, Unused));
   if (Wanted && Wanted->ParentClass && Blueprint->ParentClass != Wanted->ParentClass) {
-    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
+    Self->SendAutomationError(Context.RequestingSocket, Context.RequestId,
         FString::Printf(TEXT("%s already exists with parent class %s, not %s; give the new Blueprint another name. Nothing "
                              "was changed."), *NormalizedPath, *GetNameSafe(Blueprint->ParentClass), *Wanted->ParentClass->GetName()),
-        nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+        TEXT("ASSET_ALREADY_EXISTS"));
     return true;
   }
   const TSharedPtr<FJsonObject> ResultPayload =
@@ -89,8 +89,8 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
   FString ParentError;
   UFactory *Factory = CreateBlueprintFactory(Context, ParentError);
   if (!Factory) {
-    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, ParentError, nullptr,
-                                 TEXT("CLASS_NOT_FOUND"));
+    Self->SendAutomationError(Context.RequestingSocket, Context.RequestId, ParentError,
+                              TEXT("CLASS_NOT_FOUND"));
     return true;
   }
   FAssetToolsModule &AssetToolsModule =
@@ -121,7 +121,7 @@ bool ExecuteBlueprintCreation(UEngineWireSubsystem *Self,
     const FString CreationError =
         FString::Printf(TEXT("Created asset is not a Blueprint: %s"),
                         NewObject ? *NewObject->GetPathName() : TEXT("<null>"));
-    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, CreationError, nullptr,
+    Self->SendAutomationError(Context.RequestingSocket, Context.RequestId, CreationError,
                             TEXT("CREATE_FAILED"));
     return true;
   }

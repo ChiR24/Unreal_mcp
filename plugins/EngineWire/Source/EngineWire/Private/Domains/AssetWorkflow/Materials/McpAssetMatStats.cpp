@@ -30,9 +30,9 @@ bool UEngineWireSubsystem::HandleGetMaterialStats(
   UMaterialInterface *Material = Cast<UMaterialInterface>(Asset);
 
   if (!Material) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Asset is not a Material"), nullptr,
-                           TEXT("INVALID_ASSET_TYPE"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Asset is not a Material"),
+                        TEXT("INVALID_ASSET_TYPE"));
     return true;
   }
 

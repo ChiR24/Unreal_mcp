@@ -36,8 +36,8 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
     }
 
     if (!bExists) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint not found"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Blueprint not found"),
                              TEXT("NOT_FOUND"));
       return true;
     }

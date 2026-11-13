@@ -12,14 +12,14 @@ bool AddNavModifierToPlacedActor(
     AActor* Actor = World ? FindActorByNameInWorldForMcp(World, ActorName, true) : nullptr;
     if (!Actor)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found in the editor world: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Actor not found in the editor world: %s"), *ActorName), TEXT("NOT_FOUND"));
         return true;
     }
     if (FindObject<UObject>(Actor, *ComponentName))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), nullptr, TEXT("ALREADY_EXISTS"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), TEXT("ALREADY_EXISTS"));
         return true;
     }
     Actor->Modify();
@@ -58,7 +58,7 @@ bool HandleCreateNavModifierComponent(
 
     if (BlueprintPath.IsEmpty() && ActorName.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Pass blueprintPath (a Blueprint asset) or actorName (a placed actor)"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Pass blueprintPath (a Blueprint asset) or actorName (a placed actor)"), TEXT("MISSING_PARAM"));
         return true;
     }
     if (!BlueprintPath.IsEmpty() && !IsValidNavigationPath(BlueprintPath))
@@ -81,8 +81,8 @@ bool HandleCreateNavModifierComponent(
         ResolvedAreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
         if (!ResolvedAreaClass)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("areaClass not found or not a UNavArea subclass: %s"), *AreaClassPath), nullptr, TEXT("INVALID_AREA_CLASS"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("areaClass not found or not a UNavArea subclass: %s"), *AreaClassPath), TEXT("INVALID_AREA_CLASS"));
             return true;
         }
     }
@@ -94,15 +94,15 @@ bool HandleCreateNavModifierComponent(
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 
     USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
     if (!SCS)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Blueprint has no SimpleConstructionScript"), nullptr, TEXT("INVALID_BP"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_BP"));
         return true;
     }
 
@@ -110,8 +110,8 @@ bool HandleCreateNavModifierComponent(
     {
         if (Node && Node->GetVariableName().ToString() == ComponentName)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Component '%s' already exists"), *ComponentName), nullptr, TEXT("ALREADY_EXISTS"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Component '%s' already exists"), *ComponentName), TEXT("ALREADY_EXISTS"));
             return true;
         }
     }
@@ -119,7 +119,7 @@ bool HandleCreateNavModifierComponent(
     USCS_Node* NewNode = McpAddScsNode(SCS, UNavModifierComponent::StaticClass(), *ComponentName);
     if (!NewNode)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to create SCS node"), nullptr, TEXT("CREATE_FAILED"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to create SCS node"), TEXT("CREATE_FAILED"));
         return true;
     }
 
@@ -159,7 +159,7 @@ bool HandleSetNavAreaClass(
 
     if (ActorName.IsEmpty() || AreaClassPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName and areaClass are required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and areaClass are required"), TEXT("MISSING_PARAM"));
         return true;
     }
     if (!IsValidActorName(ActorName))
@@ -178,15 +178,15 @@ bool HandleSetNavAreaClass(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 
     AActor* TargetActor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!TargetActor)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -205,8 +205,8 @@ bool HandleSetNavAreaClass(
         }
         if (!ModComp)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("NavModifierComponent '%s' not found on actor"), *ComponentName), nullptr, TEXT("NO_COMPONENT"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("NavModifierComponent '%s' not found on actor"), *ComponentName), TEXT("NO_COMPONENT"));
             return true;
         }
     }
@@ -217,15 +217,15 @@ bool HandleSetNavAreaClass(
 
     if (!ModComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No NavModifierComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("No NavModifierComponent found on actor"), TEXT("NO_COMPONENT"));
         return true;
     }
 
     UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
     if (!AreaClass)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("NavArea class not found: %s"), *AreaClassPath), nullptr, TEXT("INVALID_CLASS"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("NavArea class not found: %s"), *AreaClassPath), TEXT("INVALID_CLASS"));
         return true;
     }
 

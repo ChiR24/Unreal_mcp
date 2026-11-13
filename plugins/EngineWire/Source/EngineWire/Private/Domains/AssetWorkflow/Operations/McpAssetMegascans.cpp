@@ -90,10 +90,10 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   IMcpFabProvider *Provider = GetMcpFabProvider();
   if (Provider == nullptr || !Provider->IsMegascansAvailable()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("Megascans support is not loaded in this editor, so Bridge imports are unavailable."),
-        nullptr, TEXT("PLUGIN_UNAVAILABLE"));
+        TEXT("PLUGIN_UNAVAILABLE"));
     return true;
   }
 
@@ -106,10 +106,10 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
     const TArray<TSharedPtr<FJsonValue>> *AssetPaths = nullptr;
     if (!Payload->TryGetArrayField(TEXT("assetPaths"), AssetPaths) || AssetPaths == nullptr ||
         AssetPaths->Num() == 0) {
-      SendAutomationResponse(
-          Socket, RequestId, false,
+      SendAutomationError(
+          Socket, RequestId,
           TEXT("Provide either 'payload' (a full Bridge export envelope) or 'assetPaths' plus 'folderName'."),
-          nullptr, TEXT("INVALID_ARGUMENT"));
+          TEXT("INVALID_ARGUMENT"));
       return true;
     }
     // Bridge silently drops sources that do not exist; refuse them up front.
@@ -121,18 +121,18 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
       }
     }
     if (MissingSources.Num() > 0) {
-      SendAutomationResponse(
-          Socket, RequestId, false,
+      SendAutomationError(
+          Socket, RequestId,
           FString::Printf(TEXT("assetPaths entries must exist on disk before a Bridge import is dispatched; missing: %s"), *FString::Join(MissingSources, TEXT(", "))),
-          nullptr, TEXT("ASSET_NOT_FOUND"));
+          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
     FString FolderName;
     Payload->TryGetStringField(TEXT("folderName"), FolderName);
     if (FolderName.IsEmpty()) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("'folderName' is required when synthesizing a payload."),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId,
+                          TEXT("'folderName' is required when synthesizing a payload."),
+                          TEXT("INVALID_ARGUMENT"));
       return true;
     }
     FString AssetType = TEXT("3d");
@@ -160,9 +160,9 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
   }
 
   if (!Envelope->HasTypedField<EJson::Array>(TEXT("exportPayload"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("'payload' must contain an 'exportPayload' array."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("'payload' must contain an 'exportPayload' array."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -174,8 +174,8 @@ bool UEngineWireSubsystem::HandleImportMegascansAsset(
   // other asset mutation this bridge performs.
   FString ImportError;
   if (!Provider->ImportMegascansEnvelope(Serialized, ImportError)) {
-    SendAutomationResponse(Socket, RequestId, false, ImportError, nullptr,
-                           TEXT("PLUGIN_UNAVAILABLE"));
+    SendAutomationError(Socket, RequestId, ImportError,
+                        TEXT("PLUGIN_UNAVAILABLE"));
     return true;
   }
 

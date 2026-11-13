@@ -26,8 +26,8 @@ bool HandleSetSplineMeshMaterial(
 
     if (ActorName.IsEmpty() || MaterialPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName and materialPath are required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("actorName and materialPath are required"), TEXT("MISSING_PARAM"));
         return true;
     }
 
@@ -47,8 +47,8 @@ bool HandleSetSplineMeshMaterial(
     UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
     if (!Material)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Material not found: %s"), *SafeMaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Material not found: %s"), *SafeMaterialPath), TEXT("MATERIAL_NOT_FOUND"));
         return true;
     }
 
@@ -56,10 +56,10 @@ bool HandleSetSplineMeshMaterial(
     // refused: 2147483647 overflowed into the array's invalid-size fatal, and a few hundred million took gigabytes.
     if (MaterialIndex < 0 || MaterialIndex >= TargetComp->GetNumMaterials())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("materialIndex %d is not a material slot of %s, which has %d: a spline mesh takes its slots from its mesh, so set "
                 "the mesh first. Nothing was changed."), MaterialIndex, *TargetComp->GetName(), TargetComp->GetNumMaterials()),
-            nullptr, TEXT("MATERIAL_SLOT_NOT_FOUND"));
+            TEXT("MATERIAL_SLOT_NOT_FOUND"));
         return true;
     }
 

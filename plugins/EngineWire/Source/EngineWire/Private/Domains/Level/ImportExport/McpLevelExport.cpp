@@ -15,8 +15,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     FString ExportPath = McpGetFirstStringField(Payload, {TEXT("exportPath"), TEXT("destinationPath")});
 
     if (ExportPath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("exportPath required"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("exportPath required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -35,9 +35,9 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
               *FPaths::ConvertRelativePathToFull(Filename));
         }
         if (!bFileFound) {
-          Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+          Subsystem.SendAutomationError(RequestingSocket, RequestId,
                                  FString::Printf(TEXT("Source level not found: %s"), *LevelPath),
-                                 nullptr, TEXT("LEVEL_NOT_FOUND"));
+                                 TEXT("LEVEL_NOT_FOUND"));
           return true;
         }
       }
@@ -46,12 +46,12 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                       Current->GetPathName() == LevelPath)) {
         WorldToExport = Current;
       } else {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(
                 TEXT("Requested level is not loaded: %s. Load the level before exporting it."),
                 *LevelPath),
-            nullptr, TEXT("LEVEL_NOT_LOADED"));
+            TEXT("LEVEL_NOT_LOADED"));
         return true;
       }
     }
@@ -59,8 +59,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       WorldToExport = McpHandlerUtils::GetEditorWorld();
 
     if (!WorldToExport) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No world loaded"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No world loaded"),
                              TEXT("NO_WORLD"));
       return true;
     }
@@ -108,8 +108,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
                                            ExportErrorMessage,
                                            ExportErrorCode,
                                            TEXT("Export destination"))) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             ExportErrorMessage, nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             ExportErrorMessage,
                              ExportErrorCode.IsEmpty() ? TEXT("INVALID_ARGUMENT") : ExportErrorCode);
       return true;
     }
@@ -125,8 +125,8 @@ bool HandleExportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level exported"), nullptr);
     } else {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to export level after 5 retries (check GPU driver stability)"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Failed to export level after 5 retries (check GPU driver stability)"),
                              TEXT("EXPORT_FAILED"));
     }
     return true;

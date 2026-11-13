@@ -38,11 +38,11 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString SourceRoot;
   if (!Payload->TryGetStringField(TEXT("sourceRoot"), SourceRoot) || SourceRoot.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("sourceRoot required. Allowed: %s. Use list_content_sources to discover ids."),
                         *FString::Join(McpContentSources::AllRootTokens(), TEXT(", "))),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString SourceId;
@@ -57,10 +57,10 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
     return true;
   }
   if (!IFileManager::Get().DirectoryExists(*SourceDir)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Source directory does not exist: %s"), *SourceDir),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 
@@ -97,10 +97,10 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
   TArray<FString> RelativeFiles;
   FindPackageFiles(ContentDir, RelativeFiles);
   if (RelativeFiles.Num() == 0) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("No .uasset/.umap packages found under %s"), *ContentDir),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 
@@ -112,9 +112,9 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
   // Not a bare prefix test: "/GameFoo" passed it and landed in Content/Foo while the reply named /GameFoo.
   if (DestinationPath != TEXT("/Game") && !DestinationPath.StartsWith(TEXT("/Game/"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("destinationPath must be under /Game."), nullptr,
-                           TEXT("INVALID_PATH"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("destinationPath must be under /Game."),
+                        TEXT("INVALID_PATH"));
     return true;
   }
   if (DestinationPath.Contains(TEXT(".."))) {
@@ -130,11 +130,11 @@ bool UEngineWireSubsystem::HandleMigrateAssets(
 
   const int32 MaxPackages = GetJsonIntField(Payload, TEXT("maxPackages"), 4000);
   if (RelativeFiles.Num() > MaxPackages) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Source holds %d files, above maxPackages %d. Narrow with subPath or raise maxPackages."),
                         RelativeFiles.Num(), MaxPackages),
-        nullptr, TEXT("LIMIT_EXCEEDED"));
+        TEXT("LIMIT_EXCEEDED"));
     return true;
   }
 

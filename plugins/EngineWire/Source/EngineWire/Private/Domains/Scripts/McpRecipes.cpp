@@ -203,8 +203,8 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
     const TSharedPtr<FJsonObject> Recipe = Load(Name);
     if (!Recipe.IsValid())
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("No recipe is named %s: list_recipes lists them."), *Name),
-                                      nullptr, TEXT("RECIPE_NOT_FOUND"));
+        Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No recipe is named %s: list_recipes lists them."), *Name),
+                                   TEXT("RECIPE_NOT_FOUND"));
         return true;
     }
     const TArray<FString> Params = McpHandlerUtils::GetStringArrayField(Recipe, TEXT("paramNames"));
@@ -220,8 +220,8 @@ bool HandleRun(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSh
     }
     if (Missing.Num() > 0)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("args lacks %s."), *FString::Join(Missing, TEXT(", "))),
-                                      nullptr, TEXT("RECIPE_ARGS"));
+        Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("args lacks %s."), *FString::Join(Missing, TEXT(", "))),
+                                   TEXT("RECIPE_ARGS"));
         return true;
     }
     // Run exactly as run_script runs a script: the same parse, check, per-step gate, consent list and rollback.

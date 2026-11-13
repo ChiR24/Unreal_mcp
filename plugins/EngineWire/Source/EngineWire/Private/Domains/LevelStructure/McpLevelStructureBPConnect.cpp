@@ -97,14 +97,14 @@ bool HandleConnectLevelBlueprintNodes(
             for (const UEdGraphPin* Pin : Node->Pins) { Names.Add(Pin->PinName.ToString()); }
             return FString::Join(Names, TEXT(", "));
         };
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(
                 TEXT("Pin not found: %s has no pin '%s'. Pins on %s: [%s]. Pins on %s: [%s]."),
                 SourcePin ? *TargetNodeName : *SourceNodeName,
                 SourcePin ? *TargetPinName : *SourcePinName,
                 *SourceNodeName, *PinNames(SourceNode),
                 *TargetNodeName, *PinNames(TargetNode)),
-            nullptr, TEXT("PIN_NOT_FOUND"));
+            TEXT("PIN_NOT_FOUND"));
         return true;
     }
 
@@ -115,11 +115,11 @@ bool HandleConnectLevelBlueprintNodes(
     const bool bConnected = Schema && Response.Response != CONNECT_RESPONSE_DISALLOW && Schema->TryCreateConnection(SourcePin, TargetPin);
     if (!bConnected)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Connection refused by the graph schema: %s.%s -> %s.%s (%s). Nothing was linked."),
                 *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName,
                 Response.Message.IsEmpty() ? TEXT("incompatible pin types or directions") : *Response.Message.ToString()),
-            nullptr, TEXT("CONNECTION_REFUSED"));
+            TEXT("CONNECTION_REFUSED"));
         return true;
     }
 

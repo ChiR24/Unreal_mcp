@@ -93,13 +93,13 @@ bool ReadNamedTransform(UEngineWireSubsystem* Subsystem, const FString& RequestI
     OutArgs.VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), DefaultName);
     if (!ValidateVolumeName(OutArgs.VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
         return false;
     }
     OutArgs.Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     if (!ValidateLocation(OutArgs.Location, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         return false;
     }
     OutArgs.Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
@@ -112,7 +112,7 @@ bool ReadExtent(UEngineWireSubsystem* Subsystem, const FString& RequestId, const
     OutExtent = ExtractVectorField(Payload, *FieldName, DefaultExtent);
     if (!ValidateExtent(OutExtent, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         return false;
     }
     return true;

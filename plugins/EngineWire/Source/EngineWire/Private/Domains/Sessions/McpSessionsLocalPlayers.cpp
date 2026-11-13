@@ -139,8 +139,8 @@ bool HandleAddLocalPlayer(
 
     if (!Payload->HasField(TEXT("controllerId")))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("controllerId is required to add a local player"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("controllerId is required to add a local player"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -148,8 +148,8 @@ bool HandleAddLocalPlayer(
     UGameInstance* GameInstance = GetGameInstance();
     if (!GameInstance)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No active game instance. Start Play-In-Editor first."), nullptr, TEXT("NOT_IN_PLAY"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("NOT_IN_PLAY"));
         return true;
     }
 
@@ -157,8 +157,8 @@ bool HandleAddLocalPlayer(
     ULocalPlayer* NewPlayer = GameInstance->CreateLocalPlayer(ControllerId, Error, true);
     if (!NewPlayer)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Failed to add local player: %s"), *Error), nullptr, TEXT("ADD_PLAYER_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Failed to add local player: %s"), *Error), TEXT("ADD_PLAYER_FAILED"));
         return true;
     }
 
@@ -184,8 +184,8 @@ bool HandleRemoveLocalPlayer(
 
     if (!Payload->HasField(TEXT("playerIndex")))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("playerIndex is required to remove a local player"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("playerIndex is required to remove a local player"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -193,23 +193,23 @@ bool HandleRemoveLocalPlayer(
     UGameInstance* GameInstance = GetGameInstance();
     if (!GameInstance)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No active game instance. Start Play-In-Editor first."), nullptr, TEXT("NOT_IN_PLAY"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("NOT_IN_PLAY"));
         return true;
     }
 
     if (PlayerIndex == 0)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Cannot remove the primary local player (index 0)."), nullptr, TEXT("PRIMARY_PLAYER"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Cannot remove the primary local player (index 0)."), TEXT("PRIMARY_PLAYER"));
         return true;
     }
 
     ULocalPlayer* Player = GetLocalPlayerByIndex(PlayerIndex);
     if (!Player)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("No local player at index %d"), PlayerIndex), nullptr, TEXT("PLAYER_NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("No local player at index %d"), PlayerIndex), TEXT("PLAYER_NOT_FOUND"));
         return true;
     }
 

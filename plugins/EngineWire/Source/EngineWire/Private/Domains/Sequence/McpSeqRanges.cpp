@@ -9,8 +9,8 @@ bool UEngineWireSubsystem::HandleSequenceSetViewRange(
   double End = 0;
   // Both are seconds; a missing one defaulted (0 to 10 s) and the reply said the range was set.
   if (!Payload->TryGetNumberField(TEXT("start"), Start) || !Payload->TryGetNumberField(TEXT("end"), End) || End <= Start) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("start and end are required, in seconds, with end after start"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("start and end are required, in seconds, with end after start"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   UMovieScene *MovieScene = nullptr;
@@ -42,9 +42,9 @@ bool HandleSetWorkRange(UEngineWireSubsystem *Subsystem,
   LocalPayload->TryGetNumberField(TEXT("start"), Start);
   LocalPayload->TryGetNumberField(TEXT("end"), End);
   if (End <= Start) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("start and end are seconds, with end after start"), nullptr,
-                                      TEXT("INVALID_ARGUMENT"));
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                   TEXT("start and end are seconds, with end after start"),
+                                   TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -56,8 +56,8 @@ bool HandleSetWorkRange(UEngineWireSubsystem *Subsystem,
           Start, TickResolution, StartFrame, FrameError) ||
       !McpSequenceFrameMath::TrySecondsToFrame(
           End, TickResolution, EndFrame, FrameError)) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false, FrameError, nullptr,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId, FrameError,
         TEXT("INVALID_ARGUMENT"));
     return true;
   }

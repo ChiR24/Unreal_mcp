@@ -29,9 +29,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     const FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
     if (SystemPath.IsEmpty())
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("systemPath required (aliases: system, niagaraSystemPath, assetPath)"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Context.SendError(TEXT("systemPath required (aliases: system, niagaraSystemPath, assetPath)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -39,10 +37,8 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     UObject* NiagaraObject = LoadEffectAsset(SystemPath);
     if (!NiagaraObject)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
-            nullptr, TEXT("SYSTEM_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
+            TEXT("SYSTEM_NOT_FOUND"));
         return true;
     }
 
@@ -53,10 +49,8 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     AActor* Parent = FindActorByLabel(AttachToActor);
     if (!AttachToActor.IsEmpty() && !Parent)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            FString::Printf(TEXT("attachToActor '%s' is not in the active world"), *AttachToActor),
-            nullptr, TEXT("ACTOR_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("attachToActor '%s' is not in the active world"), *AttachToActor),
+            TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
 
@@ -66,9 +60,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         ExtractRotatorField(Context.Payload, TEXT("rotation"), FRotator::ZeroRotator));
     if (!Spawned)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Failed to spawn NiagaraActor"), nullptr, TEXT("SPAWN_FAILED"));
+        Context.SendError(TEXT("Failed to spawn NiagaraActor"), TEXT("SPAWN_FAILED"));
         return true;
     }
 
@@ -77,12 +69,10 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     if (!NiagaraComponent || !NiagaraSystem)
     {
         Spawned->Destroy();
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            NiagaraSystem
+        Context.SendError(NiagaraSystem
                 ? TEXT("Spawned NiagaraActor has no NiagaraComponent")
                 : *FString::Printf(TEXT("%s is not a Niagara system asset"), *SystemPath),
-            nullptr, NiagaraSystem ? TEXT("SPAWN_FAILED") : TEXT("ASSET_TYPE_MISMATCH"));
+            NiagaraSystem ? TEXT("SPAWN_FAILED") : TEXT("ASSET_TYPE_MISMATCH"));
         return true;
     }
     NiagaraComponent->SetAsset(NiagaraSystem);
@@ -105,9 +95,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     // though the asset is assigned, so only a missing asset is a failure.
     if (!NiagaraComponent->GetAsset())
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("NiagaraComponent asset not set after spawn"), nullptr, TEXT("SPAWN_FAILED"));
+        Context.SendError(TEXT("NiagaraComponent asset not set after spawn"), TEXT("SPAWN_FAILED"));
         return true;
     }
     const bool bActive = NiagaraComponent->IsActive();

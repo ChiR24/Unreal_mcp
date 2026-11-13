@@ -43,8 +43,8 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
 
   FString ListingId;
   if (!Payload->TryGetStringField(TEXT("listingId"), ListingId) || ListingId.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("'listingId' is required."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("'listingId' is required."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -71,9 +71,9 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
     }
     Destination.RemoveFromEnd(TEXT("/"));
     if (Destination != TEXT("/Game") && !Destination.StartsWith(TEXT("/Game/"))) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("'destinationPath' must be a /Game folder, for example /Game/Props/Barriers."),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId,
+                          TEXT("'destinationPath' must be a /Game folder, for example /Game/Props/Barriers."),
+                          TEXT("INVALID_ARGUMENT"));
       return true;
     }
   } else {
@@ -83,9 +83,9 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
   if (Payload->TryGetStringField(TEXT("assetName"), AssetName) && !AssetName.TrimStartAndEnd().IsEmpty()) {
     AssetName = AssetName.TrimStartAndEnd();
     if (!McpFabRelocate::IsValidAssetName(AssetName)) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("'assetName' is letters, digits and underscores, not starting with a digit, 64 characters at most: ConcreteBarrier."),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId,
+                          TEXT("'assetName' is letters, digits and underscores, not starting with a digit, 64 characters at most: ConcreteBarrier."),
+                          TEXT("INVALID_ARGUMENT"));
       return true;
     }
   } else {
@@ -114,9 +114,9 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
     Quality = Quality.ToLower();
     if (Quality != TEXT("raw") && Quality != TEXT("high") && Quality != TEXT("mid") &&
         Quality != TEXT("low")) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("'quality' is one of raw, high, mid or low."), nullptr,
-                             TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId,
+                          TEXT("'quality' is one of raw, high, mid or low."),
+                          TEXT("INVALID_ARGUMENT"));
       return true;
     }
     Options.Quality = Quality;
@@ -174,9 +174,9 @@ bool UEngineWireSubsystem::HandleAddFabAssetToProject(
       });
 
   if (!bStarted) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("The Fab adapter refused the request."), nullptr,
-                           TEXT("NOT_SUPPORTED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("The Fab adapter refused the request."),
+                        TEXT("NOT_SUPPORTED"));
   }
   return true;
 }

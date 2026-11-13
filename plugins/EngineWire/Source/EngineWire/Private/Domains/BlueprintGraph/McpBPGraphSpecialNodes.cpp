@@ -28,13 +28,8 @@ bool TryCreateSpecialNode(
         {
             TargetClassName = NodeType.Mid(6);
         }
-        UClass* TargetClass = ResolveUClass(TargetClassName);
-        if (!TargetClass)
-        {
-            // A Blueprint asset path (/Game/X/BP_Door) names the Blueprint, not its class, which is
-            // what targetClass is documented to take; the shared class-pin resolver maps it.
-            TargetClass = ResolveTargetClassFromString(TargetClassName);
-        }
+        // A Blueprint asset path (/Game/X/BP_Door), which targetClass is documented to take, names its generated class.
+        UClass* TargetClass = ResolveClassByName(TargetClassName);
         if (!TargetClass)
         {
             Context.SendError(

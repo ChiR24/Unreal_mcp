@@ -60,10 +60,10 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   FString Normalized, Error;
   UBlueprint *Blueprint = Path.IsEmpty() ? nullptr : LoadBlueprintAsset(Path, Normalized, Error);
   if (!Blueprint || !FBlueprintEditorUtils::IsActorBased(Blueprint)) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  Blueprint ? TEXT("A behaviour goes on an Actor Blueprint (an actor, pawn or character)")
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               Blueprint ? TEXT("A behaviour goes on an Actor Blueprint (an actor, pawn or character)")
                                             : (Error.IsEmpty() ? TEXT("blueprintPath must name a Blueprint") : *Error),
-                                  nullptr, Blueprint ? TEXT("NOT_AN_ACTOR_BLUEPRINT") : TEXT("BLUEPRINT_NOT_FOUND"));
+                               Blueprint ? TEXT("NOT_AN_ACTOR_BLUEPRINT") : TEXT("BLUEPRINT_NOT_FOUND"));
     return true;
   }
   FBehaviourPlan Plan;
@@ -73,7 +73,7 @@ bool HandleBlueprintAddBehaviour(const FBlueprintActionContext &Context) {
   }
   const TSharedPtr<FJsonObject> Recipe = McpBlueprintBehaviour::LoadRecipe(Plan.Domain, Plan.Recipe, Plan.Values, Error);
   if (!Recipe) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_RECIPE"));
     return true;
   }
   // A behaviour this one takes over (patrol over chase) is removed first: a recipe holding only its tag removes its nodes

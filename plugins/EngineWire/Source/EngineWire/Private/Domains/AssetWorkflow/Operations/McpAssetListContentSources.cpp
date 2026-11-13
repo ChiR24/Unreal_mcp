@@ -105,11 +105,11 @@ bool UEngineWireSubsystem::HandleListContentSources(
   if (RootFilter.IsEmpty()) {
     Roots = McpContentSources::AllRootTokens();
   } else if (McpContentSources::ResolveRootDir(RootFilter).IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Unknown sourceRoot '%s'. Allowed: %s"), *RootFilter,
                         *FString::Join(McpContentSources::AllRootTokens(), TEXT(", "))),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   } else {
     Roots.Add(RootFilter);

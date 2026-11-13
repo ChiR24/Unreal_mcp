@@ -13,9 +13,9 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
 
     if (LevelPath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("levelPath required for delete_level"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

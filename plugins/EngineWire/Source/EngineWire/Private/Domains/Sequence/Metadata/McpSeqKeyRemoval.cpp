@@ -64,18 +64,18 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
   if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("sequence_remove_keyframe requires a sequence path"), nullptr,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("sequence_remove_keyframe requires a sequence path"),
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
   UMovieScene *MovieScene = Sequence ? Sequence->GetMovieScene() : nullptr;
   if (!MovieScene) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("Level sequence not found"), nullptr,
-                                      TEXT("SEQUENCE_NOT_FOUND"));
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                   TEXT("Level sequence not found"),
+                                   TEXT("SEQUENCE_NOT_FOUND"));
     return true;
   }
 
@@ -85,9 +85,9 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
       GetJsonStringField(LocalPayload, TEXT("bindingId"));
   // With neither filter every track matched, so a call naming only the sequence cleared every key in it.
   if (TrackFilter.IsEmpty() && BindingFilter.IsEmpty()) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("Name the track (trackName) or the binding (bindingId) whose keys go; nothing was removed."),
-                                      nullptr, TEXT("TRACK_REQUIRED"));
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                   TEXT("Name the track (trackName) or the binding (bindingId) whose keys go; nothing was removed."),
+                                   TEXT("TRACK_REQUIRED"));
     return true;
   }
   // frame removes the keys on one frame, frames those on each listed frame; neither clears the track. An empty
@@ -107,9 +107,9 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
       FrameValues.Add(FrameValue);
     }
     if (!FrameList || FrameList->Num() == 0) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                        TEXT("frames must list at least one frame number"), nullptr,
-                                        TEXT("INVALID_FRAME"));
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     TEXT("frames must list at least one frame number"),
+                                     TEXT("INVALID_FRAME"));
       return true;
     }
   }
@@ -121,9 +121,9 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
     if (!McpSequenceFrameMath::TryTransformFrameFloor(
             Value, MovieScene->GetDisplayRate(),
             MovieScene->GetTickResolution(), TargetTick, FrameError)) {
-      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                        FrameError, nullptr,
-                                        TEXT("INVALID_FRAME"));
+      Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                     FrameError,
+                                     TEXT("INVALID_FRAME"));
       return true;
     }
     TargetTicks.Add(TargetTick);
@@ -136,9 +136,9 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
   TArray<UMovieSceneTrack *> Candidates;
   CollectTracksByName(MovieScene, TrackFilter, BindingFilter, Candidates);
   if (Candidates.Num() == 0) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("No track matched the supplied trackName/bindingId."), nullptr,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("No track matched the supplied trackName/bindingId."),
         TEXT("TRACK_NOT_FOUND"));
     return true;
   }

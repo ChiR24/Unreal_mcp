@@ -51,28 +51,10 @@ bool FCombatActionContext::HandleWeaponCore() const
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FDoubleProperty* DamageProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("BaseDamage")))
-                {
-                    DamageProp->SetPropertyValue_InContainer(CDO, BaseDamage);
-                }
-                if (FDoubleProperty* RateProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("FireRate")))
-                {
-                    RateProp->SetPropertyValue_InContainer(CDO, FireRate);
-                }
-                if (FDoubleProperty* RangeProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Range")))
-                {
-                    RangeProp->SetPropertyValue_InContainer(CDO, Range);
-                }
-                if (FDoubleProperty* SpreadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("Spread")))
-                {
-                    SpreadProp->SetPropertyValue_InContainer(CDO, Spread);
-                }
-            }
-        }
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("BaseDamage"), BaseDamage);
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("FireRate"), FireRate);
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("Range"), Range);
+        SetVariableDefaultCombat<FDoubleProperty>(Blueprint, TEXT("Spread"), Spread);
 
         if (!SaveOrReply(Blueprint))
         {

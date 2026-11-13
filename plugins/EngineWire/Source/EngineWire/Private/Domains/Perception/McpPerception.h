@@ -34,6 +34,9 @@ struct FFrame
 /** The frame of a viewport capture, on a grid of cells about 240 across (McpPerceptionAnalyze). */
 FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View);
 
+/** The mean colour, as shown (bytes over 255), of View's Block-pixel square at block column X and row Y. */
+FLinearColor BlockMean(const McpInspectHandlers::FMcpViewCapture& View, int32 X, int32 Y, int32 Block);
+
 /** OKLab (Ottosson 2020) of an sRGB colour (0-1, as displayed). */
 FVector3f OkLab(const FLinearColor& Srgb);
 

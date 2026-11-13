@@ -38,9 +38,9 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
       LocalPayload->TryGetStringField(TEXT("nodeGuid"), NodeId);
     }
     if (EventName.IsEmpty() && NodeId.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("nodeId (or eventName / customEventName) required"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
@@ -78,8 +78,8 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
         ? FindBlueprintEventGraph(RemoveBlueprint, GraphName, GraphError)
         : nullptr;
     if (!GraphError.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, GraphError,
-                                    nullptr, TEXT("GRAPH_NOT_FOUND"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, GraphError,
+                                 TEXT("GRAPH_NOT_FOUND"));
       return true;
     }
     if (RemoveBlueprint) {

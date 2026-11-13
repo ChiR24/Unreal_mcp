@@ -115,6 +115,9 @@ FSession* Current(const UWorld* PlayWorld);
 /** The floor-plan cell a point lies in, height aside (findings, coverage and islands are judged on the floor plan). */
 FIntPoint FloorCell(const FSession& Session, const FVector& At);
 
+/** The archive key of a point (at the pawn's feet): its floor cell, its height band and the tracked flags. */
+FCellKey KeyOf(const FSession& Session, const FVector& At, uint32 Flags);
+
 /** The track assertions judged now, as bits (bit i: assertion i holds). */
 uint32 FlagsNow(const FSession& Session, UWorld* World);
 

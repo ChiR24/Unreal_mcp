@@ -99,3 +99,31 @@ UBlueprint* LoadInventoryBlueprintOrError(UEngineWireSubsystem& Bridge,
 
   return Blueprint;
 }
+
+bool CreateGenericInventoryAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                 const TSharedPtr<FJsonObject>& Payload, const TCHAR* DefaultPath, const TCHAR* PathField,
+                                 const TCHAR* Created, const TCHAR* What)
+{
+  const FString Name = GetJsonStringField(Payload, TEXT("name"));
+  const FString Path = GetJsonStringField(Payload, TEXT("path"), DefaultPath);
+  if (Name.IsEmpty()) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
+    return true;
+  }
+  UPackage* Package = CreateInventoryAssetPackage(Bridge, RequestId, RequestingSocket, Path, Name);
+  if (!Package) {
+    return true;
+  }
+  bool bSaved = false;
+  if (!NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create %s asset"), What),
+                               TEXT("ASSET_CREATE_FAILED"));
+    return true;
+  }
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetBoolField(TEXT("saved"), bSaved);
+  Result->SetStringField(PathField, Package->GetName());
+  Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
+  Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Created, Result);
+  return true;
+}

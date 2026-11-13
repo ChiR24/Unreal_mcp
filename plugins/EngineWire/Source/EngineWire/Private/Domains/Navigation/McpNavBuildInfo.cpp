@@ -11,14 +11,14 @@ bool HandleRebuildNavigation(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 
     UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
     if (!NavSys)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Navigation system not available"), nullptr, TEXT("NO_NAV_SYS"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Navigation system not available"), TEXT("NO_NAV_SYS"));
         return true;
     }
 
@@ -45,7 +45,7 @@ bool HandleGetNavigationInfo(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 

@@ -123,12 +123,10 @@ bool UEngineWireSubsystem::HandleEffectAction(
 
     FString UnhandledAction = Action;
     LocalPayload->TryGetStringField(TEXT("action"), UnhandledAction);
-    SendAutomationResponse(
+    SendAutomationError(
         RequestingSocket,
         RequestId,
-        false,
         FString::Printf(TEXT("Unhandled manage_effect action: %s"), *UnhandledAction),
-        nullptr,
         TEXT("UNKNOWN_ACTION"));
     return true;
 }

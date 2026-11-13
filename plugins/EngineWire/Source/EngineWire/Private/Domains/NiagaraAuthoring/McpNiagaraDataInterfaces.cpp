@@ -14,7 +14,7 @@ static bool AddDataInterface(FActionContext& Context, const TCHAR* Label, UClass
         return true;
     }
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), FString::Printf(TEXT("MCP_%sDataInterface"), Label));
-    if (HasUserParameterNamed(System, ParamName))
+    if (FindUserParameter(System, ParamName))
     {
         Context.SendError(FString::Printf(TEXT("%s already has a user parameter '%s'; pick another parameterName. Nothing was changed."),
             *System->GetName(), *ParamName), TEXT("NAME_TAKEN"));

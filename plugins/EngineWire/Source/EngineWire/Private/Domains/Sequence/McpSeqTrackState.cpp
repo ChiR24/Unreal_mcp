@@ -140,10 +140,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   const TArray<UMovieSceneSection *> &Sections = Track->GetAllSections();
   UMovieSceneSection *Section = Index >= 0.0 && Index < Sections.Num() ? Sections[static_cast<int32>(Index)] : nullptr;
   if (!Section) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("sectionIndex %g is not a section of %s, which has %d"), Index,
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("sectionIndex %g is not a section of %s, which has %d"), Index,
                                            *Track->GetName(), Sections.Num()),
-                           nullptr, TEXT("SECTION_NOT_FOUND"));
+                        TEXT("SECTION_NOT_FOUND"));
     return true;
   }
   auto Ticks = [MovieScene](double Frames) {
@@ -156,10 +156,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   const bool bRate = Payload->TryGetNumberField(TEXT("playRate"), Rate);
   UMovieSceneSkeletalAnimationSection *Clip = Cast<UMovieSceneSkeletalAnimationSection>(Section);
   if (bRate && (!Clip || !(Rate > 0.0 && Rate <= 100.0))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           Clip ? TEXT("playRate is above 0 and at most 100 (2 plays the clip twice as fast)")
+    SendAutomationError(Socket, RequestId,
+                        Clip ? TEXT("playRate is above 0 and at most 100 (2 plays the clip twice as fast)")
                                 : TEXT("playRate is for an animation section; this one plays no animation"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   TRange<FFrameNumber> Range = Section->GetRange();
@@ -167,10 +167,10 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   const double OldRate = Clip ? ClipPlayRate(Clip, bFixedRate) : 1.0;
   // A loop, clamp or curve time warp is more than a rate: a fixed playRate written over it changed the frames played.
   if (bRate && !bFixedRate) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("This clip's play rate is a time warp (a loop, clamp or curve), not one rate; edit it in "
+    SendAutomationError(Socket, RequestId,
+                        TEXT("This clip's play rate is a time warp (a loop, clamp or curve), not one rate; edit it in "
                                 "Sequencer, or remove the warp before setting playRate."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // The clip keeps the frames it plays, as the Sequencer's play rate does: twice the rate, half the section. An
@@ -187,8 +187,8 @@ bool UEngineWireSubsystem::HandleSequenceSetSection(
   if (bEnd)
     Range.SetUpperBound(TRangeBound<FFrameNumber>::Exclusive(Ticks(End)));
   if ((bStart || bEnd) && Range.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("endFrame must come after startFrame"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("endFrame must come after startFrame"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   Section->Modify();

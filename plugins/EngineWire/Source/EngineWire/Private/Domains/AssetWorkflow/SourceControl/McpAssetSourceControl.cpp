@@ -34,8 +34,8 @@ bool SourceControlPackagesOrReply(UEngineWireSubsystem *Self, const FString &Req
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {
-    Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Source control is off: turn it on with sourceControlOp enable and a provider (Git, Perforce or Subversion)."), nullptr,
+    Self->SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("Source control is off: turn it on with sourceControlOp enable and a provider (Git, Perforce or Subversion)."),
                            TEXT("SOURCE_CONTROL_DISABLED"));
     return false;
   }

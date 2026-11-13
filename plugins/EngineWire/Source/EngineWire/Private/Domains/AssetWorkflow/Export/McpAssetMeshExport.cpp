@@ -161,8 +161,8 @@ bool HandleExportMesh(UEngineWireSubsystem* Bridge, const FString& RequestId,
                 ExportAndReply(Bridge, RequestId, Socket, Live, Format, File);
                 return;
             }
-            Bridge->SendAutomationResponse(Socket, RequestId, false, TEXT("The asset was unloaded before its export ran."),
-                                           nullptr, TEXT("EXPORT_FAILED"));
+            Bridge->SendAutomationError(Socket, RequestId, TEXT("The asset was unloaded before its export ran."),
+                                        TEXT("EXPORT_FAILED"));
         });
         return true;
     }

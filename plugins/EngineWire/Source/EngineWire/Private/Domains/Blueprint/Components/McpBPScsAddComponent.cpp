@@ -33,9 +33,9 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
   const FString MaterialPath = ScsOpMaterialPath(Payload);
 
   if (ComponentClass.IsEmpty() || ComponentName.IsEmpty()) {
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("add_component requires componentClass and componentName"), nullptr,
+    Bridge.SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("add_component requires componentClass and componentName"),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }

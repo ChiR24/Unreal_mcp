@@ -77,8 +77,8 @@ inline IMcpFabProvider* McpFabProviderOrReply(UEngineWireSubsystem* Self, const 
 	IMcpFabProvider* Provider = GetMcpFabProvider();
 	if (Provider == nullptr || !Provider->IsFabAvailable())
 	{
-		Self->SendAutomationResponse(Socket, RequestId, false,
-			FString::Printf(TEXT("Fab support is not loaded in this editor, so %s."), Consequence), nullptr, TEXT("NOT_SUPPORTED"));
+		Self->SendAutomationError(Socket, RequestId,
+			FString::Printf(TEXT("Fab support is not loaded in this editor, so %s."), Consequence), TEXT("NOT_SUPPORTED"));
 		return nullptr;
 	}
 	return Provider;

@@ -144,12 +144,12 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         if (!Context.Payload->TryGetStringField(TEXT("category"), Category) ||
             Category.IsEmpty())
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.RequestingSocket, Context.RequestId, false,
+            Context.Bridge.SendAutomationError(
+                Context.RequestingSocket, Context.RequestId,
                 TEXT("Category required. Pass a stat name such as unit, units, "
                      "fps, gpu, gfx, engine, game, threading, or any other "
                      "'stat <name>' console category."),
-                nullptr, TEXT("INVALID_ARGUMENT"));
+                TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

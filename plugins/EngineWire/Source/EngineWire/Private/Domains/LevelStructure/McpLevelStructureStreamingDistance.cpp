@@ -34,8 +34,8 @@ bool HandleSetStreamingDistance(
 
     if (LevelName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("levelName is required for set_streaming_distance"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("levelName is required for set_streaming_distance"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -48,26 +48,26 @@ bool HandleSetStreamingDistance(
     const int64 Usage = StaticEnum<EStreamingVolumeUsage>()->GetValueByNameString(TEXT("SVB_") + StreamingUsage);
     if (bCreateVolume && (Usage < 0 || Usage >= SVB_MAX || StreamingDistance <= 0.0))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, StreamingDistance <= 0.0
+        Subsystem->SendAutomationError(Socket, RequestId, StreamingDistance <= 0.0
             ? FString(TEXT("streamingDistance must be greater than 0. Nothing was created."))
             : FString::Printf(TEXT("streamingUsage '%s' is not one: use Loading, LoadingAndVisibility, VisibilityBlockingOnLoad, "
-                "BlockingOnLoad or LoadingNotVisible. Nothing was created."), *StreamingUsage), nullptr, TEXT("INVALID_ARGUMENT"));
+                "BlockingOnLoad or LoadingNotVisible. Nothing was created."), *StreamingUsage), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
     ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
     if (!FoundLevel)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr, TEXT("LEVEL_NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 

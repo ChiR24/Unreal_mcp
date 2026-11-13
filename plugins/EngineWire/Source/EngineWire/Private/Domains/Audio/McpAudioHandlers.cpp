@@ -68,12 +68,10 @@ bool UEngineWireSubsystem::HandleAudioAction(
     }
   }
 
-  SendAutomationResponse(
+  SendAutomationError(
       RequestingSocket,
       RequestId,
-      false,
       FString::Printf(TEXT("Unsupported audio action '%s'"), *Action),
-      nullptr,
       TEXT("UNKNOWN_ACTION"));
   return true;
 }

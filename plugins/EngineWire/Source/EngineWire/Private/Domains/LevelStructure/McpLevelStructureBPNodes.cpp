@@ -96,7 +96,7 @@ bool HandleAddLevelBlueprintNode(
         ? McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClassObj, EventGraph) : FString();
     if (!Mismatch.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, Mismatch, nullptr, TEXT("NODE_NOT_ALLOWED_IN_GRAPH"));
+        Subsystem->SendAutomationError(Socket, RequestId, Mismatch, TEXT("NODE_NOT_ALLOWED_IN_GRAPH"));
         return true;
     }
 
@@ -121,9 +121,9 @@ bool HandleAddLevelBlueprintNode(
             if (!CallNode->GetTargetFunction())
             {
                 NewNode->MarkAsGarbage();
-                Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                Subsystem->SendAutomationError(Socket, RequestId,
                     TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
-                    nullptr, TEXT("INVALID_ARGUMENT"));
+                    TEXT("INVALID_ARGUMENT"));
                 return true;
             }
         }

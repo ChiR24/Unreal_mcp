@@ -139,9 +139,9 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
     }
     UBlueprint *Blueprint = ResolveBlueprint();
     if (!Blueprint) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("get_scs requires a valid blueprint"),
-                             nullptr, TEXT("INVALID_BLUEPRINT"));
+                             TEXT("INVALID_BLUEPRINT"));
       return true;
     }
 

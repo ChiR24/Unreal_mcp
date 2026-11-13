@@ -21,15 +21,15 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     FString SavePath = GetJsonStringField(Payload, TEXT("savePath"));
     if (SavePath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("savePath required for save_level_as"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
     const FString LevelPathError = CheckLevelPathIsOpenLevel(Payload);
     if (!LevelPathError.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, LevelPathError, nullptr, TEXT("LEVEL_NOT_LOADED"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId, LevelPathError, TEXT("LEVEL_NOT_LOADED"));
       return true;
     }
 
@@ -45,9 +45,9 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // said "check Output Log for details". Name it here.
     const FString SavePackage = FPackageName::ObjectPathToPackageName(SavePath);
     if (FPackageName::DoesPackageExist(SavePackage) && !IsCurrentEditorWorldPackage(SavePackage)) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
           FString::Printf(TEXT("Something already exists at %s, and save_as never overwrites it: pick another savePath."), *SavePackage),
-          nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+          TEXT("ASSET_ALREADY_EXISTS"));
       return true;
     }
 
@@ -82,9 +82,9 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
         // Saving the unsaved Open World template as a new package fails on its
         // private template references and then asserts in the world partition
         // subsystem, so refuse before touching it.
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
                                TEXT("save_level_as cannot save an unsaved World Partition template level; create_level or load a level first"),
-                               nullptr, TEXT("UNSAVED_TEMPLATE_LEVEL"));
+                               TEXT("UNSAVED_TEMPLATE_LEVEL"));
         return true;
       }
       // Use McpSafeLevelSave to prevent Intel GPU driver crashes

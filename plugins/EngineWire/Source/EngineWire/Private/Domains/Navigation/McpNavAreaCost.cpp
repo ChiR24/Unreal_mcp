@@ -14,7 +14,7 @@ bool HandleConfigureNavAreaCost(
     double AreaCost = GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
     if (AreaClassPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("areaClass is required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("areaClass is required"), TEXT("MISSING_PARAM"));
         return true;
     }
     if (!IsValidNavigationPath(AreaClassPath))
@@ -27,15 +27,15 @@ bool HandleConfigureNavAreaCost(
     UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
     if (!AreaClass)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("NavArea class not found: %s"), *AreaClassPath), nullptr, TEXT("INVALID_CLASS"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("NavArea class not found: %s"), *AreaClassPath), TEXT("INVALID_CLASS"));
         return true;
     }
 
     UNavArea* AreaCDO = AreaClass->GetDefaultObject<UNavArea>();
     if (!AreaCDO)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Could not get NavArea CDO"), nullptr, TEXT("CDO_FAILED"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Could not get NavArea CDO"), TEXT("CDO_FAILED"));
         return true;
     }
 
@@ -44,7 +44,7 @@ bool HandleConfigureNavAreaCost(
     const bool bHasEnteringCost = Payload->HasField(TEXT("fixedAreaEnteringCost"));
     if (!bHasCost && !bHasEnteringCost)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Pass areaCost, fixedAreaEnteringCost or both"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Pass areaCost, fixedAreaEnteringCost or both"), TEXT("MISSING_PARAM"));
         return true;
     }
     // FixedAreaEnteringCost is protected; it is an editable UPROPERTY, so write it by reflection.
@@ -52,7 +52,7 @@ bool HandleConfigureNavAreaCost(
     FFloatProperty* EnteringProp = bHasEnteringCost ? FindFProperty<FFloatProperty>(AreaClass, TEXT("FixedAreaEnteringCost")) : nullptr;
     if (bHasEnteringCost && !EnteringProp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("FixedAreaEnteringCost property not found on this NavArea class"), nullptr, TEXT("PROPERTY_NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("FixedAreaEnteringCost property not found on this NavArea class"), TEXT("PROPERTY_NOT_FOUND"));
         return true;
     }
     AreaCDO->Modify();
@@ -75,8 +75,8 @@ bool HandleConfigureNavAreaCost(
         bPersisted = McpSafeAssetSave(AreaBlueprint);
         if (!bPersisted)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("The cost was applied in memory but saving %s failed; retry or save the asset manually"), *AreaBlueprint->GetPathName()), nullptr, TEXT("SAVE_FAILED"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("The cost was applied in memory but saving %s failed; retry or save the asset manually"), *AreaBlueprint->GetPathName()), TEXT("SAVE_FAILED"));
             return true;
         }
     }

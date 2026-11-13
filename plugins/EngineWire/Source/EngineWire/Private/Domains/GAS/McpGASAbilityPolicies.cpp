@@ -10,118 +10,72 @@
 
 namespace McpGASHandlers
 {
+namespace
+{
+// One policy of the ability: Field (the legacy `policy` as its fallback, else Default) parsed into TEnum by name, set
+// on the default object's protected Property through reflection, committed with a read-back. What names the policy in
+// the replies; Allowed lists the values an unknown one is refused with. A class without the property, or a value the
+// recompiled class lost, answered "<What> set" all the same; an unknown value became the default while the caller's
+// was echoed back as applied.
+template <typename TEnum>
+bool SetAbilityPolicy(const FGASRequestContext& Context, const TCHAR* Field, const TCHAR* Default, const TCHAR* Property,
+                      const TCHAR* What, const TCHAR* Allowed)
+{
+    if (!RequireGASBlueprintPath(Context))
+    {
+        return true;
+    }
+    const FString Policy = GetGASStringFieldWithFallback(Context.Payload, Field, TEXT("policy"), Default);
+    TEnum Value{};
+    if (!McpParseEnum(Policy, Value))
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("Unknown %s '%s'; use %s."), Field, *Policy, Allowed), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    UBlueprint* Blueprint = nullptr;
+    UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
+    if (!AbilityCDO)
+    {
+        return true;
+    }
+    const TEnumAsByte<TEnum> Wanted(Value);
+    if (!SetAbilityPropertyValue(AbilityCDO, FName(Property), Wanted))
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("This ability class has no %s property. Nothing was changed."), Property), TEXT("PROPERTY_NOT_FOUND"));
+        return true;
+    }
+    if (!CommitGASBlueprintEdit(Context, Blueprint, What, [&]
+        {
+            TEnumAsByte<TEnum> Held;
+            return ReadCompiledAbilityValue(Blueprint, FName(Property), Held) && Held == Wanted;
+        }))
+    {
+        return true;
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("blueprintPath"), Context.BlueprintPath);
+    Result->SetStringField(Field, McpEnumName(Value));
+    Context.Subsystem->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, FString::Printf(TEXT("%s set"), What),
+                                              Result);
+    return true;
+}
+} // namespace
+
 bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& SubAction)
 {
-    UEngineWireSubsystem* Bridge = Context.Subsystem;
-    const FString& RequestId = Context.RequestId;
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
-    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& BlueprintPath = Context.BlueprintPath;
-
     if (SubAction == TEXT("set_activation_policy"))
     {
-        if (!RequireGASBlueprintPath(Context))
-        {
-            return true;
-        }
-
-        // The declared activationPolicy wins; `policy` is only a legacy fallback.
-        const FString Policy = GetGASStringFieldWithFallback(Payload, TEXT("activationPolicy"), TEXT("policy"), TEXT("LocalPredicted"));
-
-        // LocalOnly / LocalPredicted / ServerOnly / ServerInitiated. An unknown value used to become
-        // LocalPredicted while the caller's value was echoed back as applied.
-        EGameplayAbilityNetExecutionPolicy::Type NetPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-        if (!McpParseEnum(Policy, NetPolicy))
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown activationPolicy '%s'; use LocalOnly, LocalPredicted, ServerOnly or ServerInitiated."), *Policy),
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = nullptr;
-        UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
-        if (!AbilityCDO)
-        {
-            return true;
-        }
-
-        // The property is protected, so it is set by name through reflection. A class without it, or a value the
-        // recompiled class lost, answered "Activation policy set" all the same.
-        const TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type> Wanted(NetPolicy);
-        if (!SetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), Wanted))
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("This ability class has no NetExecutionPolicy property. Nothing was changed."), TEXT("PROPERTY_NOT_FOUND"));
-            return true;
-        }
-        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Activation policy"), [&]
-            {
-                TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type> Held;
-                return ReadCompiledAbilityValue(Blueprint, FName(TEXT("NetExecutionPolicy")), Held) && Held == Wanted;
-            }))
-        {
-            return true;
-        }
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("activationPolicy"), McpEnumName(NetPolicy));
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Activation policy set"), Result);
-        return true;
+        return SetAbilityPolicy<EGameplayAbilityNetExecutionPolicy::Type>(Context, TEXT("activationPolicy"), TEXT("LocalPredicted"),
+            TEXT("NetExecutionPolicy"), TEXT("Activation policy"), TEXT("LocalOnly, LocalPredicted, ServerOnly or ServerInitiated"));
     }
-
     if (SubAction == TEXT("set_instancing_policy"))
     {
-        if (!RequireGASBlueprintPath(Context))
-        {
-            return true;
-        }
-
-        // The declared instancingPolicy wins; `policy` is only a legacy fallback.
-        const FString Policy = GetGASStringFieldWithFallback(Payload, TEXT("instancingPolicy"), TEXT("policy"), TEXT("InstancedPerActor"));
-
-        // NonInstanced (deprecated on newer engines) / InstancedPerActor / InstancedPerExecution,
-        // matched by name so the deprecated enumerator is never named in code.
-        EGameplayAbilityInstancingPolicy::Type InstPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-        if (!McpParseEnum(Policy, InstPolicy))
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Unknown instancingPolicy '%s'; use NonInstanced, InstancedPerActor or InstancedPerExecution."), *Policy),
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = nullptr;
-        UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
-        if (!AbilityCDO)
-        {
-            return true;
-        }
-
-        const TEnumAsByte<EGameplayAbilityInstancingPolicy::Type> Wanted(InstPolicy);
-        if (!SetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), Wanted))
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("This ability class has no InstancingPolicy property. Nothing was changed."), TEXT("PROPERTY_NOT_FOUND"));
-            return true;
-        }
-        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Instancing policy"), [&]
-            {
-                TEnumAsByte<EGameplayAbilityInstancingPolicy::Type> Held;
-                return ReadCompiledAbilityValue(Blueprint, FName(TEXT("InstancingPolicy")), Held) && Held == Wanted;
-            }))
-        {
-            return true;
-        }
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("instancingPolicy"), McpEnumName(InstPolicy));
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instancing policy set"), Result);
-        return true;
+        // NonInstanced is deprecated on newer engines: matched by name, so the deprecated enumerator is never named in code.
+        return SetAbilityPolicy<EGameplayAbilityInstancingPolicy::Type>(Context, TEXT("instancingPolicy"), TEXT("InstancedPerActor"),
+            TEXT("InstancingPolicy"), TEXT("Instancing policy"), TEXT("NonInstanced, InstancedPerActor or InstancedPerExecution"));
     }
-
     return false;
 }
 }

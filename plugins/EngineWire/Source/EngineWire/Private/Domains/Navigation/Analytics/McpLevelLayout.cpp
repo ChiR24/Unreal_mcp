@@ -83,7 +83,7 @@ bool Handle(UEngineWireSubsystem* Bridge, const FString& RequestId, const TShare
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     const auto Refuse = [&](const FString& Message, const TCHAR* Code)
     {
-        Bridge->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Bridge->SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     if (!World)

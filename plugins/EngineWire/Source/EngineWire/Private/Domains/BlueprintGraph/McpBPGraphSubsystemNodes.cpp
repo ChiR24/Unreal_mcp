@@ -80,7 +80,7 @@ bool TryCreateSubsystemNode(
         return true;
     }
 
-    UClass* ResolvedClass = ResolveTargetClassFromString(RequestedClassName);
+    UClass* ResolvedClass = ResolveClassByName(RequestedClassName);
     if (!ResolvedClass)
     {
         Context.SendError(

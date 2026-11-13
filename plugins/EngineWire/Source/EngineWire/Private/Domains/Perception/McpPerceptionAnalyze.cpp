@@ -22,6 +22,20 @@ constexpr int32 GridWidth = 240; // cells across: fine enough for a figure, coar
 const TCHAR* const AllAspects[] = {TEXT("saliency"), TEXT("palette"), TEXT("light"), TEXT("cost")};
 } // namespace
 
+FLinearColor BlockMean(const McpInspectHandlers::FMcpViewCapture& View, int32 X, int32 Y, int32 Block)
+{
+    FLinearColor Sum(0.f, 0.f, 0.f, 0.f);
+    for (int32 Row = Y * Block; Row < (Y + 1) * Block; ++Row)
+    {
+        for (int32 Column = X * Block; Column < (X + 1) * Block; ++Column)
+        {
+            const FColor& Pixel = View.Colors[Row * View.Size.X + Column];
+            Sum += FLinearColor(Pixel.R / 255.f, Pixel.G / 255.f, Pixel.B / 255.f, 1.f);
+        }
+    }
+    return Sum / float(Block * Block);
+}
+
 FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View)
 {
     using namespace McpInspectHandlers;
@@ -34,16 +48,7 @@ FFrame BuildFrame(const McpInspectHandlers::FMcpViewCapture& View)
     {
         for (int32 X = 0; X < Frame.Width; ++X)
         {
-            FLinearColor Sum(0.f, 0.f, 0.f, 0.f);
-            for (int32 Row = Y * Frame.Block; Row < (Y + 1) * Frame.Block; ++Row)
-            {
-                for (int32 Column = X * Frame.Block; Column < (X + 1) * Frame.Block; ++Column)
-                {
-                    const FColor& Pixel = View.Colors[Row * View.Size.X + Column];
-                    Sum += FLinearColor(Pixel.R / 255.f, Pixel.G / 255.f, Pixel.B / 255.f, 1.f);
-                }
-            }
-            const FLinearColor Shown = Sum / float(Frame.Block * Frame.Block);
+            const FLinearColor Shown = BlockMean(View, X, Y, Frame.Block);
             const FColor& Id = View.Ids[(Y * Frame.Block + Frame.Block / 2) * View.Size.X + X * Frame.Block + Frame.Block / 2];
             const FMcpViewProxy Proxy = McpViewProxyAt(Proxies, Id);
             Frame.Color.Add(Shown);

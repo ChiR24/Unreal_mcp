@@ -55,17 +55,17 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
       FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
 
   if (!McpAssetExists(SafeAssetPath)) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Asset not found"), nullptr,
-                           TEXT("ASSET_NOT_FOUND"));
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Asset not found"),
+                        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
   UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Failed to load asset"),
+                        TEXT("LOAD_FAILED"));
     return true;
   }
 

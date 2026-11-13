@@ -11,60 +11,6 @@
 
 namespace McpBlueprintGraphHandlers
 {
-// Shared helper: resolve a class string (Blueprint asset path, generated-class
-// path, or native class name) to a UClass. Used by every node branch that has
-// a class pin (DynamicCast TargetType, CreateWidget WidgetType, etc.) so all
-// callers accept the same input formats consistently. Declared in the shared
-// private header so other translation units (e.g. the ConstructObject-family
-// path in SpecialNodes) resolve classes identically.
-UClass* ResolveTargetClassFromString(const FString& InClassString)
-{
-    if (InClassString.IsEmpty())
-    {
-        return nullptr;
-    }
-
-    UClass* Resolved = nullptr;
-    if (InClassString.StartsWith(TEXT("/")))
-    {
-        FString ClassPath = InClassString;
-        if (!ClassPath.EndsWith(TEXT("_C")))
-        {
-            FString PackageName = ClassPath;
-            FString ObjectName = ClassPath;
-            int32 DotIdx;
-            if (ClassPath.FindChar('.', DotIdx))
-            {
-                // Both parts must be peeled from the same string — keeping
-                // PackageName as the full path here produced doubled-up paths
-                // like "/Game/X/Y.Y.Y_C" when callers passed an already-fully-
-                // qualified object path.
-                PackageName = ClassPath.Left(DotIdx);
-                ObjectName = ClassPath.RightChop(DotIdx + 1);
-            }
-            else
-            {
-                int32 SlashIdx;
-                if (ClassPath.FindLastChar('/', SlashIdx))
-                {
-                    ObjectName = ClassPath.RightChop(SlashIdx + 1);
-                }
-            }
-            ClassPath = PackageName + TEXT(".") + ObjectName + TEXT("_C");
-        }
-        Resolved = LoadObject<UClass>(nullptr, *ClassPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
-    }
-    if (!Resolved)
-    {
-        Resolved = FindNodeClassByName(InClassString);
-    }
-    if (!Resolved)
-    {
-        Resolved = McpFindTypeQuiet(InClassString);
-    }
-    return Resolved;
-}
-
 // Read the requested target class for a node with a class pin. Checks
 // targetClass first, then the legacy memberClass / nodeClass / widgetType
 // fields, then peels a "CastTo<Class>" prefix from the nodeType as a final
@@ -194,7 +140,7 @@ void CreateDynamicNode(
                 TEXT("INVALID_ARGUMENT"));
             return;
         }
-        UClass* ResolvedTarget = ResolveTargetClassFromString(TargetClass);
+        UClass* ResolvedTarget = ResolveClassByName(TargetClass);
         if (!ResolvedTarget)
         {
             Context.SendError(

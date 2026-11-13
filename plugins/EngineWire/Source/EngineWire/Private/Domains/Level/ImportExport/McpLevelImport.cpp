@@ -12,8 +12,8 @@ bool HandleImportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     FString SourcePath = McpGetFirstStringField(Payload, {TEXT("sourcePath"), TEXT("packagePath")});
 
     if (SourcePath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("sourcePath/packagePath required"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("sourcePath/packagePath required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -21,9 +21,9 @@ bool HandleImportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     // If SourcePath is a package (starts with /Game), handle as Duplicate/Copy
     if (SourcePath.StartsWith(TEXT("/"))) {
       if (DestinationPath.IsEmpty()) {
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
                                TEXT("destinationPath required for asset copy"),
-                               nullptr, TEXT("INVALID_ARGUMENT"));
+                               TEXT("INVALID_ARGUMENT"));
         return true;
       }
 
@@ -69,9 +69,9 @@ bool HandleImportLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
 
     // Only the package-path copy is supported: MAP IMPORTADD adds no actors
     // from a .t3d in this engine, even for an engine-produced export.
-    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+    Subsystem.SendAutomationError(RequestingSocket, RequestId,
                            TEXT("sourcePath must be a level package path (/Game/...); importing .t3d files is not supported. Use the package-path form to copy a .umap."),
-                           nullptr, TEXT("NOT_SUPPORTED"));
+                           TEXT("NOT_SUPPORTED"));
     return true;
   }
 } // namespace McpLevelHandlers

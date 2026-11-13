@@ -17,15 +17,15 @@ bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
 
     if (SourcePath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("levelPath or sourcePath required for rename_level"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (DestinationPath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("destinationPath required for rename_level"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (!SanitizeLevelPathPairOrReply(Subsystem, RequestingSocket, RequestId, SourcePath, DestinationPath,
@@ -43,9 +43,9 @@ bool HandleRenameLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
         }
       }
       if (bInUse) {
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
                                FString::Printf(TEXT("Level %s is loaded in the editor (current level or streaming sub-level); unload it before renaming"), *SourcePath),
-                               nullptr, TEXT("LEVEL_IN_USE"));
+                               TEXT("LEVEL_IN_USE"));
         return true;
       }
     }

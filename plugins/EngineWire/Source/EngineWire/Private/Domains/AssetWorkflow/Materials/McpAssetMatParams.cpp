@@ -31,9 +31,9 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
   Payload->TryGetStringField(TEXT("parameterType"), Type);
 
   if (AssetPath.IsEmpty() || Name.IsEmpty() || Type.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("assetPath, parameterName, and parameterType required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("assetPath, parameterName, and parameterType required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   if (!McpSanitizeAssetPathOrReply(this, Socket, RequestId, AssetPath))
@@ -49,17 +49,17 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     // "Asset is not a Material or Material Function", which explains nothing.
     // Name the action that does work on instances.
     if (LoadObject<UMaterialInstance>(nullptr, *AssetPath)) {
-      SendAutomationResponse(
-          Socket, RequestId, false,
+      SendAutomationError(
+          Socket, RequestId,
           TEXT("A material instance has no graph to add a parameter expression to. "
                "Use set_material_parameter to override a parameter on the instance, "
                "or add_parameter on its parent material to introduce a new one."),
-          nullptr, TEXT("INVALID_ASSET_TYPE"));
+          TEXT("INVALID_ASSET_TYPE"));
       return true;
     }
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Asset is not a Material or Material Function"),
-                           nullptr, TEXT("INVALID_ASSET_TYPE"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Asset is not a Material or Material Function"),
+                        TEXT("INVALID_ASSET_TYPE"));
     return true;
   }
 
@@ -134,9 +134,9 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
       }
     }
   } else {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("Unsupported parameter type: %s"), *Type), nullptr,
+    SendAutomationError(
+        Socket, RequestId,
+        FString::Printf(TEXT("Unsupported parameter type: %s"), *Type),
         TEXT("INVALID_TYPE"));
     return true;
   }
@@ -158,9 +158,9 @@ bool UEngineWireSubsystem::HandleAddMaterialParameter(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Parameter added"),
                            Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to create parameter expression"),
-                           nullptr, TEXT("CREATE_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to create parameter expression"),
+                        TEXT("CREATE_FAILED"));
   }
 
   return true;
@@ -227,9 +227,9 @@ bool UEngineWireSubsystem::HandleResetInstanceParameters(
   UMaterialInstanceConstant *MIC = Cast<UMaterialInstanceConstant>(Asset);
 
   if (!MIC) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Asset is not a Material Instance Constant"),
-                           nullptr, TEXT("INVALID_ASSET_TYPE"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Asset is not a Material Instance Constant"),
+                        TEXT("INVALID_ASSET_TYPE"));
     return true;
   }
 

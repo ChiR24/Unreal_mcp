@@ -62,8 +62,8 @@ static bool HandleCreateTemplateSpline(
         : bHasHeight ? GetJsonNumberField(Payload, TEXT("height"), 0.0) : (bStock ? Kind.Height : 0.0);
     if ((bHasWidth && Width <= 0.0) || (bHasHeight && Height <= 0.0))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("width and height must be greater than 0; nothing was created."), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("width and height must be greater than 0; nothing was created."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -84,9 +84,9 @@ static bool HandleCreateTemplateSpline(
     }
     if (!SegmentMesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Static mesh not found: %s; nothing was created."), bStock ? Kind.StockMesh : *MeshPath),
-            nullptr, TEXT("MESH_NOT_FOUND"));
+            TEXT("MESH_NOT_FOUND"));
         return true;
     }
     UMaterialInterface* SegmentMaterial = nullptr;
@@ -100,8 +100,8 @@ static bool HandleCreateTemplateSpline(
         SegmentMaterial = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);
         if (!SegmentMaterial)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Material not found: %s; nothing was created."), *MaterialPath), nullptr, TEXT("MATERIAL_NOT_FOUND"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Material not found: %s; nothing was created."), *MaterialPath), TEXT("MATERIAL_NOT_FOUND"));
             return true;
         }
     }
@@ -111,8 +111,8 @@ static bool HandleCreateTemplateSpline(
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, FRotator::ZeroRotator);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to spawn spline actor"), nullptr, TEXT("SPAWN_FAILED"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to spawn spline actor"), TEXT("SPAWN_FAILED"));
         return true;
     }
     AActor* NewActor = SplineComp->GetOwner();

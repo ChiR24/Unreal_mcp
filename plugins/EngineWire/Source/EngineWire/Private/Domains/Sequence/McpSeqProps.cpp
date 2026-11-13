@@ -40,9 +40,9 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
           TEXT("playbackEnd"), PlaybackEndValue);
       // A call that set nothing answered "properties updated".
       if (!bHasFrameRate && !bHasLengthInFrames && !bHasPlaybackStart && !bHasPlaybackEnd) {
-        SendAutomationResponse(Socket, RequestId, false,
-                               TEXT("Pass frameRate, playbackStart, playbackEnd or lengthInFrames. Nothing was changed."),
-                               nullptr, TEXT("INVALID_ARGUMENT"));
+        SendAutomationError(Socket, RequestId,
+                            TEXT("Pass frameRate, playbackStart, playbackEnd or lengthInFrames. Nothing was changed."),
+                            TEXT("INVALID_ARGUMENT"));
         return true;
       }
 
@@ -51,9 +51,9 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
         FString FrameRateError;
         if (!McpSequenceFrameRate::TryParse(
                 LocalPayload, TEXT("frameRate"), NewRate, FrameRateError)) {
-          SendAutomationResponse(Socket, RequestId, false,
+          SendAutomationError(Socket, RequestId,
                                             FrameRateError,
-                                            nullptr, TEXT("INVALID_ARGUMENT"));
+                                            TEXT("INVALID_ARGUMENT"));
           return true;
         }
       }
@@ -71,16 +71,16 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
         if (bHasPlaybackStart &&
             !McpSequenceFrameMath::TryFrameNumber(
                 PlaybackStartValue, StartFrame, FrameError)) {
-          SendAutomationResponse(
-              Socket, RequestId, false, FrameError, nullptr,
+          SendAutomationError(
+              Socket, RequestId, FrameError,
               TEXT("INVALID_ARGUMENT"));
           return true;
         }
         if (bHasPlaybackEnd) {
           if (!McpSequenceFrameMath::TryFrameNumber(
                   PlaybackEndValue, EndFrame, FrameError)) {
-            SendAutomationResponse(
-                Socket, RequestId, false, FrameError, nullptr,
+            SendAutomationError(
+                Socket, RequestId, FrameError,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -88,8 +88,8 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
           FFrameNumber Length;
           if (!McpSequenceFrameMath::TryFrameNumber(
                   LengthInFramesValue, Length, FrameError)) {
-            SendAutomationResponse(
-                Socket, RequestId, false, FrameError, nullptr,
+            SendAutomationError(
+                Socket, RequestId, FrameError,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -97,8 +97,8 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
                   StartFrame,
                   FMath::Max(0, Length.Value),
                   EndFrame, FrameError)) {
-            SendAutomationResponse(
-                Socket, RequestId, false, FrameError, nullptr,
+            SendAutomationError(
+                Socket, RequestId, FrameError,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -145,8 +145,8 @@ bool UEngineWireSubsystem::HandleSequenceSetProperties(
       return true;
     }
   }
-  SendAutomationResponse(Socket, RequestId, false, McpNotALevelSequence(SeqPath, SeqObj), nullptr,
-                         TEXT("INVALID_SEQUENCE"));
+  SendAutomationError(Socket, RequestId, McpNotALevelSequence(SeqPath, SeqObj),
+                      TEXT("INVALID_SEQUENCE"));
   return true;
 }
 
@@ -185,7 +185,7 @@ bool UEngineWireSubsystem::HandleSequenceGetProperties(
     }
   }
   // Any other asset answered success with every value 0, the same as a real sequence at 0.
-  SendAutomationResponse(Socket, RequestId, false, McpNotALevelSequence(SeqPath, SeqObj), nullptr,
-                         TEXT("INVALID_SEQUENCE"));
+  SendAutomationError(Socket, RequestId, McpNotALevelSequence(SeqPath, SeqObj),
+                      TEXT("INVALID_SEQUENCE"));
   return true;
 }

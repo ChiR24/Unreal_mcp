@@ -62,18 +62,18 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     if (!bFileFound) {
       // Try checking DoesPackageExist as last resort
       if (!FPackageName::DoesPackageExist(SubLevelPath)) {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("Level file not found: %s"), *SubLevelPath),
-            nullptr, TEXT("PACKAGE_NOT_FOUND"));
+            TEXT("PACKAGE_NOT_FOUND"));
         return true;
       }
     }
 
     UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No world loaded"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No world loaded"),
                              TEXT("NO_WORLD"));
       return true;
     }
@@ -91,11 +91,11 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     ParentLevel = FPackageName::ObjectPathToPackageName(ParentLevel);
     const FString OpenLevel = World->GetOutermost()->GetName();
     if (!ParentLevel.IsEmpty() && !ParentLevel.Equals(OpenLevel, ESearchCase::IgnoreCase)) {
-      Subsystem.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("parentLevel %s is not the level open in the editor (%s); load it with manage_level load first, then add the sub-level"),
                           *ParentLevel, *OpenLevel),
-          nullptr, TEXT("PARENT_LEVEL_NOT_LOADED"));
+          TEXT("PARENT_LEVEL_NOT_LOADED"));
       return true;
     }
 
@@ -168,17 +168,17 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
         // The level file did not load: take back the entry AddLevelToWorld made, so a refused call leaves
         // no broken sublevel in the open level.
         World->RemoveStreamingLevel(NewLevel);
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("Sublevel file not found: %s"), *SubLevelPath),
-            nullptr, TEXT("FILE_NOT_FOUND"));
+            TEXT("FILE_NOT_FOUND"));
       }
     } else {
-      Subsystem.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("Failed to add sublevel %s (Check logs)"),
                           *SubLevelPath),
-          nullptr, TEXT("ADD_FAILED"));
+          TEXT("ADD_FAILED"));
     }
     return true;
 }

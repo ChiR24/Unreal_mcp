@@ -38,16 +38,16 @@ AActor* ResolveSplineActor(UEngineWireSubsystem* Self, const FString& RequestId,
 {
     if (ActorName.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("actorName is required"), TEXT("MISSING_PARAM"));
         return nullptr;
     }
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!Actor)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("NOT_FOUND"));
     }
     return Actor;
 }
@@ -58,8 +58,8 @@ USplineComponent* ResolveSplineTarget(UEngineWireSubsystem* Self, const FString&
     USplineComponent* Spline = OutActor ? FindSplineComponent(OutActor) : nullptr;
     if (OutActor && !Spline)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("No spline component found on actor"), TEXT("NO_SPLINE"));
     }
     // A component made without RF_Transactional (every spline create_spline_actor made) kept each point edit out of
     // the undo buffer; flagged, Modify() records it.
@@ -76,8 +76,8 @@ USplineMeshComponent* ResolveSplineMeshTarget(UEngineWireSubsystem* Self, const 
     USplineMeshComponent* Mesh = OutActor ? FindSplineMeshComponent(OutActor, ComponentName) : nullptr;
     if (OutActor && !Mesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No SplineMeshComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("No SplineMeshComponent found on actor"), TEXT("NO_COMPONENT"));
     }
     return Mesh;
 }
@@ -148,8 +148,8 @@ const TCHAR* SplineMeshAxisName(ESplineMeshAxis::Type Axis)
 bool RefuseSplineMeshAxis(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                           const FString& ForwardAxis)
 {
-    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline mesh axis; use X, Y or Z. "
-        "Nothing was changed."), *ForwardAxis), nullptr, TEXT("INVALID_ARGUMENT"));
+    Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("'%s' is not a spline mesh axis; use X, Y or Z. "
+        "Nothing was changed."), *ForwardAxis), TEXT("INVALID_ARGUMENT"));
     return true;
 }
 
@@ -167,8 +167,8 @@ bool ParseSplinePointType(const FString& TypeStr, ESplinePointType::Type& OutTyp
 bool RefuseSplinePointType(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                            const FString& TypeStr)
 {
-    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("'%s' is not a spline point type; use Linear, "
-        "Curve, Constant, CurveClamped or CurveCustomTangent. Nothing was changed."), *TypeStr), nullptr, TEXT("INVALID_ARGUMENT"));
+    Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("'%s' is not a spline point type; use Linear, "
+        "Curve, Constant, CurveClamped or CurveCustomTangent. Nothing was changed."), *TypeStr), TEXT("INVALID_ARGUMENT"));
     return true;
 }
 

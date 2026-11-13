@@ -62,7 +62,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 {
     auto Refuse = [&](const TCHAR* Code, const FString& Message)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Bridge.SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
@@ -125,11 +125,9 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         SampleNav(*Fresh, World);
         FCell& First = Fresh->Cells.AddDefaulted_GetRef();
         First.Where = Fresh->Start;
-        First.Key.X = FMath::FloorToInt32(Fresh->Start.X / Fresh->CellCm);
-        First.Key.Y = FMath::FloorToInt32(Fresh->Start.Y / Fresh->CellCm);
-        First.Key.Z = FMath::FloorToInt32((Fresh->Start.Z - Pawn->GetSimpleCollisionHalfHeight()) / Fresh->HeightCm);
         // The start judged as every later cell is, or the first judgement would file the start again as a new cell.
-        First.Key.Flags = Fresh->LastFlags = FlagsNow(*Fresh, World);
+        Fresh->LastFlags = FlagsNow(*Fresh, World);
+        First.Key = KeyOf(*Fresh, Fresh->Start - FVector(0.0, 0.0, Pawn->GetSimpleCollisionHalfHeight()), Fresh->LastFlags);
         Fresh->Index.Add(First.Key, 0);
         GSession = Fresh;
         Session = GSession.Get();

@@ -41,14 +41,14 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
                                                MovieScene->GetTickResolution(), Start, FrameError) ||
       !McpSequenceFrameMath::TryTransformFrame(EndFrame, MovieScene->GetDisplayRate(),
                                                MovieScene->GetTickResolution(), End, FrameError)) {
-    SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, FrameError, TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // A sound with no end takes its length from the sound below, so the 0-100
   // default range must not be range-checked against a later start.
   if (End <= Start && (bHasEnd || SoundPath.IsEmpty())) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("end must be greater than start"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("end must be greater than start"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -71,13 +71,13 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
   const bool bCameraBound = bCameraCutTrack && !BindingId.IsEmpty() &&
                             FGuid::Parse(BindingId, CameraBinding);
   if (bCameraCutTrack && !bCameraBound) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("A camera cut section needs 'bindingId' set to the camera's "
              "binding GUID (from edit_sequence_bindings). Without it the "
              "cut has no camera and Movie Render Queue renders the default "
              "view."),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -87,11 +87,11 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
   USoundBase *Sound = nullptr;
   if (!SoundPath.IsEmpty()) {
     if (!AudioTrack) {
-      SendAutomationResponse(
-          Socket, RequestId, false,
+      SendAutomationError(
+          Socket, RequestId,
           FString::Printf(TEXT("soundPath only applies to an Audio track; '%s' is a %s"),
                           *Track->GetName(), *Track->GetClass()->GetName()),
-          nullptr, TEXT("INVALID_ARGUMENT"));
+          TEXT("INVALID_ARGUMENT"));
       return true;
     }
     // /Content maps to /Game; a traversal or an unmounted root is refused before anything loads.
@@ -109,9 +109,9 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
         *McpToObjectPath(SoundObjectPath),
         nullptr, LOAD_NoWarn);
     if (!Sound) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             FString::Printf(TEXT("Sound not found: %s"), *SoundPath),
-                             nullptr, TEXT("ASSET_NOT_FOUND"));
+      SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Sound not found: %s"), *SoundPath),
+                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
   }
@@ -175,9 +175,9 @@ bool UEngineWireSubsystem::HandleSequenceAddSection(
               : FString(TEXT("Section added to track")),
         Resp);
   } else {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to create section"), nullptr,
-                           TEXT("SECTION_CREATION_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to create section"),
+                        TEXT("SECTION_CREATION_FAILED"));
   }
   return true;
 }

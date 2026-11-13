@@ -111,9 +111,7 @@ bool HandleNiagaraLifecycleAction(
         }
         else
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.Socket, Context.RequestId, false,
-                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
+            Context.SendError(LifecycleMiss(Actor, SystemName, AssetPath),
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;
@@ -134,9 +132,7 @@ bool HandleNiagaraLifecycleAction(
         }
         else
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.Socket, Context.RequestId, false,
-                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
+            Context.SendError(LifecycleMiss(Actor, SystemName, AssetPath),
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;
@@ -150,9 +146,7 @@ bool HandleNiagaraLifecycleAction(
         Context.Payload->TryGetNumberField(TEXT("steps"), Steps);
         if (bFound && (Steps < 1 || DeltaTime <= 0.0))
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.Socket, Context.RequestId, false,
-                TEXT("steps must be 1 or more and deltaTime above 0."), nullptr,
+            Context.SendError(TEXT("steps must be 1 or more and deltaTime above 0."),
                 TEXT("INVALID_ARGUMENT"));
         }
         else if (bFound)
@@ -195,9 +189,7 @@ bool HandleNiagaraLifecycleAction(
         }
         else
         {
-            Context.Bridge.SendAutomationResponse(
-                Context.Socket, Context.RequestId, false,
-                LifecycleMiss(Actor, SystemName, AssetPath), nullptr,
+            Context.SendError(LifecycleMiss(Actor, SystemName, AssetPath),
                 TEXT("SYSTEM_NOT_FOUND"));
         }
         return true;

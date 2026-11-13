@@ -45,16 +45,16 @@ bool Fail(UEngineWireSubsystem& Bridge, const FRun& Run, const FString& RequestI
     }
     if (Run.EndedBecause == TEXT("paused"))
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, TEXT("The level's game paused itself in Simulate (a title screen or a "
+        Bridge.SendAutomationError(Socket, RequestId, TEXT("The level's game paused itself in Simulate (a title screen or a "
             "pause menu), so nothing fell; nothing was kept. Give the level a game mode that does not pause (manage_level "
-            "set_world_settings gameMode), then settle again."), nullptr, TEXT("GAME_PAUSED"));
+            "set_world_settings gameMode), then settle again."), TEXT("GAME_PAUSED"));
         return false;
     }
     const bool bStopped = Run.Phase == EPhase::Settling;
-    Bridge.SendAutomationResponse(Socket, RequestId, false,
+    Bridge.SendAutomationError(Socket, RequestId,
         bStopped ? TEXT("Simulate was stopped in the editor before the bodies came to rest; nothing was kept.")
                  : TEXT("The Simulate session did not start or end in time; nothing was kept."),
-        nullptr, bStopped ? TEXT("SIMULATE_STOPPED") : TEXT("SIMULATE_TIMEOUT"));
+        bStopped ? TEXT("SIMULATE_STOPPED") : TEXT("SIMULATE_TIMEOUT"));
     return false;
 }
 

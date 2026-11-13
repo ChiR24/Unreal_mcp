@@ -58,7 +58,7 @@ bool HandleCreateTriggerBox(UEngineWireSubsystem* Subsystem, const FString& Requ
     FString ValidationError;
     if (!ValidateExtent(Extent, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         return true;
     }
     ATriggerBox* Volume = SpawnVolumeActor<ATriggerBox>(World, Args.VolumeName, Args.Location, Args.Rotation, Extent);
@@ -87,7 +87,7 @@ bool HandleCreateTriggerSphere(UEngineWireSubsystem* Subsystem, const FString& R
     {
         if (!ValidationError.IsEmpty())
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+            Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         }
         return true;
     }
@@ -122,7 +122,7 @@ bool HandleCreateTriggerCapsule(UEngineWireSubsystem* Subsystem, const FString& 
     {
         if (!ValidationError.IsEmpty())
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
+            Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("INVALID_ARGUMENT"));
         }
         return true;
     }

@@ -124,8 +124,8 @@ FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayloa
 FString RequireBlueprintPath(const FBlueprintActionContext &Context, const TCHAR *Action) {
   const FString Path = ResolveBlueprintRequestedPath(Context.LocalPayload);
   if (Path.IsEmpty()) {
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false,
-        FString::Printf(TEXT("%s requires a blueprint path."), Action), nullptr, TEXT("INVALID_BLUEPRINT_PATH"));
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+        FString::Printf(TEXT("%s requires a blueprint path."), Action), TEXT("INVALID_BLUEPRINT_PATH"));
   }
   return Path;
 }

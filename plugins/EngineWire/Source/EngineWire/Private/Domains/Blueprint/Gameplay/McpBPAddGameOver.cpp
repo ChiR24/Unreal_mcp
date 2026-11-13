@@ -51,8 +51,8 @@ bool HandleBlueprintAddGameOver(const FBlueprintActionContext &Context) {
       : Hud.Element.IsEmpty() ? FString(TEXT("textName must not be empty"))
                              : FString();
   if (!Refusal.IsEmpty()) {
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, Refusal, nullptr,
-                                          TEXT("INVALID_ARGUMENT"));
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, Refusal,
+                                       TEXT("INVALID_ARGUMENT"));
     return true;
   }
   SetHudString(Hud, TEXT("TextName"), Hud.Element);

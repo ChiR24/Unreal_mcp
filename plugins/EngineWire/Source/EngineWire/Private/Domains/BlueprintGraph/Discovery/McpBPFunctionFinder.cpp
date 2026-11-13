@@ -207,8 +207,7 @@ bool HandleFindFunctions(FActionContext& Context)
     UClass* Scope = nullptr;
     if (!MemberClass.IsEmpty())
     {
-        Scope = ResolveUClass(MemberClass);
-        Scope = Scope ? Scope : ResolveTargetClassFromString(MemberClass);
+        Scope = ResolveClassByName(MemberClass);
         if (!Scope)
         {
             Context.SendError(FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name "

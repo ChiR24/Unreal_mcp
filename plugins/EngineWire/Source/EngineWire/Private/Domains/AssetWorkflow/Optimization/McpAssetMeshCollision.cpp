@@ -53,7 +53,7 @@ bool HandleSetMeshCollision(UEngineWireSubsystem* Bridge, const FString& Request
 {
     auto Fail = [&](const FString& Message, const TCHAR* Code)
     {
-        Bridge->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Bridge->SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
 

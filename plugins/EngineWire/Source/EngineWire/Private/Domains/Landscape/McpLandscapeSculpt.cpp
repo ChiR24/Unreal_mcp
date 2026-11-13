@@ -101,9 +101,9 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   MaxX = FMath::Min(MaxX, LMaxX);
   MaxY = FMath::Min(MaxY, LMaxY);
   if (MinX > MaxX || MinY > MaxY) {
-    SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("Brush outside landscape bounds"), nullptr,
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("Brush outside landscape bounds"),
         TEXT("OUT_OF_BOUNDS"));
     return true;
   }

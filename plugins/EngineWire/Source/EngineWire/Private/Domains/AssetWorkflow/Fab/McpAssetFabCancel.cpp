@@ -39,10 +39,10 @@ bool UEngineWireSubsystem::HandleCancelFabImport(
   FString OperationId;
   Payload->TryGetStringField(TEXT("operationId"), OperationId);
   if (!McpFabImportJson::IsPlainKey(OperationId)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("'operationId' (from the add's reply) is required: [A-Za-z0-9_-], 64 characters at most."),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

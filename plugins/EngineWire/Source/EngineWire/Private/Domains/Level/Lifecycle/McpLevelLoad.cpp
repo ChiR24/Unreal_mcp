@@ -179,10 +179,10 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
           FString LoadedPath = LoadedWorld->GetOutermost()->GetName();
           if (!LoadedPath.Equals(ExpectedLoadedPath, ESearchCase::IgnoreCase)) {
             // The requested level was not actually loaded - engine fell back to default
-            Subsystem.SendAutomationResponse(
-                RequestingSocket, RequestId, false,
+            Subsystem.SendAutomationError(
+                RequestingSocket, RequestId,
                 FString::Printf(TEXT("Level path mismatch: requested %s but loaded %s"), *ExpectedLoadedPath, *LoadedPath),
-                nullptr, TEXT("LOAD_MISMATCH"));
+                TEXT("LOAD_MISMATCH"));
             return true;
           }
         }
@@ -191,10 +191,10 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
                                  TEXT("Level loaded"), LoadReply(true), bWasGameView);
         return true;
       } else {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("Failed to load map: %s"), *LevelPath),
-            nullptr, TEXT("LOAD_FAILED"));
+            TEXT("LOAD_FAILED"));
         return true;
       }
 }

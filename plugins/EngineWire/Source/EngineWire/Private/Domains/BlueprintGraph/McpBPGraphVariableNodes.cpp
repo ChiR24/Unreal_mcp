@@ -21,9 +21,8 @@ bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet)
 
 UClass* ResolveMemberClass(const FString& MemberClassName)
 {
-    // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
-    UClass* Class = ResolveUClass(MemberClassName);
-    return Class ? Class : ResolveTargetClassFromString(MemberClassName);
+    // A Blueprint asset path (/Game/UI/WBP_Pop) names its generated class.
+    return ResolveClassByName(MemberClassName);
 }
 
 FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,

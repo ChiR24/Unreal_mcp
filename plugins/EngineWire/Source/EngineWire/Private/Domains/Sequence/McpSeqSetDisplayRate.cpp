@@ -60,16 +60,16 @@ bool UEngineWireSubsystem::HandleSequenceSetDisplayRate(
         return true;
       }
 
-      SendAutomationResponse(Socket, RequestId, false,
-                             FrameRateError, nullptr,
-                             TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId,
+                          FrameRateError,
+                          TEXT("INVALID_ARGUMENT"));
       return true;
     }
   }
 
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Invalid sequence type"), nullptr,
-                         TEXT("INVALID_SEQUENCE"));
+  SendAutomationError(Socket, RequestId,
+                      TEXT("Invalid sequence type"),
+                      TEXT("INVALID_SEQUENCE"));
   return true;
 }
 
@@ -80,17 +80,17 @@ bool UEngineWireSubsystem::HandleSequenceSetTickResolution(
   Payload->TryGetStringField(TEXT("resolution"), ResolutionStr);
   FFrameRate NewResolution;
   if (!McpParseTickResolution(ResolutionStr, NewResolution)) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("resolution must be whole ticks per second, such as 24000 or 60000 (a ratio "
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("resolution must be whole ticks per second, such as 24000 or 60000 (a ratio "
                                                 "N/D is N ticks every D seconds); got '%s'. Nothing was changed."), *ResolutionStr),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   FString SeqPath = ResolveSequencePath(Payload);
   if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("path required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("path required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -99,11 +99,11 @@ bool UEngineWireSubsystem::HandleSequenceSetTickResolution(
   // frame 24 to 23.77, and every edit after that landed between frames.
   if (Sequence && Sequence->GetMovieScene() &&
       NewResolution.AsDecimal() < Sequence->GetMovieScene()->GetDisplayRate().AsDecimal()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString::Printf(TEXT("resolution %s is coarser than the display rate (%s), so frames would fall "
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("resolution %s is coarser than the display rate (%s), so frames would fall "
                                                 "between ticks; use whole ticks per second such as 24000. Nothing was changed."),
                                            *ResolutionStr, *Sequence->GetMovieScene()->GetDisplayRate().ToPrettyText().ToString()),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   if (Sequence && Sequence->GetMovieScene()) {
@@ -132,8 +132,8 @@ bool UEngineWireSubsystem::HandleSequenceSetTickResolution(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Tick resolution set"),
                            Resp);
   } else {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, TEXT("Sequence not found"),
+                        TEXT("NOT_FOUND"));
   }
   return true;
 }

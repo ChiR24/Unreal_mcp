@@ -24,8 +24,8 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     // removals were sixteen calls, a describe for each consent).
     TArray<FString> VarNames = McpReadVariableNames(LocalPayload);
     if (VarNames.Num() == 0) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("variableName or variableNames required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("variableName or variableNames required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -35,11 +35,11 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     UBlueprint *Blueprint =
         LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (!Blueprint) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              LocalLoadError.IsEmpty()
                                  ? TEXT("Failed to load blueprint")
                                  : LocalLoadError,
-                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+                             TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 
@@ -48,12 +48,12 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     TArray<FString> Known;
     McpMatchVariableNames(Blueprint, VarNames, Missing, Known);
     if (Missing.Num() > 0) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("Variable not found: %s. Nothing was removed. The Blueprint's variables: %s."),
                           *FString::Join(Missing, TEXT(", ")),
                           Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>")),
-          nullptr, TEXT("NOT_FOUND"));
+          TEXT("NOT_FOUND"));
       return true;
     }
 
@@ -100,9 +100,9 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     LocalPayload->TryGetStringField(TEXT("newName"), NewName);
 
     if (OldName.IsEmpty() || NewName.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("Missing 'oldName' or 'newName' in payload."),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
@@ -116,11 +116,11 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     UBlueprint *Blueprint =
         LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (!Blueprint) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              LocalLoadError.IsEmpty()
                                  ? TEXT("Failed to load blueprint")
                                  : LocalLoadError,
-                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+                             TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 
@@ -133,18 +133,18 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
                                : nullptr;
 
     if (!bFound && !Component) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("Neither a variable nor a component named '%s' in this blueprint."),
                           *OldName),
-          nullptr, TEXT("NOT_FOUND"));
+          TEXT("NOT_FOUND"));
       return true;
     }
     const EValidatorResult NameCheck = FKismetNameValidator(Blueprint, OldVarName).IsValid(FName(*NewName));
     if (NameCheck != EValidatorResult::Ok) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    INameValidatorInterface::GetErrorString(NewName, NameCheck),
-                                    nullptr, TEXT("NAME_CONFLICT"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                                 INameValidatorInterface::GetErrorString(NewName, NameCheck),
+                                 TEXT("NAME_CONFLICT"));
       return true;
     }
 

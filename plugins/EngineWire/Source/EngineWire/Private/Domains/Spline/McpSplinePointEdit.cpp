@@ -28,8 +28,8 @@ bool HandleAddSplinePoint(
     // Left out, the point landed on the actor's own origin.
     if (!Payload->HasField(TEXT("position")))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("position is required. Nothing was changed."), nullptr,
-                                     TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("position is required. Nothing was changed."),
+                                  TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -86,8 +86,8 @@ bool HandleRemoveSplinePoint(
 
     if (PointIndex < 0 || PointIndex >= SplineComp->GetNumberOfSplinePoints())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid point index: %d"), PointIndex), nullptr, TEXT("INVALID_INDEX"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid point index: %d"), PointIndex), TEXT("INVALID_INDEX"));
         return true;
     }
 
@@ -119,8 +119,8 @@ bool HandleSetSplinePointPosition(
     // Left out, these moved point 0, or moved the point to the actor's origin.
     if (!Payload->HasField(TEXT("pointIndex")) || !Payload->HasField(TEXT("position")))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("pointIndex and position are required. Nothing was changed."),
-                                     nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("pointIndex and position are required. Nothing was changed."),
+                                  TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -133,8 +133,8 @@ bool HandleSetSplinePointPosition(
 
     if (PointIndex < 0 || PointIndex >= SplineComp->GetNumberOfSplinePoints())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid point index: %d"), PointIndex), nullptr, TEXT("INVALID_INDEX"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid point index: %d"), PointIndex), TEXT("INVALID_INDEX"));
         return true;
     }
 

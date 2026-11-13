@@ -34,9 +34,9 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
     }
   }
   if (Name.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_create requires name (path is then its folder, default /Game), or a path that names the sequence: /Game/Folder/SEQ_Name."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sequence_create requires name (path is then its folder, default /Game), or a path that names the sequence: /Game/Folder/SEQ_Name."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // Sanitize (accepts the slashless Game/... alias), then the writable-path check
@@ -56,10 +56,10 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
   if (McpAssetExists(FullPath)) {
     UObject *Existing = McpLoadAsset(FullPath);
     if (!Cast<ULevelSequence>(Existing)) {
-      SendAutomationResponse(Socket, RequestId, false,
+      SendAutomationError(Socket, RequestId,
           FString::Printf(TEXT("%s already holds a %s, not a level sequence"), *FullPath,
                           Existing ? *Existing->GetClass()->GetName() : TEXT("asset")),
-          nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+          TEXT("ASSET_ALREADY_EXISTS"));
       return true;
     }
     VerifyAssetExists(Resp, FullPath);
@@ -71,9 +71,9 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
 
   ULevelSequence *NewSequence = McpSequence::CreateSequenceAsset(Name, FPackageName::GetLongPackagePath(FullPath));
   if (!NewSequence) {
-    SendAutomationResponse(Socket, RequestId, false,
+    SendAutomationError(Socket, RequestId,
         TEXT("Failed to create the sequence asset (LevelSequenceFactoryNew unavailable or AssetTools refused)"),
-        nullptr, TEXT("CREATE_ASSET_FAILED"));
+        TEXT("CREATE_ASSET_FAILED"));
     return true;
   }
   Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewSequence));
@@ -96,8 +96,8 @@ bool UEngineWireSubsystem::HandleSequenceOpen(
   // Any asset at the path was opened in its own editor, and an editor that did not open still answered "opened".
   UAssetEditorSubsystem *AssetEditorSS = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
   if (!AssetEditorSS || !AssetEditorSS->OpenEditorForAsset(Sequence)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequencer did not open for this sequence"), nullptr,
-                           TEXT("EDITOR_NOT_OPEN"));
+    SendAutomationError(Socket, RequestId, TEXT("Sequencer did not open for this sequence"),
+                        TEXT("EDITOR_NOT_OPEN"));
     return true;
   }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

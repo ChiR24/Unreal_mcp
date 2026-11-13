@@ -1,7 +1,13 @@
-#include "Domains/Environment/McpEnvShared.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Landscape/McpLandscapeShared.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "Landscape.h"
+#include "LandscapeSplineControlPoint.h"
+#include "LandscapeSplineSegment.h"
+#include "LandscapeSplinesComponent.h"
+#include "LandscapeStreamingProxy.h"
 
 namespace McpLandscapeHandlers {
 
@@ -221,7 +227,7 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), Landscape->GetActorRotation());
 
     ALandscapeStreamingProxy *Proxy = Cast<ALandscapeStreamingProxy>(
-        McpEnvironmentHandlers::McpFindOrSpawnActor(ALandscapeStreamingProxy::StaticClass(), ActorName.IsEmpty() ? TEXT("LandscapeStreamingProxy") : ActorName, Location, Rotation));
+        McpFindOrSpawnActor(ALandscapeStreamingProxy::StaticClass(), ActorName.IsEmpty() ? TEXT("LandscapeStreamingProxy") : ActorName, Location, Rotation));
     if (!Proxy)
     {
         OutMessage = TEXT("Failed to create landscape streaming proxy");

@@ -27,15 +27,15 @@ bool HandleSetLevelWorldSettingsAction(UEngineWireSubsystem& Subsystem, const FS
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No editor world available"), TEXT("NO_WORLD"));
       return true;
     }
 
     ULevel* TargetLevel = World->GetCurrentLevel();
     if (!TargetLevel) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No current level"), TEXT("NO_LEVEL"));
       return true;
     }
 
@@ -43,11 +43,11 @@ bool HandleSetLevelWorldSettingsAction(UEngineWireSubsystem& Subsystem, const FS
 
     if (!RequestedLevelPath.IsEmpty()) {
       if (!CurrentLevelPath.Equals(RequestedLevelPath, ESearchCase::IgnoreCase)) {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"),
                            *RequestedLevelPath, *CurrentLevelPath),
-            nullptr, TEXT("LEVEL_NOT_LOADED"));
+            TEXT("LEVEL_NOT_LOADED"));
         return true;
       }
     }
@@ -58,8 +58,8 @@ bool HandleSetLevelWorldSettingsAction(UEngineWireSubsystem& Subsystem, const FS
     // needs to run its own game rules — got a success receipt for a no-op.
     AWorldSettings* Settings = World->GetWorldSettings();
     if (!Settings) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Level has no WorldSettings actor"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Level has no WorldSettings actor"),
                              TEXT("NO_WORLD_SETTINGS"));
       return true;
     }
@@ -73,10 +73,10 @@ bool HandleSetLevelWorldSettingsAction(UEngineWireSubsystem& Subsystem, const FS
     if (!GameModePath.TrimStartAndEnd().IsEmpty()) {
       UClass* GameModeClass = ResolveClassByName(GameModePath.TrimStartAndEnd());
       if (!GameModeClass || !GameModeClass->IsChildOf(AGameModeBase::StaticClass())) {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("Could not resolve '%s' to a GameModeBase class"), *GameModePath),
-            nullptr, TEXT("GAME_MODE_NOT_FOUND"));
+            TEXT("GAME_MODE_NOT_FOUND"));
         return true;
       }
       Settings->DefaultGameMode = GameModeClass;
@@ -111,11 +111,11 @@ bool HandleSetLevelWorldSettingsAction(UEngineWireSubsystem& Subsystem, const FS
     }
 
     if (Applied.Num() == 0) {
-      Subsystem.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
           TEXT("No world settings supplied; expected one of gameMode, killZ, "
                "gravityZ, timeDilation, enableWorldBoundsChecks"),
-          nullptr, TEXT("INVALID_ARGUMENT"));
+          TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

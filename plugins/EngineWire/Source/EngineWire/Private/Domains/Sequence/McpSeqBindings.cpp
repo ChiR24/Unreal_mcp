@@ -17,9 +17,9 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
   UObject *SeqObj = McpLoadAsset(SeqPath);
   // Another kind of asset at the path used to get a camera spawned into the level and a "bound" success with no binding.
   if (!Cast<ULevelSequence>(SeqObj) || !Cast<ULevelSequence>(SeqObj)->GetMovieScene()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           SeqObj ? TEXT("The asset at the path is not a Level Sequence; nothing was added.") : TEXT("Sequence not found"),
-                           nullptr, TEXT("INVALID_SEQUENCE"));
+    SendAutomationError(Socket, RequestId,
+                        SeqObj ? TEXT("The asset at the path is not a Level Sequence; nothing was added.") : TEXT("Sequence not found"),
+                        TEXT("INVALID_SEQUENCE"));
     return true;
   }
 
@@ -39,9 +39,9 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
                              ? static_cast<UMovieSceneSequence *>(SpawnSeq)->CreateSpawnable(ACameraActor::StaticClass())
                              : FGuid();
       if (!Guid.IsValid()) {
-        SendAutomationResponse(Socket, RequestId, false,
-                               TEXT("Failed to add a spawnable camera"), nullptr,
-                               TEXT("SPAWNABLE_CREATION_FAILED"));
+        SendAutomationError(Socket, RequestId,
+                            TEXT("Failed to add a spawnable camera"),
+                            TEXT("SPAWNABLE_CREATION_FAILED"));
         return true;
       }
       if (FMovieSceneSpawnable *Spawnable = SpawnSeq->GetMovieScene()->FindSpawnable(Guid)) {
@@ -65,9 +65,9 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
       // An unbound camera stayed in the level behind a success; it goes again and the call fails.
       if (!BindingGuid.IsValid()) {
         GEditor->GetEditorSubsystem<UEditorActorSubsystem>()->DestroyActor(Spawned);
-        SendAutomationResponse(Socket, RequestId, false,
-                               TEXT("The camera could not be bound to the sequence; nothing was added."), nullptr,
-                               TEXT("BIND_FAILED"));
+        SendAutomationError(Socket, RequestId,
+                            TEXT("The camera could not be bound to the sequence; nothing was added."),
+                            TEXT("BIND_FAILED"));
         return true;
       }
       LevelSeq->MarkPackageDirty();
@@ -81,8 +81,8 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
       return true;
     }
   }
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to add camera"),
-                         nullptr, TEXT("ADD_CAMERA_FAILED"));
+  SendAutomationError(Socket, RequestId, TEXT("Failed to add camera"),
+                      TEXT("ADD_CAMERA_FAILED"));
   return true;
 }
 
@@ -94,8 +94,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActor(
   FString ActorName;
   LocalPayload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("actorName required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("actorName required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_actor"));
@@ -121,9 +121,9 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
   const TArray<TSharedPtr<FJsonValue>> *Arr = nullptr;
   LocalPayload->TryGetArrayField(TEXT("actorNames"), Arr);
   if (!Arr || Arr->Num() == 0) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("actorNames required"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("actorNames required"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString SeqPath = McpSequence::ResolvePathOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_add_actors"));
@@ -142,8 +142,8 @@ bool UEngineWireSubsystem::HandleSequenceAddActors(
 
   UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
-    SendAutomationResponse(Socket, RequestId, false,
-                                      TEXT("Sequence not found"), nullptr,
+    SendAutomationError(Socket, RequestId,
+                                      TEXT("Sequence not found"),
                                       TEXT("INVALID_SEQUENCE"));
     return true;
   }

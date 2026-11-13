@@ -19,9 +19,9 @@ bool ConfigureNavMesh(
     ARecastNavMesh* NavMesh = NavSys ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance()) : nullptr;
     if (!NavMesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
+        Self->SendAutomationError(Socket, RequestId,
             !World ? TEXT("No editor world available") : !NavSys ? TEXT("Navigation system not available") : TEXT("No RecastNavMesh found in level"),
-            nullptr, !World ? TEXT("NO_WORLD") : !NavSys ? TEXT("NO_NAV_SYS") : TEXT("NO_NAVMESH"));
+            !World ? TEXT("NO_WORLD") : !NavSys ? TEXT("NO_NAV_SYS") : TEXT("NO_NAVMESH"));
         return true;
     }
 

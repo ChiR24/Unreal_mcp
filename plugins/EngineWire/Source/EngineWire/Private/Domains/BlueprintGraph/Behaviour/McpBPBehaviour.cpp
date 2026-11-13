@@ -261,7 +261,7 @@ bool AuthorRecipeFile(UEngineWireSubsystem& Bridge, const FString& RequestId, co
     const TSharedPtr<FJsonObject> Recipe = LoadRecipe(Domain, Name, Values, Error);
     if (!Recipe)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+        Bridge.SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_RECIPE"));
         return false;
     }
     const FAuthorResult Authored = Author(Bridge, RequestId, Socket, Blueprint->GetPathName(), Recipe);

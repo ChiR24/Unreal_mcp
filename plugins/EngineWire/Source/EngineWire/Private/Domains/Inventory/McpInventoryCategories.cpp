@@ -4,35 +4,8 @@
 bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_item_category")) {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Items/Categories"));
-
-    if (Name.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: name"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UPackage* Package = CreateInventoryAssetPackage(Bridge, RequestId, RequestingSocket, Path, Name);
-    if (!Package) {
-      return true;
-    }
-
-    bool bSaved = false;
-    if (NewInventoryDataAsset(Package, Name, Payload, bSaved)) {
-      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      Result->SetBoolField(TEXT("saved"), bSaved);
-      Result->SetStringField(TEXT("categoryPath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Item category created"), Result);
-    } else {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create category asset"),
-                          TEXT("ASSET_CREATE_FAILED"));
-    }
-    return true;
+    return CreateGenericInventoryAsset(Bridge, RequestId, RequestingSocket, Payload, TEXT("/Game/Items/Categories"), TEXT("categoryPath"),
+                                       TEXT("Item category created"), TEXT("category"));
   }
 
   if (SubAction == TEXT("assign_item_category")) {

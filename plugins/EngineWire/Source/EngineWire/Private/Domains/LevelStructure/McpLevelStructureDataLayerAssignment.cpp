@@ -32,15 +32,15 @@ bool HandleAssignActorToDataLayer(
 
     if (ActorName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName or actorPath is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("actorName or actorPath is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     if (DataLayerName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("dataLayerName is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("dataLayerName is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -55,8 +55,8 @@ bool HandleAssignActorToDataLayer(
 
     if (!FoundActor)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -110,8 +110,8 @@ bool HandleAssignActorToDataLayer(
             ? FString::Join(AvailableNames, TEXT(", "))
             : TEXT("(none)");
 
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Data layer not found: '%s'. Available data layers: %s"), *DataLayerName, *AvailableStr), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Data layer not found: '%s'. Available data layers: %s"), *DataLayerName, *AvailableStr), TEXT("NOT_FOUND"));
         return true;
     }
 

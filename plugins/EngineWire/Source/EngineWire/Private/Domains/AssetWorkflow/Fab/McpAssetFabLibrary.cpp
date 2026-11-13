@@ -162,9 +162,9 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
 
   ICoreProvider *Storage = GetMutableDataStorageFeature<ICoreProvider>(StorageFeatureName);
   if (Storage == nullptr) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Editor data storage (TEDS) is unavailable in this build."),
-                           nullptr, TEXT("NOT_SUPPORTED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Editor data storage (TEDS) is unavailable in this build."),
+                        TEXT("NOT_SUPPORTED"));
     return true;
   }
 
@@ -194,10 +194,10 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
     }
   }
   if (Read->Columns.Num() == 0) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("No requested column type resolved. Fab writes its columns only after a successful Fab.TEDS.MyFolderIntegration sync."),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 
@@ -274,9 +274,9 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
           return false;
         }
         if (Live == nullptr) {
-          Self->SendAutomationResponse(Socket, RequestId, false,
-                                       TEXT("Editor data storage (TEDS) went away while the library synced."),
-                                       nullptr, TEXT("NOT_SUPPORTED"));
+          Self->SendAutomationError(Socket, RequestId,
+                                    TEXT("Editor data storage (TEDS) went away while the library synced."),
+                                    TEXT("NOT_SUPPORTED"));
           return false;
         }
         const double Now = FPlatformTime::Seconds();
@@ -296,10 +296,10 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
       }), FabSyncPollSeconds);
   return true;
 #else
-  SendAutomationResponse(
-      Socket, RequestId, false,
+  SendAutomationError(
+      Socket, RequestId,
       TEXT("This engine version has no editor data storage (TEDS) query API, so the Fab library cannot be read."),
-      nullptr, TEXT("NOT_SUPPORTED"));
+      TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }

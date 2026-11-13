@@ -26,9 +26,7 @@ bool TryCreateConstructObjectNode(
     //
     // Prefer `targetClass` (the spelling the rest of create_node uses) and fall
     // back to the legacy spawnClass/actorClass/class spellings for backward
-    // compatibility. Resolve via the shared ResolveTargetClassFromString so
-    // /Game/... Blueprint asset paths load correctly — ResolveUClass only does
-    // native/name lookups and returns CLASS_NOT_FOUND for /Game/ paths.
+    // compatibility. ResolveClassByName takes a /Game/... Blueprint asset path as well as a class name or path.
     FString RequestedClassName;
     UClass* DesiredClass = nullptr;
     const bool bHasRequestedClass =
@@ -38,7 +36,7 @@ bool TryCreateConstructObjectNode(
         Context.Payload->TryGetStringField(TEXT("class"), RequestedClassName);
     if (bHasRequestedClass)
     {
-        DesiredClass = ResolveTargetClassFromString(RequestedClassName);
+        DesiredClass = ResolveClassByName(RequestedClassName);
         if (!DesiredClass)
         {
             Context.SendError(

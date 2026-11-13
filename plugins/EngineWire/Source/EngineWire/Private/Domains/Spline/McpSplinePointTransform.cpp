@@ -24,8 +24,8 @@ static bool GetSplinePointTarget(
     if (!Payload->HasField(TEXT("pointIndex")) || (ValueField && !Payload->HasField(ValueField)))
     {
         const FString Needed = ValueField ? FString::Printf(TEXT("pointIndex and %s are"), ValueField) : FString(TEXT("pointIndex is"));
-        Self->SendAutomationResponse(Socket, RequestId, false, Needed + TEXT(" required. Nothing was changed."), nullptr,
-                                     TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, Needed + TEXT(" required. Nothing was changed."),
+                                  TEXT("INVALID_ARGUMENT"));
         return false;
     }
     OutPointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
@@ -37,8 +37,8 @@ static bool GetSplinePointTarget(
 
     if (OutPointIndex < 0 || OutPointIndex >= OutSplineComp->GetNumberOfSplinePoints())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid point index: %d"), OutPointIndex), nullptr, TEXT("INVALID_INDEX"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid point index: %d"), OutPointIndex), TEXT("INVALID_INDEX"));
         return false;
     }
 
@@ -76,8 +76,8 @@ bool HandleSetSplinePointTangents(
     }
     if (!Payload->HasField(TEXT("arriveTangent")) && !Payload->HasField(TEXT("leaveTangent")))
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("arriveTangent or leaveTangent is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("arriveTangent or leaveTangent is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     // These point edits ran outside any transaction, so undo could not take them back.
@@ -175,8 +175,8 @@ bool HandleSetSplineType(
     {
         if (PointIndex >= SplineComp->GetNumberOfSplinePoints())
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Invalid point index: %d"), PointIndex), nullptr, TEXT("INVALID_INDEX"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Invalid point index: %d"), PointIndex), TEXT("INVALID_INDEX"));
             return true;
         }
         SplineComp->SetSplinePointType(PointIndex, PointType, true);

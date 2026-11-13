@@ -117,8 +117,7 @@ static bool BindParameterToSource(FActionContext& Context)
     // An unknown user parameter would compile to its type's default without a word.
     if (SourceBinding.StartsWith(TEXT("User.")))
     {
-        const FNiagaraVariableWithOffset* User = System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
-            [&SourceBinding](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == SourceBinding; });
+        const FNiagaraVariableWithOffset* User = FindUserParameter(System, SourceBinding);
         if (!User || User->GetType() != Type)
         {
             Context.SendError(FString::Printf(TEXT("User parameter '%s' %s; '%s' takes a %s (add_user_parameter makes one)."), *SourceBinding,

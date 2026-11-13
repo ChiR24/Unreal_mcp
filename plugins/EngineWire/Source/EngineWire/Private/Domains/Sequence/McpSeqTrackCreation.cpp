@@ -18,10 +18,10 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
   FString TrackType;
   LocalPayload->TryGetStringField(TEXT("trackType"), TrackType);
   if (TrackType.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId,
         TEXT("trackType required (e.g., Transform, Animation, Audio, Event)"),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -35,10 +35,10 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
       McpSequenceKeyframes::ResolveBindingGuid(MovieScene, FString(), ActorName);
   if (!ActorName.IsEmpty()) {
     if (!BindingGuid.IsValid()) {
-      Subsystem->SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Subsystem->SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("Binding not found for actor: %s"), *ActorName),
-          nullptr, TEXT("BINDING_NOT_FOUND"));
+          TEXT("BINDING_NOT_FOUND"));
       return true;
     }
   }
@@ -74,9 +74,9 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
       Nameable->SetDisplayName(FText::FromString(TrackName));
     }
   } else if (!TrackClass) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
         FString::Printf(TEXT("No track type '%s': list_track_types gives the names add_track takes"), *TrackType),
-        nullptr, TEXT("TRACK_CREATION_FAILED"));
+        TEXT("TRACK_CREATION_FAILED"));
     return true;
   } else {
     Subsystem->SendAutomationError(
@@ -108,10 +108,10 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
                                       TEXT("Track added successfully"), Resp,
                                       FString());
   } else {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId,
         FString::Printf(TEXT("Failed to add track of type: %s"), *TrackType),
-        nullptr, TEXT("TRACK_CREATION_FAILED"));
+        TEXT("TRACK_CREATION_FAILED"));
   }
   return true;
 }

@@ -36,12 +36,12 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
     }
     // A function library or an Object, component or level script Blueprint was given a graph it never runs.
     if (!FBlueprintEditorUtils::SupportsConstructionScript(BP)) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
           FString::Printf(TEXT("No construction script on %s: only an Actor Blueprint runs one (a level script, an "
                                "interface, or a function or macro library does not)."),
                           *Path),
-          nullptr, TEXT("CONSTRUCTION_SCRIPT_UNSUPPORTED"));
+          TEXT("CONSTRUCTION_SCRIPT_UNSUPPORTED"));
       return true;
     }
 

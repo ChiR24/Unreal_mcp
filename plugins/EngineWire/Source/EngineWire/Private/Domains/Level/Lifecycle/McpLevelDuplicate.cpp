@@ -10,15 +10,15 @@ bool HandleDuplicateLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
     FString DestinationPath = McpGetFirstStringField(Payload, {TEXT("destinationPath")});
 
     if (SourcePath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("sourcePath or levelPath required for duplicate_level"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (DestinationPath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("destinationPath required for duplicate_level"),
-                             nullptr, TEXT("INVALID_ARGUMENT"));
+                             TEXT("INVALID_ARGUMENT"));
       return true;
     }
 

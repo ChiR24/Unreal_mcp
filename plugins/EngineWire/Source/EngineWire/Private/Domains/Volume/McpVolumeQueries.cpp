@@ -80,7 +80,7 @@ bool HandleRemoveVolume(UEngineWireSubsystem* Subsystem, const FString& RequestI
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
         return true;
     }
     UWorld* World = nullptr;
@@ -91,8 +91,8 @@ bool HandleRemoveVolume(UEngineWireSubsystem* Subsystem, const FString& RequestI
     AActor* VolumeActor = FindVolumeByName(World, VolumeName);
     if (!VolumeActor)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), TEXT("NOT_FOUND"));
         return true;
     }
     const FString VolumeClass = VolumeActor->GetClass()->GetName();

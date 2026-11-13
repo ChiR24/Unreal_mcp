@@ -37,8 +37,8 @@ bool HandleConfigureLevelStreaming(
 
     if (LevelName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("levelName is required for configure_level_streaming"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("levelName is required for configure_level_streaming"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -50,8 +50,8 @@ bool HandleConfigureLevelStreaming(
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -60,16 +60,16 @@ bool HandleConfigureLevelStreaming(
     UClass* StreamingClass = Payload->HasField(TEXT("streamingMethod")) ? ResolveLevelStreamingClass(StreamingMethod) : nullptr;
     if (Payload->HasField(TEXT("streamingMethod")) && !StreamingClass)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
     if (!FoundLevel)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), nullptr, TEXT("LEVEL_NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 
@@ -80,8 +80,8 @@ bool HandleConfigureLevelStreaming(
             ULevelStreaming* Converted = UEditorLevelUtils::SetStreamingClassForLevel(FoundLevel, StreamingClass);
             if (!Converted)
             {
-                Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                    FString::Printf(TEXT("Could not switch %s to %s streaming"), *LevelName, *StreamingMethod), nullptr, TEXT("OPERATION_FAILED"));
+                Subsystem->SendAutomationError(Socket, RequestId,
+                    FString::Printf(TEXT("Could not switch %s to %s streaming"), *LevelName, *StreamingMethod), TEXT("OPERATION_FAILED"));
                 return true;
             }
             FoundLevel = Converted;

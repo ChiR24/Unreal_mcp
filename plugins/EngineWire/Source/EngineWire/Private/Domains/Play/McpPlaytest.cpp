@@ -74,7 +74,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
 {
     auto Refuse = [&](const TCHAR* Code, const FString& Message)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Bridge.SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;

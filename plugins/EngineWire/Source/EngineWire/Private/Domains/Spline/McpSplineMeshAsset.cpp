@@ -24,8 +24,8 @@ bool HandleSetSplineMeshAsset(
 
     if (ActorName.IsEmpty() || MeshPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName and meshPath are required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("actorName and meshPath are required"), TEXT("MISSING_PARAM"));
         return true;
     }
 
@@ -45,8 +45,8 @@ bool HandleSetSplineMeshAsset(
     UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), TEXT("MESH_NOT_FOUND"));
         return true;
     }
 

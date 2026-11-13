@@ -79,9 +79,9 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
     const FString Inapplicable = McpFindInapplicableVolumeParam(ClassKey, Payload, AllowedParams);
     if (!Inapplicable.IsEmpty())
     {
-        SendAutomationResponse(Socket, RequestId, false,
+        SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("%s does not apply to %s; that volume class takes: %s. Nothing was created."), *Inapplicable, *ClassKey, *AllowedParams),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     // actorPath attaches the volume; a create_ name with actorPath takes the add_ route that honours it.
@@ -140,7 +140,7 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
 #else
     if (SubAction == TEXT("create_post_process_volume"))
     {
-        SendAutomationResponse(Socket, RequestId, false, TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume requires UE 5.1 or later"), TEXT("UNSUPPORTED_VERSION"));
         return true;
     }
 #endif
@@ -166,12 +166,12 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
 #else
     if (SubAction == TEXT("add_post_process_volume"))
     {
-        SendAutomationResponse(Socket, RequestId, false, TEXT("PostProcessVolume requires UE 5.1 or later"), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume requires UE 5.1 or later"), TEXT("UNSUPPORTED_VERSION"));
         return true;
     }
 #endif
 
-    SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("Unknown volume subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Unknown volume subAction: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 }

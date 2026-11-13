@@ -33,56 +33,7 @@ FString DescribeDeclaringClasses(UClass* Class, const FString& Wanted);
 // round trip of guessing. Two things are worth saying: the reflected names that
 // look like what was asked for, and - the case that bites hardest - that the
 // name is a PROPERTY, which is a VariableGet/VariableSet node, not a function.
-static inline FString SuggestMemberFix(UClass* Class, const FString& Wanted)
-{
-    if (!Class || Wanted.IsEmpty())
-    {
-        return FString();
-    }
-    FString Bare = Wanted;
-    if (Bare.StartsWith(TEXT("Set")) || Bare.StartsWith(TEXT("Get")))
-    {
-        Bare = Bare.RightChop(3);
-    }
-    for (TFieldIterator<FProperty> PropIt(Class); PropIt; ++PropIt)
-    {
-        const FString PropName = PropIt->GetName();
-        if (PropName.Equals(Wanted, ESearchCase::IgnoreCase) ||
-            PropName.Equals(Bare, ESearchCase::IgnoreCase) ||
-            PropName.Equals(TEXT("b") + Bare, ESearchCase::IgnoreCase))
-        {
-            return FString::Printf(
-                TEXT(" '%s' is a PROPERTY on %s, not a function - create it with "
-                     "nodeType VariableGet or VariableSet and memberName '%s'."),
-                *PropName, *Class->GetName(), *PropName);
-        }
-    }
-    // Underscores do not count: VInterpToConstant asked for VInterpTo_Constant and was told nothing.
-    const FString WantedKey = Wanted.Replace(TEXT("_"), TEXT("")).ToLower();
-    const FString BareKey = Bare.Replace(TEXT("_"), TEXT("")).ToLower();
-    TArray<FString> Close;
-    for (TFieldIterator<UFunction> FuncIt(Class); FuncIt; ++FuncIt)
-    {
-        const FString Name = FuncIt->GetName();
-        const FString Key = Name.Replace(TEXT("_"), TEXT("")).ToLower();
-        if (Key.Contains(WantedKey) ||
-            (Bare.Len() >= 4 && Key.Contains(BareKey)))
-        {
-            Close.AddUnique(Name);
-        }
-    }
-    if (Close.Num() == 0)
-    {
-        return DescribeDeclaringClasses(Class, Wanted);
-    }
-    Close.Sort();
-    if (Close.Num() > 8)
-    {
-        Close.SetNum(8);
-    }
-    return FString::Printf(TEXT(" Closest reflected names on %s: %s."),
-                           *Class->GetName(), *FString::Join(Close, TEXT(", ")));
-}
+FString SuggestMemberFix(UClass* Class, const FString& Wanted);
 
 struct FActionContext
 {
@@ -190,11 +141,6 @@ UClass* FindNodeClassByName(const FString& NodeType);
 FString DescribeGraphMismatch(UClass* NodeClass, const UEdGraph* Graph);
 // The StandardMacros graph a nodeType names (ForLoop, DoOnce, DoN -> "Do N" ...), or null.
 const FString* StandardMacroGraphName(const FString& NodeType);
-// Resolve a class string (Blueprint asset path like /Game/..., generated-class
-// path, or native class name) to a UClass. Shared so every create_node branch
-// with a class pin accepts the same input formats — including /Game/ Blueprint
-// paths, which the name-oriented ResolveUClass() cannot load.
-UClass* ResolveTargetClassFromString(const FString& InClassString);
 // pinSubType, container and a map's valueType on a pin descriptor (McpBPGraphQueries.cpp).
 void AddPinTypeFields(const TSharedPtr<FJsonObject>& PinObject, const FEdGraphPinType& PinType);
 // defaultValue / defaultTextValue / defaultObjectPath, only on a visible input nothing is wired to.

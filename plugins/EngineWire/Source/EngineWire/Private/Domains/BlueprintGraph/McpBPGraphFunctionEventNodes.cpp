@@ -22,8 +22,7 @@ UClass* ResolveOutputClass(FActionContext& Context, const UFunction& Function, c
     {
         return nullptr;
     }
-    UClass* Class = ResolveUClass(ClassText);
-    Class = Class ? Class : ResolveTargetClassFromString(ClassText);
+    UClass* Class = ResolveClassByName(ClassText);
     const FClassProperty* Param = CastField<FClassProperty>(Function.FindPropertyByName(FName(*PinName)));
     if (Class && (!Param || Class->IsChildOf(Param->MetaClass)))
     {
@@ -202,12 +201,7 @@ static bool TryCreateEventNode(
     {
         if (!MemberClass.IsEmpty())
         {
-            TargetClass = ResolveUClass(MemberClass);
-            if (!TargetClass)
-            {
-                // A Blueprint asset path names the Blueprint, not its class.
-                TargetClass = ResolveTargetClassFromString(MemberClass);
-            }
+            TargetClass = ResolveClassByName(MemberClass); // a Blueprint asset path names its generated class
             if (TargetClass)
             {
                 EventFunction = Overridable(TargetClass->FindFunctionByName(*Candidate));

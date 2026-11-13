@@ -21,7 +21,7 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
     FString ValidationError;
     if (!ValidateVolumeName(VolumeName, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
         return true;
     }
     TArray<float> BoundsValues;
@@ -34,15 +34,15 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
     }
     if (BoundsValues.Num() != 6)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("bounds must be an array of 6 values [minX, minY, minZ, maxX, maxY, maxZ]"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("bounds must be an array of 6 values [minX, minY, minZ, maxX, maxY, maxZ]"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     for (float Value : BoundsValues)
     {
         if (!FMath::IsFinite(Value))
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("bounds contains NaN or Infinity values"), nullptr, TEXT("INVALID_ARGUMENT"));
+            Subsystem->SendAutomationError(Socket, RequestId, TEXT("bounds contains NaN or Infinity values"), TEXT("INVALID_ARGUMENT"));
             return true;
         }
     }
@@ -52,8 +52,8 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
     const FVector Extent = (MaxBound - MinBound) * 0.5f;
     if (Extent.X <= 0.0f || Extent.Y <= 0.0f || Extent.Z <= 0.0f)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("bounds must define a valid volume (max > min for all axes)"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("bounds must define a valid volume (max > min for all axes)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     UWorld* World = nullptr;
@@ -64,8 +64,8 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
     AActor* VolumeActor = FindVolumeByName(World, VolumeName);
     if (!VolumeActor)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Volume not found: %s"), *VolumeName), TEXT("NOT_FOUND"));
         return true;
     }
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Volume Bounds")), EMcpMutationDurability::EditorStateOnly,

@@ -19,14 +19,14 @@ bool HandleSaveCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString
     }
     const FString LevelPathError = CheckLevelPathIsOpenLevel(Payload);
     if (!LevelPathError.IsEmpty()) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, LevelPathError, nullptr, TEXT("LEVEL_NOT_LOADED"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId, LevelPathError, TEXT("LEVEL_NOT_LOADED"));
       return true;
     }
 
     UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No world loaded"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No world loaded"),
                              TEXT("NO_WORLD"));
       return true;
     }

@@ -32,8 +32,8 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     FString VarName;
     LocalPayload->TryGetStringField(TEXT("variableName"), VarName);
     if (VarName.TrimStartAndEnd().IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("variableName required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("variableName required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }

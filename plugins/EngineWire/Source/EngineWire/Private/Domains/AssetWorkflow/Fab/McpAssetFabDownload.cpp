@@ -34,25 +34,25 @@ bool UEngineWireSubsystem::HandleDownloadFabAsset(
 
   FString AssetId, DownloadUrl;
   if (!Payload->TryGetStringField(TEXT("assetId"), AssetId) || AssetId.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("'assetId' is required."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TEXT("'assetId' is required."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   if (!Payload->TryGetStringField(TEXT("downloadUrl"), DownloadUrl) ||
       !DownloadUrl.StartsWith(TEXT("https://"))) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("'downloadUrl' is required and must be https. Fab mints this from its authenticated session; it cannot be produced here."),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   // Fab's downloader names the file after the URL's last segment, taken raw: on Windows a backslash there is a path
   // separator, and the file would land outside the library folder.
   if (DownloadUrl.Contains(TEXT("\\"))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("'downloadUrl' must not contain a backslash: the downloader names the file after the URL's last segment."),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("'downloadUrl' must not contain a backslash: the downloader names the file after the URL's last segment."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -60,9 +60,9 @@ bool UEngineWireSubsystem::HandleDownloadFabAsset(
   // let one call write a file of the caller's name and content anywhere the editor can write.
   const FString Destination = McpContentSources::FabLibraryDir();
   if (Destination.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Could not resolve a destination directory."), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Could not resolve a destination directory."),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   IFileManager::Get().MakeDirectory(*Destination, true);
@@ -106,9 +106,9 @@ bool UEngineWireSubsystem::HandleDownloadFabAsset(
       });
 
   if (!bQueued) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Fab refused the download request."), nullptr,
-                           TEXT("DOWNLOAD_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Fab refused the download request."),
+                        TEXT("DOWNLOAD_FAILED"));
   }
   return true;
 }

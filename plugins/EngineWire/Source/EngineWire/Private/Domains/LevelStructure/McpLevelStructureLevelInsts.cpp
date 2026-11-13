@@ -41,16 +41,16 @@ bool ResolveInstancedLevel(UEngineWireSubsystem* Subsystem, const FString& Reque
     OutPackage.RemoveFromEnd(TEXT(".umap"));
     if (OutPackage.IsEmpty() || !FPackageName::DoesPackageExist(OutPackage))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("No level asset at '%s'. Pass the /Game path of a saved level (manage_level_structure get_level_structure_info lists them)."),
-            *Requested), nullptr, TEXT("LEVEL_NOT_FOUND"));
+            *Requested), TEXT("LEVEL_NOT_FOUND"));
         return false;
     }
     if (EditorWorld && EditorWorld->GetOutermost()->GetName().Equals(OutPackage, ESearchCase::IgnoreCase))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("'%s' is the level that is open; a level cannot contain an instance of itself. Open another level first."), *OutPackage),
-            nullptr, TEXT("LEVEL_INSTANCE_LOOP"));
+            TEXT("LEVEL_INSTANCE_LOOP"));
         return false;
     }
     OutWorld = TSoftObjectPtr<UWorld>(FSoftObjectPath(McpToObjectPath(OutPackage)));
@@ -113,7 +113,7 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     TSoftObjectPtr<UWorld> WorldAsset;
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
     if (!ResolveInstancedLevel(Subsystem, RequestId, Socket, Payload, World, Package, WorldAsset))
@@ -129,16 +129,16 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     ALevelInstance* Instance = World->SpawnActor<ALevelInstance>(ALevelInstance::StaticClass(), Location, Rotation, SpawnParams);
     if (!Instance)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("The Level Instance actor could not be spawned."), nullptr, TEXT("ACTOR_SPAWN_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("The Level Instance actor could not be spawned."), TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
     // SetWorldAsset refuses a level that would contain itself somewhere down its instances.
     if (!Instance->SetWorldAsset(WorldAsset))
     {
         World->DestroyActor(Instance);
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("The engine refused '%s' as the instance's level (it would instance the open level through its own level instances). Nothing was placed."),
-            *Package), nullptr, TEXT("LEVEL_INSTANCE_LOOP"));
+            *Package), TEXT("LEVEL_INSTANCE_LOOP"));
         return true;
     }
     Instance->SetActorLabel(Label);
@@ -151,9 +151,9 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     if (!Instance->IsLoaded() || !Instance->GetLoadedLevel())
     {
         World->DestroyActor(Instance);
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("'%s' did not load as a Level Instance, so nothing was placed. Open the level on its own to check it loads, then retry."),
-            *Package), nullptr, TEXT("LEVEL_INSTANCE_NOT_LOADED"));
+            *Package), TEXT("LEVEL_INSTANCE_NOT_LOADED"));
         return true;
     }
 
@@ -189,7 +189,7 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     {
         if (!World)
         {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+            Subsystem->SendAutomationError(Socket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
         }
         return true;
     }
@@ -199,8 +199,8 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     BPPackage = BPPackage.IsEmpty() ? FString() : FPackageName::ObjectPathToPackageName(BPPackage);
     if (BPPackage.IsEmpty() || !FPackageName::IsValidLongPackageName(BPPackage))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
-            TEXT("blueprintPath '%s' is not a valid asset path; pass a /Game path such as /Game/Maps/BPP_Room."), *RequestedBP), nullptr, TEXT("INVALID_ASSET_PATH"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("blueprintPath '%s' is not a valid asset path; pass a /Game path such as /Game/Maps/BPP_Room."), *RequestedBP), TEXT("INVALID_ASSET_PATH"));
         return true;
     }
     const FString BPObjectPath = McpToObjectPath(BPPackage);
@@ -210,22 +210,22 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     UBlueprint* BP = bExisted ? BPAsset.LoadSynchronous() : nullptr;
     if (bExisted && (!BP || !BP->GeneratedClass || !BP->GeneratedClass->IsChildOf(APackedLevelActor::StaticClass())))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
-            TEXT("'%s' exists and is not a Packed Level Blueprint; pass another blueprintPath."), *BPPackage), nullptr, TEXT("ASSET_EXISTS"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("'%s' exists and is not a Packed Level Blueprint; pass another blueprintPath."), *BPPackage), TEXT("ASSET_EXISTS"));
         return true;
     }
     const TSharedPtr<FPackedLevelActorBuilder> Builder = FPackedLevelActorBuilder::CreateDefaultBuilder();
     if (bExisted && ProbePackedInstanceCount(*Builder, WorldAsset) == 0)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("%s has nothing to pack (no static meshes would reach the Blueprint), so the existing Blueprint '%s' was left unchanged."),
-            *Package, *BPPackage), nullptr, TEXT("NOTHING_TO_PACK"));
+            *Package, *BPPackage), TEXT("NOTHING_TO_PACK"));
         return true;
     }
     // Created here so the builder never opens its save-as dialog for a missing Blueprint.
     if (!BP && !FPackedLevelActorBuilder::CreatePackedLevelActorBlueprint(BPAsset, WorldAsset, false))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("Could not create the Blueprint '%s'."), *BPPackage), nullptr, TEXT("CREATE_FAILED"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Could not create the Blueprint '%s'."), *BPPackage), TEXT("CREATE_FAILED"));
         return true;
     }
     const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -236,10 +236,10 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     if (!bPacked || Instances == 0)
     {
         const bool bRemoved = !bExisted && McpSafeOperations::McpDeleteAssetAndFile(BPObjectPath);
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("%s had nothing to pack (no static meshes reached the Blueprint)%s."), *Package,
             bExisted ? TEXT("; the existing Blueprint now holds no instances") : (bRemoved ? TEXT("; the new Blueprint was removed") : TEXT("; the new Blueprint could not be removed"))),
-            nullptr, bPacked ? TEXT("NOTHING_TO_PACK") : TEXT("PACK_FAILED"));
+            bPacked ? TEXT("NOTHING_TO_PACK") : TEXT("PACK_FAILED"));
         return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -268,9 +268,9 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     DefaultSaveToLevelState(Payload, World);
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Spawned->GetLevel(), Message + TEXT(" and placed it"), Result);
 #else
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+    Subsystem->SendAutomationError(Socket, RequestId,
         TEXT("Packed Level Blueprints can be built from code on Unreal Engine 5.3 or later; on this version use the editor's Create Packed Level Blueprint command, or create_level_structure kind level_instance."),
-        nullptr, TEXT("ENGINE_VERSION_UNSUPPORTED"));
+        TEXT("ENGINE_VERSION_UNSUPPORTED"));
 #endif
     return true;
 }

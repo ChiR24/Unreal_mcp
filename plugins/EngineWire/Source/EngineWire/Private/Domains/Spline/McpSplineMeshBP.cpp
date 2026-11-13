@@ -36,8 +36,8 @@ bool HandleCreateSplineMeshComponent(
     }
     if (BlueprintPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("blueprintPath (Blueprint route) or actorName (level actor route) is required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("blueprintPath (Blueprint route) or actorName (level actor route) is required"), TEXT("MISSING_PARAM"));
         return true;
     }
 
@@ -56,16 +56,16 @@ bool HandleCreateSplineMeshComponent(
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *SafeBlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 
     USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
     if (!SCS)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Blueprint has no SimpleConstructionScript"), nullptr, TEXT("INVALID_BP"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_BP"));
         return true;
     }
 
@@ -73,8 +73,8 @@ bool HandleCreateSplineMeshComponent(
     {
         if (Node && Node->GetVariableName().ToString() == ComponentName)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Component '%s' already exists"), *ComponentName), nullptr, TEXT("ALREADY_EXISTS"));
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Component '%s' already exists"), *ComponentName), TEXT("ALREADY_EXISTS"));
             return true;
         }
     }
@@ -82,8 +82,8 @@ bool HandleCreateSplineMeshComponent(
     USCS_Node* NewNode = SCS->CreateNode(USplineMeshComponent::StaticClass(), *ComponentName);
     if (!NewNode)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create SCS node"), nullptr, TEXT("CREATE_FAILED"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to create SCS node"), TEXT("CREATE_FAILED"));
         return true;
     }
 
@@ -95,8 +95,8 @@ bool HandleCreateSplineMeshComponent(
             UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
             if (!Mesh)
             {
-                Self->SendAutomationResponse(Socket, RequestId, false,
-                    FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+                Self->SendAutomationError(Socket, RequestId,
+                    FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), TEXT("MESH_NOT_FOUND"));
                 return true;
             }
             MeshComp->SetStaticMesh(Mesh);

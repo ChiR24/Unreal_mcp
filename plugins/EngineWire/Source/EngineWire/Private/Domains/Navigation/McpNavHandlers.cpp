@@ -40,7 +40,7 @@ bool UEngineWireSubsystem::HandleManageNavigationAction(
     if (SubAction == TEXT("analyze_level_layout"))
         return McpLevelLayout::Handle(this, RequestId, Payload, Socket);
 
-    SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("Unknown navigation subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Unknown navigation subAction: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 }

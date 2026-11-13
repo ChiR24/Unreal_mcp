@@ -33,8 +33,8 @@ FString McpSequence::ResolvePathOrReply(UEngineWireSubsystem *Subsystem, const F
                                         const TCHAR *Action) {
   const FString Path = ResolvePath(Payload);
   if (Path.IsEmpty()) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("%s requires a sequence path"), Action), nullptr, TEXT("INVALID_SEQUENCE"));
+    Subsystem->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("%s requires a sequence path"), Action), TEXT("INVALID_SEQUENCE"));
   }
   return Path;
 }
@@ -48,8 +48,8 @@ UObject *McpSequence::LoadAssetOrReply(UEngineWireSubsystem *Subsystem, const FS
   }
   UObject *Asset = McpLoadAsset(OutPath);
   if (!Asset) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"), nullptr,
-                                      TEXT("INVALID_SEQUENCE"));
+    Subsystem->SendAutomationError(Socket, RequestId, TEXT("Sequence not found"),
+                                   TEXT("INVALID_SEQUENCE"));
   }
   return Asset;
 }
@@ -64,14 +64,14 @@ ULevelSequence *McpSequence::LoadOrReply(UEngineWireSubsystem *Subsystem, const 
   }
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *Path);
   if (!Sequence) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("Level sequence not found: %s"), *Path), nullptr, TEXT("SEQUENCE_NOT_FOUND"));
+    Subsystem->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Level sequence not found: %s"), *Path), TEXT("SEQUENCE_NOT_FOUND"));
     return nullptr;
   }
   OutMovieScene = Sequence->GetMovieScene();
   if (!OutMovieScene) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        TEXT("MovieScene not available"), nullptr, TEXT("MOVIESCENE_UNAVAILABLE"));
+    Subsystem->SendAutomationError(Socket, RequestId,
+        TEXT("MovieScene not available"), TEXT("MOVIESCENE_UNAVAILABLE"));
     return nullptr;
   }
   return Sequence;
@@ -81,15 +81,15 @@ void McpSequence::ReplyTrackMiss(UEngineWireSubsystem *Subsystem, const FString 
                                  TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &TrackName,
                                  const FString &Ambiguous) {
   if (Ambiguous.IsEmpty()) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+    Subsystem->SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("No track named '%s'; list_tracks gives each track's trackName and displayName"), *TrackName),
-        nullptr, TEXT("TRACK_NOT_FOUND"));
+        TEXT("TRACK_NOT_FOUND"));
     return;
   }
-  Subsystem->SendAutomationResponse(Socket, RequestId, false,
+  Subsystem->SendAutomationError(Socket, RequestId,
       FString::Printf(TEXT("'%s' fits several tracks: %s. Pass one trackName exactly as list_tracks gives it"),
                       *TrackName, *Ambiguous),
-      nullptr, TEXT("AMBIGUOUS_TRACK"));
+      TEXT("AMBIGUOUS_TRACK"));
 }
 
 ULevelSequence *McpSequence::CreateSequenceAsset(const FString &Name, const FString &Folder) {

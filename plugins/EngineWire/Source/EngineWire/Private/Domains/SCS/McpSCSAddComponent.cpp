@@ -4,6 +4,7 @@
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -32,32 +33,8 @@ namespace {
 USceneComponent *FindNativeSceneComponent(UBlueprint *BP, const FString &Name) {
   UClass *ParentClass = BP ? BP->ParentClass : nullptr;
   AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr;
-  if (!CDO || Name.IsEmpty()) {
-    return nullptr;
-  }
-  // Object name first: CollisionCylinder, CharacterMesh0.
-  for (UActorComponent *Comp : CDO->GetComponents()) {
-    USceneComponent *Scene = Cast<USceneComponent>(Comp);
-    if (Scene && Scene->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
-      return Scene;
-    }
-  }
-  // Then the UPROPERTY that exposes it, which is the name the editor shows and
-  // the one callers reach for: CapsuleComponent, Mesh.
-  for (TFieldIterator<FObjectProperty> It(ParentClass); It; ++It) {
-    FObjectProperty *Prop = *It;
-    if (!Prop || !Prop->PropertyClass ||
-        !Prop->PropertyClass->IsChildOf(USceneComponent::StaticClass()) ||
-        !Prop->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
-      continue;
-    }
-    if (UObject *Value = Prop->GetObjectPropertyValue_InContainer(CDO)) {
-      if (USceneComponent *Scene = Cast<USceneComponent>(Value)) {
-        return Scene;
-      }
-    }
-  }
-  return nullptr;
+  // By object name (CollisionCylinder, CharacterMesh0), else by the property the editor shows (CapsuleComponent, Mesh).
+  return CDO ? Cast<USceneComponent>(McpFindActorComponent(CDO, Name, USceneComponent::StaticClass())) : nullptr;
 }
 
 // "Parent component not found: X" never said what would have worked. List both
@@ -193,15 +170,13 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   if ((!MeshPath.IsEmpty() && !MeshAsset) || (!MaterialPath.IsEmpty() && !MaterialAsset)) {
     const bool bMesh = !MeshPath.IsEmpty() && !MeshAsset;
     const bool bCanHold = bMesh ? (bStaticMeshClass || bSkeletalMeshClass) : CompClass->IsChildOf(UPrimitiveComponent::StaticClass());
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), bCanHold
+    return SCSFail(Result, bCanHold
         ? FString::Printf(TEXT("%s %s does not load as a %s; nothing was added."), bMesh ? TEXT("meshPath") : TEXT("materialPath"),
               bMesh ? *MeshPath : *MaterialPath, bMesh ? (bStaticMeshClass ? TEXT("static mesh") : TEXT("skeletal mesh")) : TEXT("material"))
         : FString::Printf(TEXT("%s shows no %s; send %s only for a %s. Nothing was added."), *CompClass->GetName(),
               bMesh ? TEXT("mesh") : TEXT("material"), bMesh ? TEXT("meshPath") : TEXT("materialPath"),
-              bMesh ? TEXT("StaticMeshComponent or SkeletalMeshComponent") : TEXT("primitive component")));
-    Result->SetStringField(TEXT("errorCode"), bCanHold ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
-    return Result;
+              bMesh ? TEXT("StaticMeshComponent or SkeletalMeshComponent") : TEXT("primitive component")),
+        bCanHold ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
   }
 
   USCS_Node *NewNode = SCS->CreateNode(CompClass, FName(*ComponentName));
@@ -253,18 +228,11 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
       bVerified && SCSParentMatches(SCS, VerifiedNode, ParentComponentName);
 
   if (!bVerified || !bParentVerified) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           bVerified
-                               ? FString::Printf(
-                                     TEXT("Verification failed: Component '%s' "
-                                          "parent did not match requested parent '%s'"),
-                                     *ComponentName, *ParentComponentName)
-                               : FString::Printf(
-                                     TEXT("Verification failed: Component '%s' "
-                                          "not found in SCS after add"),
-                                     *ComponentName));
-    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_VERIFICATION_FAILED"));
+    SCSFail(Result,
+            bVerified ? FString::Printf(TEXT("Verification failed: Component '%s' parent did not match requested parent '%s'"),
+                                        *ComponentName, *ParentComponentName)
+                      : FString::Printf(TEXT("Verification failed: Component '%s' not found in SCS after add"), *ComponentName),
+            TEXT("SCS_VERIFICATION_FAILED"));
     if (VerifiedNode) {
       AddSCSNodeVerification(Result, SCS, VerifiedNode);
     }

@@ -11,12 +11,6 @@
 
 namespace McpBlueprintGraphHandlers
 {
-UClass* ResolveBehaviourClass(const FString& Name)
-{
-    UClass* Class = Name.IsEmpty() ? nullptr : ResolveUClass(Name);
-    return Class ? Class : ResolveTargetClassFromString(Name);
-}
-
 // A dispatcher on Owner, else this Blueprint's own (on the skeleton class, where a
 // dispatcher added earlier in the same batch already is).
 FMulticastDelegateProperty* FindBehaviourDispatcher(UBlueprint* Blueprint, const FString& Name, UClass* Owner)
@@ -102,7 +96,7 @@ bool CreateAsyncTaskNode(FActionContext& Context, float X, float Y)
 {
     const FString Member = GetJsonStringField(Context.Payload, TEXT("memberName"));
     const FString MemberClass = McpGetFirstStringField(Context.Payload, {TEXT("memberClass"), TEXT("targetClass")});
-    UClass* Owner = ResolveBehaviourClass(MemberClass);
+    UClass* Owner = ResolveClassByName(MemberClass);
     UFunction* Factory = FindBehaviourFunction(Owner, /*bAsync=*/true, Member);
     if (!Factory)
     {
@@ -170,7 +164,7 @@ bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, fl
     const FString MemberClass = McpGetFirstStringField(Context.Payload, {TEXT("memberClass"), TEXT("targetClass")});
     if (IsCallDelegateKind(NodeType))
     {
-        UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveBehaviourClass(MemberClass);
+        UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveClassByName(MemberClass);
         FMulticastDelegateProperty* Dispatcher = FindBehaviourDispatcher(Context.Blueprint, Member, Owner);
         if (!Dispatcher || (!MemberClass.IsEmpty() && !Owner))
         {
@@ -190,7 +184,7 @@ bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, fl
     {
         return false;
     }
-    UFunction* Function = FindBehaviourFunction(ResolveBehaviourClass(MemberClass), /*bAsync=*/false, Member);
+    UFunction* Function = FindBehaviourFunction(ResolveClassByName(MemberClass), /*bAsync=*/false, Member);
     if (!Function)
     {
         Context.SendError(FString::Printf(TEXT("A Message node needs memberClass naming an interface (a Blueprint "
@@ -211,7 +205,7 @@ FString PrecheckBehaviourNode(const FActionContext& Context, const FString& Node
 {
     if (IsCallDelegateKind(NodeType) || IsBindEventKind(NodeType))
     {
-        UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveBehaviourClass(MemberClass);
+        UClass* Owner = MemberClass.IsEmpty() ? nullptr : ResolveClassByName(MemberClass);
         if ((MemberClass.IsEmpty() && Declared.Contains(FName(*Member))) ||
             ((MemberClass.IsEmpty() || Owner) && FindBehaviourDispatcher(Context.Blueprint, Member, Owner)))
         {
@@ -226,7 +220,7 @@ FString PrecheckBehaviourNode(const FActionContext& Context, const FString& Node
         return FString();
     }
     const bool bAsync = IsAsyncTaskKind(NodeType);
-    if (FindBehaviourFunction(ResolveBehaviourClass(MemberClass), bAsync, Member))
+    if (FindBehaviourFunction(ResolveClassByName(MemberClass), bAsync, Member))
     {
         return FString();
     }

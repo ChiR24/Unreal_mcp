@@ -110,16 +110,16 @@ bool UEngineWireSubsystem::HandleSequencePlay(
     TimeError = TEXT("loopMode must be once or loop (Sequencer has no ping-pong playback)");
   }
   if (!TimeError.IsEmpty() || (bHasStartTime && !McpSequenceFrameMath::CheckPlaybackTime(MovieScene, StartTime, TimeError))) {
-    SendAutomationResponse(Socket, RequestId, false, TimeError, nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TimeError, TEXT("INVALID_ARGUMENT"));
     return true;
   }
   if (ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
     TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(LevelSeq);
     if (!Sequencer.IsValid() && (bHasStartTime || !LoopMode.IsEmpty())) {
-      SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Sequencer did not open, so startTime and "
+      SendAutomationError(Socket, RequestId,
+                          TEXT("Sequencer did not open, so startTime and "
                                   "loopMode could not be applied"),
-                             nullptr, TEXT("EDITOR_NOT_OPEN"));
+                          TEXT("EDITOR_NOT_OPEN"));
       return true;
     }
     if (!LoopMode.IsEmpty() && Sequencer->GetSequencerSettings()) {
@@ -154,9 +154,9 @@ bool UEngineWireSubsystem::HandleSequencePlay(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"), Resp);
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
+  SendAutomationError(Socket, RequestId,
                                     TEXT("Failed to open or play sequence"),
-                                    nullptr, TEXT("EXECUTION_ERROR"));
+                                    TEXT("EXECUTION_ERROR"));
   return true;
 }
 
@@ -165,9 +165,9 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   double Speed = GetJsonNumberField(Payload, TEXT("speed"), 1.0);
   if (!FMath::IsFinite(Speed) || Speed <= 0.0) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid speed (must be > 0)"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Invalid speed (must be > 0)"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   UMovieScene *MovieScene = nullptr;
@@ -204,12 +204,12 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
     Sequencer->SetPlaybackSpeed(static_cast<float>(Speed));
   }
   if (UpdatedActors.Num() == 0 && !Sequencer.IsValid()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("No level sequence actor in the editor level plays this sequence "
              "and it is not open in Sequencer; place a level sequence actor for "
              "it or open it first"),
-        nullptr, TEXT("PLAYBACK_TARGET_NOT_FOUND"));
+        TEXT("PLAYBACK_TARGET_NOT_FOUND"));
     return true;
   }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -238,7 +238,7 @@ bool UEngineWireSubsystem::HandleSequencePause(
   const bool bHold = Payload->TryGetNumberField(TEXT("startTime"), HoldAt);
   FString TimeError;
   if (bHold && !McpSequenceFrameMath::CheckPlaybackTime(MovieScene, HoldAt, TimeError)) {
-    SendAutomationResponse(Socket, RequestId, false, TimeError, nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, TimeError, TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // Holding a frame needs Sequencer, so a closed sequence is opened the way play opens it.
@@ -260,9 +260,9 @@ bool UEngineWireSubsystem::HandleSequencePause(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence paused"), Resp);
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("The sequence is not open in Sequencer: play opens it, and so does pause with startTime"),
-                         nullptr, TEXT("EDITOR_NOT_OPEN"));
+  SendAutomationError(Socket, RequestId,
+                      TEXT("The sequence is not open in Sequencer: play opens it, and so does pause with startTime"),
+                      TEXT("EDITOR_NOT_OPEN"));
   return true;
 }
 
@@ -285,7 +285,7 @@ bool UEngineWireSubsystem::HandleSequenceStop(
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence stopped at the start of its playback range"), Resp);
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false, TEXT("The sequence is not open in Sequencer, so there is nothing to stop"),
-                         nullptr, TEXT("EDITOR_NOT_OPEN"));
+  SendAutomationError(Socket, RequestId, TEXT("The sequence is not open in Sequencer, so there is nothing to stop"),
+                      TEXT("EDITOR_NOT_OPEN"));
   return true;
 }

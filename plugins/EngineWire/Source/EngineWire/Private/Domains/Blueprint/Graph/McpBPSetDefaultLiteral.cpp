@@ -24,8 +24,8 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     FString PropertyName;
     LocalPayload->TryGetStringField(TEXT("propertyName"), PropertyName);
     if (PropertyName.TrimStartAndEnd().IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("propertyName required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("propertyName required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -40,8 +40,8 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
       ValueField = LocalPayload->TryGetField(TEXT("value"));
     }
     if (!ValueField.IsValid()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("propertyValue (or legacy 'value') field required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("propertyValue (or legacy 'value') field required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -56,25 +56,25 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     UBlueprint *Blueprint =
         LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (!Blueprint) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              LocalLoadError.IsEmpty()
                                  ? TEXT("Failed to load blueprint")
                                  : LocalLoadError,
-                             nullptr, TEXT("BLUEPRINT_NOT_FOUND"));
+                             TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 
     if (!Blueprint->GeneratedClass) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint has no generated class"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Blueprint has no generated class"),
                              TEXT("INVALID_BLUEPRINT"));
       return true;
     }
 
     UObject *CDO = Blueprint->GeneratedClass->GetDefaultObject();
     if (!CDO) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Could not get CDO"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Could not get CDO"),
                              TEXT("INVALID_BLUEPRINT"));
       return true;
     }
@@ -96,10 +96,10 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     }
 
     if (!Property || !TargetContainer) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
                              ResolveError.IsEmpty() ? TEXT("Property not found")
                                                     : ResolveError,
-                             nullptr, TEXT("PROPERTY_NOT_FOUND"));
+                             TEXT("PROPERTY_NOT_FOUND"));
       return true;
     }
 
@@ -142,8 +142,8 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     Property->DestroyValue(OldValue);
     FMemory::Free(OldValue);
     if (!bApplied) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             ConversionError, nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             ConversionError,
                              TEXT("CONVERSION_FAILED"));
       return true;
     }

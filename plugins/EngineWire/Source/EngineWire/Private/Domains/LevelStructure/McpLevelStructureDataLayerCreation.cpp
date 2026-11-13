@@ -28,14 +28,14 @@ UDataLayerEditorSubsystem* RequireDataLayerWorld(UEngineWireSubsystem* Subsystem
     OutWorld = LevelStructureHelpers::GetEditorWorld();
     if (!OutWorld)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_EDITOR_WORLD"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_EDITOR_WORLD"));
         return nullptr;
     }
     if (!OutWorld->GetWorldPartition())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return nullptr;
     }
     // Without external objects (One File Per Actor) AddDataLayerInstance asserts
@@ -56,8 +56,8 @@ UDataLayerEditorSubsystem* RequireDataLayerWorld(UEngineWireSubsystem* Subsystem
     UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
     if (!DataLayerEditorSubsystem)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data Layer Editor Subsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_AVAILABLE"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Data Layer Editor Subsystem not available"), TEXT("SUBSYSTEM_NOT_AVAILABLE"));
     }
     return DataLayerEditorSubsystem;
 }
@@ -77,8 +77,8 @@ bool HandleCreateDataLayer(
 
     if (DataLayerName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("dataLayerName is required for create_data_layer"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("dataLayerName is required for create_data_layer"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -91,14 +91,14 @@ bool HandleCreateDataLayer(
     const bool bRuntime = DataLayerType.Equals(TEXT("Runtime"), ESearchCase::IgnoreCase);
     if (!bRuntime && !DataLayerType.Equals(TEXT("Editor"), ESearchCase::IgnoreCase))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("dataLayerType '%s' is not one: use Runtime "
-            "(streams in the game) or Editor (organises the editor only). Nothing was created."), *DataLayerType), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("dataLayerType '%s' is not one: use Runtime "
+            "(streams in the game) or Editor (organises the editor only). Nothing was created."), *DataLayerType), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     if (bIsPrivate)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("bIsPrivate needs UE 5.3 or later; omit it on this engine."), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("bIsPrivate needs UE 5.3 or later; omit it on this engine."), TEXT("UNSUPPORTED_VERSION"));
         return true;
     }
 #endif
@@ -165,9 +165,9 @@ bool HandleCreateDataLayer(
     const UScriptStruct* CreationParamsType = FindObject<UScriptStruct>(nullptr, TEXT("/Script/DataLayerEditor.DataLayerCreationParameters"));
     if (!CreationParamsType)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Created DataLayerAsset '%s' but the engine has no DataLayerCreationParameters type to create its "
-                "DataLayerInstance with. The asset exists at: %s"), *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
+                "DataLayerInstance with. The asset exists at: %s"), *DataLayerName, *FullAssetPath), TEXT("DATA_LAYER_INSTANCE_FAILED"));
         return true;
     }
     FStructOnScope CreationParamsScope(CreationParamsType);
@@ -184,9 +184,9 @@ bool HandleCreateDataLayer(
     UDataLayerInstance* NewDataLayerInstance = DataLayerEditorSubsystem->CreateDataLayerInstance(CreationParams);
     if (!NewDataLayerInstance)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Created DataLayerAsset '%s' but failed to create DataLayerInstance. The asset exists at: %s"),
-                *DataLayerName, *FullAssetPath), nullptr, TEXT("DATA_LAYER_INSTANCE_FAILED"));
+                *DataLayerName, *FullAssetPath), TEXT("DATA_LAYER_INSTANCE_FAILED"));
         return true;
     }
 

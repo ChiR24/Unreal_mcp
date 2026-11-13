@@ -24,8 +24,8 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     FString NodeType;
     LocalPayload->TryGetStringField(TEXT("nodeType"), NodeType);
     if (NodeType.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("nodeType required"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("nodeType required"),
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -167,7 +167,7 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     FString TimelineName, TimelineError;
     LocalPayload->TryGetStringField(TEXT("timelineName"), TimelineName);
     if (!McpBindTimelineNode(NewNode, BP, TimelineName, TimelineError)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, TimelineError, nullptr, TEXT("INVALID_ARGUMENT"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, TimelineError, TEXT("INVALID_ARGUMENT"));
       return true;
     }
     NewNode->Modify();

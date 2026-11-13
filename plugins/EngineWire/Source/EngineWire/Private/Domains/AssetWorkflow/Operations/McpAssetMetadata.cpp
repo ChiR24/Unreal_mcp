@@ -36,17 +36,17 @@ bool UEngineWireSubsystem::HandleSetMetadata(
 
   UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to load asset"),
+                        TEXT("LOAD_FAILED"));
     return true;
   }
 
   UPackage *Package = Asset->GetOutermost();
   if (!Package) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to resolve package for asset"), nullptr,
-                           TEXT("PACKAGE_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to resolve package for asset"),
+                        TEXT("PACKAGE_NOT_FOUND"));
     return true;
   }
 
@@ -127,9 +127,9 @@ bool UEngineWireSubsystem::HandleGetMetadata(
 
   UObject *Asset = McpLoadAsset(AssetPath);
   if (!Asset) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to load asset"), nullptr,
-                           TEXT("LOAD_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to load asset"),
+                        TEXT("LOAD_FAILED"));
     return true;
   }
 

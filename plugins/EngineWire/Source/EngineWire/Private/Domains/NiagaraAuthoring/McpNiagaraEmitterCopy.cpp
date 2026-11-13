@@ -62,8 +62,7 @@ static TArray<FString> CopyUserParameters(UNiagaraSystem* System, UNiagaraSystem
         {
             continue;
         }
-        const FNiagaraVariableWithOffset* Existing = Target.ReadParameterVariables().FindByPredicate(
-            [&Var](const FNiagaraVariableWithOffset& Other) { return Other.GetName() == Var.GetName(); });
+        const FNiagaraVariableWithOffset* Existing = FindUserParameter(System, Var.GetName().ToString());
         if (Existing)
         {
             if (Existing->GetType() != Var.GetType())

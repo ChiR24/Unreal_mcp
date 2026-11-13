@@ -38,8 +38,8 @@ bool HandleCreateLevel(
 
     if (!bHasLevelName || LevelName.IsEmpty())
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("levelName is required for create_level"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("levelName is required for create_level"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -48,9 +48,9 @@ bool HandleCreateLevel(
     if (!FName::IsValidXName(LevelName, FString(INVALID_OBJECTNAME_CHARACTERS) + INVALID_LONGPACKAGE_CHARACTERS, &InvalidNameReason) ||
         !FFileHelper::IsFilenameValidForSaving(LevelName, InvalidNameReason))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("Invalid levelName '%s': %s"), *LevelName, *InvalidNameReason.ToString()),
-            nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

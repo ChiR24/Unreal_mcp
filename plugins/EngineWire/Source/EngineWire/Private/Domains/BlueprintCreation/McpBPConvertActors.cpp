@@ -59,7 +59,7 @@ bool HandleBlueprintConvertActors(const FBlueprintActionContext& Context)
     }
     const auto Refuse = [&](const FString& Message, const TCHAR* Code)
     {
-        Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message + TEXT(" Nothing was created."), nullptr, Code);
+        Bridge.SendAutomationError(RequestingSocket, RequestId, Message + TEXT(" Nothing was created."), Code);
         return true;
     };
     const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));

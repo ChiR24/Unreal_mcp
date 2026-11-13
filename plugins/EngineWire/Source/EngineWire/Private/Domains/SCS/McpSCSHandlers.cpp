@@ -5,6 +5,7 @@
 
 #include "Domains/SCS/McpSCSSupport.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -278,18 +279,10 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
   if (!CDO) {
     return false;
   }
-  for (TFieldIterator<FObjectProperty> It(OwnerClass); It; ++It) {
-    FObjectProperty *Prop = *It;
-    if (!Prop || !Prop->PropertyClass ||
-        !Prop->PropertyClass->IsChildOf(USceneComponent::StaticClass()) ||
-        !Prop->GetName().Equals(ExpectedParentName, ESearchCase::IgnoreCase)) {
-      continue;
-    }
-    if (UObject *Value = Prop->GetObjectPropertyValue_InContainer(CDO)) {
-      return Value->GetName().Equals(StoredParent, ESearchCase::IgnoreCase);
-    }
-  }
-  return false;
+  const FObjectProperty *Held = McpFindComponentProperty(OwnerClass, ExpectedParentName, false);
+  const UObject *Value = Held && Held->PropertyClass->IsChildOf(USceneComponent::StaticClass())
+                            ? Held->GetObjectPropertyValue_InContainer(CDO) : nullptr;
+  return Value && Value->GetName().Equals(StoredParent, ESearchCase::IgnoreCase);
 }
 
 }

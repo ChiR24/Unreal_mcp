@@ -81,15 +81,15 @@ bool HandleBlueprintEditTimeline(const FBlueprintActionContext &Context) {
     Error = TEXT("length is in seconds and must be above 0");
   }
   if (!Error.IsEmpty() || !ParseTracks(LocalPayload, Tracks, Error)) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INVALID_ARGUMENT"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString Normalized;
   UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, Error);
   if (!Blueprint) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  Error.IsEmpty() ? TEXT("Failed to load blueprint") : Error, nullptr,
-                                  TEXT("BLUEPRINT_NOT_FOUND"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               Error.IsEmpty() ? TEXT("Failed to load blueprint") : Error,
+                               TEXT("BLUEPRINT_NOT_FOUND"));
     return true;
   }
   // A track named again keeps its type and its own curve; anything else is refused before the timeline changes.
@@ -101,13 +101,13 @@ bool HandleBlueprintEditTimeline(const FBlueprintActionContext &Context) {
       const TCHAR *Problem = Type != Edit.Type ? TEXT("already exists as type") : TEXT("plays a curve asset of type");
       Error = FString::Printf(TEXT("Track %s %s %s; give the %s track another name"), *Edit.Name.ToString(), Problem,
                               TrackTypeNames[Type], TrackTypeNames[Edit.Type]);
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("TRACK_TYPE_MISMATCH"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("TRACK_TYPE_MISMATCH"));
       return true;
     }
   }
   const bool bCreated = !Template;
   if (bCreated && (Template = MakeTimeline(Blueprint, FName(*Name), Error)) == nullptr) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("TIMELINE_NOT_CREATED"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("TIMELINE_NOT_CREATED"));
     return true;
   }
   Template->Modify();

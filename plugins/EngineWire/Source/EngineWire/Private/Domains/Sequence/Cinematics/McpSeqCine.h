@@ -5,10 +5,12 @@
 
 class AActor;
 class UActorComponent;
+class FMcpBridgeWebSocket;
 class ULevelSequence;
 class UMovieScene;
 class UMovieSceneSection;
 class UMovieSceneTrack;
+class UEngineWireSubsystem;
 
 namespace McpSequenceCinematics {
 bool TryHandleCinematics(const FString &Action,
@@ -66,6 +68,10 @@ int32 GetDuration(const TSharedPtr<FJsonObject> &Params, UMovieScene *MovieScene
                   int32 DefaultDuration = 100);
 ULevelSequence *LoadSequence(const TSharedPtr<FJsonObject> &Params,
                              TSharedPtr<FJsonObject> &OutResult);
+// LoadSequence for a handler that answers for itself: null once the loader's refusal is sent (its error and
+// errorCode, else "sequencePath names no Level Sequence." and INVALID_SEQUENCE).
+ULevelSequence *LoadSequenceOrSend(UEngineWireSubsystem &Bridge, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                   const FString &RequestId, const TSharedPtr<FJsonObject> &Params);
 void SetSectionRange(UMovieScene *MovieScene, UMovieSceneSection *Section,
                      const TSharedPtr<FJsonObject> &Params,
                      int32 DefaultDuration = 100);

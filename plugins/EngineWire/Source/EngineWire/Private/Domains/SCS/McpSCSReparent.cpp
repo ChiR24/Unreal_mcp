@@ -106,10 +106,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   if (NewParentNode == ComponentNode) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"),
-                           TEXT("Cannot reparent a component to itself"));
-    Result->SetStringField(TEXT("errorCode"), TEXT("SCS_SELF_REPARENT"));
+    SCSFail(Result, TEXT("Cannot reparent a component to itself"), TEXT("SCS_SELF_REPARENT"));
     AddSCSNodeVerification(Result, SCS, ComponentNode);
     return Result;
   }

@@ -119,9 +119,6 @@ bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double V
                                    const FString &ResponseName, TSharedPtr<FJsonObject> Resp, TArray<FString> &Applied);
 int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload,
                                      TArray<FString> &AppliedProperties, TArray<FString> &FailedProperties);
-AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName);
-AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const FVector &Location,
-                                   const FRotator &Rotation, bool *bOutSpawned = nullptr);
 UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass);
 UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, const FString &ComponentName);
 // Finds the actor named by targetActor, actorName, waterBodyName or name (else DefaultActorName, or with

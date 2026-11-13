@@ -4,6 +4,8 @@
 
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
+#include "EdGraphSchema_K2.h"
+#include "Engine/Blueprint.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -70,6 +72,44 @@ AActor* FindLevelActorForBinding(ULevel& Level, const FString& Name, FString& Ou
 }
 }
 
+UFunction* McpFindOverridableEvent(const UBlueprint* Blueprint, FString Name, bool bEditorNames)
+{
+    TArray<FString> Candidates;
+    if (bEditorNames)
+    {
+        Name.RemoveFromStart(TEXT("Event "));
+        Candidates.Add(TEXT("Receive") + Name);
+    }
+    Candidates.Insert(Name, 0);
+    const auto IsEvent = [](UFunction* Function)
+    {
+        return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintEvent) && UEdGraphSchema_K2::FunctionCanBePlacedAsEvent(Function);
+    };
+    for (const FString& Candidate : Candidates)
+    {
+        for (UClass* Class = Blueprint->ParentClass; Class; Class = Class->GetSuperClass())
+        {
+            if (UFunction* Function = Class->FindFunctionByName(FName(*Candidate), EIncludeSuperFlag::ExcludeSuper))
+            {
+                if (IsEvent(Function))
+                {
+                    return Function;
+                }
+                break;
+            }
+        }
+        for (const FBPInterfaceDescription& Description : Blueprint->ImplementedInterfaces)
+        {
+            UFunction* Function = Description.Interface ? Description.Interface->FindFunctionByName(FName(*Candidate)) : nullptr;
+            if (IsEvent(Function))
+            {
+                return Function;
+            }
+        }
+    }
+    return nullptr;
+}
+
 FMulticastDelegateProperty* McpFindMulticastDelegate(const UClass* Class, const FString& Name, TArray<FString>& OutAssignable)
 {
     FMulticastDelegateProperty* Found = nullptr;
@@ -101,6 +141,21 @@ FObjectProperty* McpFindComponentProperty(const UClass* Class, const FString& Na
         }
     }
     return nullptr;
+}
+
+UActorComponent* McpFindActorComponent(const AActor* Actor, const FString& Name, const UClass* Class)
+{
+    for (UActorComponent* Component : Actor->GetComponents())
+    {
+        if (Component && Component->IsA(Class) && Component->GetName().Equals(Name, ESearchCase::IgnoreCase))
+        {
+            return Component;
+        }
+    }
+    const FObjectProperty* Held = McpFindComponentProperty(Actor->GetClass(), Name, false);
+    UActorComponent* Component = Held && Held->PropertyClass->IsChildOf(Class)
+        ? Cast<UActorComponent>(Held->GetObjectPropertyValue_InContainer(Actor)) : nullptr;
+    return Component && Component->IsA(Class) ? Component : nullptr;
 }
 
 bool McpBindLevelActorNode(UK2Node* Node, ULevel* Level, const FString& ActorName, const FString& EventName,

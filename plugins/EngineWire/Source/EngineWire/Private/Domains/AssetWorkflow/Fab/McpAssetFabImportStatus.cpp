@@ -101,10 +101,10 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
     Payload->TryGetStringField(TEXT("listingId"), Key);
   }
   if (!Key.IsEmpty() && !McpFabImportJson::IsPlainKey(Key)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("'operationId' (from the add's reply) and 'listingId' (its newest import is reported) are each [A-Za-z0-9_-], 64 characters at most."),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -133,10 +133,10 @@ bool UEngineWireSubsystem::HandleGetFabImportStatus(
 
   FMcpFabImportStatus Status;
   if (!Provider->GetImportStatus(Key, Status)) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("No Fab import matches '%s'. The editor keeps the last 16 imports of this session and forgets them on restart; add the listing to start one."), *Key),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 

@@ -56,9 +56,7 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
         ChosenClass, ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector), FRotator::ZeroRotator);
     if (!Spawned)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Failed to spawn light actor"), nullptr,
+        Context.SendError(TEXT("Failed to spawn light actor"),
             TEXT("CREATE_DYNAMIC_LIGHT_FAILED"));
         return true;
     }

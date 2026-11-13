@@ -72,13 +72,8 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
     OutResolvedClass = nullptr;
     if (!MemberClass.IsEmpty())
     {
-        // ResolveUClass rejects a Blueprint's own names ("BP_Door_C", "/Game/X/BP_Door"),
-        // which are what a caller writes; the shared class-pin resolver takes both.
-        OutResolvedClass = ResolveUClass(MemberClass);
-        if (!OutResolvedClass)
-        {
-            OutResolvedClass = ResolveTargetClassFromString(MemberClass);
-        }
+        // A Blueprint's own names ("BP_Door_C", "/Game/X/BP_Door") are what a caller writes; ResolveClassByName takes them.
+        OutResolvedClass = ResolveClassByName(MemberClass);
         if (!OutResolvedClass)
         {
             return nullptr;
@@ -136,63 +131,6 @@ UFunction* ResolveCallNodeFunction(UBlueprint* Blueprint, const TSharedPtr<FJson
     OutOutputClass = TargetClass;
     OutResolvedClass = LibraryClass;
     return Library;
-}
-
-// "Function not found" hid the usual cause: the memberClass itself resolved nothing.
-FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName,
-                                const FString& MemberClass, UClass* ResolvedClass)
-{
-    if (!MemberClass.IsEmpty() && !ResolvedClass)
-    {
-        return FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (KismetMathLibrary) "
-                                    "or a Blueprint asset path (/Game/Folder/BP_Name)."), *MemberClass);
-    }
-    UClass* HintClass = ResolvedClass ? ResolvedClass : (Blueprint ? Blueprint->GeneratedClass.Get() : nullptr);
-    FString Hint = SuggestMemberFix(HintClass, MemberName);
-    // Without a memberClass the stock libraries are searched too, so their near names are the likely fix.
-    UClass* Libraries[] = {UKismetMathLibrary::StaticClass(), UKismetSystemLibrary::StaticClass(), UGameplayStatics::StaticClass()};
-    for (int32 Index = 0; Hint.IsEmpty() && MemberClass.IsEmpty() && Index < UE_ARRAY_COUNT(Libraries); ++Index)
-    {
-        Hint = SuggestMemberFix(Libraries[Index], MemberName);
-    }
-    return FString::Printf(TEXT("Function '%s' not found.%s To find a function by what it does: inspect_graph info "
-                                "functions, words saying what the node should do."), *MemberName, *Hint);
-}
-
-// The name may be exactly right and live on another class: a function library
-// (RemoveAllWidgets is on UWidgetLayoutLibrary while every neighbouring widget
-// helper is on UWidgetBlueprintLibrary) or a component class. Only libraries were
-// searched, so SetScalarParameterValueOnMaterials asked of PrimitiveComponent came
-// back a bare "not found" although MeshComponent declares it.
-FString DescribeDeclaringClasses(UClass* Class, const FString& Wanted)
-{
-    const FName WantedName(*Wanted);
-    TArray<UClass*> Declarers;
-    for (TObjectIterator<UClass> It; It && Declarers.Num() < 4; ++It)
-    {
-        if (*It == Class || It->HasAnyClassFlags(CLASS_Deprecated) || McpIsCompileDebrisClass(*It))
-        {
-            continue;
-        }
-        const UFunction* Found = It->FindFunctionByName(WantedName, EIncludeSuperFlag::ExcludeSuper);
-        if (Found && Found->HasAnyFunctionFlags(FUNC_BlueprintCallable))
-        {
-            Declarers.Add(*It);
-        }
-    }
-    if (Declarers.Num() == 1)
-    {
-        return FString::Printf(TEXT(" '%s' is not on %s, but %s declares it - retry with memberClass '%s'."),
-                               *Wanted, *Class->GetName(), *Declarers[0]->GetName(), *Declarers[0]->GetPathName());
-    }
-    TArray<FString> Paths;
-    for (const UClass* Declarer : Declarers)
-    {
-        Paths.Add(Declarer->GetPathName());
-    }
-    return Paths.Num() == 0 ? FString() : FString::Printf(
-        TEXT(" '%s' is not on %s, but these declare it: %s - retry with the memberClass of the object the node acts on."),
-        *Wanted, *Class->GetName(), *FString::Join(Paths, TEXT(", ")));
 }
 }
 

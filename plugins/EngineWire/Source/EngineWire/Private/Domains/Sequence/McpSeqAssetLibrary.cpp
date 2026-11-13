@@ -19,15 +19,15 @@ static ULevelSequence *McpResolveSequenceMove(UEngineWireSubsystem *Self, TShare
   UObject *Source = McpLoadAsset(SourcePath);
   ULevelSequence *Sequence = Cast<ULevelSequence>(Source);
   if (!Sequence) {
-    Self->SendAutomationResponse(Socket, RequestId, false,
+    Self->SendAutomationError(Socket, RequestId,
         Source ? FString::Printf(TEXT("%s is a %s, not a level sequence"), *SourcePath, *Source->GetClass()->GetName())
                : FString::Printf(TEXT("Source sequence not found: %s"), *SourcePath),
-        nullptr, TEXT("INVALID_SEQUENCE"));
+        TEXT("INVALID_SEQUENCE"));
     return nullptr;
   }
   if (McpAssetExists(DestinationPath)) {
-    Self->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("An asset already exists at %s"), *DestinationPath),
-                                 nullptr, TEXT("ASSET_ALREADY_EXISTS"));
+    Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("An asset already exists at %s"), *DestinationPath),
+                              TEXT("ASSET_ALREADY_EXISTS"));
     return nullptr;
   }
   return Sequence;
@@ -102,9 +102,9 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
   FString DestinationPath;
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_duplicate requires path and destinationPath"), nullptr,
+    SendAutomationError(
+        Socket, RequestId,
+        TEXT("sequence_duplicate requires path and destinationPath"),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -150,9 +150,9 @@ bool UEngineWireSubsystem::HandleSequenceDuplicate(
                            FString());
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Failed to duplicate sequence"), nullptr,
-                         TEXT("OPERATION_FAILED"));
+  SendAutomationError(Socket, RequestId,
+                      TEXT("Failed to duplicate sequence"),
+                      TEXT("OPERATION_FAILED"));
   return true;
 }
 
@@ -164,9 +164,9 @@ bool UEngineWireSubsystem::HandleSequenceRename(
   FString NewName;
   Payload->TryGetStringField(TEXT("newName"), NewName);
   if (Path.IsEmpty() || NewName.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_rename requires path and newName"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sequence_rename requires path and newName"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
@@ -192,9 +192,9 @@ bool UEngineWireSubsystem::HandleSequenceRename(
                            FString());
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("Failed to rename sequence"), nullptr,
-                         TEXT("OPERATION_FAILED"));
+  SendAutomationError(Socket, RequestId,
+                      TEXT("Failed to rename sequence"),
+                      TEXT("OPERATION_FAILED"));
   return true;
 }
 
@@ -204,9 +204,9 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
   FString Path;
   Payload->TryGetStringField(TEXT("path"), Path);
   if (Path.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_delete requires path"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("sequence_delete requires path"),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   if (!McpAssetExists(Path)) {
@@ -243,9 +243,9 @@ bool UEngineWireSubsystem::HandleSequenceDelete(
   }
   // The engine delete keeps the file of a package something still holds: the sequence leaves the Content Browser,
   // a retry answers not found, and it comes back at the next editor start.
-  SendAutomationResponse(Socket, RequestId, false,
-                         McpAssetExists(Path) ? TEXT("Failed to delete sequence")
+  SendAutomationError(Socket, RequestId,
+                      McpAssetExists(Path) ? TEXT("Failed to delete sequence")
                              : TEXT("The sequence left the Content Browser, but its file is still on disk because its package is still loaded: delete it again after an editor restart"),
-                         nullptr, TEXT("OPERATION_FAILED"));
+                      TEXT("OPERATION_FAILED"));
   return true;
 }

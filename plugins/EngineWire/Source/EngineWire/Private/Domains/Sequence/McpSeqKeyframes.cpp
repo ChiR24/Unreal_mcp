@@ -109,32 +109,32 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
   LocalPayload->TryGetStringField(TEXT("property"), PropertyName);
 
   if (BindingIdStr.IsEmpty() && ActorName.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("Either bindingId or actorName must be provided. bindingId is the "
              "GUID from add_actor/get_bindings. actorName is the label of an "
              "actor already bound to the sequence. Example: {\"actorName\": "
              "\"MySphere\", \"property\": \"Location\", \"frame\": 0, "
              "\"value\": {\"x\":0,\"y\":0,\"z\":0}}"),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
   // A number or bool value keyed a property track named None (no property, or "None"), and the engine's
   // SetPropertyNameAndPath assert closed the editor; a name of NAME_SIZE characters asserts in FName itself.
   if (PropertyName.IsEmpty() || PropertyName.Equals(TEXT("None"), ESearchCase::IgnoreCase) ||
       PropertyName.Len() >= NAME_SIZE) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           FString(TEXT("property must name what is keyed (Transform, Location, Rotation, Scale, "
+    SendAutomationError(Socket, RequestId,
+                        FString(TEXT("property must name what is keyed (Transform, Location, Rotation, Scale, "
                                         "Visibility, or a float or bool property) and goes beside value. "
                                         "Example params: ")) + KeyParamsExample,
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   TArray<TSharedPtr<FJsonObject>> Keys;
   FString KeyError;
   if (!ReadKeys(LocalPayload, Keys, KeyError)) {
-    SendAutomationResponse(Socket, RequestId, false, KeyError, nullptr, TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(Socket, RequestId, KeyError, TEXT("INVALID_ARGUMENT"));
     return true;
   }
   const bool bBatch = LocalPayload->HasField(TEXT("keys"));
@@ -149,18 +149,18 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
   ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj);
   UMovieScene *MovieScene = LevelSeq ? LevelSeq->GetMovieScene() : nullptr;
   if (!MovieScene) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           SeqObj ? TEXT("Sequence object is not a LevelSequence") : TEXT("Sequence not found"),
-                           nullptr, SeqObj ? TEXT("INVALID_SEQUENCE_TYPE") : TEXT("INVALID_SEQUENCE"));
+    SendAutomationError(Socket, RequestId,
+                        SeqObj ? TEXT("Sequence object is not a LevelSequence") : TEXT("Sequence not found"),
+                        SeqObj ? TEXT("INVALID_SEQUENCE_TYPE") : TEXT("INVALID_SEQUENCE"));
     return true;
   }
   FGuid BindingGuid = McpSequenceKeyframes::ResolveBindingGuid(MovieScene, BindingIdStr, ActorName);
   if (!BindingGuid.IsValid() || !MovieScene->FindBinding(BindingGuid)) {
     FString Target = !BindingIdStr.IsEmpty() ? BindingIdStr : ActorName;
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("Binding not found for '%s'. Ensure actor is bound to sequence."), *Target),
-        nullptr, TEXT("BINDING_NOT_FOUND"));
+        TEXT("BINDING_NOT_FOUND"));
     return true;
   }
 
@@ -183,7 +183,7 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
     FString FrameError;
     if (!McpSequenceFrameMath::TryTransformFrameFloor(Frame, MovieScene->GetDisplayRate(),
                                                       MovieScene->GetTickResolution(), TickFrame, FrameError)) {
-      SendAutomationResponse(Socket, RequestId, false, Where + FrameError, nullptr, TEXT("INVALID_ARGUMENT"));
+      SendAutomationError(Socket, RequestId, Where + FrameError, TEXT("INVALID_ARGUMENT"));
       return true;
     }
     // A key outside the playback range is silently dead: it never evaluates and nothing said so. Sequencer's own
@@ -201,15 +201,15 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
                                                                Keys[Index], SuccessMessage);
     if (!bAdded) {
       // A transform key fails only on its value: calling that an unsupported property sent callers looking elsewhere.
-      SendAutomationResponse(
-          Socket, RequestId, false,
+      SendAutomationError(
+          Socket, RequestId,
           Where + (Index > 0 ? FString::Printf(TEXT("(the %d keys before it were written) "), Index) : FString()) +
               (bTransform ? TEXT("The value keyed nothing. ") : TEXT("Unsupported property or value. ")) +
               TEXT("Transform takes value {location: {x,y,z}, rotation: {pitch,yaw,roll}, scale: {x,y,z}} (any of "
                    "them; lookAt needs location beside it), Location, Rotation and Scale that one object, Visibility "
                    "true or false, and a float or bool property its number or bool. Example params: ") +
               KeyParamsExample,
-          nullptr, bTransform ? TEXT("INVALID_ARGUMENT") : TEXT("UNSUPPORTED_PROPERTY"));
+          bTransform ? TEXT("INVALID_ARGUMENT") : TEXT("UNSUPPORTED_PROPERTY"));
       return true;
     }
   }

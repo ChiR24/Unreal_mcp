@@ -142,18 +142,18 @@ bool HandleListTrackKeys(UEngineWireSubsystem *Subsystem,
                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
   if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("sequence_list_track_keys requires a sequence path"), nullptr,
+    Subsystem->SendAutomationError(
+        RequestingSocket, RequestId,
+        TEXT("sequence_list_track_keys requires a sequence path"),
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
   UMovieScene *MovieScene = Sequence ? Sequence->GetMovieScene() : nullptr;
   if (!MovieScene) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("Level sequence not found"), nullptr,
-                                      TEXT("SEQUENCE_NOT_FOUND"));
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                                   TEXT("Level sequence not found"),
+                                   TEXT("SEQUENCE_NOT_FOUND"));
     return true;
   }
 

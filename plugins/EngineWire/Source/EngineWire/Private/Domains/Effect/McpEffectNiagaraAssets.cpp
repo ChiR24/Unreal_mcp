@@ -39,10 +39,8 @@ bool CreateNiagaraEffectFromPayload(
     UObject* NiagaraObject = LoadEffectAsset(SystemPath);
     if (!NiagaraObject)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
-            nullptr, TEXT("SYSTEM_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
+            TEXT("SYSTEM_NOT_FOUND"));
         return true;
     }
 

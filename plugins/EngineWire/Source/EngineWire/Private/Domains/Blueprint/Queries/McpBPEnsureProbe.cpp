@@ -19,9 +19,9 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
         !EnsureSavePath.TrimStartAndEnd().IsEmpty();
     FString Path = bNamedBySavePath ? EnsureSavePath / EnsureName : ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_ensure_exists requires a blueprint path."), nullptr,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("blueprint_ensure_exists requires a blueprint path."),
           TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }

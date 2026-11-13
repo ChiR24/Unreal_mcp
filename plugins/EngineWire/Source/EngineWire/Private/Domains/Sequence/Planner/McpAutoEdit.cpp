@@ -68,18 +68,9 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         Bridge.SendAutomationError(Socket, RequestId, TEXT("Needs the editor world with Play In Editor stopped."), TEXT("NO_WORLD"));
         return true;
     }
-    TSharedPtr<FJsonObject> Failure;
-    ULevelSequence* Sequence = McpSequenceCinematics::LoadSequence(Payload, Failure);
+    ULevelSequence* Sequence = McpSequenceCinematics::LoadSequenceOrSend(Bridge, Socket, RequestId, Payload);
     if (!Sequence)
     {
-        FString Message = TEXT("sequencePath names no Level Sequence.");
-        FString Code = TEXT("INVALID_SEQUENCE");
-        if (Failure.IsValid())
-        {
-            Failure->TryGetStringField(TEXT("error"), Message);
-            Failure->TryGetStringField(TEXT("errorCode"), Code);
-        }
-        Bridge.SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     }
     TArray<AActor*> Cameras;

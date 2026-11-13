@@ -7,6 +7,7 @@
 // the actors drawn there before and after.
 
 #include "Domains/Perception/McpPerceptionDiff.h"
+#include "Domains/Perception/McpPerception.h"
 
 #include "Domains/Inspect/View/McpInspectViewIds.h"
 #include "GameFramework/Actor.h"
@@ -92,16 +93,7 @@ FViewMeasure MeasureFrame(const McpInspectHandlers::FMcpViewCapture& View)
     {
         for (int32 BlockX = 0; BlockX < Out.BlocksX; ++BlockX)
         {
-            FLinearColor Sum(0.f, 0.f, 0.f, 0.f);
-            for (int32 Y = BlockY * DiffBlock; Y < (BlockY + 1) * DiffBlock; ++Y)
-            {
-                for (int32 X = BlockX * DiffBlock; X < (BlockX + 1) * DiffBlock; ++X)
-                {
-                    const FColor& Pixel = View.Colors[Y * View.Size.X + X];
-                    Sum += FLinearColor(Pixel.R / 255.f, Pixel.G / 255.f, Pixel.B / 255.f, 1.f);
-                }
-            }
-            Out.BlockColour.Add(Sum / float(DiffBlock * DiffBlock));
+            Out.BlockColour.Add(BlockMean(View, BlockX, BlockY, DiffBlock));
         }
     }
     TMap<uint32, FMcpViewProxy> Proxies;

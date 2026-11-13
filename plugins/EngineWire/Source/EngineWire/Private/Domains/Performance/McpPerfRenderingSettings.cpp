@@ -8,14 +8,6 @@
 
 namespace McpPerformanceHandlers
 {
-namespace
-{
-const TCHAR* McpCVarSwitch(bool bOn)
-{
-    return bOn ? TEXT("1") : TEXT("0");
-}
-}
-
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
 {
     if (Context.Lower == TEXT("set_scalability"))
@@ -105,8 +97,8 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
         // The editor's windows, Play In Editor included, present by r.VSyncEditor and never read r.VSync, so setting
         // only r.VSync changed nothing on screen.
-        McpSetConsoleVariableNamed(TEXT("r.VSyncEditor"), McpCVarSwitch(bEnabled), Applied, NotSet);
-        McpSetConsoleVariableNamed(TEXT("r.VSync"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.VSyncEditor"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.VSync"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
         SendPerfCVarResult(Context, bEnabled ? TEXT("VSync on") : TEXT("VSync off"), Applied, NotSet);
         return true;
     }
@@ -130,7 +122,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        McpSetConsoleVariableNamed(TEXT("r.Nanite"), McpCVarSwitch(bEnabled), Applied, NotSet);
+        McpSetConsoleVariableNamed(TEXT("r.Nanite"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
         SendPerfCVarResult(Context, bEnabled ? TEXT("Nanite meshes render with Nanite")
                                              : TEXT("Nanite meshes render their fallback meshes"), Applied, NotSet);
         return true;
@@ -181,7 +173,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         }
         if (bHasEnabled)
         {
-            McpSetConsoleVariableNamed(TEXT("r.TextureStreaming"), McpCVarSwitch(bEnabled), Applied, NotSet);
+            McpSetConsoleVariableNamed(TEXT("r.TextureStreaming"), bEnabled ? TEXT("1") : TEXT("0"), Applied, NotSet);
         }
         if (bHasPool)
         {

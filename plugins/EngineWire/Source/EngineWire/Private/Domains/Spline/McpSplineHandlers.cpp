@@ -70,7 +70,7 @@ bool UEngineWireSubsystem::HandleManageSplinesAction(
     if (SubAction == TEXT("get_splines_info"))
         return HandleGetSplinesInfo(this, RequestId, SplinePayload, Socket);
 
-    SendAutomationResponse(Socket, RequestId, false,
-        FString::Printf(TEXT("Unknown spline subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Unknown spline subAction: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 }

@@ -9,20 +9,7 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
     ENiagaraScriptUsage TargetUsage,
     const FString& SuggestedName)
 {
-    if (!Handle)
-    {
-        return nullptr;
-    }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
-#else
-    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-#endif
-    if (!EmitterData)
-    {
-        return nullptr;
-    }
-    UNiagaraScriptSource* ScriptSource = Cast<UNiagaraScriptSource>(EmitterData->GraphSource);
+    UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Handle);
     if (!ScriptSource || !ScriptSource->NodeGraph)
     {
         return nullptr;
@@ -63,15 +50,7 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
 
 UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle)
 {
-    if (!Handle)
-    {
-        return nullptr;
-    }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetEmitterData();
-#else
-    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle->GetInstance();
-#endif
+    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = Handle ? MCP_GET_EMITTER_DATA(*Handle) : nullptr;
     return EmitterData ? Cast<UNiagaraScriptSource>(EmitterData->GraphSource) : nullptr;
 }
 

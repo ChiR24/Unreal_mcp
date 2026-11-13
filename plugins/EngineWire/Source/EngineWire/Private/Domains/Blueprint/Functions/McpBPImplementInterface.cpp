@@ -46,21 +46,21 @@ bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context) {
   bool bRemove = false;
   LocalPayload->TryGetBoolField(TEXT("remove"), bRemove);
   if (Path.IsEmpty() || InterfacePath.TrimStartAndEnd().IsEmpty()) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("blueprintPath and interfacePath are required"),
-                                  nullptr, TEXT("INVALID_ARGUMENT"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("blueprintPath and interfacePath are required"),
+                               TEXT("INVALID_ARGUMENT"));
     return true;
   }
   FString Normalized, Error;
   UBlueprint *Blueprint = LoadBlueprintAsset(Path, Normalized, Error);
   if (!Blueprint) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  Error.IsEmpty() ? TEXT("Failed to load blueprint") : Error, nullptr,
-                                  TEXT("BLUEPRINT_NOT_FOUND"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               Error.IsEmpty() ? TEXT("Failed to load blueprint") : Error,
+                               TEXT("BLUEPRINT_NOT_FOUND"));
     return true;
   }
   UClass *Interface = ResolveInterfaceClass(InterfacePath.TrimStartAndEnd(), Error);
   if (!Interface) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INTERFACE_NOT_FOUND"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INTERFACE_NOT_FOUND"));
     return true;
   }
 
@@ -71,9 +71,9 @@ bool HandleBlueprintImplementInterface(const FBlueprintActionContext &Context) {
   } else if (bChange) {
     const bool bAdded = FBlueprintEditorUtils::ImplementNewInterface(Blueprint, MCP_CLASS_ID(Interface));
     if (!bAdded) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    FString::Printf(TEXT("The editor refused to add %s"), *Interface->GetName()),
-                                    nullptr, TEXT("IMPLEMENT_FAILED"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                                 FString::Printf(TEXT("The editor refused to add %s"), *Interface->GetName()),
+                                 TEXT("IMPLEMENT_FAILED"));
       return true;
     }
   }

@@ -31,8 +31,8 @@ bool HandleRemoveLevelBlueprintNode(
     Payload->TryGetBoolField(TEXT("unboundOnly"), bUnboundOnly);
     if (NodeId.IsEmpty() && NodeName.IsEmpty() && !bUnboundOnly)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Pass nodeId or nodeName, or unboundOnly:true to purge call nodes without a function"), nullptr, TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Pass nodeId or nodeName, or unboundOnly:true to purge call nodes without a function"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     // Honor levelPath on removal too: deleting from whatever level is open would
@@ -74,10 +74,10 @@ bool HandleRemoveLevelBlueprintNode(
     {
         TArray<FString> Names;
         for (UEdGraphNode* Node : ToRemove) { Names.Add(Node->GetName()); }
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); nothing was removed. Pass one node's nodeId (guid) or node name."),
                 NodeId.IsEmpty() ? *NodeName : *NodeId, ToRemove.Num(), *FString::Join(Names, TEXT(", "))),
-            nullptr, TEXT("AMBIGUOUS_NODE"));
+            TEXT("AMBIGUOUS_NODE"));
         return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -89,8 +89,8 @@ bool HandleRemoveLevelBlueprintNode(
     }
     if (ToRemove.Num() == 0 && !bUnboundOnly)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Level blueprint node not found: %s"), NodeId.IsEmpty() ? *NodeName : *NodeId), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Level blueprint node not found: %s"), NodeId.IsEmpty() ? *NodeName : *NodeId), TEXT("NOT_FOUND"));
         return true;
     }
     if (ToRemove.Num() > 0)

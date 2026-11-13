@@ -39,17 +39,14 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
     UEditorActorSubsystem* ActorSubsystem = GetEditorActorSubsystem();
     if (!ActorSubsystem)
     {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), nullptr,
+        Context.SendError(TEXT("EditorActorSubsystem not available"),
             TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
         return true;
     }
     // The editor actor subsystem lists nothing while a game plays, so this answered removed=0 as if done.
     if (GEditor->PlayWorld)
     {
-        Context.Bridge.SendAutomationResponse(Context.Socket, Context.RequestId, false,
-            TEXT("Stop Play In Editor first: cleanup deletes actors from the level being edited"), nullptr, TEXT("PIE_ACTIVE"));
+        Context.SendError(TEXT("Stop Play In Editor first: cleanup deletes actors from the level being edited"), TEXT("PIE_ACTIVE"));
         return true;
     }
     TArray<UObject*> Matches;

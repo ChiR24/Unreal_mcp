@@ -19,9 +19,9 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
       return true;
     }
     if (Path.IsEmpty()) {
-      Bridge.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("blueprint_compile requires a blueprint path."), nullptr,
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("blueprint_compile requires a blueprint path."),
           TEXT("INVALID_BLUEPRINT_PATH"));
       return true;
     }

@@ -205,9 +205,7 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
             TEXT("Debug shapes cleared"), Response);
         return true;
     }
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("Editor world not available"), nullptr, TEXT("NO_WORLD"));
+    Context.SendError(TEXT("Editor world not available"), TEXT("NO_WORLD"));
     return true;
 }
 

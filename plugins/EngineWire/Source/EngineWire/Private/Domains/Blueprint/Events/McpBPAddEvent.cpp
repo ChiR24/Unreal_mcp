@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 #include "EdGraphSchema_K2.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -76,8 +77,8 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     FString GraphError;
     UEdGraph *EventGraph = FindBlueprintEventGraph(BP, GraphName, GraphError);
     if (!GraphError.IsEmpty()) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, GraphError,
-                                    nullptr, TEXT("GRAPH_NOT_FOUND"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, GraphError,
+                                 TEXT("GRAPH_NOT_FOUND"));
       return true;
     }
     if (!EventGraph) {
@@ -90,8 +91,8 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     }
 
     if (!EventGraph) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Failed to create event graph"), nullptr,
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("Failed to create event graph"),
                              TEXT("GRAPH_UNAVAILABLE"));
       return true;
     }
@@ -166,7 +167,7 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     }
     // A name an implemented interface or the parent class already declares as an event is that event: a custom
     // event under it collided with it, and the Blueprint stopped compiling ("more than one function").
-    const bool bInheritedEvent = bIsCustomEvent && !CustomName.IsEmpty() && McpFindOverridableEvent(BP, CustomName);
+    const bool bInheritedEvent = bIsCustomEvent && !CustomName.IsEmpty() && McpFindOverridableEvent(BP, CustomName, /*bEditorNames=*/false);
     if (bIsCustomEvent && !bInheritedEvent) {
       return McpBlueprintAddEventCustom(Context, BP, EventGraph, EventPosX,
                                         EventPosY, RegistryKey, FinalType,

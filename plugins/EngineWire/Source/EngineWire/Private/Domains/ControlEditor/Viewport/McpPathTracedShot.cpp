@@ -112,7 +112,7 @@ void Fail(FShot& Shot, const TCHAR* Code, const FString& Message)
 {
     Restore(Shot);
     Reply(Shot, [&](UEngineWireSubsystem& Self) {
-        Self.SendAutomationResponse(Shot.Socket, Shot.RequestId, false, Message, nullptr, Code);
+        Self.SendAutomationError(Shot.Socket, Shot.RequestId, Message, Code);
     });
 }
 
@@ -206,7 +206,7 @@ bool Handle(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedP
         return false;
     }
     const auto Refuse = [&](const TCHAR* Code, const FString& Message) {
-        Self->SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Self->SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     FString Mode;

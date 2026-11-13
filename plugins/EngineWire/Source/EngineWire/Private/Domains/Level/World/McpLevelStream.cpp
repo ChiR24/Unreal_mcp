@@ -23,9 +23,9 @@ bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
     bVisible = bVisible && bLoad; // a level streamed out is not drawn
     if (LevelName.IsEmpty()) {
-      Subsystem.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("stream_level requires levelName or levelPath"), nullptr,
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("stream_level requires levelName or levelPath"),
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -37,8 +37,8 @@ bool HandleStreamLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     UWorld* PlayWorld = GEditor->PlayWorld;
     UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
     if (!World) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No world loaded"), nullptr,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No world loaded"),
                              TEXT("NO_WORLD"));
       return true;
     }

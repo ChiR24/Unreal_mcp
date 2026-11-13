@@ -72,9 +72,9 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
     }
 
     if (SavePath.IsEmpty()) {
-      Subsystem.SendAutomationResponse(
-          RequestingSocket, RequestId, false,
-          TEXT("levelName or levelPath required for create_level"), nullptr,
+      Subsystem.SendAutomationError(
+          RequestingSocket, RequestId,
+          TEXT("levelName or levelPath required for create_level"),
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -85,11 +85,11 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
     if (bSaveDirtyPackages) {
       int32 WorldBefore = 0, ContentBefore = 0, WorldAfter = 0, ContentAfter = 0, Failed = 0;
       if (!SaveBlockingDirtyPackagesForLevelLoad(WorldBefore, ContentBefore, WorldAfter, ContentAfter, Failed)) {
-        Subsystem.SendAutomationResponse(
-            RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationError(
+            RequestingSocket, RequestId,
             FString::Printf(TEXT("saveDirtyPackages: %d package(s) failed to save and %d remain dirty; nothing was created. Save or discard them, then retry"),
                             Failed, WorldAfter + ContentAfter),
-            nullptr, TEXT("DIRTY_PACKAGES"));
+            TEXT("DIRTY_PACKAGES"));
         return true;
       }
     }

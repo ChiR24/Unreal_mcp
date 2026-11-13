@@ -47,9 +47,9 @@ bool UEngineWireSubsystem::HandleCreateFolder(
                            bAlreadyExisted ? TEXT("Folder already exists") : TEXT("Folder created"),
                            Resp, FString());
   } else {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to create folder"), nullptr,
-                           TEXT("CREATE_FAILED"));
+    SendAutomationError(Socket, RequestId,
+                        TEXT("Failed to create folder"),
+                        TEXT("CREATE_FAILED"));
   }
   return true;
 }

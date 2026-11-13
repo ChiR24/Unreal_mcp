@@ -19,9 +19,6 @@ struct FActionContext;
  *  {memberClass: task or async-action class, memberName: its static factory}. False for any other nodeType. */
 bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, float X, float Y);
 
-/** A class by path or name (a Blueprint's generated class too); null when none. */
-UClass* ResolveBehaviourClass(const FString& Name);
-
 /** A dispatcher on Owner, else this Blueprint's own (on the skeleton class, where a dispatcher
  *  added earlier in the same batch already is). */
 FMulticastDelegateProperty* FindBehaviourDispatcher(UBlueprint* Blueprint, const FString& Name, UClass* Owner);

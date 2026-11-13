@@ -30,8 +30,8 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
                           : FallHeight <= 0.0 ? FString(TEXT("fallHeight must be above 0"))
                           : Tag.IsEmpty() ? FString(TEXT("checkpointTag must not be empty")) : FString();
   if (!Refusal.IsEmpty()) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Refusal, nullptr,
-                                  Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Refusal,
+                               Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
     return true;
   }
   // With the Health behaviour, death respawns it too. One snapshot for both, so a failure leaves the Blueprint as it was.
@@ -53,7 +53,7 @@ bool HandleBlueprintAddRespawn(const FBlueprintActionContext &Context) {
     }
     const TSharedPtr<FJsonObject> Recipe = McpBlueprintBehaviour::LoadRecipe(TEXT("Gameplay"), Name, Values, Error);
     if (!Recipe) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+      Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_RECIPE"));
       return true;
     }
     const McpBlueprintBehaviour::FAuthorResult Result = McpBlueprintBehaviour::Author(

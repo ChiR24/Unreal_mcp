@@ -11,15 +11,15 @@ namespace McpLevelHandlers {
 bool HandleGetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     UWorld* EditorWorld = McpHandlerUtils::GetEditorWorld();
     if (!EditorWorld) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No editor world available"), TEXT("NO_WORLD"));
       return true;
     }
 
     ULevel* CurrentLevel = EditorWorld->GetCurrentLevel();
     if (!CurrentLevel) {
-      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("No current level available"), nullptr, TEXT("NO_LEVEL"));
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                             TEXT("No current level available"), TEXT("NO_LEVEL"));
       return true;
     }
 

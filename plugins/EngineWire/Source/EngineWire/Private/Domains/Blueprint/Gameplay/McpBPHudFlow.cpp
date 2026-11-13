@@ -50,12 +50,12 @@ UBlueprint *LoadScreenBlueprint(const FBlueprintActionContext &Context, const TC
   }
   const UClass *Class = Blueprint ? Blueprint->GeneratedClass.Get() : nullptr;
   if (!Class || !Class->IsChildOf(Base ? Base : APawn::StaticClass())) {
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
+    Bridge.SendAutomationError(
+        RequestingSocket, RequestId,
         !Blueprint ? (Error.IsEmpty() ? FString(TEXT("blueprintPath must name a Blueprint")) : Error)
         : Base     ? FString::Printf(TEXT("%s needs an Actor Blueprint"), What)
                    : FString::Printf(TEXT("%s on screen needs a Pawn or Character Blueprint (the player controlling it sees it)"), What),
-        nullptr, Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
+        Blueprint ? TEXT("INVALID_ARGUMENT") : TEXT("BLUEPRINT_NOT_FOUND"));
     return nullptr;
   }
   return Blueprint;
@@ -66,9 +66,9 @@ void AuthorHud(const FBlueprintActionContext &Context, UBlueprint *Blueprint, co
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   // Author refuses during PIE too, but only after the widget below would have been made.
   if (GEditor && GEditor->IsPlaySessionInProgress()) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                  TEXT("Stop Play In Editor first: compiling a Blueprint during PIE reinstances the running game."),
-                                  nullptr, TEXT("PIE_ACTIVE"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               TEXT("Stop Play In Editor first: compiling a Blueprint during PIE reinstances the running game."),
+                               TEXT("PIE_ACTIVE"));
     return;
   }
   FString WidgetPath = GetJsonStringField(LocalPayload, TEXT("widgetPath")).TrimStartAndEnd();
@@ -96,13 +96,13 @@ void AuthorHud(const FBlueprintActionContext &Context, UBlueprint *Blueprint, co
     bWidgetChanged = true;
   }
   if (!Widget || !HasElement(Widget, Hud.Element, Hud.ElementClass)) {
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
+    Bridge.SendAutomationError(
+        RequestingSocket, RequestId,
         !Error.IsEmpty() ? Error
         : !Widget        ? FString::Printf(TEXT("No Widget Blueprint at %s"), *WidgetPath)
                          : FString::Printf(TEXT("%s has no %s variable named %s"), *WidgetPath,
                                            *Hud.ElementClass->GetName(), *Hud.Element),
-        nullptr, !Widget ? TEXT("NOT_FOUND") : TEXT("WIDGET_NOT_FOUND"));
+        !Widget ? TEXT("NOT_FOUND") : TEXT("WIDGET_NOT_FOUND"));
     return;
   }
   const FString WidgetClass = Widget->GeneratedClass->GetPathName();
@@ -110,7 +110,7 @@ void AuthorHud(const FBlueprintActionContext &Context, UBlueprint *Blueprint, co
   Hud.Values.Add(TEXT("WidgetType"), MakeShared<FJsonValueString>(TEXT("Object:") + WidgetClass));
   const TSharedPtr<FJsonObject> Recipe = McpBlueprintBehaviour::LoadRecipe(TEXT("Gameplay"), Hud.Recipe, Hud.Values, Error);
   if (!Recipe) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Error, nullptr, TEXT("INVALID_RECIPE"));
+    Bridge.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_RECIPE"));
     return;
   }
   const McpBlueprintBehaviour::FAuthorResult Result =

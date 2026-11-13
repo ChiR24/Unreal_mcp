@@ -26,7 +26,7 @@ static AActor* ResolveVolumeByName(UEngineWireSubsystem* Subsystem, const FStrin
     OutVolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT(""));
     if (!ValidateVolumeName(OutVolumeName, ValidationError))
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
+        Subsystem->SendAutomationError(Socket, RequestId, *ValidationError, TEXT("MISSING_PARAMETER"));
         return nullptr;
     }
     UWorld* World = nullptr;
@@ -37,8 +37,8 @@ static AActor* ResolveVolumeByName(UEngineWireSubsystem* Subsystem, const FStrin
     AActor* VolumeActor = FindVolumeByName(World, OutVolumeName);
     if (!VolumeActor)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Volume not found: %s"), *OutVolumeName), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Volume not found: %s"), *OutVolumeName), TEXT("NOT_FOUND"));
     }
     return VolumeActor;
 }

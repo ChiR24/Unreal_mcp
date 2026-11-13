@@ -128,16 +128,13 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Attribute '%s' was added to the Blueprint but is not present on the compiled class%s. The asset was NOT saved."),
                     *AttributeName,
-                    bCompiled ? TEXT("") : TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)")),
+                    GASCompileFailureNote(bCompiled)),
                 TEXT("ATTRIBUTE_NOT_APPLIED"));
             return true;
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Attribute")))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Attribute verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."),
-                TEXT("SAVE_FAILED"));
             return true;
         }
 

@@ -73,22 +73,22 @@ bool HandleScatterMeshesAlongSpline(
     UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);
     if (!Mesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), nullptr, TEXT("MESH_NOT_FOUND"));
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Mesh not found: %s"), *SafeMeshPath), TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
     if (Spacing <= 0.0)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("spacing must be greater than 0"), nullptr, TEXT("INVALID_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("spacing must be greater than 0"), TEXT("INVALID_PARAM"));
         return true;
     }
 
     if (RandomOffsetRange < 0.0 || MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid spline mesh randomization configuration"), nullptr, TEXT("INVALID_PARAM"));
+        Self->SendAutomationError(Socket, RequestId,
+            TEXT("Invalid spline mesh randomization configuration"), TEXT("INVALID_PARAM"));
         return true;
     }
 
@@ -99,9 +99,9 @@ bool HandleScatterMeshesAlongSpline(
     const double Steps = FMath::FloorToDouble(static_cast<double>(SplineLength) / Spacing);
     if (Steps + 1.0 > MaxScatteredMeshes)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
+        Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("spacing %g along this spline of %.0f cm would scatter %.0f meshes; one call adds at most %d. Use a larger "
-                "spacing. Nothing was added."), Spacing, SplineLength, Steps + 1.0, MaxScatteredMeshes), nullptr, TEXT("INVALID_PARAM"));
+                "spacing. Nothing was added."), Spacing, SplineLength, Steps + 1.0, MaxScatteredMeshes), TEXT("INVALID_PARAM"));
         return true;
     }
     int32 MeshCount = static_cast<int32>(Steps);

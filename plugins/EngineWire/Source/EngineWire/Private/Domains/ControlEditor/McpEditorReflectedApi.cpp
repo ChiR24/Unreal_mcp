@@ -92,20 +92,20 @@ bool UEngineWireSubsystem::HandleDescribeReflectedApi(
     Payload->TryGetStringField(TEXT("classPath"), ClassName);
   }
   if (ClassName.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         TEXT("'className' is required (for example 'FabBrowserApi' or '/Script/Engine.DirectionalLightComponent')."),
-        nullptr, TEXT("INVALID_ARGUMENT"));
+        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   UObject* Instance = McpFindReflectedInstance(ClassName);
   if (Instance == nullptr) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
+    SendAutomationError(
+        Socket, RequestId,
         FString::Printf(TEXT("No reflected class named '%s'. Its owning plugin may be disabled, or the object is not created until its window opens."),
                         *ClassName),
-        nullptr, TEXT("NOT_FOUND"));
+        TEXT("NOT_FOUND"));
     return true;
   }
 
