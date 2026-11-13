@@ -33,7 +33,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_niagara_data_interface', selector: 'interfaceKind',
-    summary: 'Add a data interface to a Niagara emitter: static mesh, skeletal mesh, spline, collision query, audio spectrum.',
+    summary: 'Add a data interface to a Niagara system, as a user parameter: static mesh, skeletal mesh, spline, collision query, audio spectrum.',
     topics: ['data interface', 'skeletal mesh data interface', 'spline data interface', 'audio spectrum', 'audio reactive particles'],
     members: byTarget('add_', ['add_static_mesh_data_interface', 'add_skeletal_mesh_data_interface', 'add_spline_data_interface', 'add_collision_query_data_interface', 'add_audio_spectrum_data_interface'], '_data_interface'),
   },

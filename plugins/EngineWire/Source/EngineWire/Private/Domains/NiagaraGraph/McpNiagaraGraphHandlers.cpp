@@ -49,7 +49,14 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     UNiagaraScript* TargetScript = nullptr;
 
     // Spawn script by default; scriptType "Update" selects the update script.
-    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")).Equals(TEXT("Update"), ESearchCase::IgnoreCase);
+    const FString ScriptType = GetJsonStringField(Payload, TEXT("scriptType"));
+    const bool bUpdateScript = ScriptType.Equals(TEXT("Update"), ESearchCase::IgnoreCase);
+    if (!bUpdateScript && !ScriptType.IsEmpty() && !ScriptType.Equals(TEXT("Spawn"), ESearchCase::IgnoreCase))
+    {
+        SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("scriptType '%s' is neither Spawn nor Update. Nothing was changed."),
+            *ScriptType), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     if (EmitterName.IsEmpty())
     {
         TargetScript = bUpdateScript ? System->GetSystemUpdateScript() : System->GetSystemSpawnScript();

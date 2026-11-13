@@ -82,8 +82,12 @@ bool AddPlacedUserParameters(FActionContext& Context, UNiagaraSystem* System)
     return true;
 }
 
-FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType)
+static FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType)
 {
+    if (ParamType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
+    {
+        return FNiagaraTypeDefinition::GetFloatDef();
+    }
     if (ParamType.Equals(TEXT("Int"), ESearchCase::IgnoreCase) || ParamType.Equals(TEXT("Integer"), ESearchCase::IgnoreCase))
     {
         return FNiagaraTypeDefinition::GetIntDef();
@@ -100,6 +104,28 @@ FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType)
     {
         return FNiagaraTypeDefinition::GetColorDef();
     }
-    return FNiagaraTypeDefinition::GetFloatDef();
+    return FNiagaraTypeDefinition();
+}
+
+bool ResolveNiagaraTypeOrRefuse(FActionContext& Context, const FString& ParamType, FNiagaraTypeDefinition& OutType)
+{
+    OutType = ResolveNiagaraTypeByName(ParamType);
+    if (!OutType.IsValid())
+    {
+        Context.SendError(FString::Printf(TEXT("parameterType '%s' is not Float, Int, Bool, Vector or Color."), *ParamType), TEXT("INVALID_ARGUMENT"));
+        return false;
+    }
+    return true;
+}
+
+bool UserParameterNameFree(FActionContext& Context, UNiagaraSystem* System, const FString& ParamName)
+{
+    if (!FindUserParameter(System, ParamName))
+    {
+        return true;
+    }
+    Context.SendError(FString::Printf(TEXT("%s already has a user parameter '%s'; pick another parameterName. Nothing was changed."),
+        *System->GetName(), *ParamName), TEXT("NAME_TAKEN"));
+    return false;
 }
 }

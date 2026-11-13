@@ -258,10 +258,15 @@ void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)
     {
         System->RequestCompile(false);
     }
+    if (Object)
+    {
+        // Saved or not: a user parameter is written straight into the system's store with no Modify, so with save
+        // false nothing offered the system for saving and the value was gone at the next start.
+        Object->MarkPackageDirty();
+    }
     if (Context.bSave && Object)
     {
         // Dirty alone never reached disk: module/parameter edits vanished at the next editor start.
-        Object->MarkPackageDirty();
         const bool bSaved = McpSafeOperations::McpSafeAssetSave(Object);
         Context.Result->SetBoolField(TEXT("saved"), bSaved);
     }

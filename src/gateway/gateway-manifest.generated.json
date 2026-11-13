@@ -14665,7 +14665,7 @@
           },
           "emitterName": {
             "type": "string",
-            "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
+            "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
           },
           "emitterPath": {
             "type": "string",
@@ -14766,7 +14766,7 @@
               "collision_query",
               "audio_spectrum"
             ],
-            "description": "Which add niagara data interface variant to run.\nstatic_mesh: Add a Static Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_StaticMeshDataInterface), for modules to sample a static mesh's surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nskeletal_mesh: Add a Skeletal Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_SkeletalMeshDataInterface), for modules to sample a skeletal mesh's bones and surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nspline: Add a Spline data interface as a user parameter of the system, User.<parameterName> (default MCP_SplineDataInterface), for modules to sample positions along a spline; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\ncollision_query: Add a Collision Query data interface as a user parameter of the system, User.<parameterName> (default MCP_CollisionQueryDataInterface), for modules to trace against the world; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\naudio_spectrum: Add an Audio Spectrum data interface as a user parameter of the system, User.<parameterName> (default MCP_AudioSpectrumDataInterface), for modules to read the spectrum of playing audio (audio-reactive particles); emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved)."
+            "description": "Which add niagara data interface variant to run.\nstatic_mesh: Add a Static Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_StaticMeshDataInterface), for modules to sample a static mesh's surface. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nskeletal_mesh: Add a Skeletal Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_SkeletalMeshDataInterface), for modules to sample a skeletal mesh's bones and surface. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nspline: Add a Spline data interface as a user parameter of the system, User.<parameterName> (default MCP_SplineDataInterface), for modules to sample positions along a spline. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\ncollision_query: Add a Collision Query data interface as a user parameter of the system, User.<parameterName> (default MCP_CollisionQueryDataInterface), for modules to trace against the world. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\naudio_spectrum: Add an Audio Spectrum data interface as a user parameter of the system, User.<parameterName> (default MCP_AudioSpectrumDataInterface), for modules to read the spectrum of playing audio (audio-reactive particles). A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved)."
           },
           "kind": {
             "type": "string",
@@ -14869,7 +14869,7 @@
           },
           "parameterType": {
             "type": "string",
-            "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
+            "description": "Niagara parameter type: Float (the default), Int, Bool, Vector or Color; any other name is refused."
           },
           "parameterValue": {
             "description": "The value in the parameter's own type: a number (float or int; a bool also takes true or false), an {x,y,z[,w]} or {r,g,b,a} object, or an array of exactly the type's numbers: 2 for a Vector2, 3 for a Vector3, 4 for a Vector4, 3 or 4 for a color (alpha 1). Any other array, numeric strings included, is refused (PARAM_TYPE_MISMATCH) and the value left as it was."
@@ -14952,7 +14952,7 @@
           },
           "scriptType": {
             "type": "string",
-            "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
+            "description": "Which script the graph edit works in: Spawn (default) or Update; any other word is refused. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
           },
           "shape": {
             "type": "string",

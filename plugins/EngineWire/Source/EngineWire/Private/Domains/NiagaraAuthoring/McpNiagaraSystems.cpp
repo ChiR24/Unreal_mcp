@@ -48,13 +48,8 @@ static bool CreateNiagaraSystem(FActionContext& Context)
     // The factory compiles a new system; built here without it, it was saved with no compiled scripts.
     NewSystem->RequestCompile(false);
     FAssetRegistryModule::AssetCreated(NewSystem);
-    if (Context.bSave)
-    {
-        McpSafeAssetSave(NewSystem);
-    }
-    // save false leaves nothing on disk by design: checked then too, every such create answered CREATE_FAILED for a
-    // system it had made.
-    if (Context.bSave && !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
+    // save false leaves nothing on disk by design.
+    if (Context.bSave && !McpSafeAssetSave(NewSystem))
     {
         Context.SendError(TEXT("Created system package does not exist on disk."), TEXT("CREATE_FAILED"));
         return true;
@@ -97,9 +92,10 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
     McpNameNewEmitterAsset(*NewEmitter);
 #endif
     FAssetRegistryModule::AssetCreated(NewEmitter);
-    if (Context.bSave)
+    if (Context.bSave && !McpSafeAssetSave(NewEmitter))
     {
-        McpSafeAssetSave(NewEmitter);
+        Context.SendError(TEXT("Created emitter package does not exist on disk."), TEXT("CREATE_FAILED"));
+        return true;
     }
     McpHandlerUtils::AddVerification(Context.Result, NewEmitter);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Niagara Emitter: %s"), *Context.Name));
@@ -212,6 +208,7 @@ static bool SetEmitterProperties(FActionContext& Context)
     UNiagaraScriptSource* Source = bHasModules ? GetEmitterScriptSource(Handle) : nullptr;
     UNiagaraGraph* Graph = Source ? Source->NodeGraph : nullptr;
     TArray<FString> Missing;
+    TArray<TPair<UNiagaraNodeFunctionCall*, bool>> Switches;
     if (bHasModules)
     {
         for (const auto& Pair : (*ModulesObj)->Values)
@@ -227,9 +224,7 @@ static bool SetEmitterProperties(FActionContext& Context)
                     if (Module && Module->GetCalledUsage() == ENiagaraScriptUsage::Module &&
                         Module->GetFunctionName().Equals(ModuleName, ESearchCase::IgnoreCase))
                     {
-                        Module->Modify();
-                        Module->SetEnabledState(bOn ? ENodeEnabledState::Enabled : ENodeEnabledState::Disabled, false);
-                        Module->MarkNodeRequiresSynchronization(TEXT("Module enabled state changed"), true);
+                        Switches.Emplace(Module, bOn);
                         ++Matched;
                     }
                 }
@@ -244,6 +239,13 @@ static bool SetEmitterProperties(FActionContext& Context)
     {
         Context.SendError(FString::Printf(TEXT("No module named %s on emitter '%s' (or its value is not a boolean); get_niagara_info lists each emitter's modules."), *FString::Join(Missing, TEXT(", ")), *Context.EmitterName), TEXT("MODULE_NOT_FOUND"));
         return true;
+    }
+    // Switched only once every name matched: a refusal left the ones found switched, uncompiled and clean.
+    for (const TPair<UNiagaraNodeFunctionCall*, bool>& Switch : Switches)
+    {
+        Switch.Key->Modify();
+        Switch.Key->SetEnabledState(Switch.Value ? ENodeEnabledState::Enabled : ENodeEnabledState::Disabled, false);
+        Switch.Key->MarkNodeRequiresSynchronization(TEXT("Module enabled state changed"), true);
     }
     if (bHasEnabled)
     {

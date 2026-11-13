@@ -152,6 +152,20 @@ FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSys
 // only the entries that need the emitter).
 FNiagaraEmitterHandle* FindTargetEmitter(FActionContext& Context, UNiagaraSystem* System, FString& OutError);
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle);
+// The emitter a stack edit changes: the system, the handle, the handle's emitter object and data and, from 5.1, the
+// version. Filled by LoadEmitterTarget, false after its refusal: LoadSystemAndEmitter's, or UNSUPPORTED_EMITTER for
+// a handle without them (a lightweight emitter).
+struct FEmitterTarget
+{
+    UNiagaraSystem* System = nullptr;
+    FNiagaraEmitterHandle* Handle = nullptr;
+    UNiagaraEmitter* Emitter = nullptr;
+    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = nullptr;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    FVersionedNiagaraEmitter VersionedEmitter;
+#endif
+};
+bool LoadEmitterTarget(FActionContext& Context, FEmitterTarget& Target);
 void MarkDirtyAndVerify(FActionContext& Context, UObject* Object);
 UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
     FNiagaraEmitterHandle* Handle,
@@ -168,7 +182,10 @@ TSharedPtr<FJsonValue> ReadNiagaraValue(const FNiagaraParameterStore& Store, con
 // With actorName, puts the placed effect's own user parameter values (and the ones it overrides) under placed; false
 // after replying ACTOR_NOT_FOUND or COMPONENT_NOT_FOUND. Without actorName it does nothing and returns true.
 bool AddPlacedUserParameters(FActionContext& Context, UNiagaraSystem* System);
-FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
+// ParamType (Float, Int, Bool, Vector or Color) as a Niagara type in OutType; false after refusing any other name.
+bool ResolveNiagaraTypeOrRefuse(FActionContext& Context, const FString& ParamType, FNiagaraTypeDefinition& OutType);
+// False after refusing NAME_TAKEN when the system already has a user parameter of that name, of any type.
+bool UserParameterNameFree(FActionContext& Context, UNiagaraSystem* System, const FString& ParamName);
 // Every script whose rapid-iteration store holds module inputs: the system spawn/update scripts
 // (emitter-stage modules are mirrored there) plus each emitter's own scripts.
 inline TArray<UNiagaraScript*> GatherModuleInputScripts(UNiagaraSystem* System)

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "223c3d5187411333",
+  "catalogRevision": "5d448e19b36a6c4e",
   "recordCount": 489,
   "records": [
     {
@@ -76418,7 +76418,7 @@
           "audio spectrum",
           "audio reactive particles"
         ],
-        "summary": "Add a data interface to a Niagara emitter: static mesh, skeletal mesh, spline, collision query, audio spectrum.",
+        "summary": "Add a data interface to a Niagara system, as a user parameter: static mesh, skeletal mesh, spline, collision query, audio spectrum.",
         "whenToUse": [
           "interfaceKind=static_mesh: Read static mesh data.",
           "interfaceKind=skeletal_mesh: Read skeletal mesh data.",
@@ -76439,10 +76439,6 @@
               "type": "string",
               "description": "Canonical /Game Niagara System asset path."
             },
-            "emitterName": {
-              "type": "string",
-              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
-            },
             "parameterName": {
               "type": "string",
               "description": "Niagara parameter name."
@@ -76460,7 +76456,7 @@
                 "collision_query",
                 "audio_spectrum"
               ],
-              "description": "Which add niagara data interface variant to run.\nstatic_mesh: Add a Static Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_StaticMeshDataInterface), for modules to sample a static mesh's surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nskeletal_mesh: Add a Skeletal Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_SkeletalMeshDataInterface), for modules to sample a skeletal mesh's bones and surface; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nspline: Add a Spline data interface as a user parameter of the system, User.<parameterName> (default MCP_SplineDataInterface), for modules to sample positions along a spline; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\ncollision_query: Add a Collision Query data interface as a user parameter of the system, User.<parameterName> (default MCP_CollisionQueryDataInterface), for modules to trace against the world; emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\naudio_spectrum: Add an Audio Spectrum data interface as a user parameter of the system, User.<parameterName> (default MCP_AudioSpectrumDataInterface), for modules to read the spectrum of playing audio (audio-reactive particles); emitterName must name an emitter of the system. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved)."
+              "description": "Which add niagara data interface variant to run.\nstatic_mesh: Add a Static Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_StaticMeshDataInterface), for modules to sample a static mesh's surface. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nskeletal_mesh: Add a Skeletal Mesh data interface as a user parameter of the system, User.<parameterName> (default MCP_SkeletalMeshDataInterface), for modules to sample a skeletal mesh's bones and surface. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\nspline: Add a Spline data interface as a user parameter of the system, User.<parameterName> (default MCP_SplineDataInterface), for modules to sample positions along a spline. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\ncollision_query: Add a Collision Query data interface as a user parameter of the system, User.<parameterName> (default MCP_CollisionQueryDataInterface), for modules to trace against the world. A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved).\naudio_spectrum: Add an Audio Spectrum data interface as a user parameter of the system, User.<parameterName> (default MCP_AudioSpectrumDataInterface), for modules to read the spectrum of playing audio (audio-reactive particles). A parameterName the system already has is NAME_TAKEN, nothing changed. Saved unless save is false (saved)."
             }
           },
           "required": [
@@ -76495,11 +76491,10 @@
       },
       "examples": [
         {
-          "title": "Add a data interface to a Niagara emitter: static mesh, skeletal mesh, spline, collision query, audio spectrum.",
+          "title": "Add a data interface to a Niagara system, as a user parameter: static mesh, skeletal mesh, spline, collision query, audio spectrum.",
           "input": {
             "action": "add_niagara_data_interface",
             "systemPath": "/Game/NS_Fire",
-            "emitterName": "Spark",
             "parameterName": "StaticDI",
             "interfaceKind": "static_mesh"
           },
@@ -76547,8 +76542,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "09c1b3de4e0c5897fb6587d339c42765514f03a33f10acef35dc23e3f073dcf6",
-        "content": "6c59b6aad9bf8c275f6740fb8c4aaa028ece576519fe8add4732d43d5b87213b"
+        "schema": "1c7f75e16387a42faa4e809158f147bd9ef4962e47687d46e15caeea3164f71f",
+        "content": "a860215c7ee6c137fd88c01e5fb31e1c88e6681ad80cbd1411e3dd93f74e975c"
       }
     },
     {
@@ -76781,7 +76776,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "modulePath": {
               "type": "string",
@@ -76789,7 +76784,7 @@
             },
             "scriptType": {
               "type": "string",
-              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
+              "description": "Which script the graph edit works in: Spawn (default) or Update; any other word is refused. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "save": {
               "type": "boolean",
@@ -77073,8 +77068,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "283df00719fc6373ace0fcaa1b41ce14acca621563626b3bb43538ea4609367e",
-        "content": "8f35e1045f7dd2fdf4940efc0fcd78f0ae19430e1a761ca800040c2ccc3f042a"
+        "schema": "8c02093bca66ec8b56f73f8de444bb8687b3528ec5751bec6ba5d4d4778e8acc",
+        "content": "5a520076dc7eb57d3cd251029b2c238e181e783c347de24b77867b1f869a8a56"
       }
     },
     {
@@ -78390,7 +78385,7 @@
             },
             "parameterType": {
               "type": "string",
-              "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
+              "description": "Niagara parameter type: Float (the default), Int, Bool, Vector or Color; any other name is refused."
             },
             "sourceBinding": {
               "type": "string",
@@ -78469,7 +78464,7 @@
             },
             "scriptType": {
               "type": "string",
-              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
+              "description": "Which script the graph edit works in: Spawn (default) or Update; any other word is refused. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "fromNode": {
               "type": "string",
@@ -78538,7 +78533,7 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "userParametersAdded": {
               "type": "array",
@@ -78814,8 +78809,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "da99fa49a032f0fb6566d807e8591f3d71ebac8c97a38eaa72616ea6ebca28d3",
-        "content": "9158424b3e7a5a455fae72c9712fb87f8bed8da77ddefdb984001131a1dd1e8e"
+        "schema": "2e21962508bd592ea6e779785480165874a247cd663a7d6d98bfeda003e47831",
+        "content": "f59299d05869ba17a54e2a8a860559b6173d6a9fd1110d7f232c64789cfc2691"
       }
     },
     {
@@ -79210,11 +79205,11 @@
             },
             "emitterName": {
               "type": "string",
-              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, data interface, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
+              "description": "Emitter within the system, by the name get_niagara_info lists. Module, renderer, event, parameter and simulation edits also read emitter, and with neither use the system's only emitter (a system with several refuses with EMITTER_NOT_FOUND, listing them); graph edits without one edit the system's own script."
             },
             "scriptType": {
               "type": "string",
-              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
+              "description": "Which script the graph edit works in: Spawn (default) or Update; any other word is refused. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "nodeId": {
               "type": "string",
@@ -79300,8 +79295,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6caa5272eeeab16dd1cdf0e87c327684ba0e8a2348d895c92376bdc5a5e6120f",
-        "content": "ecbde9e833817ea5c1f67da4e23250d79484cb9c64b800ae0c672f40158e44d6"
+        "schema": "54b8667896730bfe88488c39c9130ab8d75d67badffa0b146b86d27671ae987d",
+        "content": "7614d830b36335e7645ee7980845301980d420c140f5911b1de2154751cf24bc"
       }
     },
     {

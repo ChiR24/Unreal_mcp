@@ -107,9 +107,8 @@ static bool AddEventGenerator(FActionContext& Context)
 static bool AddEventReceiver(FActionContext& Context)
 {
     FString EventName;
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!RequireEventName(Context, EventName) || !LoadSystemAndEmitter(Context, System, Handle))
+    FEmitterTarget Target;
+    if (!RequireEventName(Context, EventName) || !LoadEmitterTarget(Context, Target))
     {
         return true;
     }
@@ -117,46 +116,38 @@ static bool AddEventReceiver(FActionContext& Context)
     const double EventSpawnCount = GetJsonNumberField(Context.Payload, TEXT("eventSpawnCount"), 1.0);
     bool bEventHandlerAdded = false;
     bool bEventGraphCreated = false;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    FVersionedNiagaraEmitter VersionedEmitter = Handle->GetInstance();
-    UNiagaraEmitter* Emitter = VersionedEmitter.Emitter;
-#else
-    UNiagaraEmitter* Emitter = Handle->GetInstance();
-#endif
-    if (Emitter)
+    UNiagaraEmitter* Emitter = Target.Emitter;
+    UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Target.Handle);
+    if (!ScriptSource || !ScriptSource->NodeGraph)
     {
-        UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Handle);
-        if (!ScriptSource || !ScriptSource->NodeGraph)
+        Context.SendError(TEXT("Emitter graph source is not initialized."), TEXT("NIAGARA_EMITTER_INIT_FAILED"));
+        return true;
+    }
+    Emitter->Modify();
+    FNiagaraEventScriptProperties EventProps;
+    EventProps.Script = NewObject<UNiagaraScript>(Emitter, MakeUniqueObjectName(Emitter, UNiagaraScript::StaticClass(), TEXT("MCPEventScript")), RF_Transactional);
+    if (EventProps.Script)
+    {
+        EventProps.Script->SetUsage(ENiagaraScriptUsage::ParticleEventScript);
+        EventProps.Script->SetUsageId(FGuid::NewGuid());
+        EventProps.Script->SetLatestSource(ScriptSource);
+        EventProps.SourceEventName = FName(*EventName);
+        EventProps.SpawnNumber = static_cast<uint32>(FMath::Max(0.0, EventSpawnCount));
+        EventProps.ExecutionMode = bSpawnOnEvent ? EScriptExecutionMode::SpawnedParticles : EScriptExecutionMode::EveryParticle;
+        bEventGraphCreated = EnsureScriptOutputGraph(ScriptSource, ENiagaraScriptUsage::ParticleEventScript, EventProps.Script->GetUsageId());
+        if (!bEventGraphCreated)
         {
-            Context.SendError(TEXT("Emitter graph source is not initialized."), TEXT("NIAGARA_EMITTER_INIT_FAILED"));
+            Context.SendError(TEXT("Failed to create Niagara event handler graph."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
             return true;
         }
-        Emitter->Modify();
-        FNiagaraEventScriptProperties EventProps;
-        EventProps.Script = NewObject<UNiagaraScript>(Emitter, MakeUniqueObjectName(Emitter, UNiagaraScript::StaticClass(), TEXT("MCPEventScript")), RF_Transactional);
-        if (EventProps.Script)
-        {
-            EventProps.Script->SetUsage(ENiagaraScriptUsage::ParticleEventScript);
-            EventProps.Script->SetUsageId(FGuid::NewGuid());
-            EventProps.Script->SetLatestSource(ScriptSource);
-            EventProps.SourceEventName = FName(*EventName);
-            EventProps.SpawnNumber = static_cast<uint32>(FMath::Max(0.0, EventSpawnCount));
-            EventProps.ExecutionMode = bSpawnOnEvent ? EScriptExecutionMode::SpawnedParticles : EScriptExecutionMode::EveryParticle;
-            bEventGraphCreated = EnsureScriptOutputGraph(ScriptSource, ENiagaraScriptUsage::ParticleEventScript, EventProps.Script->GetUsageId());
-            if (!bEventGraphCreated)
-            {
-                Context.SendError(TEXT("Failed to create Niagara event handler graph."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
-                return true;
-            }
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            Emitter->AddEventHandler(EventProps, VersionedEmitter.Version);
+        Emitter->AddEventHandler(EventProps, Target.VersionedEmitter.Version);
 #else
-            Emitter->AddEventHandler(EventProps);
+        Emitter->AddEventHandler(EventProps);
 #endif
-            bEventHandlerAdded = true;
-        }
+        bEventHandlerAdded = true;
     }
-    MarkDirtyAndVerify(Context, System);
+    MarkDirtyAndVerify(Context, Target.System);
     Context.Result->SetStringField(TEXT("eventName"), EventName);
     Context.Result->SetStringField(TEXT("eventType"), TEXT("Receiver"));
     Context.Result->SetBoolField(TEXT("spawnOnEvent"), bSpawnOnEvent);

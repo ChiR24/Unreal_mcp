@@ -16,7 +16,12 @@ static bool AddUserParameter(FActionContext& Context)
         Context.SendError(TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    System->GetExposedParameters().AddParameter(FNiagaraVariable(ResolveNiagaraTypeByName(ParamType), FName(*ParamName)), true);
+    FNiagaraTypeDefinition Type;
+    if (!ResolveNiagaraTypeOrRefuse(Context, ParamType, Type) || !UserParameterNameFree(Context, System, ParamName))
+    {
+        return true;
+    }
+    System->GetExposedParameters().AddParameter(FNiagaraVariable(Type, FName(*ParamName)), true);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("parameterName"), ParamName);
     Context.Result->SetStringField(TEXT("parameterType"), ParamType);
@@ -107,7 +112,11 @@ static bool BindParameterToSource(FActionContext& Context)
         return true;
     }
     FString InputName = ParamName;
-    FNiagaraTypeDefinition Type = ResolveNiagaraTypeByName(GetJsonStringField(Context.Payload, TEXT("parameterType"), TEXT("Float")));
+    FNiagaraTypeDefinition Type;
+    if (!ResolveNiagaraTypeOrRefuse(Context, GetJsonStringField(Context.Payload, TEXT("parameterType"), TEXT("Float")), Type))
+    {
+        return true;
+    }
     if (bModuleInput)
     {
         InputName = Input.GetName().ToString();

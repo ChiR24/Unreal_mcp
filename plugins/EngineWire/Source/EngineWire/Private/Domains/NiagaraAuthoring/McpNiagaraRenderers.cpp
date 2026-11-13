@@ -4,36 +4,8 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
-struct FRendererTarget
-{
-    UNiagaraSystem* System = nullptr;
-    MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = nullptr;
-    UNiagaraEmitter* Emitter = nullptr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    FVersionedNiagaraEmitter VersionedEmitter;
-#endif
-};
-
-static bool LoadRendererTarget(FActionContext& Context, FRendererTarget& Target)
-{
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, Target.System, Handle))
-    {
-        return false;
-    }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Target.EmitterData = Handle->GetEmitterData();
-    Target.VersionedEmitter = Handle->GetInstance();
-    Target.Emitter = Target.VersionedEmitter.Emitter;
-#else
-    Target.EmitterData = Handle->GetInstance();
-    Target.Emitter = Handle->GetInstance();
-#endif
-    return Target.EmitterData && Target.Emitter;
-}
-
 template <typename TRenderer>
-static TRenderer* FindOrCreateRenderer(FRendererTarget& Target, bool& bOutCreated)
+static TRenderer* FindOrCreateRenderer(FEmitterTarget& Target, bool& bOutCreated)
 {
     bOutCreated = false;
     for (UNiagaraRendererProperties* Renderer : Target.EmitterData->GetRenderers())
@@ -61,8 +33,8 @@ static TRenderer* FindOrCreateRenderer(FRendererTarget& Target, bool& bOutCreate
 template <typename TRenderer, typename TConfigure>
 static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure Configure)
 {
-    FRendererTarget Target;
-    if (!LoadRendererTarget(Context, Target))
+    FEmitterTarget Target;
+    if (!LoadEmitterTarget(Context, Target))
     {
         return true;
     }

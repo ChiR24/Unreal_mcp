@@ -4,20 +4,18 @@ namespace McpNiagaraAuthoringHandlers
 {
 // One data interface as a user parameter of the system (User.<parameterName>). Every DI but the static-mesh one used
 // to reply success with dataInterfaceAdded false; a second one under a taken name was built by NewObject over the
-// first (same outer, same name), replacing an object the system still used.
+// first (same outer, same name), replacing an object the system still used. No emitter is read: one used to be
+// resolved, and a system with several refused a call that sent no emitterName.
 static bool AddDataInterface(FActionContext& Context, const TCHAR* Label, UClass* DataInterfaceClass)
 {
-    UNiagaraSystem* System = nullptr;
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
+    UNiagaraSystem* System = LoadSystemOrError(Context);
+    if (!System)
     {
         return true;
     }
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), FString::Printf(TEXT("MCP_%sDataInterface"), Label));
-    if (FindUserParameter(System, ParamName))
+    if (!UserParameterNameFree(Context, System, ParamName))
     {
-        Context.SendError(FString::Printf(TEXT("%s already has a user parameter '%s'; pick another parameterName. Nothing was changed."),
-            *System->GetName(), *ParamName), TEXT("NAME_TAKEN"));
         return true;
     }
     if (!AddDataInterfaceUserParameter(System, ParamName, DataInterfaceClass))

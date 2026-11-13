@@ -54,6 +54,28 @@ UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle)
     return EmitterData ? Cast<UNiagaraScriptSource>(EmitterData->GraphSource) : nullptr;
 }
 
+bool LoadEmitterTarget(FActionContext& Context, FEmitterTarget& Target)
+{
+    if (!LoadSystemAndEmitter(Context, Target.System, Target.Handle))
+    {
+        return false;
+    }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+    Target.VersionedEmitter = Target.Handle->GetInstance();
+    Target.Emitter = Target.VersionedEmitter.Emitter;
+#else
+    Target.Emitter = Target.Handle->GetInstance();
+#endif
+    Target.EmitterData = MCP_GET_EMITTER_DATA(*Target.Handle);
+    if (!Target.Emitter || !Target.EmitterData)
+    {
+        Context.SendError(FString::Printf(TEXT("Emitter '%s' has no emitter data to edit (a lightweight emitter has none). Nothing was changed."),
+            *Context.EmitterName), TEXT("UNSUPPORTED_EMITTER"));
+        return false;
+    }
+    return true;
+}
+
 bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptUsage ScriptUsage, FGuid ScriptUsageId)
 {
     if (!ScriptSource || !ScriptSource->NodeGraph)
