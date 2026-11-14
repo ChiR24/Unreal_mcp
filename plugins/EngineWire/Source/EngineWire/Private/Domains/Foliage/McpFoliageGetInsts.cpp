@@ -19,13 +19,13 @@ bool UEngineWireSubsystem::HandleGetFoliageInstances(
   const int32 Limit = Payload->TryGetNumberField(TEXT("limit"), LimitValue) && LimitValue >= 0.0
       ? static_cast<int32>(LimitValue) : MAX_int32;
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
+  if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
-  UWorld *World = GEditor->GetEditorWorldContext().World();
   const TArray<AInstancedFoliageActor *> FoliageActors = McpFoliageHandlers::AllFoliageActors(World);
   UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
       ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn);

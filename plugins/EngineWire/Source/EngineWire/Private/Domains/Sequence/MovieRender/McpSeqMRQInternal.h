@@ -13,6 +13,9 @@ class UMoviePipelineOutputSetting;
 #include "String/LexFromString.h"
 
 namespace McpSequenceMovieRender {
+// The UserData prefix that marks a render job this plugin made, before its id.
+inline const TCHAR *const RenderJobIdPrefix = TEXT("mcp.renderJobId=");
+
 // Payload.settings.<Name> as an int.
 inline bool TryGetSettingsInt(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Name, int32 &Out) {
   const TSharedPtr<FJsonObject> *Settings = nullptr;

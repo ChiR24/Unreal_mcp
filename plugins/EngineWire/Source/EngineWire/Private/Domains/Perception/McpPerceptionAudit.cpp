@@ -8,7 +8,9 @@
 
 #include "Algo/Find.h"
 #include "Domains/Inspect/View/McpInspectViewIds.h"
-#include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
 #include "Editor.h"
 #include "EditorViewportClient.h"
 #include "Foundation/McpScreenshotResample.h"
@@ -74,7 +76,7 @@ bool HandleAuditMaterials(UEngineWireSubsystem& Bridge, const FString& RequestId
     }
     if (Checks.Contains(TEXT("instancing")))
     {
-        const TSharedPtr<FJsonObject> Instancing = InstancingGroups(GEditor->GetEditorWorldContext().World());
+        const TSharedPtr<FJsonObject> Instancing = InstancingGroups(McpHandlerUtils::GetEditorWorld());
         Result->SetObjectField(TEXT("instancing"), Instancing);
         const TArray<TSharedPtr<FJsonValue>>* Groups = nullptr;
         Said.Add(FString::Printf(TEXT("%d group(s) of repeated meshes to instance"), Instancing->TryGetArrayField(TEXT("groups"), Groups) ? Groups->Num() : 0));

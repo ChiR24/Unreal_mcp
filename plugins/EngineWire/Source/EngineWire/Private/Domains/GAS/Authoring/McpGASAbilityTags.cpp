@@ -54,14 +54,10 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     TArray<TPair<FString, FGameplayTag>> AssetTagWrites;
     TArray<FReflectionTagWrite> ReflectionWrites;
 
-    auto ResolveArray = [&](const TCHAR* Primary, const TCHAR* SingularAlias, const FName& ContainerProp)
+    auto ResolveArray = [&](const TCHAR* Field, const FName& ContainerProp)
     {
         const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
-        if (!Payload->TryGetArrayField(Primary, Arr) && SingularAlias != nullptr)
-        {
-            Payload->TryGetArrayField(SingularAlias, Arr);
-        }
-        if (!Arr)
+        if (!Payload->TryGetArrayField(Field, Arr) || !Arr)
         {
             return;
         }
@@ -88,12 +84,11 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
         }
     };
 
-    ResolveArray(TEXT("abilityTags"), nullptr, NAME_None);
-    // The declared singular spellings win; the plural is only a legacy fallback.
-    ResolveArray(TEXT("cancelAbilitiesWithTag"), TEXT("cancelAbilitiesWithTags"), FName(TEXT("CancelAbilitiesWithTag")));
-    ResolveArray(TEXT("blockAbilitiesWithTag"), TEXT("blockAbilitiesWithTags"), FName(TEXT("BlockAbilitiesWithTag")));
-    ResolveArray(TEXT("activationRequiredTags"), nullptr, FName(TEXT("ActivationRequiredTags")));
-    ResolveArray(TEXT("activationBlockedTags"), nullptr, FName(TEXT("ActivationBlockedTags")));
+    ResolveArray(TEXT("abilityTags"), NAME_None);
+    ResolveArray(TEXT("cancelAbilitiesWithTag"), FName(TEXT("CancelAbilitiesWithTag")));
+    ResolveArray(TEXT("blockAbilitiesWithTag"), FName(TEXT("BlockAbilitiesWithTag")));
+    ResolveArray(TEXT("activationRequiredTags"), FName(TEXT("ActivationRequiredTags")));
+    ResolveArray(TEXT("activationBlockedTags"), FName(TEXT("ActivationBlockedTags")));
 
     if (TagsUnresolved.Num() > 0)
     {

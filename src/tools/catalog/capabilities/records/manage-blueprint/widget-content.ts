@@ -107,7 +107,7 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_margin',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.',
+    summary: 'Set the margin on a widget: the padding of its parent slot, for every slot that carries one (Horizontal Box, Vertical Box, Overlay, Border, Scroll Box, Size Box, Scale Box, Uniform Grid and more), and a Border widget\'s own content padding. A side left out is 0.',
     whenToUse: ['A widget needs spacing applied through its parent slot.'],
     whenNotToUse: ['The parent slot carries no margin, as a Canvas Panel slot (INVALID_SLOT): position it with set_widget_layout instead.'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, left: P.left, top: P.top, right: P.right, bottom: P.bottom },

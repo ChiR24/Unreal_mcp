@@ -1,25 +1,10 @@
 #include "Domains/NiagaraGraph/McpNiagaraGraphPrivate.h"
-
-#include "NiagaraNode.h"
+#include "Domains/NiagaraGraph/McpNiagaraModuleOrder.h"
 
 namespace McpNiagaraGraphHandlers
 {
 namespace
 {
-UEdGraphPin* FindParameterMapPin(
-    UNiagaraNode* Node,
-    EEdGraphPinDirection Direction)
-{
-    for (UEdGraphPin* Pin : Node->Pins)
-    {
-        if (Pin && Pin->Direction == Direction && Node->IsParameterMapPin(Pin))
-        {
-            return Pin;
-        }
-    }
-    return nullptr;
-}
-
 void RestoreModuleLinks(
     UEdGraphPin* PreviousOutputPin,
     UEdGraphPin* ModuleInputPin,
@@ -43,21 +28,8 @@ bool RemoveNiagaraGraphNodeSafely(
         return false;
     }
 
-    UNiagaraNode* NiagaraNode = Cast<UNiagaraNode>(TargetNode);
-    if (!NiagaraNode)
-    {
-        if (!TargetGraph->RemoveNode(TargetNode))
-        {
-            OutError = TEXT("Failed to remove Niagara graph node.");
-            return false;
-        }
-        return true;
-    }
-
-    UEdGraphPin* ModuleInputPin =
-        FindParameterMapPin(NiagaraNode, EGPD_Input);
-    UEdGraphPin* ModuleOutputPin =
-        FindParameterMapPin(NiagaraNode, EGPD_Output);
+    UEdGraphPin* ModuleInputPin = McpNiagaraModuleOrder::MapInputPin(*TargetNode);
+    UEdGraphPin* ModuleOutputPin = McpNiagaraModuleOrder::MapInputPin(*TargetNode, EGPD_Output);
     if (!ModuleInputPin && !ModuleOutputPin)
     {
         if (!TargetGraph->RemoveNode(TargetNode))

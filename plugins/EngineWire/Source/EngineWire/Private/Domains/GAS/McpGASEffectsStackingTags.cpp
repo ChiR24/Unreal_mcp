@@ -63,9 +63,9 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
         EffectCDO->StackDurationRefreshPolicy = NewRefresh;
         EffectCDO->StackPeriodResetPolicy = NewReset;
         EffectCDO->StackExpirationPolicy = NewExpiration;
-        // The declared stackLimitCount wins; an omitted limit leaves the current one (it used to reset to 1).
+        // An omitted stackLimitCount leaves the current limit (it used to reset to 1).
         double StackLimitValue = 0.0;
-        if (Payload->TryGetNumberField(TEXT("stackLimitCount"), StackLimitValue) || Payload->TryGetNumberField(TEXT("stackLimit"), StackLimitValue))
+        if (Payload->TryGetNumberField(TEXT("stackLimitCount"), StackLimitValue))
         {
             EffectCDO->StackLimitCount = FMath::Max(0, static_cast<int32>(StackLimitValue));
         }

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "17a0fba95a4f9923",
+  "catalogRevision": "5651c2f8c81ac6bc",
   "recordCount": 489,
   "records": [
     {
@@ -27670,7 +27670,7 @@
                 "font",
                 "margin"
               ],
-              "description": "Which set font variant to run; omit for 'font'.\nfont: Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.\nmargin: Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.",
+              "description": "Which set font variant to run; omit for 'font'.\nfont: Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.\nmargin: Set the margin on a widget: the padding of its parent slot, for every slot that carries one (Horizontal Box, Vertical Box, Overlay, Border, Scroll Box, Size Box, Scale Box, Uniform Grid and more), and a Border widget's own content padding. A side left out is 0.",
               "default": "font"
             }
           },
@@ -27814,8 +27814,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "21c9d1e9202ceb9b6266eef6872000adcd3c8643f6157c2ccfeb95736bb9e037",
-        "content": "36a136ced295eabe8280bac5fcecee862bfefd7c0c872a7b38a011a6f59854e3"
+        "schema": "d2fe5c6988b8e1c9b189d9aa815427417b3956166b28bdce101964f55ee50369",
+        "content": "900a9eab613f05e390092e11ed212a1962bd441d933e07e53cc82580e8bf6de8"
       }
     },
     {
@@ -110682,7 +110682,7 @@
             },
             "renderJobName": {
               "type": "string",
-              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
+              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId; with neither, the queue's last job)."
             },
             "antiAliasingMethod": {
               "type": "string",
@@ -110971,8 +110971,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c894163ba476bb75429689327928e4bfe96b58c71873e83fb6a81361d60eb4d3",
-        "content": "301d916f8ea76d0627ab759b47cc4dffd8fb865f1ab6e89ff8e957abdec314ec"
+        "schema": "6914ff4f0cc2da13182886549488914792dd44adec3797925b549dac0726b58d",
+        "content": "17b4944447d8b43afd828fed3ecb90b0191ce75028ddbd249888bffcd66004d6"
       }
     },
     {
@@ -111071,7 +111071,7 @@
             },
             "renderJobName": {
               "type": "string",
-              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
+              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId; with neither, the queue's last job)."
             },
             "jobName": {
               "type": "string",
@@ -111395,8 +111395,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "36ee2cf6833b1e40063aee08e7ad1949b29236d11766ef92f944c570590ddce4",
-        "content": "b3e5225908975205691dfe355fac236def3510e06b7bf30a0685466c7574081d"
+        "schema": "bc6a74ee888f768a501c1acbf87e9c71e9f4729dd010646d39fd8cda47f01181",
+        "content": "06a68c1980d754e1c944acbc5548dc0548bba384009b25734ba57ae6d9557feb"
       }
     },
     {

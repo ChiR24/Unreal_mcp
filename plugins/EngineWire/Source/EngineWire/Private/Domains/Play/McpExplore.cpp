@@ -13,7 +13,6 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/Solvers/McpPratt.h"
 #include "Foundation/Viewport/McpEditorScreenshotSupport.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -24,7 +23,6 @@ namespace McpExplore
 {
 namespace ExploreParts
 {
-constexpr int32 MaxTrack = 16;
 constexpr int32 NavSamples = 64;
 TSharedPtr<FSession> GSession; // one at a time: a second would steer the same pawn
 bool GRunning = false;
@@ -101,19 +99,12 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         APawn* Pawn = McpPlaySession::ResolvePawn(World, GetJsonStringField(Payload, TEXT("actorName")));
         if (!Pawn || !Pawn->GetController())
         {
-            return Refuse(TEXT("NO_PAWN"), TEXT("No controlled pawn to drive: the player has none, or actorName names no pawn with a controller."));
+            return Refuse(TEXT("NO_PAWN"), McpPlaySession::NoPawnMessage);
         }
-        for (const FString& Text : McpHandlerUtils::GetStringArrayField(Payload, TEXT("track")))
+        FString TrackError;
+        if (!McpPlaySession::ParseAssertions(Payload, TEXT("track"), Fresh->Track, Fresh->TrackTexts, TrackError))
         {
-            TSharedPtr<McpPratt::FNode> Root;
-            FString Why;
-            if (Fresh->Track.Num() >= MaxTrack || !McpPratt::Parse(Text, Root, Why))
-            {
-                return Refuse(TEXT("INVALID_ARGUMENT"), Fresh->Track.Num() >= MaxTrack ? FString::Printf(TEXT("track takes %d texts at most."), MaxTrack)
-                                                                                         : FString::Printf(TEXT("track '%s': %s"), *Text, *Why));
-            }
-            Fresh->Track.Add(Root);
-            Fresh->TrackTexts.Add(Text);
+            return Refuse(TEXT("INVALID_ARGUMENT"), TrackError);
         }
         Fresh->Game = World->GetGameInstance();
         Fresh->Pawn = Pawn;

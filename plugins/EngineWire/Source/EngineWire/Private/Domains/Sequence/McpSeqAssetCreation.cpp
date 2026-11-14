@@ -17,12 +17,10 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
     return true;
   }
 
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString Name;
-  LocalPayload->TryGetStringField(TEXT("name"), Name);
+  Payload->TryGetStringField(TEXT("name"), Name);
   FString Path;
-  LocalPayload->TryGetStringField(TEXT("path"), Path);
+  Payload->TryGetStringField(TEXT("path"), Path);
   FString Folder = Path.IsEmpty() ? TEXT("/Game") : Path;
   McpAssetPathCanonical::MapContentRootInline(Folder);
   // Without a name, a path that is no folder names the sequence itself, the way every other sequence action reads path.
@@ -92,15 +90,13 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
 bool UEngineWireSubsystem::HandleSequenceOpen(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  TSharedPtr<FJsonObject> LocalPayload =
-      Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   UMovieScene *MovieScene = nullptr;
-  ULevelSequence *Sequence = McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("open"), MovieScene);
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("open"), MovieScene);
   if (!Sequence) {
     return true;
   }
   // Any asset at the path was opened in its own editor, and an editor that did not open still answered "opened".
-  UAssetEditorSubsystem *AssetEditorSS = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+  UAssetEditorSubsystem *AssetEditorSS = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
   if (!AssetEditorSS || !AssetEditorSS->OpenEditorForAsset(Sequence)) {
     SendAutomationError(Socket, RequestId, TEXT("Sequencer did not open for this sequence"),
                         TEXT("EDITOR_NOT_OPEN"));

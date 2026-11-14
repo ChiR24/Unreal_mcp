@@ -76,24 +76,10 @@ bool HandleGetNavigationInfo(
             NavInfo->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
             NavInfo->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
             NavInfo->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-            const FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-            NavInfo->SetNumberField(TEXT("cellSize"), DefaultParams.CellSize);
-            NavInfo->SetNumberField(TEXT("cellHeight"), DefaultParams.CellHeight);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-            NavInfo->SetNumberField(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
-#else
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            NavInfo->SetNumberField(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-#else
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            NavInfo->SetNumberField(TEXT("cellSize"), NavMesh->CellSize);
-            NavInfo->SetNumberField(TEXT("cellHeight"), NavMesh->CellHeight);
-            NavInfo->SetNumberField(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
+            const FNavMeshResolution Resolution = McpNavMeshResolution(NavMesh);
+            NavInfo->SetNumberField(TEXT("cellSize"), Resolution.CellSize);
+            NavInfo->SetNumberField(TEXT("cellHeight"), Resolution.CellHeight);
+            NavInfo->SetNumberField(TEXT("agentStepHeight"), Resolution.AgentMaxStepHeight);
         }
         NavInfo->SetBoolField(TEXT("isNavigationBuildInProgress"), NavSys->IsNavigationBuildInProgress());
     }

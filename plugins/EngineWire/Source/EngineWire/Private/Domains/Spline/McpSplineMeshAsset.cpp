@@ -87,7 +87,8 @@ bool HandleConfigureSplineMeshAxis(
         return true;
     }
 
-    TargetComp->Modify();
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Spline Mesh Axis")), EMcpMutationDurability::EditorStateOnly,
+                                            {TargetComp});
     TargetComp->SetForwardAxis(Axis);
     Actor->MarkPackageDirty();
 

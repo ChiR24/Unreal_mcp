@@ -153,12 +153,15 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
     ParameterType = TEXT("color");
   }
   FGuid ComponentGuid;
-  UPrimitiveComponent *Component = ResolveMaterialComponent(
-      Sequence, Guid, GetString(Params, TEXT("componentName")), ComponentGuid);
+  const FString ComponentName = GetString(Params, TEXT("componentName"));
+  UPrimitiveComponent *Component = ResolveMaterialComponent(Sequence, Guid, ComponentName, ComponentGuid);
   if (!Component) {
     OutResult = MakeResult(
         false, TEXT("add_material_parameter_track"),
-        TEXT("bindingGuid must resolve to an actor or primitive component"),
+        ComponentName.IsEmpty()
+            ? FString(TEXT("bindingGuid must resolve to an actor or primitive component"))
+            : FString::Printf(TEXT("bindingGuid must resolve to an actor or primitive component named '%s'"),
+                              *ComponentName),
         TEXT("MATERIAL_COMPONENT_REQUIRED"));
     return true;
   }

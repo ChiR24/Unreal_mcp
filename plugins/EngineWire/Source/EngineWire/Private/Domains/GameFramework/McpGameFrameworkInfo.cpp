@@ -9,21 +9,16 @@ static FString ClassPathOrNone(const UClass* Class)
     return Class ? Class->GetPathName() : FString(TEXT("None"));
 }
 
-static void AddGeneratedClassProperty(UClass* Class, UObject* CDO, const FName& PropertyName, const FString& ResponseName, TSharedPtr<FJsonObject>& InfoObj)
+// The class slots of the game mode whose class default CDO is, each under its payload field's name.
+static void AddGameModeDefaults(const UObject* CDO, TSharedPtr<FJsonObject>& InfoObj)
 {
-    FClassProperty* Property = CastField<FClassProperty>(Class->FindPropertyByName(PropertyName));
-    if (!Property) return;
-
-    InfoObj->SetStringField(ResponseName, ClassPathOrNone(Cast<UClass>(Property->GetPropertyValue_InContainer(CDO))));
-}
-
-static void AddGameModeDefaults(const AGameModeBase* CDO, TSharedPtr<FJsonObject>& InfoObj)
-{
-    InfoObj->SetStringField(TEXT("defaultPawnClass"), ClassPathOrNone(CDO->DefaultPawnClass.Get()));
-    InfoObj->SetStringField(TEXT("playerControllerClass"), ClassPathOrNone(CDO->PlayerControllerClass.Get()));
-    InfoObj->SetStringField(TEXT("gameStateClass"), ClassPathOrNone(CDO->GameStateClass.Get()));
-    InfoObj->SetStringField(TEXT("playerStateClass"), ClassPathOrNone(CDO->PlayerStateClass.Get()));
-    InfoObj->SetStringField(TEXT("hudClass"), ClassPathOrNone(CDO->HUDClass.Get()));
+    for (const FGameModeClassSlot& Slot : GameModeClassSlots)
+    {
+        if (const FClassProperty* Property = CastField<FClassProperty>(CDO->GetClass()->FindPropertyByName(Slot.Property)))
+        {
+            InfoObj->SetStringField(Slot.Field, ClassPathOrNone(Cast<UClass>(Property->GetPropertyValue_InContainer(CDO))));
+        }
+    }
 }
 
 static bool AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& InfoObj)
@@ -34,11 +29,7 @@ static bool AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& I
     UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
     if (CDO)
     {
-        AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("DefaultPawnClass"), TEXT("defaultPawnClass"), InfoObj);
-        AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("PlayerControllerClass"), TEXT("playerControllerClass"), InfoObj);
-        AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("GameStateClass"), TEXT("gameStateClass"), InfoObj);
-        AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("PlayerStateClass"), TEXT("playerStateClass"), InfoObj);
-        AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("HUDClass"), TEXT("hudClass"), InfoObj);
+        AddGameModeDefaults(CDO, InfoObj);
     }
     InfoObj->SetStringField(TEXT("gameModeClass"), Blueprint->GeneratedClass->GetPathName());
     return true;

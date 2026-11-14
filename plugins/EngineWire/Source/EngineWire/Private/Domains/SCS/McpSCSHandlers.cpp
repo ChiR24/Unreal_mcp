@@ -104,7 +104,11 @@ TSharedPtr<FJsonObject> SCSFail(TSharedPtr<FJsonObject> Result, const FString &E
 
 UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Result, bool bRequireScs) {
   // Every SCS edit compiles the Blueprint, which during Play can take the editor down: only add refused it.
-  if (IsPlayInEditorActive()) {
+  bool bPlaying = GEditor->IsPlaySessionInProgress();
+  for (const FWorldContext &Context : GEngine->GetWorldContexts()) {
+    bPlaying = bPlaying || Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game;
+  }
+  if (bPlaying) {
     SCSFail(Result, TEXT("SCS operations cannot modify Blueprints during Play In Editor (PIE). Please stop the play "
                          "session first."), TEXT("PIE_ACTIVE"));
     return nullptr;
@@ -122,21 +126,6 @@ UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJso
     return nullptr;
   }
   return Blueprint;
-}
-
-bool IsPlayInEditorActive() {
-  if (GEditor->IsPlaySessionInProgress()) {
-    return true;
-  }
-  {
-    for (const FWorldContext &Context : GEngine->GetWorldContexts()) {
-      if (Context.WorldType == EWorldType::PIE ||
-          Context.WorldType == EWorldType::Game) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 FString GetSCSNodeName(const USCS_Node *Node) {
@@ -167,33 +156,6 @@ USCS_Node *SCSRootAliasNode(USimpleConstructionScript *SCS) {
     Node = SCS->GetDefaultSceneRootNode();
   }
   return Node && Node->GetSCS() == SCS ? Node : nullptr;
-}
-
-TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform) {
-  TSharedPtr<FJsonObject> TransformObj = MakeShared<FJsonObject>();
-  const FVector Loc = Transform.GetLocation();
-  const FRotator Rot = Transform.GetRotation().Rotator();
-  const FVector Scale = Transform.GetScale3D();
-
-  TArray<TSharedPtr<FJsonValue>> LocationArray;
-  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.X));
-  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.Y));
-  LocationArray.Add(MakeShared<FJsonValueNumber>(Loc.Z));
-  TransformObj->SetArrayField(TEXT("location"), LocationArray);
-
-  TArray<TSharedPtr<FJsonValue>> RotationArray;
-  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Pitch));
-  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Yaw));
-  RotationArray.Add(MakeShared<FJsonValueNumber>(Rot.Roll));
-  TransformObj->SetArrayField(TEXT("rotation"), RotationArray);
-
-  TArray<TSharedPtr<FJsonValue>> ScaleArray;
-  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.X));
-  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.Y));
-  ScaleArray.Add(MakeShared<FJsonValueNumber>(Scale.Z));
-  TransformObj->SetArrayField(TEXT("scale"), ScaleArray);
-
-  return TransformObj;
 }
 
 void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
@@ -244,8 +206,12 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
 
   if (USceneComponent *SceneComp =
           Cast<USceneComponent>(Node->ComponentTemplate)) {
-    Verification->SetObjectField(
-        TEXT("transform"), MakeTransformJson(SceneComp->GetRelativeTransform()));
+    const FTransform Relative = SceneComp->GetRelativeTransform();
+    TSharedPtr<FJsonObject> Transform = MakeShared<FJsonObject>();
+    Transform->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Relative.GetLocation()));
+    Transform->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(Relative.GetRotation().Rotator()));
+    Transform->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Relative.GetScale3D()));
+    Verification->SetObjectField(TEXT("transform"), Transform);
   }
 
   Result->SetObjectField(TEXT("scsVerification"), Verification);

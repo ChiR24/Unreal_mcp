@@ -28,13 +28,11 @@
 
 namespace McpSequenceMovieRender {
 namespace {
-const TCHAR *JobIdPrefix = TEXT("mcp.renderJobId=");
-
 FString GetJobId(UMoviePipelineExecutorJob *Job) {
   if (!Job)
     return FString();
-  return Job->UserData.StartsWith(JobIdPrefix)
-             ? Job->UserData.RightChop(FCString::Strlen(JobIdPrefix))
+  return Job->UserData.StartsWith(RenderJobIdPrefix)
+             ? Job->UserData.RightChop(FCString::Strlen(RenderJobIdPrefix))
              : FString();
 }
 
@@ -251,11 +249,9 @@ TSharedPtr<FJsonObject> BuildJobResult(UMoviePipelineExecutorJob *Job,
       // MRQ records only the non-realtime mixer (MoviePipelineWaveOutput's own check).
       if (FAudioThread::IsUsingThreadedAudio() &&
           !FParse::Param(FCommandLine::Get(), TEXT("DeterministicAudio"))) {
-        TArray<TSharedPtr<FJsonValue>> Warnings;
-        Warnings.Add(MakeShared<FJsonValueString>(
-            TEXT("No .wav will be written: MRQ records audio only when the editor runs "
-                 "with -DeterministicAudio.")));
-        Result->SetArrayField(TEXT("warnings"), Warnings);
+        McpHandlerUtils::AppendWarning(
+            Result, TEXT("No .wav will be written: MRQ records audio only when the editor runs "
+                         "with -DeterministicAudio."));
       }
     }
   }

@@ -63,19 +63,10 @@ bool HandleRemoveKeyframe(UEngineWireSubsystem *Subsystem,
                           const TSharedPtr<FJsonObject> &LocalPayload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("sequence_remove_keyframe requires a sequence path"),
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
-  UMovieScene *MovieScene = Sequence ? Sequence->GetMovieScene() : nullptr;
-  if (!MovieScene) {
-    Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                                   TEXT("Level sequence not found"),
-                                   TEXT("SEQUENCE_NOT_FOUND"));
+  UMovieScene *MovieScene = nullptr;
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(Subsystem, RequestId, RequestingSocket, LocalPayload,
+                                                      TEXT("sequence_remove_keyframe"), MovieScene);
+  if (!Sequence) {
     return true;
   }
 

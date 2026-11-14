@@ -3,6 +3,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -44,10 +45,12 @@ bool HandleConfigureMeshSpacing(
         return true;
     }
 
+    // SetSplineConfigValue Modify's the target, which records nothing with no transaction open.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Mesh Spacing")), EMcpMutationDurability::EditorStateOnly,
+                                            {Target});
     if (bHasSpacing) SetSplineConfigValue(Target, TEXT("meshSpacing"), FString::SanitizeFloat(Spacing));
     if (bHasUseOffset) SetSplineConfigValue(Target, TEXT("useRandomOffset"), BoolToSplineConfigString(GetJsonBoolField(Payload, TEXT("useRandomOffset"), false)));
     if (bHasOffsetRange) SetSplineConfigValue(Target, TEXT("randomOffsetRange"), FString::SanitizeFloat(RandomOffsetRange));
-    World->MarkPackageDirty();
 
     // What scatter_meshes_along_spline will now read for this target.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -106,12 +109,13 @@ bool HandleConfigureMeshRandomization(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Mesh Randomization")),
+                                            EMcpMutationDurability::EditorStateOnly, {Target});
     if (Payload->HasField(TEXT("randomizeScale"))) SetSplineConfigValue(Target, TEXT("randomizeScale"), BoolToSplineConfigString(GetJsonBoolField(Payload, TEXT("randomizeScale"), false)));
     if (Payload->HasField(TEXT("minScale"))) SetSplineConfigValue(Target, TEXT("minScale"), FString::SanitizeFloat(MinScale));
     if (Payload->HasField(TEXT("maxScale"))) SetSplineConfigValue(Target, TEXT("maxScale"), FString::SanitizeFloat(MaxScale));
     if (Payload->HasField(TEXT("randomizeRotation"))) SetSplineConfigValue(Target, TEXT("randomizeRotation"), BoolToSplineConfigString(GetJsonBoolField(Payload, TEXT("randomizeRotation"), false)));
     if (Payload->HasField(TEXT("rotationRange"))) SetSplineConfigValue(Target, TEXT("rotationRange"), FString::SanitizeFloat(RotationRange));
-    World->MarkPackageDirty();
 
     // What scatter_meshes_along_spline will now read for this target.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

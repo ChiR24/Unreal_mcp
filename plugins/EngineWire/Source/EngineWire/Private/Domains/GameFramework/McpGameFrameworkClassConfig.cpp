@@ -48,17 +48,13 @@ static int32 SetOptionalClassCounted(UBlueprint* Blueprint, const FActionContext
     return 1;
 }
 
-// Not static: McpGameFrameworkCreation.cpp links against
-// this helper so create_game_mode can apply the class overrides and report any
-// that failed to resolve instead of silently dropping them.
 int32 ApplyGameModeClassOverrides(FActionContext& Context, UBlueprint* Blueprint, FString& Error)
 {
     int32 Applied = 0;
-    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("defaultPawnClass"), TEXT("DefaultPawnClass"), Error);
-    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("playerControllerClass"), TEXT("PlayerControllerClass"), Error);
-    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("gameStateClass"), TEXT("GameStateClass"), Error);
-    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("playerStateClass"), TEXT("PlayerStateClass"), Error);
-    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("hudClass"), TEXT("HUDClass"), Error);
+    for (const FGameModeClassSlot& Slot : GameModeClassSlots)
+    {
+        Applied += SetOptionalClassCounted(Blueprint, Context, Slot.Field, Slot.Property, Error);
+    }
     return Applied;
 }
 

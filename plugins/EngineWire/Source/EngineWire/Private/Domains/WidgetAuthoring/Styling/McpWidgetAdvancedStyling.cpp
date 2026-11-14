@@ -4,13 +4,11 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
-#include "Components/HorizontalBoxSlot.h"
-#include "Components/OverlaySlot.h"
 #include "Components/EditableText.h"
 #include "Components/EditableTextBox.h"
+#include "Components/PanelSlot.h"
 #include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
-#include "Components/VerticalBoxSlot.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
@@ -200,22 +198,14 @@ bool HandleWidgetAuthoringAdvancedStyling(
         FMargin Margin(Left, Top, Right, Bottom);
         bool bMarginApplied = false;
 
-        // Apply margin based on slot type
+        // The slot's padding, by the reflection write set_padding makes, for every slot class that declares one.
         if (UPanelSlot* Slot = TargetWidget->Slot)
         {
-            if (UHorizontalBoxSlot* HBoxSlot = Cast<UHorizontalBoxSlot>(Slot))
+            if (FMargin* Padding = FindSlotPadding(Slot))
             {
-                HBoxSlot->SetPadding(Margin);
-                bMarginApplied = true;
-            }
-            else if (UVerticalBoxSlot* VBoxSlot = Cast<UVerticalBoxSlot>(Slot))
-            {
-                VBoxSlot->SetPadding(Margin);
-                bMarginApplied = true;
-            }
-            else if (UOverlaySlot* OvSlot = Cast<UOverlaySlot>(Slot))
-            {
-                OvSlot->SetPadding(Margin);
+                Slot->Modify();
+                *Padding = Margin;
+                Slot->SynchronizeProperties();
                 bMarginApplied = true;
             }
         }
@@ -230,7 +220,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
         if (!bMarginApplied)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget '%s' sits in a %s, which carries no margin; set_margin needs a HorizontalBox, VerticalBox, Overlay or Border slot"),
+                FString::Printf(TEXT("Widget '%s' sits in a %s, which carries no margin."),
                     *SlotName, TargetWidget->Slot ? *TargetWidget->Slot->GetClass()->GetName() : TEXT("detached slot")),
                 TEXT("INVALID_SLOT"));
             return true;

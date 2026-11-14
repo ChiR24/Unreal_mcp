@@ -42,7 +42,7 @@ export const P = {
   shotSequencePath: str('Canonical /Game shot sequence path.'),
   mapPath: str('Canonical /Game map path.'),
   jobId: str('Render job identifier.'),
-  renderJobName: str('Render job name: names a new job, or selects an existing job (alternative to jobId).'),
+  renderJobName: str('Render job name: names a new job, or selects an existing job (alternative to jobId; with neither, the queue\'s last job).'),
   outputDirectory: str('Output directory for rendered frames.'),
   fileNameFormat: str('Output file name format string.'),
   mrqResolution: str('Output resolution in WIDTHxHEIGHT format, such as 1920x1080.'),

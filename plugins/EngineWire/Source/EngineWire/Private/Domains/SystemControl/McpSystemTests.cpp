@@ -130,7 +130,7 @@ bool McpTickTestRun(UEngineWireSubsystem* Self, const FString& RequestId, FSyste
   }
   const FAutomationTestInfo& Test = Run.Tests[Run.Index];
   // Another runner (the Session Frontend) or a game started meanwhile: the framework would refuse or interleave.
-  const bool bBlocked = GIsAutomationTesting || (GEditor && GEditor->PlayWorld);
+  const bool bBlocked = GIsAutomationTesting || GEditor->PlayWorld;
   if (!bBlocked) {
     Self->SendProgressUpdate(RequestId, 100.0f * Run.Index / Run.Tests.Num(),
                              FString::Printf(TEXT("Running test %d of %d: %s"), Run.Index + 1, Run.Tests.Num(),
@@ -166,7 +166,7 @@ bool HandleRunTests(UEngineWireSubsystem* Self,
                               TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (GEditor && GEditor->PlayWorld) {
+  if (GEditor->PlayWorld) {
     Self->SendAutomationError(RequestingSocket, RequestId,
                               TEXT("Play In Editor is running, and the automation framework starts no test while "
                                    "a game runs: stop it (control_editor.stop) first."),

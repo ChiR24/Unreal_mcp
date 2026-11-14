@@ -168,17 +168,17 @@ bool HandleSetSplineType(
         return true;
     }
 
+    if (PointIndex >= SplineComp->GetNumberOfSplinePoints())
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Invalid point index: %d"), PointIndex), TEXT("INVALID_INDEX"));
+        return true;
+    }
     // It ran outside any transaction, so undo could not take a type change back.
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Spline Point Type")), EMcpMutationDurability::EditorStateOnly,
                                             {SplineComp});
     if (PointIndex >= 0)
     {
-        if (PointIndex >= SplineComp->GetNumberOfSplinePoints())
-        {
-            Self->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("Invalid point index: %d"), PointIndex), TEXT("INVALID_INDEX"));
-            return true;
-        }
         SplineComp->SetSplinePointType(PointIndex, PointType, true);
     }
     else

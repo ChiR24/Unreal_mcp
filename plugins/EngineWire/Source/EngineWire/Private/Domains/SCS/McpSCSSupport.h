@@ -15,7 +15,6 @@ TSharedPtr<FJsonObject> SCSFail(TSharedPtr<FJsonObject> Result, const FString &E
 // The Blueprint at BlueprintPath; null after marking Result PIE_ACTIVE during Play, ASSET_NOT_FOUND, or SCS_NOT_FOUND
 // when bRequireScs and it has no SimpleConstructionScript.
 UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Result, bool bRequireScs = true);
-bool IsPlayInEditorActive();
 FString GetSCSNodeName(const USCS_Node *Node);
 bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name);
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);
@@ -23,7 +22,6 @@ bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);
 // the Blueprint hierarchy, else the default scene root. Null when that root is not a node of this SCS (native or a
 // parent Blueprint's): a node at the top of the SCS is then its child.
 USCS_Node *SCSRootAliasNode(USimpleConstructionScript *SCS);
-TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform);
 void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
                             USimpleConstructionScript *SCS, USCS_Node *Node);
 bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,

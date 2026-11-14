@@ -117,6 +117,7 @@ static bool HandleCreateTemplateSpline(
 
     UWorld* World = McpHandlerUtils::GetEditorWorld();
 
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, FRotator::ZeroRotator);
     if (!SplineComp)
     {
@@ -161,7 +162,7 @@ static bool HandleCreateTemplateSpline(
     const int32 SegmentCount = bClosedLoop ? NumPoints : NumPoints - 1;
     for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
     {
-        USplineMeshComponent* SegmentComp = NewObject<USplineMeshComponent>(NewActor);
+        USplineMeshComponent* SegmentComp = NewObject<USplineMeshComponent>(NewActor, NAME_None, RF_Transactional);
         SegmentComp->SetMobility(EComponentMobility::Movable);
         SegmentComp->AttachToComponent(SplineComp, FAttachmentTransformRules::KeepRelativeTransform);
         SegmentComp->RegisterComponent();

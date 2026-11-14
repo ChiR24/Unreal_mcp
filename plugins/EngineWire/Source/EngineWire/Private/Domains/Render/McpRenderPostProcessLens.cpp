@@ -21,8 +21,9 @@ bool HandleRenderPostProcessLensAction(
     if (SubAction == TEXT("configure_screen_percentage"))
     {
         double ScreenPercentage = 100.0;
+        bool bSent = false;
         FString Error;
-        if (!ReadBoundedNumberField(Payload, TEXT("screenPercentage"), 100.0, 1.0, 200.0, ScreenPercentage, Error))
+        if (!ReadBoundedNumberSetting(Payload, TEXT("screenPercentage"), 1.0, 200.0, false, ScreenPercentage, bSent, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
             return true;

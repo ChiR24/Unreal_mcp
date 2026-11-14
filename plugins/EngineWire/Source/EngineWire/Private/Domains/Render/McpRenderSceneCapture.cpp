@@ -145,8 +145,12 @@ bool HandleRenderSceneCaptureAction(
     if (SubAction == TEXT("configure_capture_source"))
     {
         FString Error;
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Capture Source")),
+                                                EMcpMutationDurability::EditorStateOnly, {CaptureComponent});
         if (!ApplyCaptureSource(CaptureComponent, GetJsonStringField(Payload, TEXT("captureSource")), Error))
         {
+            // Refused before anything was written: the step goes.
+            Transaction.Cancel();
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
@@ -165,16 +169,20 @@ bool HandleRenderSceneCaptureAction(
             Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Render target not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Assign Render Target")),
+                                                EMcpMutationDurability::EditorStateOnly, {Capture2D});
         Capture2D->TextureTarget = Target;
     }
     else if (SubAction == TEXT("configure_capture_resolution"))
     {
         // No default: a call without resolution resized the render target to 512 and said it was asked for.
-        int32 Resolution = 0;
+        double Resolution = 0.0;
+        bool bSent = false;
         FString Error;
-        if (!ReadBoundedIntField(Payload, TEXT("resolution"), 0, 1, 4096, Resolution, Error))
+        if (!ReadBoundedNumberSetting(Payload, TEXT("resolution"), 1.0, 4096.0, true, Resolution, bSent, Error) || !bSent)
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                bSent ? Error : FString(TEXT("resolution must be a whole number between 1 and 4096")), TEXT("INVALID_ARGUMENT"));
             return true;
         }
         if (!Capture2D)
@@ -199,7 +207,7 @@ bool HandleRenderSceneCaptureAction(
         // The render target asset is what changes (every capture drawing into it), so it is what undo must restore.
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Resize Capture Target")),
                                                 EMcpMutationDurability::EditorStateOnly, {Capture2D->TextureTarget.Get()});
-        Capture2D->TextureTarget->ResizeTarget(Resolution, Resolution);
+        Capture2D->TextureTarget->ResizeTarget(static_cast<uint32>(Resolution), static_cast<uint32>(Resolution));
     }
     else if (SubAction == TEXT("capture_scene"))
     {

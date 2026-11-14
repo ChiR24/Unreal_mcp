@@ -202,7 +202,6 @@ bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, c
     Cast<UMaterial>(Target)->TwoSided = bTwoSided ? 1 : 0;
   }
   TSharedPtr<FJsonObject> Result = FinishPropertyEdit(RequestId, Payload, Target);
-  Result->SetStringField(TEXT("assetPath"), Path);
   Result->SetBoolField(TEXT("twoSided"), Target->IsTwoSided());
   Bridge->SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Two-sided set to %s."), bTwoSided ? TEXT("true") : TEXT("false")), Result);

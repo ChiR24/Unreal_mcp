@@ -51,18 +51,11 @@ bool ConfigureNavMesh(
         bModified = true;
     };
     const UStruct* MeshType = ARecastNavMesh::StaticClass();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-    FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-    const UStruct* ParamType = FNavMeshResolutionParam::StaticStruct();
-#endif
+    FNavMeshResolution Resolution = McpNavMeshResolution(NavMesh);
     const auto ApplyFields = [&]()
     {
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        Apply(TEXT("agentStepHeight"), ParamType, TEXT("AgentMaxStepHeight"), DefaultParams.AgentMaxStepHeight);
-#else
-        Apply(TEXT("agentStepHeight"), MeshType, TEXT("AgentMaxStepHeight"), NavMesh->AgentMaxStepHeight);
-#endif
+        Apply(TEXT("agentStepHeight"), Resolution.StepHeightOwner, TEXT("AgentMaxStepHeight"), Resolution.AgentMaxStepHeight);
         if (bAgentProperties)
         {
             Apply(TEXT("agentRadius"), MeshType, TEXT("AgentRadius"), NavMesh->AgentRadius);
@@ -75,13 +68,8 @@ bool ConfigureNavMesh(
             Apply(TEXT("minRegionArea"), MeshType, TEXT("MinRegionArea"), NavMesh->MinRegionArea);
             Apply(TEXT("mergeRegionSize"), MeshType, TEXT("MergeRegionSize"), NavMesh->MergeRegionSize);
             Apply(TEXT("maxSimplificationError"), MeshType, TEXT("MaxSimplificationError"), NavMesh->MaxSimplificationError);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-            Apply(TEXT("cellSize"), ParamType, TEXT("CellSize"), DefaultParams.CellSize);
-            Apply(TEXT("cellHeight"), ParamType, TEXT("CellHeight"), DefaultParams.CellHeight);
-#else
-            Apply(TEXT("cellSize"), MeshType, TEXT("CellSize"), NavMesh->CellSize);
-            Apply(TEXT("cellHeight"), MeshType, TEXT("CellHeight"), NavMesh->CellHeight);
-#endif
+            Apply(TEXT("cellSize"), Resolution.CellOwner, TEXT("CellSize"), Resolution.CellSize);
+            Apply(TEXT("cellHeight"), Resolution.CellOwner, TEXT("CellHeight"), Resolution.CellHeight);
         }
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
     };
@@ -110,11 +98,7 @@ bool ConfigureNavMesh(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("modified"), bModified);
     PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    Result->SetNumberField(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
-#else
-    Result->SetNumberField(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
-#endif
+    Result->SetNumberField(TEXT("agentStepHeight"), Resolution.AgentMaxStepHeight);
     if (bAgentProperties)
     {
         Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
@@ -128,13 +112,8 @@ bool ConfigureNavMesh(
         Result->SetNumberField(TEXT("minRegionArea"), NavMesh->MinRegionArea);
         Result->SetNumberField(TEXT("mergeRegionSize"), NavMesh->MergeRegionSize);
         Result->SetNumberField(TEXT("maxSimplificationError"), NavMesh->MaxSimplificationError);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-        Result->SetNumberField(TEXT("cellSize"), DefaultParams.CellSize);
-        Result->SetNumberField(TEXT("cellHeight"), DefaultParams.CellHeight);
-#else
-        Result->SetNumberField(TEXT("cellSize"), NavMesh->CellSize);
-        Result->SetNumberField(TEXT("cellHeight"), NavMesh->CellHeight);
-#endif
+        Result->SetNumberField(TEXT("cellSize"), Resolution.CellSize);
+        Result->SetNumberField(TEXT("cellHeight"), Resolution.CellHeight);
     }
     PRAGMA_ENABLE_DEPRECATION_WARNINGS
     Self->SendAutomationResponse(Socket, RequestId, true,

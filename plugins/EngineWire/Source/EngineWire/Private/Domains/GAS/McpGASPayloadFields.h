@@ -19,38 +19,4 @@ static inline FString NormalizeGASToken(FString Value)
     return Normalized;
 }
 
-static inline FString GetGASStringFieldWithFallback(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* PrimaryField,
-    const TCHAR* FallbackField,
-    const FString& DefaultValue = FString())
-{
-    FString Value = GetJsonStringField(Payload, PrimaryField);
-    if (!Value.IsEmpty())
-    {
-        return Value;
-    }
-
-    Value = GetJsonStringField(Payload, FallbackField);
-    return Value.IsEmpty() ? DefaultValue : Value;
-}
-
-static inline double GetGASNumberFieldWithFallback(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* PrimaryField,
-    const TCHAR* FallbackField,
-    double DefaultValue = 0.0)
-{
-    double Value = 0.0;
-    if (Payload.IsValid() && Payload->TryGetNumberField(PrimaryField, Value))
-    {
-        return Value;
-    }
-    if (Payload.IsValid() && Payload->TryGetNumberField(FallbackField, Value))
-    {
-        return Value;
-    }
-    return DefaultValue;
-}
-
 }

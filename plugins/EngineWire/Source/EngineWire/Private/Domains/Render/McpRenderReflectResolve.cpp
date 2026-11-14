@@ -37,9 +37,10 @@ bool HandleRenderReflectionResolutionAction(
         return true;
     }
 
-    int32 Resolution = UReflectionCaptureComponent::GetReflectionCaptureSize();
+    double Resolution = UReflectionCaptureComponent::GetReflectionCaptureSize();
+    bool bSent = false;
     FString Error;
-    if (!ReadBoundedIntField(Payload, TEXT("resolution"), Resolution, 16, 4096, Resolution, Error))
+    if (!ReadBoundedNumberSetting(Payload, TEXT("resolution"), 16.0, 4096.0, true, Resolution, bSent, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
         return true;
@@ -49,7 +50,7 @@ bool HandleRenderReflectionResolutionAction(
     TArray<FString> Unsupported;
     McpSetConsoleVariableNamed(
         TEXT("r.ReflectionCaptureResolution"),
-        FString::FromInt(Resolution),
+        FString::FromInt(static_cast<int32>(Resolution)),
         Applied,
         Unsupported);
 

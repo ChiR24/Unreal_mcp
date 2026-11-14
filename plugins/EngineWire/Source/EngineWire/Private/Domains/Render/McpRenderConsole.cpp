@@ -28,22 +28,22 @@ bool AddEnabledCVar(
         Unsupported);
 }
 
+} // namespace
+
 bool ReadBoundedNumberSetting(
-    UEngineWireSubsystem* Subsystem,
-    const FString& RequestId,
     const TSharedPtr<FJsonObject>& Settings,
-    const FString& Field,
+    const TCHAR* Field,
     double MinValue,
     double MaxValue,
     bool bRequireWholeNumber,
-    FBoundedConsoleSetting& OutSetting,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+    double& InOutValue,
+    bool& bOutPresent,
+    FString& OutError)
 {
-    OutSetting.bPresent = false;
-    OutSetting.Value = 0.0;
     // UE 5.8 changed FJsonObject::Values' key type to UE::TSharedString<TCHAR>, so an FString no
     // longer implicitly converts in Contains(); use the public HasField() accessor instead.
-    if (!Settings.IsValid() || !Settings->HasField(Field))
+    bOutPresent = Settings.IsValid() && Settings->HasField(Field);
+    if (!bOutPresent)
     {
         return true;
     }
@@ -53,25 +53,17 @@ bool ReadBoundedNumberSetting(
         Value < MinValue || Value > MaxValue ||
         (bRequireWholeNumber && Value != FMath::FloorToDouble(Value)))
     {
-        const FString Requirement = bRequireWholeNumber ? TEXT("a whole number ") : TEXT("");
-        Subsystem->SendAutomationError(
-            Socket,
-            RequestId,
-            FString::Printf(
-                TEXT("%s must be %sbetween %.0f and %.0f"),
-                *Field,
-                *Requirement,
-                MinValue,
-                MaxValue),
-            TEXT("INVALID_ARGUMENT"));
+        OutError = FString::Printf(TEXT("%s must be %sbetween %.0f and %.0f"), Field,
+                                   bRequireWholeNumber ? TEXT("a whole number ") : TEXT(""), MinValue, MaxValue);
         return false;
     }
 
-    OutSetting.bPresent = true;
-    OutSetting.Value = Value;
+    InOutValue = Value;
     return true;
 }
 
+namespace
+{
 void ApplyNumberSetting(
     const FBoundedConsoleSetting& Setting,
     const FString& CVar,
@@ -237,9 +229,12 @@ bool HandleRenderConsoleAction(
     TArray<FBoundedConsoleSetting> Values;
     for (const FNumberCVar& Number : ConsoleAction->Numbers)
     {
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Number.bTopLevel ? Payload : Settings, Number.Field,
-                Number.Min, Number.Max, Number.bWhole, Values.AddDefaulted_GetRef(), RequestingSocket))
+        FBoundedConsoleSetting& Value = Values.AddDefaulted_GetRef();
+        FString Error;
+        if (!ReadBoundedNumberSetting(Number.bTopLevel ? Payload : Settings, Number.Field, Number.Min, Number.Max, Number.bWhole,
+                Value.Value, Value.bPresent, Error))
         {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
             return true;
         }
     }

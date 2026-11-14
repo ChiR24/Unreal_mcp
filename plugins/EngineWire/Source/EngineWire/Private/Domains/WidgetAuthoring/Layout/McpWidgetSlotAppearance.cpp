@@ -11,6 +11,16 @@
 #include "EngineWireSubsystem.h"
 #include "WidgetBlueprint.h"
 
+namespace WidgetAuthoringHelpers
+{
+FMargin* FindSlotPadding(UPanelSlot* Slot)
+{
+    FStructProperty* PaddingProp = Slot ? FindFProperty<FStructProperty>(Slot->GetClass(), TEXT("Padding")) : nullptr;
+    return PaddingProp && PaddingProp->Struct == TBaseStructure<FMargin>::Get() ? PaddingProp->ContainerPtrToValuePtr<FMargin>(Slot)
+                                                                               : nullptr;
+}
+}
+
 // set_padding, set_z_order, set_render_transform, set_visibility; each reply carries the
 // widget's layout read back after the write.
 namespace WidgetAuthoringHandlers
@@ -52,8 +62,8 @@ bool HandleWidgetAuthoringSlotAppearance(
         // Fifteen UMG slot classes declare an FMargin Padding UPROPERTY; one reflection
         // write covers all of them (a cast ladder used to cover three and fake the rest).
         UPanelSlot* TargetSlot = Widget->Slot;
-        FStructProperty* PaddingProp = TargetSlot ? FindFProperty<FStructProperty>(TargetSlot->GetClass(), TEXT("Padding")) : nullptr;
-        if (!PaddingProp || PaddingProp->Struct != TBaseStructure<FMargin>::Get())
+        FMargin* Padding = FindSlotPadding(TargetSlot);
+        if (!Padding)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
                 TEXT("'%s' sits in a %s, which carries no padding. A CanvasPanel child is positioned with set_position instead."),
@@ -61,10 +71,9 @@ bool HandleWidgetAuthoringSlotAppearance(
             return true;
         }
         // Omitted sides keep their current value.
-        FMargin& Padding = *PaddingProp->ContainerPtrToValuePtr<FMargin>(TargetSlot);
         TargetSlot->Modify();
-        Padding = FMargin(GetJsonNumberField(PaddingObj, TEXT("left"), Padding.Left), GetJsonNumberField(PaddingObj, TEXT("top"), Padding.Top),
-                          GetJsonNumberField(PaddingObj, TEXT("right"), Padding.Right), GetJsonNumberField(PaddingObj, TEXT("bottom"), Padding.Bottom));
+        *Padding = FMargin(GetJsonNumberField(PaddingObj, TEXT("left"), Padding->Left), GetJsonNumberField(PaddingObj, TEXT("top"), Padding->Top),
+                           GetJsonNumberField(PaddingObj, TEXT("right"), Padding->Right), GetJsonNumberField(PaddingObj, TEXT("bottom"), Padding->Bottom));
         TargetSlot->SynchronizeProperties();
         ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Padding set"));
         return true;

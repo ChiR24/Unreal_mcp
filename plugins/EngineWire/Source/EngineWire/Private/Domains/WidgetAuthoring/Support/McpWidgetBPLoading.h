@@ -6,6 +6,8 @@
 
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
+class UPanelSlot;
+struct FMargin;
 
 class UUserWidget;
 class UWidget;
@@ -16,6 +18,8 @@ class UWidgetTree;
 namespace WidgetAuthoringHelpers
 {
 UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
+// The FMargin Padding a slot declares (fifteen UMG slot classes do), by reflection; null when its class has none.
+FMargin* FindSlotPadding(UPanelSlot* Slot);
 // LoadWidgetBlueprint, or null after refusing "Widget blueprint not found" (NOT_FOUND).
 UWidgetBlueprint* LoadWidgetBlueprintOrReply(UEngineWireSubsystem& Subsystem, const FString& RequestId,
                                              const TSharedPtr<FMcpBridgeWebSocket>& Socket, const FString& WidgetPath);

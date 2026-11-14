@@ -8,12 +8,12 @@
 // exported, so the stack is walked here.
 namespace McpNiagaraModuleOrder
 {
-// The input pin of a stack node that carries the parameter map.
-inline UEdGraphPin* MapInputPin(UEdGraphNode& Node)
+// The pin of a stack node that carries the parameter map in (or, with EGPD_Output, out).
+inline UEdGraphPin* MapInputPin(UEdGraphNode& Node, EEdGraphPinDirection Direction = EGPD_Input)
 {
     for (UEdGraphPin* Pin : Node.Pins)
     {
-        const UObject* Type = Pin && Pin->Direction == EGPD_Input ? Pin->PinType.PinSubCategoryObject.Get() : nullptr;
+        const UObject* Type = Pin && Pin->Direction == Direction ? Pin->PinType.PinSubCategoryObject.Get() : nullptr;
         if (Type && Type->GetFName() == TEXT("NiagaraParameterMap"))
         {
             return Pin;

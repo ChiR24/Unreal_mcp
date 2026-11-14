@@ -7,7 +7,9 @@
 #include "Domains/Perception/McpPerceptionDiff.h"
 
 #include "Domains/Inspect/View/McpInspectViewIds.h"
-#include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "EngineWireSubsystem.h"
 #include "Domains/Perception/McpPerception.h"
 #include "EditorViewportClient.h"
 

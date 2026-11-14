@@ -67,6 +67,35 @@ T* NavLinkCustomField(UNavLinkCustomComponent* SmartComp, const TCHAR* Name)
     return Property ? Property->ContainerPtrToValuePtr<T>(SmartComp) : nullptr;
 }
 
+struct FNavMeshResolution
+{
+    float& CellSize;
+    float& CellHeight;
+    float& AgentMaxStepHeight;
+    const UStruct* CellOwner;
+    const UStruct* StepHeightOwner;
+};
+
+// The three resolution fields as stored for the engine version in use.
+inline FNavMeshResolution McpNavMeshResolution(ARecastNavMesh* NavMesh)
+{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
+    const UStruct* ParamType = FNavMeshResolutionParam::StaticStruct();
+    return {DefaultParams.CellSize, DefaultParams.CellHeight, DefaultParams.AgentMaxStepHeight, ParamType, ParamType};
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+    FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    float& StepHeight = NavMesh->AgentMaxStepHeight;
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    return {DefaultParams.CellSize, DefaultParams.CellHeight, StepHeight, FNavMeshResolutionParam::StaticStruct(), ARecastNavMesh::StaticClass()};
+#else
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    return {NavMesh->CellSize, NavMesh->CellHeight, NavMesh->AgentMaxStepHeight, ARecastNavMesh::StaticClass(), ARecastNavMesh::StaticClass()};
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+}
+
 // What a link proxy links, relative to itself.
 struct FNavLinkEnds
 {

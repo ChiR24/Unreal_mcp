@@ -7,6 +7,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
@@ -55,16 +56,9 @@ bool GetBoolAny(const TSharedPtr<FJsonObject> &Payload,
 double GetNumberAny(const TSharedPtr<FJsonObject> &Payload,
                     std::initializer_list<const TCHAR *> Fields,
                     double DefaultValue) {
-  if (!Payload.IsValid()) {
-    return DefaultValue;
-  }
-  for (const TCHAR *Field : Fields) {
-    double Value = 0.0;
-    if (Payload->TryGetNumberField(Field, Value)) {
-      return Value;
-    }
-  }
-  return DefaultValue;
+  double OutValue = DefaultValue;
+  McpGetFirstNumberField(Payload, Fields, OutValue);
+  return OutValue;
 }
 
 void SendMediaError(UEngineWireSubsystem *Subsystem,

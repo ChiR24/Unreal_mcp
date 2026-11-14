@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
@@ -52,10 +53,12 @@ bool HandleCreateSplineMeshComponentOnActor(
             FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), TEXT("ALREADY_EXISTS"));
         return true;
     }
-    Actor->Modify();
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Spline Mesh Component")),
+                                            EMcpMutationDurability::EditorStateOnly, {Actor});
     USplineMeshComponent* MeshComp = NewObject<USplineMeshComponent>(Actor, FName(*ComponentName), RF_Transactional);
     if (!MeshComp)
     {
+        Transaction.Cancel();
         Self->SendAutomationError(Socket, RequestId,
             TEXT("Failed to create spline mesh component"), TEXT("CREATE_FAILED"));
         return true;

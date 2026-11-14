@@ -7,16 +7,9 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Dom/JsonValue.h"
-#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
-#include "Engine/DataAsset.h"
-#include "Factories/BlueprintFactory.h"
-#include "GameplayEffect.h"
-#include "GameplayTagContainer.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpGASHandlers

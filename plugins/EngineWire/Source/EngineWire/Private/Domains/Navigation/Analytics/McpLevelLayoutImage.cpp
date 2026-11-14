@@ -4,11 +4,9 @@
 #include "Domains/Navigation/Analytics/McpLevelLayout.h"
 
 #include "HAL/FileManager.h"
-#include "IImageWrapper.h"
-#include "IImageWrapperModule.h"
+#include "ImageUtils.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "Modules/ModuleManager.h"
 
 namespace McpLevelLayout
 {
@@ -76,13 +74,8 @@ bool WriteImage(const FGraph& Graph, const FLayout& Layout, int32 Start, int32 G
     {
         Paint(Goal, FColor::Red, 0);
     }
-    IImageWrapperModule& Module = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
-    const TSharedPtr<IImageWrapper> Png = Module.CreateImageWrapper(EImageFormat::PNG);
-    if (!Png.IsValid() || !Png->SetRaw(Pixels.GetData(), Pixels.Num() * sizeof(FColor), Width, Height, ERGBFormat::BGRA, 8))
-    {
-        return false;
-    }
-    const TArray64<uint8> Bytes = Png->GetCompressed(100);
+    TArray64<uint8> Bytes;
+    FImageUtils::PNGCompressImageArray(Width, Height, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Bytes);
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
     return Bytes.Num() > 0 && FFileHelper::SaveArrayToFile(Bytes, *Path);
 }

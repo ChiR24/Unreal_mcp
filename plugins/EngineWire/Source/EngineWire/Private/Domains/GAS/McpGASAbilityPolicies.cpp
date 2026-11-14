@@ -25,7 +25,7 @@ bool SetAbilityPolicy(const FGASRequestContext& Context, const TCHAR* Field, con
     {
         return true;
     }
-    const FString Policy = GetGASStringFieldWithFallback(Context.Payload, Field, TEXT("policy"), Default);
+    const FString Policy = GetJsonStringField(Context.Payload, Field, Default);
     TEnum Value{};
     if (!McpParseEnum(Policy, Value))
     {

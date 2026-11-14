@@ -36,8 +36,8 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
         }
 
         int32 ModifierIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("modifierIndex"), 0));
-        float Value = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("modifierMagnitude"), TEXT("value"), 0.0));
-        FString MagnitudeType = GetGASStringFieldWithFallback(Payload, TEXT("magnitudeCalculationType"), TEXT("magnitudeType"), TEXT("ScalableFloat"));
+        float Value = static_cast<float>(GetJsonNumberField(Payload, TEXT("modifierMagnitude"), 0.0));
+        FString MagnitudeType = GetJsonStringField(Payload, TEXT("magnitudeCalculationType"), TEXT("ScalableFloat"));
 
         if (ModifierIndex < 0 || ModifierIndex >= EffectCDO->Modifiers.Num())
         {

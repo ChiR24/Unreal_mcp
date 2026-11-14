@@ -37,8 +37,8 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        FString Operation = GetGASStringFieldWithFallback(Payload, TEXT("modifierOperation"), TEXT("operation"), TEXT("Add"));
-        float Magnitude = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("modifierMagnitude"), TEXT("magnitude"), 0.0));
+        FString Operation = GetJsonStringField(Payload, TEXT("modifierOperation"), TEXT("Add"));
+        float Magnitude = static_cast<float>(GetJsonNumberField(Payload, TEXT("modifierMagnitude"), 0.0));
 
         FGameplayModifierInfo Modifier;
 
@@ -68,7 +68,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
         // a real read-back of the wrong thing. Both spellings are accepted because the
         // contract declares both: `targetAttribute` and `attributeName`.
         const FString TargetAttribute =
-            GetGASStringFieldWithFallback(Payload, TEXT("targetAttribute"), TEXT("attributeName"), TEXT("")).TrimStartAndEnd();
+            McpGetFirstStringField(Payload, {TEXT("targetAttribute"), TEXT("attributeName")}).TrimStartAndEnd();
         if (TargetAttribute.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,

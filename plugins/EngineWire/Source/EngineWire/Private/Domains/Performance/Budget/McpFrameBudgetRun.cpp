@@ -47,7 +47,7 @@ void Answer(FRun& Run, const TFunctionRef<void(UEngineWireSubsystem&)> Send)
 void Fail(FRun& Run, const TCHAR* Code, const FString& Message)
 {
     RestoreView(Run);
-    Answer(Run, [&](UEngineWireSubsystem& Self) { Self.SendAutomationResponse(Run.Socket, Run.RequestId, false, Message, nullptr, Code); });
+    Answer(Run, [&](UEngineWireSubsystem& Self) { Self.SendAutomationError(Run.Socket, Run.RequestId, Message, Code); });
 }
 
 void Finish(FRun& Run)
@@ -62,7 +62,7 @@ void Finish(FRun& Run)
         }
         if (Kept == INDEX_NONE)
         {
-            Self.SendAutomationResponse(Run.Socket, Run.RequestId, false, Detail, nullptr, Code);
+            Self.SendAutomationError(Run.Socket, Run.RequestId, Detail, Code);
             return;
         }
         FString Message;

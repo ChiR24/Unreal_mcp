@@ -35,15 +35,7 @@ bool HandleInventoryReplicationActions(UEngineWireSubsystem& Bridge, const FStri
     };
 
     for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      bool bIsInventoryVar = false;
-      for (const FName& VarName : InventoryVarNames) {
-        if (Var.VarName == VarName) {
-          bIsInventoryVar = true;
-          break;
-        }
-      }
-
-      if (bIsInventoryVar) {
+      if (InventoryVarNames.Contains(Var.VarName)) {
         if (bReplicated) {
           // Only the replication flag and condition change: a RepNotify function already on the variable is
           // kept (this used to reset it to none, silently dropping the OnRep_ hook the caller had wired).

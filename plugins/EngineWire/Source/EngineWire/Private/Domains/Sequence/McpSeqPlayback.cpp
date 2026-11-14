@@ -2,6 +2,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
+#include "ILevelSequenceEditorToolkit.h"
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"

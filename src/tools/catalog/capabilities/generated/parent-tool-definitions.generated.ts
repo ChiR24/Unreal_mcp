@@ -18928,7 +18928,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "font",
             "margin"
           ],
-          "description": "Which set font variant to run; omit for 'font'.\nfont: Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.\nmargin: Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.",
+          "description": "Which set font variant to run; omit for 'font'.\nfont: Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.\nmargin: Set the margin on a widget: the padding of its parent slot, for every slot that carries one (Horizontal Box, Vertical Box, Overlay, Border, Scroll Box, Size Box, Scale Box, Uniform Grid and more), and a Border widget's own content padding. A side left out is 0.",
           "default": "font"
         },
         "texturePath": {
@@ -29396,7 +29396,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "renderJobName": {
           "type": "string",
-          "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
+          "description": "Render job name: names a new job, or selects an existing job (alternative to jobId; with neither, the queue's last job)."
         },
         "renderPass": {
           "type": "string",

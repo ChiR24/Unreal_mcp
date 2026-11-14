@@ -4,30 +4,9 @@
 #include "Domains/Debug/Contracts/McpContracts.h"
 #include "Domains/Log/McpScriptErrors.h"
 #include "Editor.h"
-#include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Foundation/Solvers/McpPratt.h"
 #include "GameFramework/Pawn.h"
-
-namespace McpPlaySession
-{
-namespace
-{
-// The session's game instance, not its world: a level change inside the session (a restart, an OpenLevel) makes a new
-// world, while the game instance lives from Play's start to its end.
-TWeakObjectPtr<UGameInstance> GStarted;
-}
-
-void NoteStarted(UWorld* PlayWorld)
-{
-    GStarted = PlayWorld ? PlayWorld->GetGameInstance() : nullptr;
-}
-
-bool StartedByMcp(const UWorld* PlayWorld)
-{
-    return PlayWorld && PlayWorld->GetGameInstance() && GStarted.Get() == PlayWorld->GetGameInstance();
-}
-} // namespace McpPlaySession
 
 namespace McpPlaytest
 {

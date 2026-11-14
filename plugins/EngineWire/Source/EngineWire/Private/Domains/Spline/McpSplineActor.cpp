@@ -28,6 +28,7 @@ bool HandleCreateSplineActor(
     {
         return RefuseSplinePointType(Self, RequestId, Socket, SplineType);
     }
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, Rotation);
     if (!SplineComp)
     {

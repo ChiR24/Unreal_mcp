@@ -22,21 +22,23 @@ bool UEngineWireSubsystem::HandleRemoveFoliage(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (!FoliageTypePath.IsEmpty() && !LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn)) {
+  UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
+      ? nullptr
+      : LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn);
+  if (!FoliageTypePath.IsEmpty() && !OnlyType) {
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
                         TEXT("FOLIAGE_TYPE_NOT_FOUND"));
     return true;
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
+  UWorld *World = McpHandlerUtils::GetEditorWorld();
+  if (!World) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
                         TEXT("EDITOR_NOT_AVAILABLE"));
     return true;
   }
-
-  UWorld *World = GEditor->GetEditorWorldContext().World();
   const TArray<AInstancedFoliageActor *> FoliageActors = McpFoliageHandlers::AllFoliageActors(World);
   if (FoliageActors.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -83,7 +85,6 @@ bool UEngineWireSubsystem::HandleRemoveFoliage(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  UFoliageType *OnlyType = FoliageTypePath.IsEmpty() ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
   // One undo step for every foliage actor touched (it had none); each is modified only when it loses instances.
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Remove Foliage")), EMcpMutationDurability::EditorStateOnly,
                                           TArray<UObject *>());

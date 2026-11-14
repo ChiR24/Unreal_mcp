@@ -29,9 +29,6 @@
 #include "Subsystems/AssetEditorSubsystem.h"
 
 
-#if __has_include("ILevelSequenceEditorToolkit.h")
-#include "ILevelSequenceEditorToolkit.h"
-#endif
 
 #include "ISequencer.h"
 #include "MovieSceneSequencePlayer.h"

@@ -23,8 +23,7 @@ bool UEngineWireSubsystem::HandleManageGASAction(
     }
 
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    for (const TCHAR* PathField : { TEXT("abilityPath"), TEXT("effectPath"),
-                                    TEXT("cuePath"), TEXT("attributeSetPath") })
+    for (const TCHAR* PathField : { TEXT("abilityPath"), TEXT("effectPath"), TEXT("attributeSetPath") })
     {
         if (!BlueprintPath.IsEmpty())
         {

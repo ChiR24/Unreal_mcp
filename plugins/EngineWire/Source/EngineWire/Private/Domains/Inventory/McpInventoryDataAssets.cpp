@@ -52,42 +52,40 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
       return true;
     }
 
-    if (Payload->TryGetObjectField(TEXT("properties"), PropertiesObj) && PropertiesObj && (*PropertiesObj).IsValid()) {
-      // Iterate through all properties in the JSON and apply them via reflection
-      for (const auto& Pair : (*PropertiesObj)->Values) {
-        const FString PropertyName(*Pair.Key);
-        const TSharedPtr<FJsonValue>& PropertyValue = Pair.Value;
+    // Iterate through all properties in the JSON and apply them via reflection
+    for (const auto& Pair : (*PropertiesObj)->Values) {
+      const FString PropertyName(*Pair.Key);
+      const TSharedPtr<FJsonValue>& PropertyValue = Pair.Value;
 
-        FProperty* Prop = ItemAsset->GetClass()->FindPropertyByName(*PropertyName);
-        if (Prop) {
-          FString ApplyError;
-          if (ApplyJsonValueToProperty(ItemAsset, Prop, PropertyValue, ApplyError)) {
-            ModifiedProperties.Add(PropertyName);
-          } else {
-            FailedProperties.Add(FString::Printf(TEXT("%s: %s"), *PropertyName, *ApplyError));
-          }
-        } else if (UMcpGenericDataAsset* GenericItem = Cast<UMcpGenericDataAsset>(ItemAsset)) {
-          // Generic items keep authored fields (DisplayName, Weight, Value,
-          // Description, ...) in their Properties map; that is also what
-          // get_inventory_info reads back.
-          FString ValueText;
-          if (PropertyValue.IsValid()) {
-            if (PropertyValue->Type == EJson::String) {
-              ValueText = PropertyValue->AsString();
-            } else if (PropertyValue->Type == EJson::Number) {
-              ValueText = FString::SanitizeFloat(PropertyValue->AsNumber());
-            } else if (PropertyValue->Type == EJson::Boolean) {
-              ValueText = PropertyValue->AsBool() ? TEXT("true") : TEXT("false");
-            } else {
-              TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ValueText);
-              FJsonSerializer::Serialize(PropertyValue, TEXT(""), Writer, false);
-            }
-          }
-          GenericItem->Properties.Add(PropertyName, ValueText);
+      FProperty* Prop = ItemAsset->GetClass()->FindPropertyByName(*PropertyName);
+      if (Prop) {
+        FString ApplyError;
+        if (ApplyJsonValueToProperty(ItemAsset, Prop, PropertyValue, ApplyError)) {
           ModifiedProperties.Add(PropertyName);
         } else {
-          FailedProperties.Add(FString::Printf(TEXT("%s: Property not found"), *PropertyName));
+          FailedProperties.Add(FString::Printf(TEXT("%s: %s"), *PropertyName, *ApplyError));
         }
+      } else if (UMcpGenericDataAsset* GenericItem = Cast<UMcpGenericDataAsset>(ItemAsset)) {
+        // Generic items keep authored fields (DisplayName, Weight, Value,
+        // Description, ...) in their Properties map; that is also what
+        // get_inventory_info reads back.
+        FString ValueText;
+        if (PropertyValue.IsValid()) {
+          if (PropertyValue->Type == EJson::String) {
+            ValueText = PropertyValue->AsString();
+          } else if (PropertyValue->Type == EJson::Number) {
+            ValueText = FString::SanitizeFloat(PropertyValue->AsNumber());
+          } else if (PropertyValue->Type == EJson::Boolean) {
+            ValueText = PropertyValue->AsBool() ? TEXT("true") : TEXT("false");
+          } else {
+            TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ValueText);
+            FJsonSerializer::Serialize(PropertyValue, TEXT(""), Writer, false);
+          }
+        }
+        GenericItem->Properties.Add(PropertyName, ValueText);
+        ModifiedProperties.Add(PropertyName);
+      } else {
+        FailedProperties.Add(FString::Printf(TEXT("%s: Property not found"), *PropertyName));
       }
     }
 

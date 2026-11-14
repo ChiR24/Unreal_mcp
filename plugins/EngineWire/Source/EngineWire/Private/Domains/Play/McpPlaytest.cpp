@@ -8,29 +8,14 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/Solvers/McpPratt.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "Navigation/PathFollowingComponent.h" // EPathFollowingRequestResult: AIController.h only declares it from 5.x on
-
-namespace McpPlaySession
-{
-APawn* ResolvePawn(UWorld* World, const FString& Name)
-{
-    if (!Name.IsEmpty())
-    {
-        return Cast<APawn>(FindActorByNameInWorldForMcp(World, Name, false));
-    }
-    const APlayerController* Player = World->GetFirstPlayerController();
-    return Player ? Player->GetPawn() : nullptr;
-}
-} // namespace McpPlaySession
 
 namespace McpPlaytest
 {
 namespace PlaytestParts
 {
-constexpr int32 MaxChecks = 16;
 bool GRunning = false; // one leg at a time: two would steer the same game
 
 bool ReadGoal(const TSharedPtr<FJsonObject>& Payload, UWorld* World, FVector& Out, FString& OutError)
@@ -46,24 +31,6 @@ bool ReadGoal(const TSharedPtr<FJsonObject>& Payload, UWorld* World, FVector& Ou
     OutError = TEXT("Give goal (a point) or goalActor.");
     Out = ExtractVectorField(Payload, TEXT("goal"), FVector::ZeroVector);
     return Payload->HasField(TEXT("goal"));
-}
-
-bool ReadChecks(const TSharedPtr<FJsonObject>& Payload, FRun& Run, FString& OutError)
-{
-    for (const FString& Text : McpHandlerUtils::GetStringArrayField(Payload, TEXT("checks")))
-    {
-        TSharedPtr<McpPratt::FNode> Root;
-        FString Why;
-        if (Run.Checks.Num() >= MaxChecks || !McpPratt::Parse(Text, Root, Why))
-        {
-            OutError = Run.Checks.Num() >= MaxChecks ? FString::Printf(TEXT("checks takes %d assertions at most."), MaxChecks)
-                                                     : FString::Printf(TEXT("check '%s': %s"), *Text, *Why);
-            return false;
-        }
-        Run.Checks.Add(Root);
-        Run.CheckTexts.Add(Text);
-    }
-    return true;
 }
 } // namespace PlaytestParts
 
@@ -103,9 +70,9 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     FString Error;
     if (!Controller)
     {
-        return Refuse(TEXT("NO_PAWN"), TEXT("No controlled pawn to drive: the player has none, or actorName names no pawn with a controller."));
+        return Refuse(TEXT("NO_PAWN"), McpPlaySession::NoPawnMessage);
     }
-    if (!ReadGoal(Payload, World, Run->Goal, Error) || !ReadChecks(Payload, *Run, Error))
+    if (!ReadGoal(Payload, World, Run->Goal, Error) || !McpPlaySession::ParseAssertions(Payload, TEXT("checks"), Run->Checks, Run->CheckTexts, Error))
     {
         return Refuse(TEXT("INVALID_ARGUMENT"), Error);
     }

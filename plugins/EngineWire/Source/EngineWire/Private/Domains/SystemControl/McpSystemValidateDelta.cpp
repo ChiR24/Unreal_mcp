@@ -30,7 +30,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     McpChangeJournal::AssetsChangedBy(RequestId, Packages);
     // The plugin is optional and its module delay-loaded: its subsystem is reached only while that module is loaded.
     UEditorValidatorSubsystem* Validator =
-        Packages.Num() > 0 && GEditor && FModuleManager::Get().IsModuleLoaded(TEXT("DataValidation"))
+        Packages.Num() > 0 && FModuleManager::Get().IsModuleLoaded(TEXT("DataValidation"))
             ? GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>()
             : nullptr;
     if (!Validator)

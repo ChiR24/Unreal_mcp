@@ -18,10 +18,6 @@
 #include "MoviePipelineQueueSubsystem.h"
 
 namespace McpSequenceMovieRender {
-namespace {
-const TCHAR *CreationJobIdPrefix = TEXT("mcp.renderJobId=");
-}
-
 bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
                            const FString &RequestId,
                            const TSharedPtr<FJsonObject> &Payload,
@@ -32,12 +28,13 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
   if (!QueueSubsystem)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   const FString SequencePath =
-      McpGetFirstStringField(Payload, {TEXT("sequencePath"), TEXT("path")});
+      McpGetFirstStringField(Payload, {TEXT("sequencePath")});
   ULevelSequence *Sequence =
       Cast<ULevelSequence>(McpLoadAsset(SequencePath));
   if (!Sequence)
     return SendError(Subsystem, RequestId, Socket,
-                     TEXT("create_render_job requires a valid sequencePath."),
+                     FString::Printf(TEXT("create_render_job requires a valid sequencePath: %s does not load as a "
+                                          "Level Sequence."), *SequencePath),
                      TEXT("INVALID_SEQUENCE")),
            true;
 
@@ -89,7 +86,7 @@ bool HandleCreateRenderJob(UEngineWireSubsystem *Subsystem,
     Job->JobName = JobName;
   if (MapObjectPath.IsValid())
     Job->Map = MapObjectPath;
-  Job->UserData = FString::Printf(TEXT("%s%s"), CreationJobIdPrefix,
+  Job->UserData = FString::Printf(TEXT("%s%s"), RenderJobIdPrefix,
                                   *FGuid::NewGuid().ToString());
   EnsureEssentialSettings(Job);
   Message.Reset();

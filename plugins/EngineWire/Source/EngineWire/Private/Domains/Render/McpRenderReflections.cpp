@@ -223,9 +223,17 @@ bool HandleRenderReflectionAction(
         TArray<FString> Unsupported;
         FString Error;
         const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
-        Component->Modify();
-        if (!ValidateBoundedNumberSetting(Settings, TEXT("ScreenPercentage"), 1.0, 200.0, Error) ||
-            !ApplyJsonSettings(Component, Component->GetClass(), Settings, false, Applied, Unsupported, Error))
+        double ScreenPercentage = 0.0;
+        bool bSent = false;
+        if (!ReadBoundedNumberSetting(Settings, TEXT("ScreenPercentage"), 1.0, 200.0, false, ScreenPercentage, bSent, Error))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+            return true;
+        }
+        // A refused key leaves the ones before it written, so the step stays for undo to take them back.
+        FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Planar Reflection")),
+                                                EMcpMutationDurability::EditorStateOnly, {Component});
+        if (!ApplyJsonSettings(Component, Component->GetClass(), Settings, false, Applied, Unsupported, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;

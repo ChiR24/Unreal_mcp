@@ -79,6 +79,22 @@ void FinishBlueprintMutation(UBlueprint* Blueprint, bool bSave);
 TSharedPtr<FJsonObject> MakeBlueprintResponse(const FString& Message, UBlueprint* Blueprint);
 // The game mode the open level runs in play: live, else its World Settings override, else the project default; sets InfoObj.source.
 UClass* ResolveWorldGameMode(UWorld* World, TSharedPtr<FJsonObject>& InfoObj);
+// A game mode's class slots: the payload field (and reply key) and the AGameModeBase property it sets.
+struct FGameModeClassSlot
+{
+    const TCHAR* Field;
+    const TCHAR* Property;
+};
+inline const FGameModeClassSlot GameModeClassSlots[] = {
+    {TEXT("defaultPawnClass"), TEXT("DefaultPawnClass")},
+    {TEXT("playerControllerClass"), TEXT("PlayerControllerClass")},
+    {TEXT("gameStateClass"), TEXT("GameStateClass")},
+    {TEXT("playerStateClass"), TEXT("PlayerStateClass")},
+    {TEXT("hudClass"), TEXT("HUDClass")},
+};
+// Sets each class slot the payload names on the game mode Blueprint; how many were set. Error names the last that
+// failed, so create_game_mode reports a dropped field instead of answering success while ignoring it.
+int32 ApplyGameModeClassOverrides(FActionContext& Context, UBlueprint* Blueprint, FString& Error);
 bool HandleCoreClassAction(FActionContext& Context);
 bool HandleGameModeConfigAction(FActionContext& Context);
 bool HandlePlayerFlowAction(FActionContext& Context);
