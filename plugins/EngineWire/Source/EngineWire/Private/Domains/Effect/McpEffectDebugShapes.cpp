@@ -225,15 +225,9 @@ bool HandleDrawDebugShape(const FEffectActionContext& Context)
             TEXT("Missing required parameter: location"), Response, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    const float Duration = Context.Payload->HasField(TEXT("duration"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("duration")))
-        : 5.0f;
-    const float Size = Context.Payload->HasField(TEXT("radius"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("radius")))
-        : static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("size"), 100.0));
-    const float Thickness = Context.Payload->HasField(TEXT("thickness"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("thickness")))
-        : 2.0f;
+    const float Duration = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("duration"), 5.0));
+    const float Size = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("radius"), 100.0));
+    const float Thickness = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("thickness"), 2.0));
     return DrawShape(Context, ShapeType, ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector), Size, Duration, Thickness, ReadColorField(Context.Payload, TEXT("color")));
 }
 }

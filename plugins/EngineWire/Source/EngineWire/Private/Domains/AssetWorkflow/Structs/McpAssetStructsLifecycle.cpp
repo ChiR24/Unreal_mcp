@@ -41,13 +41,14 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("PACKAGE_CREATE_FAILED"));
             return true;
         }
+        const FString ObjectPath = McpToObjectPath(PackageName);
 
         const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
         const bool bHasMembers = Payload->TryGetArrayField(TEXT("members"), MembersArr) && MembersArr;
         TArray<FParsedMember> ParsedMembers;
         if (bHasMembers)
         {
-            const FName SelfPath = FName(*McpToObjectPath(PackageName));
+            const FName SelfPath = FName(*ObjectPath);
             TArray<FString> ValidationFailures;
             if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, ValidationFailures))
             {
@@ -93,7 +94,7 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
             if (ApplyFailures.Num() > 0)
             {
                 TSharedPtr<FJsonObject> ApplyResult = McpHandlerUtils::CreateResultObject();
-                ApplyResult->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
+                ApplyResult->SetStringField(TEXT("assetPath"), ObjectPath);
                 ApplyResult->SetNumberField(TEXT("imported"), Applied);
                 ApplyResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
                 ApplyResult->SetArrayField(TEXT("failures"), McpHandlerUtils::ToJsonStringArray(ApplyFailures));
@@ -123,7 +124,7 @@ bool HandleStructLifecycleActions(UEngineWireSubsystem& Bridge, const FString& R
         const bool bSaved = bSave && McpSafeOperations::McpSafeAssetSave(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), McpToObjectPath(PackageName));
+        Result->SetStringField(TEXT("assetPath"), ObjectPath);
         Result->SetStringField(TEXT("structName"), SanitizedName);
         Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
         Result->SetBoolField(TEXT("saved"), bSaved);

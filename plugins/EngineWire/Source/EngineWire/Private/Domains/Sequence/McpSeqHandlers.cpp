@@ -10,6 +10,7 @@
 #include "Domains/Sequence/Planner/McpFlyThrough.h"
 #include "Domains/Sequence/Planner/McpFrameShot.h"
 #include "Domains/Sequence/RecordReplay/McpSeqRecordReplay.h"
+#include "ScopedTransaction.h"
 
 bool UEngineWireSubsystem::HandleSequenceAction(
     const FString &RequestId, const FString &Action,
@@ -30,6 +31,18 @@ bool UEngineWireSubsystem::HandleSequenceAction(
     SendAutomationError(RequestingSocket, RequestId, IntegerError,
                         TEXT("INVALID_ARGUMENT"));
     return true;
+  }
+  // An edit of a sequence's content is one undo step: these handlers Modify the sequence and its movie scene, which with
+  // no transaction open recorded nothing, so control_editor undo reverted the step before the call. The ones that open
+  // their own step, asset creation, playback and the reads are not listed.
+  static const TSet<FString> ContentEdits = {
+      TEXT("sequence_set_properties"), TEXT("sequence_add_actor"), TEXT("sequence_add_actors"),
+      TEXT("sequence_add_spawnable_from_class"), TEXT("sequence_remove_actors"), TEXT("sequence_add_keyframe"),
+      TEXT("sequence_add_section"), TEXT("sequence_set_section"), TEXT("sequence_set_tick_resolution"),
+      TEXT("sequence_set_view_range"), TEXT("sequence_remove_track")};
+  TOptional<FScopedTransaction> Step;
+  if (ContentEdits.Contains(EffectiveAction)) {
+    Step.Emplace(FText::FromString(FString::Printf(TEXT("Sequencer %s"), *SubAction)));
   }
 
   if (EffectiveAction == TEXT("sequence_create"))

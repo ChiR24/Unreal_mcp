@@ -97,9 +97,19 @@ T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR*
 // The EQS query at QueryPath, or null once NOT_FOUND is sent (EQS/McpAIEQSAssets.cpp).
 UEnvQuery* LoadEnvQueryOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& QueryPath);
 
+// The AIController Blueprint at the payload's controllerPath, in any form LoadBlueprintAsset takes (OutPath: its path), or
+// null once the refusal is sent: INVALID_ARGUMENT with no path, NOT_FOUND, NOT_AI_CONTROLLER for any other Blueprint
+// (Controllers/McpAIControllerBehaviour.cpp).
+UBlueprint* LoadControllerBlueprint(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> Socket, FString& OutPath);
+
 // The Behavior Tree at Path, or null once "Behavior Tree not found: <Path>" (NOT_FOUND) is sent
 // (BehaviorTree/McpAIBehaviorTreeAssets.cpp).
 UBehaviorTree* LoadBehaviorTreeOrReply(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& Path);
+
+// A Blueprint variable's default: its default text, a compile, then the class default object's value; true when the
+// compiled class has the variable and took the value (Perception/McpAIPerceptionTeam.cpp).
+bool SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue);
 
 // The query's test at a flat index counted across its options (empty options and tests are not counted), with the option
 // it sits in and its index there when asked; null past the last test (EQS/McpAIEQSContextTests.cpp).

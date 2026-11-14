@@ -4,6 +4,7 @@
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireLog.h"
 #include "UObject/Package.h"
 
 namespace WidgetAuthoringHelpers
@@ -61,7 +62,7 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
             if (Cast<UPanelWidget>(NewWidget))
             {
                 WidgetTree->RootWidget = NewWidget;
-                UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Set '%s' as root widget"), *NewWidget->GetName());
+                UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("SafeAddWidgetToTree: Set '%s' as root widget"), *NewWidget->GetName());
                 return true;
             }
             UCanvasPanel* NewRoot = CreateAndRegisterWidget<UCanvasPanel>(
@@ -73,13 +74,13 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
             }
             WidgetTree->RootWidget = NewRoot;
             NewRoot->AddChild(NewWidget);
-            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Created canvas root for leaf '%s'"),
+            UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("SafeAddWidgetToTree: Created canvas root for leaf '%s'"),
                 *NewWidget->GetName());
         }
         else if (UPanelWidget* RootPanel = Cast<UPanelWidget>(WidgetTree->RootWidget))
         {
             RootPanel->AddChild(NewWidget);
-            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of root panel '%s'"),
+            UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of root panel '%s'"),
                 *NewWidget->GetName(), *RootPanel->GetName());
         }
         else
@@ -92,14 +93,14 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
                 WidgetBP, WidgetTree, TEXT("RootCanvas"));
             if (!NewRoot)
             {
-                UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Could not create canvas root for '%s'"),
+                UE_LOG(LogEngineWireSubsystem, Warning, TEXT("SafeAddWidgetToTree: Could not create canvas root for '%s'"),
                     *NewWidget->GetName());
                 return false;
             }
             WidgetTree->RootWidget = NewRoot;
             NewRoot->AddChild(ExistingRoot);
             NewRoot->AddChild(NewWidget);
-            UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Promoted root '%s' into a canvas to seat '%s'"),
+            UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("SafeAddWidgetToTree: Promoted root '%s' into a canvas to seat '%s'"),
                 *ExistingRoot->GetName(), *NewWidget->GetName());
         }
         return true;
@@ -108,13 +109,13 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
     UWidget* ParentWidget = WidgetTree->FindWidget(FName(*ParentSlot));
     if (!ParentWidget)
     {
-        UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Parent widget '%s' not found"), *ParentSlot);
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("SafeAddWidgetToTree: Parent widget '%s' not found"), *ParentSlot);
         return false;
     }
     UPanelWidget* ParentPanel = Cast<UPanelWidget>(ParentWidget);
     if (!ParentPanel)
     {
-        UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Parent '%s' is not a panel widget"), *ParentSlot);
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("SafeAddWidgetToTree: Parent '%s' is not a panel widget"), *ParentSlot);
         return false;
     }
     // Same cycle one level down: a widget cannot be seated inside itself or its own subtree.
@@ -122,13 +123,13 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
     {
         if (Ancestor == NewWidget)
         {
-            UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: '%s' cannot be seated inside its own subtree ('%s')"),
+            UE_LOG(LogEngineWireSubsystem, Warning, TEXT("SafeAddWidgetToTree: '%s' cannot be seated inside its own subtree ('%s')"),
                 *NewWidget->GetName(), *ParentSlot);
             return false;
         }
     }
     ParentPanel->AddChild(NewWidget);
-    UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of '%s'"),
+    UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of '%s'"),
         *NewWidget->GetName(), *ParentSlot);
     return true;
 }
@@ -260,6 +261,6 @@ void ClearWidgetTreeForRebuild(UWidgetBlueprint* WidgetBP)
 #if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
     WidgetBP->WidgetVariableNameToGuidMap.Empty();
 #endif
-    UE_LOG(LogTemp, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
+    UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("ClearWidgetTreeForRebuild: Cleared %d widgets from tree"), WidgetsToRemove.Num());
 }
 }

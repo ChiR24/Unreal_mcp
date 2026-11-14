@@ -32,7 +32,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
     'Enumerate reusable content already installed on this machine: engine templates (vehicle, first person, ...), engine and plugin content, and Quixel Bridge / Fab packs already downloaded by those plugins. Call this before authoring assets from scratch — a production-grade vehicle, track kit or Megascans surface is usually already on disk. Feed a returned sourceRoot + sourceId straight into asset.migrate_assets. Results are paginated (default 50): an unfiltered sweep finds several hundred sources because every engine plugin that ships content counts, so narrow with sourceRoot or filter rather than paging through all of them.',
     schema({
       sourceRoot: str(`Restrict the listing to one root. One of: ${SOURCE_ROOTS}. Omit to list every root.`),
-      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.'),
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name, and on the own name of each folder listed. Listing content sources: a case-insensitive match on the source id and, for plugins, the category.'),
       includePackageCounts: bool('Include packageCount per source. Costs a recursive file scan per returned entry, so leave off for a broad sweep and turn on once the candidate list is short.'),
       limit: boundedLimit(500, 50),
       offset: num('Zero-based offset into the full result set.')
@@ -332,7 +332,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
 
   r('list_megascans_library', 'asset',
     'List the Quixel Bridge / Megascans library index on this machine. This reads the packs a Quixel Bridge install has already downloaded: Bridge writes a plain uassetsData.json next to them, so the inventory is an ordinary local read. Megascans listings that are not downloaded yet are found with search_fab_listings (seller Quixel Megascans) and imported straight from Fab with import_marketplace_asset (marketplace=fab_listing). Pair this with import_megascans_asset to bring a downloaded entry into the project.',
-    schema({ filter: str('Case-sensitive substring matched against each serialized index entry.') }, []),
+    schema({ filter: str('Case-insensitive substring matched against each serialized index entry.') }, []),
     schema({
       success: bool('Operation succeeded.'),
       assets: arrObj('Indexed library entries, verbatim from uassetsData.json.'),

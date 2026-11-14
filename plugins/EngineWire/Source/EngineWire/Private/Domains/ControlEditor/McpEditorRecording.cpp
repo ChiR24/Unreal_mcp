@@ -102,8 +102,7 @@ bool UEngineWireSubsystem::HandleControlEditorStopRecording(
 }
 
 namespace {
-// The level viewport bookmarks belong to, and the slot named by id (the declared
-// name; index is its older spelling). A non-numeric id used to read as 0 and
+// The level viewport bookmarks belong to, and the slot named by id. A non-numeric id used to read as 0 and
 // silently overwrite slot 0; now it is an error, as is a slot the level cannot hold.
 FEditorViewportClient* McpReadBookmarkSlot(const TSharedPtr<FJsonObject>& Payload, uint32& OutSlot, FString& OutError) {
   FEditorViewportClient* Client = GCurrentLevelEditingViewportClient;
@@ -111,10 +110,7 @@ FEditorViewportClient* McpReadBookmarkSlot(const TSharedPtr<FJsonObject>& Payloa
     OutError = TEXT("No level viewport is open to hold bookmarks");
     return nullptr;
   }
-  TSharedPtr<FJsonValue> Field = Payload->TryGetField(TEXT("id"));
-  if (!Field.IsValid()) {
-    Field = Payload->TryGetField(TEXT("index"));
-  }
+  const TSharedPtr<FJsonValue> Field = Payload->TryGetField(TEXT("id"));
   double Number = -1.0;
   if (Field.IsValid() && Field->Type == EJson::String && FCString::IsNumeric(*Field->AsString())) {
     Number = FCString::Atod(*Field->AsString());

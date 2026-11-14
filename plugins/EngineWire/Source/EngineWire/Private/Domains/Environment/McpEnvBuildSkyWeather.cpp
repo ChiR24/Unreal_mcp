@@ -64,7 +64,7 @@ bool ConfigureSkyRigActor(
 
 bool CreateSkySphereRig(FEnvironmentBuildContext &Context)
 {
-    const FString BaseName = McpGetFirstStringField(Context.Payload, {TEXT("name"), TEXT("actorName")});
+    const FString BaseName = GetJsonStringField(Context.Payload, TEXT("name"));
     const FString AtmosphereName = BaseName.IsEmpty() ? TEXT("SkyAtmosphere") : BaseName + TEXT("_Atmosphere");
     const FString DirectionalName = BaseName.IsEmpty() ? TEXT("DirectionalLight") : BaseName + TEXT("_Sun");
     const FString SkyLightName = BaseName.IsEmpty() ? TEXT("SkyLight") : BaseName + TEXT("_SkyLight");

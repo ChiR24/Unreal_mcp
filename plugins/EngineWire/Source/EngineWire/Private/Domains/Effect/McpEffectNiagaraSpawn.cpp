@@ -54,6 +54,13 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
 
+    UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(NiagaraObject);
+    if (!NiagaraSystem)
+    {
+        Context.SendError(FString::Printf(TEXT("%s is not a Niagara system asset"), *SystemPath), TEXT("ASSET_TYPE_MISMATCH"));
+        return true;
+    }
+
     const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(Context.RequestId);
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
@@ -66,14 +73,10 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     }
 
     UNiagaraComponent* NiagaraComponent = Spawned->FindComponentByClass<UNiagaraComponent>();
-    UNiagaraSystem* NiagaraSystem = Cast<UNiagaraSystem>(NiagaraObject);
-    if (!NiagaraComponent || !NiagaraSystem)
+    if (!NiagaraComponent)
     {
         Spawned->Destroy();
-        Context.SendError(NiagaraSystem
-                ? TEXT("Spawned NiagaraActor has no NiagaraComponent")
-                : *FString::Printf(TEXT("%s is not a Niagara system asset"), *SystemPath),
-            NiagaraSystem ? TEXT("SPAWN_FAILED") : TEXT("ASSET_TYPE_MISMATCH"));
+        Context.SendError(TEXT("Spawned NiagaraActor has no NiagaraComponent"), TEXT("SPAWN_FAILED"));
         return true;
     }
     NiagaraComponent->SetAsset(NiagaraSystem);

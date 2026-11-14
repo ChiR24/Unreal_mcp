@@ -7,7 +7,6 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
-#include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
@@ -80,20 +79,11 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
         return true;
     }
 
-    // LoadObject, not a registry check: a Blueprint created moments ago may not be in the asset registry yet.
-    UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+    // The controller actions' loader: any other Blueprint took the success reply below with nothing assigned.
+    FString LoadedControllerPath;
+    UBlueprint* ControllerBP = LoadControllerBlueprint(Self, RequestId, Payload, RequestingSocket, LoadedControllerPath);
     if (!ControllerBP)
     {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("AI Controller not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-        return true;
-    }
-    // Any other Blueprint took the success reply below with nothing assigned.
-    if (!ControllerBP->GeneratedClass || !ControllerBP->GeneratedClass->IsChildOf(AAIController::StaticClass()))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("%s is not an AI Controller Blueprint (its parent class is %s), so it holds no Blackboard. Nothing was changed."),
-                *ControllerPath, ControllerBP->ParentClass ? *ControllerBP->ParentClass->GetName() : TEXT("none")), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -136,19 +126,9 @@ bool HandleAssignBlackboard(UEngineWireSubsystem* Self, const FString& RequestId
                 PinType.PinSubCategoryObject = UBlackboardData::StaticClass();
 
                 const FName VarName = TEXT("DefaultBlackboard");
-                if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
-                {
-                    // The variable is a property of the class only after a compile: looked up before one it was never found,
-                    // so it was made with no default and propertyAssigned read false. The compile makes a new default object.
-                    McpSafeCompileBlueprint(ControllerBP);
-                    UObject* Defaults = ControllerBP->GeneratedClass ? ControllerBP->GeneratedClass->GetDefaultObject() : nullptr;
-                    FObjectProperty* ObjProp = Defaults ? CastField<FObjectProperty>(ControllerBP->GeneratedClass->FindPropertyByName(VarName)) : nullptr;
-                    if (ObjProp)
-                    {
-                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(Defaults), BB);
-                        bPropertySet = true;
-                    }
-                }
+                // The variable is a property of the class only after a compile, which the setter runs first.
+                bPropertySet = FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType) &&
+                               SetBPVarDefaultValueAI(ControllerBP, VarName, BB->GetPathName());
                 Result->SetStringField(TEXT("propertyName"), VarName.ToString());
             }
 

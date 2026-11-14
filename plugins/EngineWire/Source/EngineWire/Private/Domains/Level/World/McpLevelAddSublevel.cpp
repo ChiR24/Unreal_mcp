@@ -127,7 +127,7 @@ bool HandleAddSublevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
           } else {
             // Existing streaming level is broken (failed to load)
             // Remove it and continue to add the new one
-            UE_LOG(LogTemp, Warning, TEXT("add_sublevel: Removing broken streaming level reference: %s"), *SubLevelPath);
+            UE_LOG(LogEngineWireSubsystem, Warning, TEXT("add_sublevel: Removing broken streaming level reference: %s"), *SubLevelPath);
             World->RemoveStreamingLevel(ExistingStreamingLevel);
             break;  // Exit the loop to continue adding
           }

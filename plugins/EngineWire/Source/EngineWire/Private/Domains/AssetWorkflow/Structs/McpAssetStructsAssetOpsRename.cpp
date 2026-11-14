@@ -172,21 +172,18 @@ bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString&
         FString NewName = GetJsonStringField(Payload, TEXT("newName"));
         FString DestFolder = GetJsonStringField(Payload, TEXT("destinationFolder"));
 
-        FString FinalObjectPath;
-        FString NewNameOnly;
+        // The destination's folder and name: newStructPath's, else newName in destinationFolder (default: the struct's).
+        FString NewParentFolder;
+        FString NewRawName;
         if (!NewStructPath.IsEmpty())
         {
-            FinalObjectPath = NewStructPath;
-            NewNameOnly = FPaths::GetBaseFilename(FinalObjectPath);
+            NewParentFolder = FPaths::GetPath(NewStructPath);
+            NewRawName = FPaths::GetBaseFilename(NewStructPath);
         }
         else if (!NewName.IsEmpty())
         {
-            NewName = SanitizeAssetName(NewName);
-            NewNameOnly = NewName;
-            const FString ParentFolder = DestFolder.IsEmpty()
-                ? FPaths::GetPath(StructPath)
-                : DestFolder;
-            FinalObjectPath = FString::Printf(TEXT("%s/%s.%s"), *ParentFolder, *NewNameOnly, *NewNameOnly);
+            NewParentFolder = DestFolder.IsEmpty() ? FPaths::GetPath(StructPath) : DestFolder;
+            NewRawName = SanitizeAssetName(NewName);
         }
         else
         {
@@ -200,10 +197,10 @@ bool HandleStructAssetAction_Rename(UEngineWireSubsystem& Bridge, const FString&
         // validation before performing the rename. This rejects out-of-root
         // paths, '..' traversal, and read-only engine/script targets, and
         // normalizes the folder/name so the rename lands on a canonical path.
+        FString FinalObjectPath;
+        FString NewNameOnly;
         FString NewPackagePath;
         {
-            const FString NewParentFolder = FPaths::GetPath(FinalObjectPath);
-            const FString NewRawName = FPaths::GetBaseFilename(FinalObjectPath);
             const FString NewSanitizedName = SanitizeAssetName(NewRawName);
             FString NewPackageName;
             FString NewPathError;

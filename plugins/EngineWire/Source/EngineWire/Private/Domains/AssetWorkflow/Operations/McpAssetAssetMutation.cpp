@@ -43,7 +43,7 @@ bool UEngineWireSubsystem::HandleRenameAsset(
   // A bare destination name stays beside the source.
   DestinationPath = McpHandlerUtils::ResolveSiblingAssetPath(SourcePath, DestinationPath);
 
-  if ((SourcePath.Contains(TEXT("/")) || SourcePath.StartsWith(TEXT("/"))) &&
+  if (SourcePath.Contains(TEXT("/")) &&
       SanitizeProjectRelativePath(SourcePath).IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
                            McpPathRefusalMessage(TEXT("sourcePath"), SourcePath), nullptr,

@@ -178,7 +178,7 @@ FEdGraphPinType MakePinType(const FString& InType)
     FTypeResolutionResult Result = ResolvePinType(InType);
     if (!Result.bSuccess)
     {
-        UE_LOG(LogTemp, Warning, TEXT("McpBlueprintUtils::MakePinType: %s"), *Result.OutError);
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("McpBlueprintUtils::MakePinType: %s"), *Result.OutError);
         FEdGraphPinType Wildcard;
         Wildcard.PinCategory = UEdGraphSchema_K2::PC_Wildcard;
         return Wildcard;

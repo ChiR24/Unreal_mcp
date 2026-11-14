@@ -100,15 +100,14 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
             FinalName = SanitizedName;
         }
 
-        const FName SelfPath = StructPath.IsEmpty()
-            ? FName(*FString::Printf(TEXT("%s.%s"), *PackageName, *FinalName))
-            : FName(*StructPath);
+        const FString AssetPath = PackageName + TEXT(".") + FinalName;
+        const FName SelfPath = StructPath.IsEmpty() ? FName(*AssetPath) : FName(*StructPath);
         TArray<FParsedMember> ParsedMembers;
         TArray<FString> Failures;
         if (!ValidateStructMembers(*MembersArr, SelfPath, ParsedMembers, Failures))
         {
             TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
-            ValidationResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+            ValidationResult->SetStringField(TEXT("assetPath"), AssetPath);
             ValidationResult->SetStringField(TEXT("structName"), FinalName);
             ValidationResult->SetNumberField(TEXT("imported"), 0);
             ValidationResult->SetNumberField(TEXT("failed"), Failures.Num());
@@ -152,7 +151,7 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
             Transaction.Cancel();
 
             TSharedPtr<FJsonObject> FailureResult = McpHandlerUtils::CreateResultObject();
-            FailureResult->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+            FailureResult->SetStringField(TEXT("assetPath"), AssetPath);
             FailureResult->SetStringField(TEXT("structName"), FinalName);
             FailureResult->SetNumberField(TEXT("imported"), Applied);
             FailureResult->SetNumberField(TEXT("failed"), ApplyFailures.Num());
@@ -176,7 +175,7 @@ bool HandleStructImportActions(UEngineWireSubsystem& Bridge, const FString& Requ
         FinishStructEdit(S, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + FinalName);
+        Result->SetStringField(TEXT("assetPath"), AssetPath);
         Result->SetStringField(TEXT("structName"), FinalName);
         Result->SetNumberField(TEXT("imported"), Applied);
         Result->SetNumberField(TEXT("failed"), ApplyFailures.Num());

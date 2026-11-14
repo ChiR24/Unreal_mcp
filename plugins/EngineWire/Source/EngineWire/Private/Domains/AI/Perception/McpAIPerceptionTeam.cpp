@@ -10,11 +10,11 @@
 
 namespace McpAIHandlers
 {
-static void SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
+bool SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
 {
     if (!Blueprint)
     {
-        return;
+        return false;
     }
 
     for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
@@ -27,6 +27,7 @@ static void SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const F
     }
 
     McpSafeCompileBlueprint(Blueprint);
+    bool bTaken = false;
     if (Blueprint->GeneratedClass)
     {
         if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
@@ -34,13 +35,14 @@ static void SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const F
             if (FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName))
             {
                 void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
-                MCP_PROPERTY_IMPORT_TEXT(Property, *DefaultValue, ValuePtr, CDO, PPF_None);
+                bTaken = MCP_PROPERTY_IMPORT_TEXT(Property, *DefaultValue, ValuePtr, CDO, PPF_None) != nullptr;
             }
         }
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     Blueprint->MarkPackageDirty();
+    return bTaken;
 }
 
 // Implements the "set_perception_team" action.

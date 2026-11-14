@@ -13,8 +13,10 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 
+		FString PackagePath, PathError;
+		if (!BuildAudioCreationPath(Path, Name, PackagePath, PathError)) { return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError); }
 		FString CreateError, CreateCode;
-		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		UReverbEffect* NewEffect = NewObject<UReverbEffect>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewEffect) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create ReverbEffect")); }
@@ -42,8 +44,10 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 
+		FString PackagePath, PathError;
+		if (!BuildAudioCreationPath(Path, Name, PackagePath, PathError)) { return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError); }
 		FString CreateError, CreateCode;
-		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewChain) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create source effect chain")); }
@@ -153,8 +157,10 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			return McpHandlerUtils::BuildErrorResponse(TEXT("UNSUPPORTED_EFFECT_TYPE"), FString::Printf(TEXT("effectType '%s' is not Reverb, EQ or Dynamics"), *EffectType));
 		}
 
+		FString PackagePath, PathError;
+		if (!BuildAudioCreationPath(Path, Name, PackagePath, PathError)) { return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ASSET_PATH"), PathError); }
 		FString CreateError, CreateCode;
-		UPackage* Package = McpCreatePackageForNewAsset(Path / Name, CreateError, CreateCode);
+		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 		USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewSubmix) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create submix")); }

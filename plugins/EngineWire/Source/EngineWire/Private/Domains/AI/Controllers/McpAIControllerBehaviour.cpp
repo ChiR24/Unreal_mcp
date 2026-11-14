@@ -13,11 +13,6 @@
 // was set and the tree assigned, while nothing focused and no tree ran.
 namespace McpAIHandlers
 {
-namespace
-{
-constexpr const TCHAR* RunTreeTag = TEXT("MCP run behavior tree");
-constexpr const TCHAR* FocusBehaviourTag = TEXT("MCP AI focus");
-
 // The AIController Blueprint at controllerPath, or null once the refusal is sent.
 UBlueprint* LoadControllerBlueprint(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                                     TSharedPtr<FMcpBridgeWebSocket> Socket, FString& OutPath)
@@ -50,6 +45,11 @@ UBlueprint* LoadControllerBlueprint(UEngineWireSubsystem* Self, const FString& R
     }
     return Blueprint;
 }
+
+namespace
+{
+constexpr const TCHAR* RunTreeTag = TEXT("MCP run behavior tree");
+constexpr const TCHAR* FocusBehaviourTag = TEXT("MCP AI focus");
 
 UBehaviorTree* LoadTree(UEngineWireSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
                         TSharedPtr<FMcpBridgeWebSocket> Socket)

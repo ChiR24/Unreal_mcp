@@ -10,6 +10,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
+#include "SourceControlHelpers.h"
 
 bool UEngineWireSubsystem::HandleGetSourceControlState(
     const FString &RequestId,
@@ -85,17 +86,9 @@ bool UEngineWireSubsystem::HandleGetSourceControlState(
 
     StateObj->SetBoolField(TEXT("exists"), true);
 
-    // Convert asset path to file path
-    FString PackageName = FPackageName::ObjectPathToPackageName(SafeAssetPath);
-    FString FilePath;
-    if (!FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetAssetPackageExtension()) &&
-        !FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, FilePath, FPackageName::GetMapPackageExtension())) {
-      StateObj->SetStringField(TEXT("state"), TEXT("path_conversion_failed"));
-      StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));
-      continue;
-    }
+    // The engine's resolution, which finds the package on disk first, as submit does: joining the asset extension
+    // succeeded for every mounted package, so a level's state was asked for Level.uasset.
+    const FString FilePath = SourceControlHelpers::PackageFilename(FPackageName::ObjectPathToPackageName(SafeAssetPath));
 
     // Get source control state
     FSourceControlStatePtr SourceControlState = SourceControlProvider.GetState(

@@ -217,7 +217,7 @@ FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSh
         return OutStr;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("McpStructHandlers: failed to apply default value: %s"), *ApplyError);
+    UE_LOG(LogEngineWireSubsystem, Warning, TEXT("McpStructHandlers: failed to apply default value: %s"), *ApplyError);
     return TEXT("");
 }
 

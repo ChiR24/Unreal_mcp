@@ -2,6 +2,7 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "ScopedTransaction.h"
 
 namespace McpSequenceCinematics {
 TSharedPtr<FJsonObject> MakeResult(bool bSuccess, const FString &Action,
@@ -58,6 +59,15 @@ bool TryHandleCinematics(const FString &Action,
       {TEXT("add_property_track"), &HandleAddPropertyTrack},
   };
   const FHandler *Handler = Handlers.Find(Action);
-  return Handler && (*Handler)(Params, OutResult);
+  if (!Handler) {
+    return false;
+  }
+  // One undo step for an edit of an existing sequence: the handlers Modify it, which with no transaction open recorded
+  // nothing. Creating the master sequence is asset creation, which stays outside as everywhere in the plugin.
+  TOptional<FScopedTransaction> Step;
+  if (Action != TEXT("create_master_sequence")) {
+    Step.Emplace(FText::FromString(FString::Printf(TEXT("Sequencer %s"), *Action)));
+  }
+  return (*Handler)(Params, OutResult);
 }
 }

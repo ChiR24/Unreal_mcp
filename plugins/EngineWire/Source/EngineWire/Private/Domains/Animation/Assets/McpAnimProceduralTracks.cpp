@@ -108,6 +108,29 @@ void FillBetweenKeys(TArray<T> &Keys, TArray<int32> Keyed, BlendFn Blend) {
 }
 } // namespace
 
+bool McpEnsureBoneTrack(UAnimSequence *Sequence, FName Bone, bool &bOutHad) {
+  IAnimationDataController &Controller = Sequence->GetController();
+#if ENGINE_MINOR_VERSION >= 2
+  const auto Has = [&Controller, Bone] { return Controller.GetModel()->IsValidBoneTrackName(Bone); };
+#else
+  const auto Has = [&Controller, Bone] { return Controller.GetModel()->FindBoneTrackByName(Bone) != nullptr; };
+#endif
+  bOutHad = Has();
+  if (!bOutHad) {
+#if ENGINE_MINOR_VERSION >= 2
+    Controller.AddBoneCurve(Bone);
+#elif ENGINE_MINOR_VERSION == 1
+    Controller.AddBoneTrack(Bone);
+#else
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    FRawAnimSequenceTrack NewTrack;
+    Sequence->AddNewRawTrack(Bone, &NewTrack);
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+  }
+  return Has();
+}
+
 int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                                 USkeleton *TargetSkeleton,
                                 const TArray<TSharedPtr<FJsonValue>> &Tracks,
@@ -141,30 +164,14 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
     const FReferenceSkeleton &RefSkeleton = TargetSkeleton->GetReferenceSkeleton();
     const int32 RefBoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
     if (RefBoneIndex == INDEX_NONE) {
-      UE_LOG(LogTemp, Warning,
+      UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("create_procedural_anim: Bone '%s' not found in skeleton %s"),
              *BoneName, *TargetSkeleton->GetName());
       continue;
     }
 
-#if ENGINE_MINOR_VERSION >= 2
-    if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName)) {
-      Controller.AddBoneCurve(BoneFName);
-    }
-#elif ENGINE_MINOR_VERSION == 1
-    if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr) {
-      Controller.AddBoneTrack(BoneFName);
-    }
-#else
-    const FBoneAnimationTrack *ExistingTrack =
-        Controller.GetModel()->FindBoneTrackByName(BoneFName);
-    if (ExistingTrack == nullptr) {
-      PRAGMA_DISABLE_DEPRECATION_WARNINGS
-      FRawAnimSequenceTrack NewTrack;
-      NewSequence->AddNewRawTrack(BoneFName, &NewTrack);
-      PRAGMA_ENABLE_DEPRECATION_WARNINGS
-    }
-#endif
+    bool bHadTrack = false;
+    McpEnsureBoneTrack(NewSequence, BoneFName, bHadTrack);
 
     TArray<FVector> PositionKeys;
     TArray<FQuat> RotationKeys;

@@ -127,14 +127,9 @@ bool UEngineWireSubsystem::HandleNaniteRebuildMesh(
   double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 100.0);
   TrianglePercent = FMath::Clamp(TrianglePercent, 0.0, 100.0);
 
-  // The published capability schema names this `assetPath` (and rejects any
-  // undeclared field), so reading only `meshPath` made the action uncallable.
-  // Prefer the contract spelling and keep `meshPath` for legacy callers.
+  // The record declares assetPath (one mesh) and assetPaths (several).
   FString MeshPath;
-  if ((!Payload->TryGetStringField(TEXT("assetPath"), MeshPath) ||
-       MeshPath.IsEmpty()) &&
-      (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) ||
-       MeshPath.IsEmpty())) {
+  if (!Payload->TryGetStringField(TEXT("assetPath"), MeshPath) || MeshPath.IsEmpty()) {
     // A whole imported pack in one call, under one consent: one row per mesh, and a mesh that fails does not stop
     // the others.
     const TArray<TSharedPtr<FJsonValue>> *Paths = nullptr;

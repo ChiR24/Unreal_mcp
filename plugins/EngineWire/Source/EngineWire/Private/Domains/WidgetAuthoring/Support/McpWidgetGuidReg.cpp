@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireLog.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHelpers
@@ -41,7 +42,7 @@ void UnregisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     if (MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName))
     {
         MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Remove(WidgetFName);
-        UE_LOG(LogTemp, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"), *WidgetFName.ToString());
+        UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("UnregisterWidgetGuid: Unregistered widget '%s'"), *WidgetFName.ToString());
     }
 #else
     // No GUID map before 5.6, so nothing was ever registered to remove. Logged
@@ -61,7 +62,7 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
     {
         FGuid AnimGuid = MCP_NEW_DETERMINISTIC_GUID(Animation->GetPathName());
         MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(AnimFName, AnimGuid);
-        UE_LOG(LogTemp, Verbose, TEXT("RegisterAnimationGuid: Registered animation '%s' with GUID %s"),
+        UE_LOG(LogEngineWireSubsystem, Verbose, TEXT("RegisterAnimationGuid: Registered animation '%s' with GUID %s"),
             *AnimFName.ToString(), *AnimGuid.ToString());
     }
 #else

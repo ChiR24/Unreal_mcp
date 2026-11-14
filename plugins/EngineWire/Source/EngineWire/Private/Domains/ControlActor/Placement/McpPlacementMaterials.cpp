@@ -4,6 +4,7 @@
 #include "Dom/JsonValue.h"
 #include "Domains/SystemControl/McpSystemPrivate.h"
 #include "Engine/Blueprint.h"
+#include "EngineWireLog.h"
 #include "Materials/MaterialInterface.h"
 #include "Safety/McpSafeOperationsAssetSave.h"
 #include "UObject/Package.h"
@@ -24,7 +25,7 @@ FMcpPreviewMaterialSaver::~FMcpPreviewMaterialSaver()
             : nullptr;
         if (Material && Material->GetOutermost()->GetName().StartsWith(TEXT("/Game/")) && McpSafeOperations::McpSafeAssetSave(Material))
         {
-            UE_LOG(LogTemp, Log, TEXT("EngineWire: saved %s, which needs the %s usage flag it was given"),
+            UE_LOG(LogEngineWireSubsystem, Log, TEXT("EngineWire: saved %s, which needs the %s usage flag it was given"),
                    *Material->GetPathName(), *Row->GetStringField(TEXT("usage")));
         }
     }

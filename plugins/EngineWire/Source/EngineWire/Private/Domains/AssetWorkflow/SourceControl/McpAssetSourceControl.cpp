@@ -14,17 +14,14 @@
 
 namespace
 {
-// The packages a checkout or submit names (assetPath, or the paths / assetPaths list), with the asset paths they came
+// The packages a checkout or submit names (assetPath, or the paths list), with the asset paths they came
 // from; false after the reply when no path was sent, source control is off, or no path names an asset of the project.
 // A path that names none is listed in OutSkipped.
 bool SourceControlPackagesOrReply(UEngineWireSubsystem *Self, const FString &RequestId,
                                   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                   const TSharedPtr<FJsonObject> &Payload, TArray<FString> &PackageNames,
                                   TArray<FString> &ValidPaths, TArray<TSharedPtr<FJsonValue>> &Skipped) {
-  // The contract declares `paths`; only assetPaths was read, so a multi-asset
-  // call through the gateway was impossible. assetPaths stays as the fallback.
-  const TArray<FString> AssetPaths = McpGetStringListField(
-      Payload, Payload->HasField(TEXT("paths")) ? TEXT("paths") : TEXT("assetPaths"), TEXT("assetPath"));
+  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("paths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     Self->SendAutomationError(RequestingSocket, RequestId,

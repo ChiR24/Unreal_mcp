@@ -213,10 +213,10 @@ bool UEngineWireSubsystem::HandleListFabLibrary(
   Read->Handle = Storage->RegisterQuery(MoveTemp(Description));
 
   // A real library is mostly engine versions and plugins (Source "uem"), which
-  // crowd the genuine content out of any row limit. `filter` is already in this
-  // capability's contract with exactly this meaning for the Megascans lookup;
-  // honouring it here lets a caller ask for "fab" and get an inventory worth
-  // reading, instead of paging past eleven rows called "Unreal Engine".
+  // crowd the genuine content out of any row limit. `filter` lets a caller ask
+  // for "fab" and get an inventory worth reading, instead of paging past eleven
+  // rows called "Unreal Engine". It matches case-sensitively, unlike the Megascans
+  // filter: every row's keys contain "Fab", so a case-blind "fab" would keep them all.
   Payload->TryGetStringField(TEXT("filter"), Read->Filter);
   double Limit = GetJsonNumberField(Payload, TEXT("limit"), 200);
   Read->MaxRows = FMath::Clamp(static_cast<int32>(Limit), 1, 1000);

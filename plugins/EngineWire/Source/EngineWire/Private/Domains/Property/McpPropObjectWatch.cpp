@@ -2,6 +2,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Containers/Ticker.h"
+#include "Core/Requests/McpUndoLedger.h"
+#include "Domains/ControlActor/Placement/McpChangeWatch.h"
+#include "Domains/SystemControl/McpSystemValidateDelta.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -136,6 +139,12 @@ void SendAfterWatch(UEngineWireSubsystem& Bridge, const FString& RequestId, TSha
   Run->Result = Result;
   Run->Start = FPlatformTime::Seconds();
   AdvanceWatch(*Run); // the value right after the write, before any frame ran
+  // The reply goes out after this request's brackets close, which add the undo block and the placement and content
+  // checks: the checks of what this bracket changed go into the reply now, and the reply is sent inside the brackets
+  // again (RunLatentReply), whose undo ledger goes on from this one (Park), as run_script's await does.
+  McpChangeWatch::AddWarnings(RequestId, Result);
+  McpValidateDelta::AddWarnings(RequestId, Result);
+  McpUndoLedger::Park(RequestId);
   TWeakObjectPtr<UEngineWireSubsystem> WeakBridge(&Bridge);
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([WeakBridge, Run, RequestId, Socket](float) -> bool
@@ -157,10 +166,12 @@ void SendAfterWatch(UEngineWireSubsystem& Bridge, const FString& RequestId, TSha
         WatchJson->SetBoolField(TEXT("changed"), Run->Samples.Num() > 1);
         WatchJson->SetNumberField(TEXT("frames"), Run->Frames);
         Run->Result->SetObjectField(TEXT("watch"), WatchJson);
-        Self->SendAutomationResponse(Socket, RequestId, true,
-                                     FString::Printf(TEXT("Property value updated; the watched %s took %d value(s) in %.2f s."),
-                                                     *Run->Watch.PropertyName, Run->Samples.Num(), Run->Watch.Duration),
-                                     Run->Result);
+        Self->RunLatentReply(RequestId, TEXT("inspect set_property"), [Self, &Run, &RequestId, &Socket]() {
+          Self->SendAutomationResponse(Socket, RequestId, true,
+                                       FString::Printf(TEXT("Property value updated; the watched %s took %d value(s) in %.2f s."),
+                                                       *Run->Watch.PropertyName, Run->Samples.Num(), Run->Watch.Duration),
+                                       Run->Result);
+        });
         return false;
       }),
       0.0f);

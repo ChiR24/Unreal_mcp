@@ -61,7 +61,7 @@ static bool ConnectPins(FActionContext& Context)
     if (FromNode->Pins.Num() == 0)
     {
         UE_LOG(
-            LogTemp,
+            LogEngineWireSubsystem,
             Warning,
             TEXT("connect_pins: FromNode '%s' has no pins, calling AllocateDefaultPins"),
             *FromNode->GetName());
@@ -70,7 +70,7 @@ static bool ConnectPins(FActionContext& Context)
     if (ToNode->Pins.Num() == 0)
     {
         UE_LOG(
-            LogTemp,
+            LogEngineWireSubsystem,
             Warning,
             TEXT("connect_pins: ToNode '%s' has no pins, calling AllocateDefaultPins"),
             *ToNode->GetName());

@@ -15,6 +15,9 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
                                 FString &OutError);
 // Sets Sequence's length to NumFrames at FrameRate fps.
 void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 FrameRate);
+// Gives Sequence a track for Bone unless it has one (bOutHad), as each engine adds one: AddBoneCurve from 5.2,
+// AddBoneTrack on 5.1, AddNewRawTrack on 5.0. True when the sequence holds the track afterwards.
+bool McpEnsureBoneTrack(UAnimSequence *Sequence, FName Bone, bool &bOutHad);
 int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                                 USkeleton *TargetSkeleton,
                                 const TArray<TSharedPtr<FJsonValue>> &Tracks,

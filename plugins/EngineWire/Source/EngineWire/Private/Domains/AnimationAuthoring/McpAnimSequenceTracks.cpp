@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
+#include "Domains/Animation/Assets/McpAnimProceduralTracks.h"
 
 namespace McpAnimationAuthoring {
 
@@ -90,83 +91,21 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
-        bool bAlreadyHadTrack = false;
-#if ENGINE_MINOR_VERSION >= 2
-        // UE 5.2+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
-        IAnimationDataController& Controller = Sequence->GetController();
-
-        // Validate the controller model is available
-        if (!Controller.GetModel())
+        if (!Sequence->GetController().GetModel())
         {
             ANIM_ERROR_RESPONSE(
                 TEXT("Animation data model is not available - cannot add bone track"),
                 TEXT("MODEL_NOT_AVAILABLE")
             );
         }
-
-        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
-        bAlreadyHadTrack = Controller.GetModel()->IsValidBoneTrackName(BoneFName);
-        if (!bAlreadyHadTrack)
+        bool bAlreadyHadTrack = false;
+        if (!McpAnimationHandlers::McpEnsureBoneTrack(Sequence, BoneFName, bAlreadyHadTrack))
         {
-            // AddBoneCurve returns bool - check the result
-            const bool bAdded = Controller.AddBoneCurve(BoneFName);
-            if (!bAdded)
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("AddBoneCurve failed for bone '%s' - the bone may not be valid for this animation"), *BoneName),
-                    TEXT("BONE_TRACK_ADD_FAILED")
-                );
-            }
-
-            if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
-                    TEXT("BONE_TRACK_ADD_FAILED")
-                );
-            }
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to add bone track '%s' - the bone may not be valid for this animation"), *BoneName),
+                TEXT("BONE_TRACK_ADD_FAILED")
+            );
         }
-#elif ENGINE_MINOR_VERSION == 1
-        // UE 5.1: AddBoneTrack/FindBoneTrackByName (AddBoneCurve is 5.2+, AddNewRawTrack is 5.0-only)
-        IAnimationDataController& Controller = Sequence->GetController();
-        bAlreadyHadTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName) != nullptr;
-        if (!bAlreadyHadTrack)
-        {
-            Controller.AddBoneTrack(BoneFName);
-            if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to add bone track '%s' - the bone may not be valid for this animation"), *BoneName),
-                    TEXT("BONE_TRACK_ADD_FAILED")
-                );
-            }
-        }
-#else
-        // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
-        IAnimationDataController& Controller = Sequence->GetController();
-
-        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
-        bAlreadyHadTrack = Track != nullptr;
-        if (Track == nullptr)
-        {
-            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack directly on the sequence
-            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            FRawAnimSequenceTrack NewTrack;
-            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-            // Verify the bone track was actually added
-            const FBoneAnimationTrack* AddedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
-            if (AddedTrack == nullptr)
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to add bone track '%s' - internal error"), *BoneName),
-                    TEXT("BONE_TRACK_ADD_FAILED")
-                );
-            }
-        }
-#endif
 
         // A track the sequence already had answered "added" and the sequence was written again.
         Response->SetBoolField(TEXT("alreadyExists"), bAlreadyHadTrack);
@@ -218,11 +157,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             ? ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion() : Base.GetRotation();
         FVector Scale = ExtractVectorField(Params, TEXT("scale"), Base.GetScale3D());
 
-#if ENGINE_MINOR_VERSION >= 2
-        // UE 5.2+ API
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
-
         if (!Controller.GetModel())
         {
             ANIM_ERROR_RESPONSE(
@@ -230,29 +166,15 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 TEXT("MODEL_NOT_AVAILABLE")
             );
         }
-
-        // Use IsValidBoneTrackName (non-deprecated) instead of GetBoneTrackIndexByName (deprecated since 5.2)
-        if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
+        bool bHadTrack = false;
+        if (!McpAnimationHandlers::McpEnsureBoneTrack(Sequence, BoneFName, bHadTrack))
         {
-            const bool bAdded = Controller.AddBoneCurve(BoneFName);
-            if (!bAdded)
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Failed to create missing bone track '%s' before keying"), *BoneName),
-                    TEXT("BONE_TRACK_ADD_FAILED")
-                );
-            }
-
-            // Verify the track was actually created after AddBoneCurve succeeded
-            if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName))
-            {
-                ANIM_ERROR_RESPONSE(
-                    FString::Printf(TEXT("Bone track '%s' not found in animation sequence after AddBoneCurve. Add the track first using add_bone_track."), *BoneName),
-                    TEXT("BONE_TRACK_NOT_FOUND")
-                );
-            }
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to create missing bone track '%s' before keying"), *BoneName),
+                TEXT("BONE_TRACK_ADD_FAILED")
+            );
         }
-
+#if ENGINE_MINOR_VERSION >= 1
         // UpdateBoneTrackKeys preserves other frames; SetBoneTrackKeys would replace the entire track
         FInt32Range KeyRange(Frame, Frame + 1);
         if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
@@ -262,56 +184,9 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 TEXT("BONE_KEY_SET_FAILED")
             );
         }
-#elif ENGINE_MINOR_VERSION == 1
-        // UE 5.1: AddBoneTrack/FindBoneTrackByName, then UpdateBoneTrackKeys (present since 5.0)
-        IAnimationDataController& Controller = Sequence->GetController();
-        FName BoneFName(*BoneName);
-        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
-        {
-            Controller.AddBoneTrack(BoneFName);
-        }
-        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
-                TEXT("BONE_TRACK_NOT_FOUND")
-            );
-        }
-        FInt32Range KeyRange(Frame, Frame + 1);
-        if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Failed to set bone key at frame %d"), Frame),
-                TEXT("BONE_KEY_SET_FAILED")
-            );
-        }
 #else
-        // UE 5.0 API - uses FindBoneTrackByName which returns a pointer
-        IAnimationDataController& Controller = Sequence->GetController();
-        FName BoneFName(*BoneName);
-
-        const FBoneAnimationTrack* Track = Controller.GetModel()->FindBoneTrackByName(BoneFName);
-        if (Track == nullptr)
-        {
-            // UE 5.0 doesn't have AddBoneCurve - use AddNewRawTrack
-            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            FRawAnimSequenceTrack NewTrack;
-            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-        }
-
-        // Verify bone track exists before setting keys
-        const FBoneAnimationTrack* VerifiedTrack = Controller.GetModel()->FindBoneTrackByName(BoneFName);
-        if (VerifiedTrack == nullptr)
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
-                TEXT("BONE_TRACK_NOT_FOUND")
-            );
-        }
-
-        // UE 5.0 fallback: SetBoneTrackKeys replaces the entire track (no UpdateBoneTrackKeys available)
+        // UE 5.0: SetBoneTrackKeys replaces the entire track. UpdateBoneTrackKeys exists on 5.0 but writes only inside
+        // the keys a track already holds, and a track AddNewRawTrack just made holds none.
         Controller.SetBoneTrackKeys(BoneFName, {Location}, {Rotation}, {Scale});
 #endif
 
