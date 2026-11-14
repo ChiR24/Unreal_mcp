@@ -5,7 +5,7 @@
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
 #include "Domains/SCS/McpSCSSupport.h"
 #include "Engine/Blueprint.h"

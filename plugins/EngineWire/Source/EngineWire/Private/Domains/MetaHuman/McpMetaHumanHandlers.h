@@ -15,7 +15,6 @@
 // The same reasoning drives Fab in EngineWireFab/McpFabDirectApi.cpp.
 
 #include "CoreMinimal.h"
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

@@ -10,7 +10,6 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopedSlowTask.h"
 
 bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     const FString &RequestId, const FString &Action,
@@ -35,22 +34,6 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  const bool bHasRegion = Payload->HasField(TEXT("region")) || Payload->HasField(TEXT("minX")) ||
-                          Payload->HasField(TEXT("maxX")) || Payload->HasField(TEXT("minY")) || Payload->HasField(TEXT("maxY"));
-  int32 MinX = -1, MinY = -1, MaxX = -1, MaxY = -1;
-  const TSharedPtr<FJsonObject> *RegionObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("region"), RegionObj) && RegionObj) {
-    (*RegionObj)->TryGetNumberField(TEXT("minX"), MinX);
-    (*RegionObj)->TryGetNumberField(TEXT("minY"), MinY);
-    (*RegionObj)->TryGetNumberField(TEXT("maxX"), MaxX);
-    (*RegionObj)->TryGetNumberField(TEXT("maxY"), MaxY);
-  } else {
-    Payload->TryGetNumberField(TEXT("minX"), MinX);
-    Payload->TryGetNumberField(TEXT("minY"), MinY);
-    Payload->TryGetNumberField(TEXT("maxX"), MaxX);
-    Payload->TryGetNumberField(TEXT("maxY"), MaxY);
-  }
-
   double Strength = GetJsonNumberField(Payload, TEXT("strength"), 1.0);
   Strength = FMath::Clamp(Strength, 0.0, 1.0);
   bool bSkipFlush = false;
@@ -100,27 +83,13 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
             FName(*FString::Printf(TEXT("LayerInfo_%s"),
                                    *LayerName)),
             RF_Public | RF_Transactional);
-    if (!NewLayerInfo) {
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Failed to create layer '%s'"),
-                          *LayerName),
-          TEXT("LAYER_CREATION_FAILED"));
-      return true;
-    }
     McpLandscapeHandlers::SetLayerInfoName(NewLayerInfo, FName(*LayerName));
     LandscapeInfo->Layers.Add(
         FLandscapeInfoLayerSettings(NewLayerInfo, Landscape));
     LayerInfo = NewLayerInfo;
   }
 
-  FScopedSlowTask SlowTask(
-      1.0f,
-      FText::FromString(TEXT("Painting landscape layer...")));
-  int32 PaintMinX = MinX;
-  int32 PaintMinY = MinY;
-  int32 PaintMaxX = MaxX;
-  int32 PaintMaxY = MaxY;
+  int32 PaintMinX = 0, PaintMinY = 0, PaintMaxX = 0, PaintMaxY = 0;
   FVector BrushCenter = FVector::ZeroVector;
   double BrushRadiusQuads = 0.0;
   if (bBrush) {
@@ -139,11 +108,11 @@ bool UEngineWireSubsystem::HandlePaintLandscapeLayer(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to get landscape extent"), TEXT("INVALID_LANDSCAPE"));
     return true;
   }
-  if (!bBrush && !bHasRegion) {
-    PaintMinX = LMinX;
-    PaintMinY = LMinY;
-    PaintMaxX = LMaxX;
-    PaintMaxY = LMaxY;
+  if (!bBrush) {
+    // The region, each bound left out at the landscape's extent (a region with one bound sent kept the other three at
+    // -1, clamped to where min > max), else the whole landscape: the heightmap actions' reader.
+    McpLandscapeHandlers::McpApplyHeightmapRegionFromPayload(Payload, LMinX, LMinY, LMaxX, LMaxY, PaintMinX, PaintMinY,
+                                                             PaintMaxX, PaintMaxY);
   }
   if (bBrush && (PaintMaxX < LMinX || PaintMinX > LMaxX || PaintMaxY < LMinY || PaintMinY > LMaxY)) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Brush lies outside the landscape"),

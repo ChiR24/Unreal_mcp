@@ -51,11 +51,14 @@ bool TryGetPCGAssetPath(const TSharedPtr<FJsonObject>& Payload, std::initializer
     OutPath = McpGetFirstStringField(Payload, DirectFields);
     if (OutPath.IsEmpty())
     {
-        const FString Directory = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/PCG"));
+        // A folder and a name through the validator the other creators share: a name was joined by hand, so a separator
+        // in it made a subfolder.
         const FString Name = GetJsonStringField(Payload, TEXT("name"));
-        if (!Name.IsEmpty())
+        FString Code;
+        if (!Name.IsEmpty() && !McpBuildValidatedAssetPath(GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/PCG")), Name,
+                                                          TEXT("PCG graph"), OutPath, OutError, Code))
         {
-            OutPath = Directory / Name;
+            return false;
         }
     }
 

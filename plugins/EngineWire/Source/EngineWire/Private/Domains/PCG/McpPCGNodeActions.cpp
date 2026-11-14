@@ -55,7 +55,7 @@ bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     }
 
     // An edit that changed nothing (or sent only a meshPath or class the node has no slot for) answered "updated".
-    const bool bMoves = Payload->HasField(TEXT("x")) || Payload->HasField(TEXT("y")) || Payload->HasField(TEXT("posX")) || Payload->HasField(TEXT("posY"));
+    const bool bMoves = Payload->HasField(TEXT("x")) || Payload->HasField(TEXT("y"));
     if (bEdit && AppliedSettings + AppliedConvenienceSettings == 0 && !bMoves && !Payload->HasField(TEXT("title")))
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("Nothing to change: send settings (property values), title, x and y, "
@@ -83,11 +83,9 @@ bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
 
 bool HandleAddPCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph, const FString& GraphPath)
 {
-    FString NodeType = McpGetFirstStringField(Payload, {TEXT("settingsClass"), TEXT("nodeType")});
-    if (NodeType.IsEmpty())
-    {
-        NodeType = SubAction;
-    }
+    // The generic add_pcg_node names its class (settingsClass, else nodeType; it requires one); a typed kind is its class.
+    const FString NodeType = SubAction == TEXT("add_pcg_node")
+        ? McpGetFirstStringField(Payload, {TEXT("settingsClass"), TEXT("nodeType")}) : SubAction;
     UClass* SettingsClass = ResolvePCGSettingsClass(NodeType);
     if (!SettingsClass)
     {

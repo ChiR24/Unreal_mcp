@@ -1,19 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Misc/EngineVersionComparison.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
 class APostProcessVolume;
 class FJsonObject;
 class FMcpBridgeWebSocket;
 class UEngineWireSubsystem;
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#define MCP_HAS_POSTPROCESS_VOLUME 1
-#else
-#define MCP_HAS_POSTPROCESS_VOLUME 0
-#endif
 
 namespace McpVolumeHandlers
 {
@@ -27,12 +20,10 @@ bool HandleCreatePainCausingVolume(UEngineWireSubsystem* Subsystem, const FStrin
 bool HandleCreatePhysicsVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreateAudioVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreateReverbVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-#if MCP_HAS_POSTPROCESS_VOLUME
 bool HandleCreatePostProcessVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddPostProcessVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 // The payload's postProcessSettings object onto Volume (Rendering.cpp); shared by the create and add routes.
 void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload);
-#endif
 bool HandleCreateCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreatePrecomputedVisibilityVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreateLightmassImportanceVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

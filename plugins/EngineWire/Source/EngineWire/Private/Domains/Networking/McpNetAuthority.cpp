@@ -50,15 +50,15 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
             TEXT("NOT_FOUND"));
         return true;
     }
-    Actor->SetOwner(Owner);
-    // SetOwner keeps the old owner, with a log line only, when the new one is owned by the actor or is the actor.
-    if (Actor->GetOwner() != Owner)
+    // SetOwner keeps the old owner, with an error line only, when the new one is the actor or is owned by it.
+    if (Owner && Owner->IsOwnedBy(Actor))
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
             FString::Printf(TEXT("%s is %s or is owned by it, so it cannot own it (an owner loop); the owner was left unchanged."), *OwnerActorName, *ActorName),
             TEXT("OWNER_LOOP"));
         return true;
     }
+    Actor->SetOwner(Owner);
 
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Owner ? FString::Printf(TEXT("Set owner of %s to %s"), *ActorName, *OwnerActorName) : FString::Printf(TEXT("Cleared owner of %s"), *ActorName));

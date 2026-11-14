@@ -158,16 +158,16 @@ bool HasPCGEdge(const UPCGPin* SourcePin, const UPCGPin* TargetPin)
 
 void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, bool bNameIsTitle)
 {
-    // An explicit title wins: set_pcg_node_settings LOCATES the node by nodeName, and reading nodeName as the title
-    // re-titled the node with its own locator (its object name, when found by that).
-    const FString Title = bNameIsTitle ? McpGetFirstStringField(Payload, {TEXT("title"), TEXT("nodeName"), TEXT("name")})
+    // A create is titled by nodeName, else name (no create declares title). set_pcg_node_settings LOCATES its node by
+    // nodeName, and reading nodeName as the title re-titled the node with its own locator, so an edit takes title.
+    const FString Title = bNameIsTitle ? McpGetFirstStringField(Payload, {TEXT("nodeName"), TEXT("name")})
         : GetJsonStringField(Payload, TEXT("title"));
     if (!Title.IsEmpty())
     {
         Node->NodeTitle = FName(*Title);
     }
 
-    // From the node's own position: the axis not sent was set to 0.
+    // From the node's own position: the axis not sent was set to 0. posX and posY are the generic add_pcg_node's names.
     int32 OldX = 0;
     int32 OldY = 0;
     Node->GetNodePosition(OldX, OldY);

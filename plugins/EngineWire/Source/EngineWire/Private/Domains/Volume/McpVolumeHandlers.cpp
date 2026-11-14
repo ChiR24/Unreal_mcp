@@ -134,15 +134,7 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("create_audio_volume")) { return HandleCreateAudioVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("create_reverb_volume")) { return HandleCreateReverbVolume(this, RequestId, Payload, Socket); }
 
-#if MCP_HAS_POSTPROCESS_VOLUME
     if (SubAction == TEXT("create_post_process_volume")) { return HandleCreatePostProcessVolume(this, RequestId, Payload, Socket); }
-#else
-    if (SubAction == TEXT("create_post_process_volume"))
-    {
-        SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume requires UE 5.1 or later"), TEXT("UNSUPPORTED_VERSION"));
-        return true;
-    }
-#endif
     if (SubAction == TEXT("create_cull_distance_volume")) { return HandleCreateCullDistanceVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("create_precomputed_visibility_volume")) { return HandleCreatePrecomputedVisibilityVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("create_lightmass_importance_volume")) { return HandleCreateLightmassImportanceVolume(this, RequestId, Payload, Socket); }
@@ -160,15 +152,7 @@ bool UEngineWireSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("add_kill_z_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddKillZVolume(this, RequestId, Payload, Socket) : HandleCreateKillZVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("add_physics_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddPhysicsVolume(this, RequestId, Payload, Socket) : HandleCreatePhysicsVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("add_cull_distance_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddCullDistanceVolume(this, RequestId, Payload, Socket) : HandleCreateCullDistanceVolume(this, RequestId, Payload, Socket); }
-#if MCP_HAS_POSTPROCESS_VOLUME
     if (SubAction == TEXT("add_post_process_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddPostProcessVolume(this, RequestId, Payload, Socket) : HandleCreatePostProcessVolume(this, RequestId, Payload, Socket); }
-#else
-    if (SubAction == TEXT("add_post_process_volume"))
-    {
-        SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume requires UE 5.1 or later"), TEXT("UNSUPPORTED_VERSION"));
-        return true;
-    }
-#endif
 
     SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("Unknown volume subAction: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));

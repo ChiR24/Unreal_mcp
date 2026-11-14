@@ -99,7 +99,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
 #endif
 
     FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
-    UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
+    UStaticMesh* CreatedMesh = UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
         Target->Mesh,
         AssetPath,
         CreateOptions,
@@ -107,7 +107,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
         nullptr
     );
 
-    if (Outcome != EGeometryScriptOutcomePins::Success)
+    if (Outcome != EGeometryScriptOutcomePins::Success || !CreatedMesh)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("Failed to create StaticMesh asset"), TEXT("ASSET_CREATION_FAILED"));
         return true;
@@ -117,14 +117,6 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     // and no collision body; fill the slots and give it a body, then save again, because the first write predates both
     // and without a second save the materials and the collision were gone on the next editor load.
     TArray<TSharedPtr<FJsonValue>> SlotsJson;
-    UStaticMesh* CreatedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPath));
-    if (!CreatedMesh)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(
-            TEXT("%s was created but could not be loaded back, so its materials and collision body were not applied."), *AssetPath),
-            TEXT("ASSET_CREATION_FAILED"));
-        return true;
-    }
     {
         ApplyConversionMaterials(CreatedMesh, Materials, SlotCount);
         ApplyConversionCollision(CreatedMesh, CollisionMode);

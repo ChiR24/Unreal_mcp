@@ -6,7 +6,6 @@
 
 #include "DynamicSubmesh3.h"
 #include "GeometryScript/MeshMaterialFunctions.h"
-#include "GeometryScript/MeshTransformFunctions.h"
 #include "Materials/MaterialInterface.h"
 #include "Selections/MeshConnectedComponents.h"
 
@@ -242,10 +241,9 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
             continue;
         }
         UGeometryScriptLibrary_MeshTransformFunctions::TranslateMesh(Part, -PivotAt);
-        UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(Part, AssetPaths[Index], CreateOptions, Outcome, nullptr);
-        UStaticMesh* Created = Outcome == EGeometryScriptOutcomePins::Success
-            ? Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPaths[Index])) : nullptr;
-        if (!Created)
+        UStaticMesh* Created = UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
+            Part, AssetPaths[Index], CreateOptions, Outcome, nullptr);
+        if (!Created || Outcome != EGeometryScriptOutcomePins::Success)
         {
             Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Could not create %s; the %d part(s) before it were created."),
                                                                          *AssetPaths[Index], Index), TEXT("ASSET_CREATION_FAILED"));

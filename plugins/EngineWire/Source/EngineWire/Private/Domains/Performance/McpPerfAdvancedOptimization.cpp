@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/Performance/McpPerfPrivate.h"
@@ -6,7 +7,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Editor.h"
 #include "Engine/World.h"
-#include "ScopedTransaction.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "WorldPartition/WorldPartition.h"
 
 #include "CoreGlobals.h"
@@ -26,7 +27,8 @@ bool IsWorldPartitionStreaming(UWorldPartition* WorldPartition)
 
 void SetWorldPartitionStreaming(UWorldPartition* WorldPartition, bool bEnabled)
 {
-    const FScopedTransaction Transaction(NSLOCTEXT("EngineWire", "SetWorldPartitionStreaming", "Set World Partition Enable Streaming"));
+    const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set World Partition Enable Streaming")),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{WorldPartition});
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     WorldPartition->SetEnableStreaming(bEnabled);
 #else
@@ -165,19 +167,9 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
     }
     // These wrote wp.Runtime.EnableStreaming, RuntimeCellSize and RuntimeStreamingRange, none of which any 5.x engine
     // has, and answered success. Streaming is the World Partition's Enable Streaming; cell size and range live on
-    // its runtime grid.
-    if (bHasEnabled && IsWorldPartitionStreaming(WorldPartition) != bEnabled)
-    {
-        SetWorldPartitionStreaming(WorldPartition, bEnabled);
-        if (IsWorldPartitionStreaming(WorldPartition) != bEnabled)
-        {
-            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("World "
-                "Partition streaming stays %s: the engine kept it (UE 5.0 confirms this change in a dialog an automated call "
-                "answers No); switch Enable Streaming in World Settings by hand. Nothing was changed."), bEnabled ? TEXT("off") : TEXT("on")),
-                TEXT("STREAMING_NOT_CHANGED"));
-            return true;
-        }
-    }
+    // its runtime grid, which the grid door changes first, its reply held: a grid the level cannot take is refused before
+    // streaming changes (the refusal came after the switch), and the one reply says what became of both.
+    FMcpCapturedResponse Grid;
     if (bHasCellSize || bHasRange)
     {
         TSharedPtr<FJsonObject> GridPayload = MakeShared<FJsonObject>();
@@ -190,12 +182,39 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             GridPayload->SetNumberField(TEXT("loadingRange"), LoadingRange);
         }
         GridPayload->SetBoolField(TEXT("createIfMissing"), false);
-        return McpLevelStructure::HandleConfigureGridSize(&Context.Bridge, Context.RequestId, GridPayload, Context.RequestingSocket);
+        const FString GridId = Context.RequestId + TEXT("/grid");
+        Grid = McpCaptureResponse(GridId, [&]()
+            { McpLevelStructure::HandleConfigureGridSize(&Context.Bridge, GridId, GridPayload, Context.RequestingSocket); }, false);
+        if (!Grid.bSuccess)
+        {
+            Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, Grid.Message, Grid.Result, Grid.ErrorCode);
+            return true;
+        }
     }
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("streamingEnabled"), bEnabled);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, FString::Printf(TEXT("World "
-        "Partition streaming %s; the level is unsaved"), bEnabled ? TEXT("on") : TEXT("off")), Resp);
+    const bool bSwitch = bHasEnabled && IsWorldPartitionStreaming(WorldPartition) != bEnabled;
+    if (bSwitch)
+    {
+        SetWorldPartitionStreaming(WorldPartition, bEnabled);
+        if (IsWorldPartitionStreaming(WorldPartition) != bEnabled)
+        {
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("World "
+                "Partition streaming stays %s: the engine kept it (UE 5.0 confirms this change in a dialog an automated call "
+                "answers No); switch Enable Streaming in World Settings by hand. %s"), bEnabled ? TEXT("off") : TEXT("on"),
+                Grid.bCaptured ? TEXT("The grid change stands.") : TEXT("Nothing was changed.")), TEXT("STREAMING_NOT_CHANGED"));
+            return true;
+        }
+    }
+    TSharedPtr<FJsonObject> Resp = Grid.Result.IsValid() ? Grid.Result : McpHandlerUtils::CreateResultObject();
+    FString Message = Grid.Message;
+    if (bHasEnabled)
+    {
+        Resp->SetBoolField(TEXT("streamingEnabled"), bEnabled);
+        const FString Streaming = FString::Printf(TEXT("World Partition streaming %s%s"), bSwitch ? TEXT("") : TEXT("was already "),
+                                                  bEnabled ? TEXT("on") : TEXT("off"));
+        Message = !Grid.bCaptured ? Streaming + (bSwitch ? TEXT("; the level is unsaved") : TEXT("; nothing was changed"))
+                                  : Streaming + TEXT(". ") + Grid.Message;
+    }
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, Message, Resp);
     return true;
 }
 }

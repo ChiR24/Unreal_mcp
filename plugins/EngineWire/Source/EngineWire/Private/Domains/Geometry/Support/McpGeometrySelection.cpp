@@ -9,7 +9,6 @@
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 #include "GeometryScript/MeshSelectionFunctions.h"
-#include "UDynamicMesh.h"
 
 namespace McpGeometryHandlers
 {

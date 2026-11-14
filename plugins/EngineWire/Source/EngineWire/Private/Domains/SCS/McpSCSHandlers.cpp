@@ -1,5 +1,5 @@
 #include "Domains/SCS/McpSCSHandlers.h"
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -54,10 +54,6 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                               bool &bOutSaved) {
   bOutCompiled = false;
   bOutSaved = false;
-
-  if (!Blueprint) {
-    return;
-  }
 
   McpSCSHandlers::EnableLoadOverlapsForBuoyancy(Blueprint);
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);

@@ -2,7 +2,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/PlatformTime.h"
 
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"
 

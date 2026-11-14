@@ -49,9 +49,7 @@ struct FMcpOutputFileEntry {
 int32 ReadClampedInt(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, int32 Default, int32 Min,
                      int32 Max) {
   double Value = Default;
-  if (Payload.IsValid()) {
-    Payload->TryGetNumberField(Field, Value);
-  }
+  Payload->TryGetNumberField(Field, Value);
   return static_cast<int32>(FMath::Clamp(Value, static_cast<double>(Min), static_cast<double>(Max)));
 }
 
@@ -123,10 +121,8 @@ bool HandleListOutputFiles(UEngineWireSubsystem* Self, const FString& RequestId,
   const int32 Offset = ReadClampedInt(Payload, TEXT("offset"), 0, 0, MAX_int32);
   FString RootFilter;
   FString Extension;
-  if (Payload.IsValid()) {
-    Payload->TryGetStringField(TEXT("root"), RootFilter);
-    Payload->TryGetStringField(TEXT("extension"), Extension);
-  }
+  Payload->TryGetStringField(TEXT("root"), RootFilter);
+  Payload->TryGetStringField(TEXT("extension"), Extension);
   RootFilter.TrimStartAndEndInline();
   RootFilter.ReplaceInline(TEXT("\\"), TEXT("/"));
   while (RootFilter.EndsWith(TEXT("/"))) {
@@ -212,11 +208,9 @@ bool HandleDeleteOutputFile(UEngineWireSubsystem* Self, const FString& RequestId
                             FSystemControlSocket RequestingSocket) {
   const FString Project = ProjectRootFull();
   const TArray<TSharedPtr<FJsonValue>>* PathValues = nullptr;
-  if (!Payload.IsValid() || !Payload->TryGetArrayField(TEXT("paths"), PathValues) || PathValues == nullptr) {
+  if (!Payload->TryGetArrayField(TEXT("paths"), PathValues) || PathValues == nullptr) {
     FString Path;
-    if (Payload.IsValid()) {
-      Payload->TryGetStringField(TEXT("path"), Path);
-    }
+    Payload->TryGetStringField(TEXT("path"), Path);
     FString ErrorCode;
     FString Error;
     TSharedPtr<FJsonObject> Resp = DeleteOneOutputFile(Project, Path, ErrorCode, Error);

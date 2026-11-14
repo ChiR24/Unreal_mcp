@@ -138,10 +138,6 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     }
 
     FString ModuleName = GetJsonStringField(Context.Payload, TEXT("moduleName"));
-    if (ModuleName.IsEmpty())
-    {
-        ModuleName = GetJsonStringField(Context.Payload, TEXT("targetModuleName"));
-    }
     int32 DotIndex = INDEX_NONE;
     if (ModuleName.IsEmpty() && InputName.FindChar(TEXT('.'), DotIndex))
     {

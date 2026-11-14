@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
+#include "Domains/SCS/McpSCSParentResolve.h"
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"
 
@@ -170,11 +170,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   }
 
   USCS_Node *NewNode = SCS->CreateNode(CompClass, FName(*ComponentName));
-  if (!NewNode) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), TEXT("Failed to create SCS node"));
-    return Result;
-  }
 
   NewNode->SetVariableName(FName(*ComponentName));
 

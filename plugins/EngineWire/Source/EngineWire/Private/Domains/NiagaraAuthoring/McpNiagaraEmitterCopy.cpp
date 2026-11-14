@@ -181,7 +181,6 @@ bool CopyEmitterFromSystem(FActionContext& Context)
     Added->SetName(FName(*(Context.EmitterName.IsEmpty() ? SourceName : Context.EmitterName)), *System);
     TArray<FString> Conflicts;
     const TArray<FString> AddedParams = CopyUserParameters(System, Source, SourceEmitter, Conflicts);
-    System->RequestCompile(false);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("emitterName"), Added->GetName().ToString());
     if (AddedParams.Num() > 0)

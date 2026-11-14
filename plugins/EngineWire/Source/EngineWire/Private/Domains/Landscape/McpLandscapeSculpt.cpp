@@ -15,26 +15,15 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  double LocX = 0, LocY = 0, LocZ = 0;
-  const TSharedPtr<FJsonObject> *LocObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-    (*LocObj)->TryGetNumberField(TEXT("x"), LocX);
-    (*LocObj)->TryGetNumberField(TEXT("y"), LocY);
-    (*LocObj)->TryGetNumberField(TEXT("z"), LocZ);
-  } else if (Payload->TryGetObjectField(TEXT("position"), LocObj) && LocObj) {
-    (*LocObj)->TryGetNumberField(TEXT("x"), LocX);
-    (*LocObj)->TryGetNumberField(TEXT("y"), LocY);
-    (*LocObj)->TryGetNumberField(TEXT("z"), LocZ);
-  } else {
+  if (!Payload->HasTypedField<EJson::Object>(TEXT("location"))) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        TEXT("location or position required. Example: {\"location\": {\"x\": 0, \"y\": 0, \"z\": 100}}"),
+        TEXT("location required. Example: {\"location\": {\"x\": 0, \"y\": 0, \"z\": 100}}"),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
-  // The declared tool, radius and falloff win over their older spellings.
-  FString ToolMode = McpGetFirstStringField(Payload, {TEXT("tool"), TEXT("toolMode")});
+  FString ToolMode = GetJsonStringField(Payload, TEXT("tool"));
   ToolMode = ToolMode.IsEmpty() ? FString(TEXT("Raise")) : ToolMode;
   // Any other tool (Smooth, Noise) left every vertex untouched and still reported success.
   if (!ToolMode.Equals(TEXT("Raise"), ESearchCase::IgnoreCase) && !ToolMode.Equals(TEXT("Lower"), ESearchCase::IgnoreCase) &&
@@ -45,18 +34,16 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
     return true;
   }
   double BrushRadius = 1000.0;
-  if (!Payload->TryGetNumberField(TEXT("radius"), BrushRadius)) {
-    Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius);
-  }
+  Payload->TryGetNumberField(TEXT("radius"), BrushRadius);
   double BrushFalloff = 0.5;
-  if (!Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff)) {
-    Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
-  }
+  Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff);
+  // The outer share of the radius that fades, held to 0-1: above 1 the fade reached the centre (2 halved it there).
+  BrushFalloff = FMath::Clamp(BrushFalloff, 0.0, 1.0);
   double Strength = GetJsonNumberField(Payload, TEXT("strength"), 0.1);
   bool bSkipFlush = false;
   Payload->TryGetBoolField(TEXT("skipFlush"), bSkipFlush);
 
-  const FVector TargetLocation(LocX, LocY, LocZ);
+  const FVector TargetLocation = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
   ULandscapeInfo *LandscapeInfo = nullptr;
   ALandscape *Landscape = McpLandscapeHandlers::ResolveLandscapeOrReply(
       *this, RequestId, Payload, RequestingSocket, &LandscapeInfo);
@@ -118,6 +105,11 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
   LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY,
                               HeightData.GetData(), 0);
 
+  // The tool and the scales, decided once: the tool was compared as text three times for every vertex.
+  const bool bFlatten = ToolMode.Equals(TEXT("Flatten"), ESearchCase::IgnoreCase);
+  const float RaiseSign = ToolMode.Equals(TEXT("Lower"), ESearchCase::IgnoreCase) ? -1.0f : 1.0f;
+  const float HeightScale = 128.0f / ScaleZ;
+  const float FlattenTarget = (TargetLocation.Z - Landscape->GetActorLocation().Z) / ScaleZ * 128.0f + 32768.0f;
   // modifiedVertices used to report the whole brush bounding box
   // whenever ANY vertex moved, so a brush that nudged three
   // vertices claimed thousands and a fully clamped brush was
@@ -138,28 +130,10 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
              (float)FalloffVerts);
       }
       Alpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
-      int32 Index = (Y - MinY) * SizeX + (X - MinX);
-      if (Index < 0 || Index >= HeightData.Num())
-        continue;
-
-      uint16 CurrentHeight = HeightData[Index];
-      float HeightScale = 128.0f / ScaleZ;
-      float Delta = 0.0f;
-      if (ToolMode.Equals(TEXT("Raise"),
-                          ESearchCase::IgnoreCase)) {
-        Delta = Strength * Alpha * 100.0f * HeightScale;
-      } else if (ToolMode.Equals(TEXT("Lower"),
-                                 ESearchCase::IgnoreCase)) {
-        Delta = -Strength * Alpha * 100.0f * HeightScale;
-      } else if (ToolMode.Equals(TEXT("Flatten"),
-                                 ESearchCase::IgnoreCase)) {
-        float Target = (TargetLocation.Z -
-                        Landscape->GetActorLocation().Z) /
-                           ScaleZ * 128.0f +
-                       32768.0f;
-        Delta =
-            (Target - (float)CurrentHeight) * Strength * Alpha;
-      }
+      const int32 Index = (Y - MinY) * SizeX + (X - MinX);
+      const uint16 CurrentHeight = HeightData[Index];
+      const float Delta = bFlatten ? (FlattenTarget - (float)CurrentHeight) * Strength * Alpha
+                                   : RaiseSign * Strength * Alpha * 100.0f * HeightScale;
 
       int32 NewHeight =
           FMath::Clamp((int32)(CurrentHeight + Delta), 0, 65535);

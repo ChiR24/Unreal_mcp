@@ -79,7 +79,7 @@ bool HandleConfigureSmartLinkBehavior(
     const auto LoadArea = [&Payload](const TCHAR* Field, const TCHAR* Default, UClass*& OutArea)
     {
         const FString Path = GetJsonStringField(Payload, Field, Default);
-        OutArea = Path.IsEmpty() ? nullptr : LoadClass<UNavArea>(nullptr, *Path);
+        OutArea = McpLoadNavAreaClass(Path);
         return OutArea != nullptr;
     };
     UClass* EnabledArea = nullptr;

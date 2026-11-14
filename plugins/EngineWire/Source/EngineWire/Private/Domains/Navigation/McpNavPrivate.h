@@ -41,6 +41,13 @@ inline bool IsValidNavigationPath(const FString& Path)
     return !Path.IsEmpty() && IsValidAssetPath(Path);
 }
 
+// The nav area class at Path: null for a path IsValidNavigationPath refuses or one that loads no UNavArea class. Every
+// area-class read loads through it, each with its own refusal.
+inline UClass* McpLoadNavAreaClass(const FString& Path)
+{
+    return IsValidNavigationPath(Path) ? LoadClass<UNavArea>(nullptr, *Path) : nullptr;
+}
+
 // direction from the payload, any case, BothWays when absent; false for any other value (it used to mean BothWays).
 inline bool ReadNavLinkDirection(const TSharedPtr<FJsonObject>& Payload, ENavLinkDirection::Type& OutDirection)
 {

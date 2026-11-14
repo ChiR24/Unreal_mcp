@@ -4,7 +4,7 @@
 
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 

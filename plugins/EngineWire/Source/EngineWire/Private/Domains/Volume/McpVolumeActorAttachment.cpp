@@ -13,9 +13,7 @@
 #include "Domains/Volume/McpVolumeGeometry.h"
 #include "Domains/Volume/McpVolumeResponses.h"
 
-#if MCP_HAS_POSTPROCESS_VOLUME
 #include "Engine/PostProcessVolume.h"
-#endif
 
 namespace McpVolumeHandlers
 {
@@ -125,7 +123,6 @@ bool HandleAddCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FString&
         TEXT("CullDistanceVolume"), TEXT("Failed to spawn CullDistanceVolume"), FCullConfig{Payload});
 }
 
-#if MCP_HAS_POSTPROCESS_VOLUME
 bool HandleAddPostProcessVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     struct FPostProcessConfig
@@ -153,5 +150,4 @@ bool HandleAddPostProcessVolume(UEngineWireSubsystem* Subsystem, const FString& 
         TEXT("PostProcessVolume"), TEXT("Failed to spawn PostProcessVolume"),
         FPostProcessConfig{static_cast<float>(GetJsonNumberField(Payload, TEXT("priority"), 0.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0)), GetJsonBoolField(Payload, TEXT("bEnabled"), GetJsonBoolField(Payload, TEXT("enabled"), true)), GetJsonBoolField(Payload, TEXT("bUnbound"), false), Payload});
 }
-#endif
 }

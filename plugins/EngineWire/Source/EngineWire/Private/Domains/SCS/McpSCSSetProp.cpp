@@ -2,7 +2,7 @@
 
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"

@@ -43,7 +43,6 @@ bool HandleAutoUV(UEngineWireSubsystem* Self, const FString& RequestId,
     };
 
     UGeometryScriptDebug* Debug = NewObject<UGeometryScriptDebug>();
-    // UE 5.7: FGeometryScriptAutoUVOptions was removed, use XAtlas directly
     UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
         Mesh, UVChannel, FGeometryScriptXAtlasOptions(), Debug);
     FString XAtlasError;
@@ -161,7 +160,6 @@ bool HandleTransformUVs(UEngineWireSubsystem* Self, const FString& RequestId,
     if (!Target) return true;
     auto [TargetActor, DMC, Mesh] = *Target;
 
-    // UE 5.7: TransformMeshUVs was removed, use separate TranslateMeshUVs, ScaleMeshUVs, RotateMeshUVs
     FGeometryScriptMeshSelection Selection; // Empty = apply to entire mesh
 
     if (!Translate.IsZero())

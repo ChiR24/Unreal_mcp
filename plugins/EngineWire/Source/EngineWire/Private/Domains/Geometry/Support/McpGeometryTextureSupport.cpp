@@ -6,14 +6,10 @@ namespace McpGeometryHandlers
 {
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath)
 {
-    FString SafePath = SanitizeProjectRelativePath(TexturePath);
+    const FString SafePath = SanitizeProjectRelativePath(TexturePath);
     if (SafePath.IsEmpty()) return nullptr;
     // A bare package path names the asset after its package.
-    if (!SafePath.Contains(TEXT(".")))
-    {
-        SafePath += TEXT(".") + FPackageName::GetLongPackageAssetName(SafePath);
-    }
-    UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *SafePath);
+    UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *McpToObjectPath(SafePath));
     if (Texture) OutResolvedPath = Texture->GetPathName();
     return Texture;
 }

@@ -12,9 +12,7 @@
 #include "Domains/Volume/McpVolumeWorldResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Sound/AudioVolume.h"
-#if MCP_HAS_POSTPROCESS_VOLUME
 #include "Engine/PostProcessVolume.h"
-#endif
 
 namespace McpVolumeHandlers
 {
@@ -97,7 +95,6 @@ bool HandleSetVolumeProperties(UEngineWireSubsystem* Subsystem, const FString& R
         if (Payload->HasField(TEXT("fadeTime"))) { ReverbSettings.FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.5f); PropertiesSet.Add(TEXT("fadeTime")); bModifiedReverb = true; }
         if (bModifiedReverb) { AudioVol->SetReverbSettings(ReverbSettings); }
     }
-#if MCP_HAS_POSTPROCESS_VOLUME
     // Post-process volumes had no branch, so the declared priority, blendWeight and bEnabled never applied.
     if (APostProcessVolume* PostVol = Cast<APostProcessVolume>(VolumeActor))
     {
@@ -106,7 +103,6 @@ bool HandleSetVolumeProperties(UEngineWireSubsystem* Subsystem, const FString& R
         if (Payload->HasField(TEXT("blendWeight"))) { PostVol->BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f); PropertiesSet.Add(TEXT("blendWeight")); }
         if (Payload->HasField(TEXT("bEnabled"))) { PostVol->bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true); PropertiesSet.Add(TEXT("bEnabled")); }
     }
-#endif
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);

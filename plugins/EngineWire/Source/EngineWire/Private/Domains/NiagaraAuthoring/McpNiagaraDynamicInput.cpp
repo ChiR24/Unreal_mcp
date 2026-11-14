@@ -12,12 +12,11 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     Context.Payload->TryGetBoolField(TEXT("replaceExisting"), bReplaceExisting);
 
     // targetNodeId is optional: ResolveDynamicInputTargetNode finds the module by name/input.
-    if (Context.SystemPath.IsEmpty() || InputName.IsEmpty() || DynamicInputScriptPath.IsEmpty())
+    // A missing systemPath is LoadSystemAndEmitter's refusal below, in the same words.
+    if (InputName.IsEmpty() || DynamicInputScriptPath.IsEmpty())
     {
-        Context.SendError(
-            Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System.") :
-            InputName.IsEmpty() ? TEXT("Missing 'inputName'.") :
-            TEXT("Missing 'dynamicInputScriptPath'."), TEXT("INVALID_ARGUMENT"));
+        Context.SendError(InputName.IsEmpty() ? TEXT("Missing 'inputName'.") : TEXT("Missing 'dynamicInputScriptPath'."),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if (!ValidateAndSanitizePath(Context, DynamicInputScriptPath, TEXT("dynamicInputScriptPath")))

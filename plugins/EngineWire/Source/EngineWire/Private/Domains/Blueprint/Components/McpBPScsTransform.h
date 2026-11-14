@@ -4,7 +4,7 @@
 
 #include "Components/SceneComponent.h"
 #include "Dom/JsonObject.h"
-#include "Domains/Blueprint/Components/McpBPScsPropagate.h"
+#include "Domains/SCS/McpSCSPropagate.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 // The placement of one edit_scs operation: {location, rotation, scale} in `transform`, or the

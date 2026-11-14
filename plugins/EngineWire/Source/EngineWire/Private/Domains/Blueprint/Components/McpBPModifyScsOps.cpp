@@ -1,5 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
-#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
+#include "Domains/SCS/McpSCSParentResolve.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"

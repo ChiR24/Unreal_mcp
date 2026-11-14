@@ -46,7 +46,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     bool bNoWeightBlend = false;
     if (Payload->TryGetBoolField(TEXT("noWeightBlend"), bNoWeightBlend))
     {
-#if ENGINE_MINOR_VERSION >= 7
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
         LayerInfo->SetBlendMethod(bNoWeightBlend ? ELandscapeTargetLayerBlendMethod::None : ELandscapeTargetLayerBlendMethod::FinalWeightBlending, false);
 #else
         LayerInfo->bNoWeightBlend = bNoWeightBlend;
@@ -67,7 +67,7 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
             TEXT("layerName or name required for create_landscape_layer_info"), TEXT("INVALID_ARGUMENT"));
     }
 
-    FString Path = McpGetFirstStringField(Payload, {TEXT("path"), TEXT("layerInfoPath")});
+    FString Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty())
     {
         Path = TEXT("/Game/Landscape");

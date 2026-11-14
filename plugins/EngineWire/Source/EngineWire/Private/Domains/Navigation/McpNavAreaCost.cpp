@@ -24,7 +24,7 @@ bool HandleConfigureNavAreaCost(
         return true;
     }
 
-    UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
+    UClass* AreaClass = McpLoadNavAreaClass(AreaClassPath);
     if (!AreaClass)
     {
         Self->SendAutomationError(Socket, RequestId,

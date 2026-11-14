@@ -1,5 +1,6 @@
 #include "Domains/Navigation/McpNavPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace
 {
@@ -22,6 +23,8 @@ bool AddNavModifierToPlacedActor(
             FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), TEXT("ALREADY_EXISTS"));
         return true;
     }
+    // One undo step, opened before the component is made.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Nav Modifier")), EMcpMutationDurability::EditorStateOnly, {Actor});
     Actor->Modify();
     UNavModifierComponent* ModComp = NewObject<UNavModifierComponent>(Actor, UNavModifierComponent::StaticClass(), FName(*ComponentName), RF_Transactional);
     ModComp->FailsafeExtent = FailsafeExtent;
@@ -36,6 +39,7 @@ bool AddNavModifierToPlacedActor(
     Result->SetStringField(TEXT("componentName"), ModComp->GetName());
     Result->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
     McpHandlerUtils::AddVerification(Result, Actor);
+    Transaction.DescribeInto(Result);
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("NavModifierComponent '%s' added to actor %s"), *ComponentName, *Actor->GetActorLabel()), Result);
     return true;
@@ -78,7 +82,7 @@ bool HandleCreateNavModifierComponent(
     UClass* ResolvedAreaClass = nullptr;
     if (!AreaClassPath.IsEmpty())
     {
-        ResolvedAreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
+        ResolvedAreaClass = McpLoadNavAreaClass(AreaClassPath);
         if (!ResolvedAreaClass)
         {
             Self->SendAutomationError(Socket, RequestId,
@@ -221,7 +225,7 @@ bool HandleSetNavAreaClass(
         return true;
     }
 
-    UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
+    UClass* AreaClass = McpLoadNavAreaClass(AreaClassPath);
     if (!AreaClass)
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -229,6 +233,7 @@ bool HandleSetNavAreaClass(
         return true;
     }
 
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Nav Area Class")), EMcpMutationDurability::EditorStateOnly, {ModComp});
     ModComp->Modify();
     ModComp->SetAreaClass(AreaClass);
 
@@ -237,6 +242,7 @@ bool HandleSetNavAreaClass(
     Result->SetStringField(TEXT("componentName"), ModComp->GetName());
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
     McpHandlerUtils::AddVerification(Result, TargetActor);
+    Transaction.DescribeInto(Result);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nav area class set"), Result);
     return true;

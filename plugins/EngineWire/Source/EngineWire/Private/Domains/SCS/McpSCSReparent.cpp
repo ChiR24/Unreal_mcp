@@ -1,5 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Domains/Blueprint/Components/McpBPScsParentResolve.h"
+#include "Domains/SCS/McpSCSParentResolve.h"
 
 #include "Domains/SCS/McpSCSHandlers.h"
 #include "Domains/SCS/McpSCSSupport.h"

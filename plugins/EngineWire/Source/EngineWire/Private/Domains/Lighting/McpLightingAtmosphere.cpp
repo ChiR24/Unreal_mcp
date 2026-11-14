@@ -117,7 +117,7 @@ bool HandleConfigureShadows(
     };
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    TArray<TSharedPtr<FJsonValue>> Applied;
+    TArray<FString> Applied;
     // shadowQuality, shadowDistance, contactShadows and rayTracedShadows were declared and
     // never applied (rayTracedShadows only returned a note). Each drives its engine-wide cvar.
     // Set as the console does and read back: one a higher-priority source held was listed as applied.
@@ -128,7 +128,7 @@ bool HandleConfigureShadows(
         const FString NotTaken = CVar ? McpSetConsoleVariable(*CVar, Value) : FString(TEXT("not in this engine version"));
         if (NotTaken.IsEmpty())
         {
-            Applied.Add(MakeShared<FJsonValueString>(Key));
+            Applied.Add(Key);
         }
         else
         {
@@ -187,28 +187,40 @@ bool HandleConfigureShadows(
             return true;
         }
         bool bCastShadows = false;
-        if (ReadBool(TEXT("castShadows"), bCastShadows))
+        double ShadowBias = 0.0, SlopeBias = 0.0, ResolutionScale = 0.0;
+        const bool bHasCast = ReadBool(TEXT("castShadows"), bCastShadows);
+        const bool bHasBias = ReadNumber(TEXT("shadowBias"), ShadowBias);
+        const bool bHasSlope = ReadNumber(TEXT("shadowSlopeBias"), SlopeBias);
+        const bool bHasScale = ReadNumber(TEXT("shadowResolutionScale"), ResolutionScale);
+        // One undo step for the light's own settings, opened when one is sent (the console variables above are engine
+        // state no undo step holds).
+        TUniquePtr<FMcpScopedEditorTransaction> LightStep;
+        if (bHasCast || bHasBias || bHasSlope || bHasScale)
+        {
+            LightStep = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Configure Shadows")),
+                                                                EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{LightComp});
+        }
+        if (bHasCast)
         {
             LightComp->SetCastShadows(bCastShadows);
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("castShadows")));
+            Applied.Add(TEXT("castShadows"));
         }
-        double NumberValue = 0.0;
-        if (ReadNumber(TEXT("shadowBias"), NumberValue))
+        if (bHasBias)
         {
-            LightComp->SetShadowBias(static_cast<float>(NumberValue));
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("shadowBias")));
+            LightComp->SetShadowBias(static_cast<float>(ShadowBias));
+            Applied.Add(TEXT("shadowBias"));
         }
-        if (ReadNumber(TEXT("shadowSlopeBias"), NumberValue))
+        if (bHasSlope)
         {
-            LightComp->SetShadowSlopeBias(static_cast<float>(NumberValue));
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("shadowSlopeBias")));
+            LightComp->SetShadowSlopeBias(static_cast<float>(SlopeBias));
+            Applied.Add(TEXT("shadowSlopeBias"));
         }
-        if (ReadNumber(TEXT("shadowResolutionScale"), NumberValue))
+        if (bHasScale)
         {
             LightComp->Modify();
-            LightComp->ShadowResolutionScale = static_cast<float>(NumberValue);
+            LightComp->ShadowResolutionScale = static_cast<float>(ResolutionScale);
             LightComp->MarkRenderStateDirty();
-            Applied.Add(MakeShared<FJsonValueString>(TEXT("shadowResolutionScale")));
+            Applied.Add(TEXT("shadowResolutionScale"));
         }
         Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
     }
@@ -223,7 +235,7 @@ bool HandleConfigureShadows(
     }
 
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetArrayField(TEXT("appliedSettings"), Applied);
+    Resp->SetArrayField(TEXT("appliedSettings"), McpHandlerUtils::ToJsonStringArray(Applied));
     TArray<TSharedPtr<FJsonValue>> NotSetJson = McpHandlerUtils::ToJsonStringArray(NotSet);
     Resp->SetArrayField(TEXT("notSet"), NotSetJson);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,

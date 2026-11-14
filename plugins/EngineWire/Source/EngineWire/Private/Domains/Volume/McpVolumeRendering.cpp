@@ -12,13 +12,10 @@
 #include "Domains/Volume/McpVolumeResponses.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
 
-#if MCP_HAS_POSTPROCESS_VOLUME
 #include "Engine/PostProcessVolume.h"
-#endif
 
 namespace McpVolumeHandlers
 {
-#if MCP_HAS_POSTPROCESS_VOLUME
 void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload)
 {
     if (!Volume || !Payload->HasTypedField<EJson::Object>(TEXT("postProcessSettings")))
@@ -96,7 +93,6 @@ bool HandleCreatePostProcessVolume(UEngineWireSubsystem* Subsystem, const FStrin
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *Volume->GetActorLabel()), ResponseJson);
     return true;
 }
-#endif
 
 bool HandleCreateCullDistanceVolume(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
