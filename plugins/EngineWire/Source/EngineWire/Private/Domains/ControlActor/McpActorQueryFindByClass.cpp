@@ -1,5 +1,4 @@
-// find_by_class lives in its own file so McpActorQuery.cpp
-// stays under the 250-pure-line structure ceiling; the handler is otherwise unchanged.
+// find_by_class: the actors of the level being edited whose class matches the one the call names.
 
 #include "Domains/ControlActor/McpActorSupport.h"
 

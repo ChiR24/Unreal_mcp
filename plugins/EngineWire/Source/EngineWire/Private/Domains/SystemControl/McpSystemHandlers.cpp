@@ -76,7 +76,7 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
 
   if (bConsoleAction) {
-    return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
+    return HandleConsoleCommandAction(RequestId, TEXT("console_command"), Payload, RequestingSocket);
   }
 
   if (bPluginAction) {

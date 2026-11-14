@@ -224,7 +224,7 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, con
   } else if (InputType == TEXT("key_up") || InputType == TEXT("keyup")) {
     SimulateKeyInputForMcp(Key, IE_Released, TEXT("Key up"), Target, bSuccess, bRoutedToPIE, bHandledByPIE,
                            bHandledBySlate, Message);
-  } else if (InputType == TEXT("mouse_click") || InputType == TEXT("click")) {
+  } else if (InputType == TEXT("mouse_click")) {
     double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
@@ -318,7 +318,7 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key, con
                              "widget holding mouse capture (%s), NOT to "
                              "whatever is drawn at those coordinates."),
                         X, Y, *CaptorName);
-  } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
+  } else if (InputType == TEXT("mouse_move")) {
     double X = 0, Y = 0;
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);

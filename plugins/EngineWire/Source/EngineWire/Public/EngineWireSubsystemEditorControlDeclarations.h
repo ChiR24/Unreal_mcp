@@ -13,7 +13,6 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorOpenAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorScreenshot); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorPause); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorResume); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorConsoleCommand); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStepFrame); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStartRecording); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStopRecording); \

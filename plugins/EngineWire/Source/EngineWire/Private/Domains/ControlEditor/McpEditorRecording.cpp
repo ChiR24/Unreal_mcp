@@ -5,12 +5,6 @@
 #include "LevelEditorViewport.h"
 #include "TimerManager.h"
 
-bool UEngineWireSubsystem::HandleControlEditorConsoleCommand(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  return HandleConsoleCommandAction(RequestId, TEXT("console_command"), Payload, Socket);
-}
-
 bool UEngineWireSubsystem::HandleControlEditorStartRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

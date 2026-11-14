@@ -157,27 +157,37 @@ void CountWindowRestoreRequestForMcp() {
   ++GMcpWindowRestoreCount;
 }
 
+#if PLATFORM_WINDOWS
+// Shows Window the ShowCmd way through its window placement, which never activates it; false without a native handle.
+static bool McpShowWindowNoActivate(const TSharedRef<SWindow> &Window, int32 ShowCmd) {
+  TSharedPtr<FGenericWindow> Native = Window->GetNativeWindow();
+  void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
+  if (Handle == nullptr) {
+    return false;
+  }
+  const HWND Hwnd = static_cast<HWND>(Handle);
+  WINDOWPLACEMENT Placement = {};
+  Placement.length = sizeof(WINDOWPLACEMENT);
+  if (::GetWindowPlacement(Hwnd, &Placement)) {
+    Placement.showCmd = static_cast<UINT>(ShowCmd);
+    ::SetWindowPlacement(Hwnd, &Placement);
+  }
+  return true;
+}
+#endif
+
 bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   if (!Window->IsWindowMinimized()) {
     return false;
   }
 #if PLATFORM_WINDOWS
-  TSharedPtr<FGenericWindow> Native = Window->GetNativeWindow();
-  void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
-  if (Handle != nullptr) {
-    // SW_SHOWNOACTIVATE, not SW_RESTORE: the editor is being driven by
-    // automation next to a human, and restoring it must not pull focus or the
-    // cursor away from whatever they are doing. Applied through the window
-    // placement: ShowWindow(SW_SHOWNOACTIVATE) on a minimized window left it
-    // parked at -32000,-32000, while the placement form restores it to its
-    // normal rectangle without activating it.
-    const HWND Hwnd = static_cast<HWND>(Handle);
-    WINDOWPLACEMENT Placement = {};
-    Placement.length = sizeof(WINDOWPLACEMENT);
-    if (::GetWindowPlacement(Hwnd, &Placement)) {
-      Placement.showCmd = SW_SHOWNOACTIVATE;
-      ::SetWindowPlacement(Hwnd, &Placement);
-    }
+  // SW_SHOWNOACTIVATE, not SW_RESTORE: the editor is being driven by
+  // automation next to a human, and restoring it must not pull focus or the
+  // cursor away from whatever they are doing. Applied through the window
+  // placement: ShowWindow(SW_SHOWNOACTIVATE) on a minimized window left it
+  // parked at -32000,-32000, while the placement form restores it to its
+  // normal rectangle without activating it.
+  if (McpShowWindowNoActivate(Window, SW_SHOWNOACTIVATE)) {
     ++GMcpWindowRestoreCount;
     // Slate composites on the game thread; one tick gives the restored window a
     // frame to draw before ReadPixels runs, otherwise the capture is blank.
@@ -195,20 +205,11 @@ void MinimizeWindowForMcp(const TSharedRef<SWindow> &Window) {
     return;
   }
 #if PLATFORM_WINDOWS
-  TSharedPtr<FGenericWindow> Native = Window->GetNativeWindow();
-  void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
-  if (Handle != nullptr) {
-    // SW_SHOWMINNOACTIVE, not SW_MINIMIZE (what SWindow::Minimize() sends): that one
-    // activates the next window in the Z order, so putting the editor away would move
-    // the focus of whoever is working beside it. Applied through the window placement,
-    // as the restore is.
-    const HWND Hwnd = static_cast<HWND>(Handle);
-    WINDOWPLACEMENT Placement = {};
-    Placement.length = sizeof(WINDOWPLACEMENT);
-    if (::GetWindowPlacement(Hwnd, &Placement)) {
-      Placement.showCmd = SW_SHOWMINNOACTIVE;
-      ::SetWindowPlacement(Hwnd, &Placement);
-    }
+  // SW_SHOWMINNOACTIVE, not SW_MINIMIZE (what SWindow::Minimize() sends): that one
+  // activates the next window in the Z order, so putting the editor away would move
+  // the focus of whoever is working beside it. Applied through the window placement,
+  // as the restore is.
+  if (McpShowWindowNoActivate(Window, SW_SHOWMINNOACTIVE)) {
     return;
   }
 #endif

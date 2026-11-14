@@ -3,7 +3,7 @@
 // =============================================================================
 // EngineWire - Gameplay Debugger Handlers
 //
-// UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+// UE Version Support: 5.0 to 5.8
 //
 // Handler Summary:
 // -----------------------------------------------------------------------------
@@ -15,8 +15,8 @@
 //   - Engine: GameplayDebugger module (optional)
 //
 // Notes:
-//   - Uses console command "GameplayDebuggerCategory [name]" for robustness
-//   - Alternative: IGameplayDebugger::Get().ToggleCategory() (requires module)
+//   - Sets the category's override in UGameplayDebuggerConfig and on each Gameplay Debugger
+//     replicator of the play world (else the editor world); no console command is run
 //   - Works with PIE (Play In Editor) for runtime debugging
 // =============================================================================
 
@@ -90,8 +90,7 @@ bool UEngineWireSubsystem::HandleDebugAction(
             return true;
         }
 
-        // Sanitize categoryName to prevent command injection
-        // Only allow alphanumeric characters and underscores
+        // A category name holds letters, digits, '_' and '-' only.
         CategoryName = CategoryName.TrimStartAndEnd();
         bool bHasInvalidChars = false;
         for (int32 i = 0; i < CategoryName.Len(); i++)

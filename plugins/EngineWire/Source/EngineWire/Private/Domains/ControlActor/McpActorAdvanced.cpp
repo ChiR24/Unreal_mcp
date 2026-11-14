@@ -4,6 +4,7 @@
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "UObject/Script.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPDiag.h"
+#include "Exporters/Exporter.h"
 
 bool UEngineWireSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,

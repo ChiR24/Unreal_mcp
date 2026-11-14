@@ -7,6 +7,7 @@
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "GameFramework/Actor.h"
+#include "UObject/Package.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include MCP_HIT_RESULT_HEADER
 
@@ -71,4 +72,74 @@ void McpAddMotionOverlapResult(const FMcpMotionOverlaps &Overlaps, FJsonObject &
   if (Overlaps.Passes.Found.Num() > 0) {
     Data.SetArrayField(TEXT("passedThrough"), Overlaps.Passes.Found);
   }
+}
+
+void McpStartMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor, const TSharedPtr<FJsonObject> &Payload) {
+  Payload->TryGetBoolField(TEXT("overlaps"), Overlaps.bOn);
+  if (Overlaps.bOn) {
+    Overlaps.Probe.Reset(NewObject<UMcpMotionOverlapProbe>(GetTransientPackage()));
+    Overlaps.Watched = Actor;
+    Actor->OnActorBeginOverlap.AddDynamic(Overlaps.Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);
+  }
+}
+
+FMcpMotionOverlaps::~FMcpMotionOverlaps() {
+  AActor *Actor = Watched.Get();
+  if (Actor && Probe) {
+    Actor->OnActorBeginOverlap.RemoveDynamic(Probe.Get(), &UMcpMotionOverlapProbe::OnBegin);
+  }
+}
+
+void McpTrackMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor) {
+  McpTrackMotionPasses(Overlaps.Passes, Actor);
+  if (!Overlaps.bOn) {
+    return;
+  }
+  // Named only when a touch begins: McpActorRef walks the level to keep the name unique.
+  TMap<AActor *, FString> Begun;
+  const auto Begin = [&Overlaps, &Begun](AActor *Other) -> FString {
+    if (const FString *Name = Begun.Find(Other)) {
+      return *Name;
+    }
+    const FString Name = Begun.Add(Other, McpActorRef(Other));
+    Overlaps.Began.Add(Name);
+    Overlaps.Ever.AddUnique(Name);
+    return Name;
+  };
+  // A touch the actor's own event announced counts even when it ended within the same frame.
+  if (Overlaps.Probe) {
+    for (const TWeakObjectPtr<AActor> &Heard : Overlaps.Probe->Heard) {
+      if (Heard.IsValid() && !Overlaps.Touching.Contains(Heard)) {
+        Begin(Heard.Get());
+      }
+    }
+    Overlaps.Probe->Heard.Reset();
+  }
+  TArray<AActor *> Now;
+  Actor->GetOverlappingActors(Now);
+  TMap<TWeakObjectPtr<AActor>, FString> Current;
+  for (AActor *Other : Now) {
+    const FString *Known = Other ? Overlaps.Touching.Find(Other) : nullptr;
+    if (Other) {
+      Current.Add(Other, Known ? *Known : Begin(Other));
+    }
+  }
+  for (const TPair<TWeakObjectPtr<AActor>, FString> &Was : Overlaps.Touching) {
+    if (!Current.Contains(Was.Key)) {
+      Overlaps.Ended.Add(Was.Value);
+    }
+  }
+  Overlaps.Touching = MoveTemp(Current);
+}
+
+void McpSampleMotionOverlaps(FMcpMotionOverlaps &Overlaps, AActor *Actor, FJsonObject &Sample) {
+  McpTrackMotionOverlaps(Overlaps, Actor);
+  if (Overlaps.Began.Num() > 0) {
+    Sample.SetArrayField(TEXT("overlapsBegan"), McpHandlerUtils::ToJsonStringArray(Overlaps.Began));
+  }
+  if (Overlaps.Ended.Num() > 0) {
+    Sample.SetArrayField(TEXT("overlapsEnded"), McpHandlerUtils::ToJsonStringArray(Overlaps.Ended));
+  }
+  Overlaps.Began.Reset();
+  Overlaps.Ended.Reset();
 }

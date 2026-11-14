@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5c514df1b8ab0266",
+  "catalogRevision": "17a0fba95a4f9923",
   "recordCount": 489,
   "records": [
     {
@@ -46461,7 +46461,7 @@
             },
             "materialIndex": {
               "type": "number",
-              "description": "Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."
+              "description": "Same as materialSlot."
             },
             "allComponents": {
               "type": "boolean",
@@ -46562,8 +46562,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "44ae4908841017bf0acad0366a8ed36fd6e9af50621a3ab81ba7e6c82d63b363",
-        "content": "89146f7e1f2dc203a7fb08c01bc0fbc053607866334f046d3b9fa771521d07aa"
+        "schema": "d877aa98feee5c9080790fc1f5aedd5817c4e86a847ca24592f1d9cf44ee6d24",
+        "content": "73ce9a8fff6fdd471f9b201c009030ee2fffb2b6eacfdb5108632e32c5cde3fd"
       }
     },
     {
@@ -47659,7 +47659,7 @@
             },
             "actorClass": {
               "type": "string",
-              "description": "Alias of classPath accepted by the spawn handler (normalizeArgs alias)."
+              "description": "Same as classPath."
             },
             "actorName": {
               "type": "string",
@@ -48016,8 +48016,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fb05155ddec0c61d867d3540276173cb9307a64ce5e8324a2024d0be782ea2aa",
-        "content": "7578d949fc82ec31577c2dd9f03474ec76ff7f7f94e29055251879266e5a7862"
+        "schema": "2230637fc0a73f606a55dd975308254a7e3e125b15a06079e43bd6e16ce05ed2",
+        "content": "4c1b91575d6e36937153f242ee614ad5d6d4444aa99346cecd356f3f10693a3f"
       }
     },
     {

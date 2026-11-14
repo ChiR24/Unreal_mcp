@@ -4934,7 +4934,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "properties": {
         "actorClass": {
           "type": "string",
-          "description": "Alias of classPath accepted by the spawn handler (normalizeArgs alias)."
+          "description": "Same as classPath."
         },
         "actorName": {
           "type": "string",
@@ -5526,7 +5526,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "materialIndex": {
           "type": "number",
-          "description": "Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."
+          "description": "Same as materialSlot."
         },
         "materialPath": {
           "type": "string",

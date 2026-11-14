@@ -210,12 +210,10 @@ void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
   static TWeakObjectPtr<UWorld> WarnedWorld;
   if (Window.IsValid() && Window->IsWindowMinimized() && WarnedWorld.Get() != PlayWorld) {
     WarnedWorld = PlayWorld;
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    Warnings.Add(MakeShared<FJsonValueString>(
+    McpHandlerUtils::AppendWarning(Resp,
         TEXT("The window showing Play In Editor is minimized, so its widgets are not painted and do not tick: "
              "Delay nodes in a widget graph and widget animations stand still until it is restored "
-             "(control_editor.configure_editor setting window).")));
-    Resp->SetArrayField(TEXT("warnings"), Warnings);
+             "(control_editor.configure_editor setting window)."));
   }
 }
 } // namespace

@@ -13,10 +13,6 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("control_editor"), ESearchCase::IgnoreCase) &&
-      !Lower.StartsWith(TEXT("control_editor")))
-    return false;
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("control_editor payload missing."),
@@ -79,7 +75,7 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return McpEditorToolsets::HandleCallTool(this, RequestId, Payload, RequestingSocket,
                                              LowerSub == TEXT("call_editor_tool_destructive"));
   if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command"))
-    return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
+    return HandleConsoleCommandAction(RequestId, TEXT("console_command"), Payload, RequestingSocket);
   if (LowerSub == TEXT("step_frame"))
     return HandleControlEditorStepFrame(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("start_recording"))
@@ -150,8 +146,8 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
         TEXT("command"), FString::Printf(TEXT("r.SetRes %dx%d"),
                                          static_cast<int32>(Width),
                                          static_cast<int32>(Height)));
-    return HandleControlEditorConsoleCommand(RequestId, ConsolePayload,
-                                             RequestingSocket);
+    return HandleConsoleCommandAction(RequestId, TEXT("console_command"), ConsolePayload,
+                                      RequestingSocket);
   }
 
   SendStandardErrorResponse(

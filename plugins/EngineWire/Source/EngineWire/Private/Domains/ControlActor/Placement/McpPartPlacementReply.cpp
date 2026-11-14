@@ -93,26 +93,21 @@ int32 AppendPartWarnings(UBlueprint* Blueprint, const TSet<FString>& Focus, cons
         return 0;
     }
     TArray<TSharedPtr<FJsonValue>> Entries;
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Warnings = *Existing;
-    }
+    TArray<FString> Warnings;
     for (int32 Index = 0; Index < Audit.Issues.Num() && Index < MaxReported; ++Index)
     {
         Entries.Add(MakeShared<FJsonValueObject>(IssueToJson(Audit.Issues[Index])));
-        Warnings.Add(MakeShared<FJsonValueString>(Audit.Issues[Index].Issue));
+        Warnings.Add(Audit.Issues[Index].Issue);
     }
-    for (const FString& Note : Audit.Notes)
-    {
-        Warnings.Add(MakeShared<FJsonValueString>(Note));
-    }
+    Warnings.Append(Audit.Notes);
     if (Entries.Num() > 0)
     {
         Result->SetArrayField(TEXT("partWarnings"), Entries);
     }
-    Result->SetArrayField(TEXT("warnings"), Warnings);
+    for (const FString& Warning : Warnings)
+    {
+        McpHandlerUtils::AppendWarning(Result, Warning);
+    }
     return Audit.Issues.Num();
 }
 
@@ -134,12 +129,7 @@ int32 AppendMeshUserWarnings(UStaticMesh* Mesh, const TSharedPtr<FJsonObject>& R
         Mesh->GetOutermost()->GetFName(), Referencers);
     Referencers.Sort(FNameLexicalLess());
     TArray<TSharedPtr<FJsonValue>> Entries;
-    TArray<TSharedPtr<FJsonValue>> Warnings;
-    const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-    if (Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-    {
-        Warnings = *Existing;
-    }
+    TArray<FString> Warnings;
     int32 Found = 0;
     int32 Audited = 0;
     // ponytail: loaded Blueprints only (no package is loaded to answer this), at most 8 of them; a Blueprint
@@ -161,15 +151,17 @@ int32 AppendMeshUserWarnings(UStaticMesh* Mesh, const TSharedPtr<FJsonObject>& R
                 TSharedPtr<FJsonObject> Entry = IssueToJson(Issue);
                 Entry->SetStringField(TEXT("blueprintPath"), PackageName);
                 Entries.Add(MakeShared<FJsonValueObject>(Entry));
-                Warnings.Add(MakeShared<FJsonValueString>(
-                    FString::Printf(TEXT("%s: %s"), *FPackageName::GetShortName(PackageName), *Issue.Issue)));
+                Warnings.Add(FString::Printf(TEXT("%s: %s"), *FPackageName::GetShortName(PackageName), *Issue.Issue));
             }
         }
     }
     if (Entries.Num() > 0)
     {
         Result->SetArrayField(TEXT("partWarnings"), Entries);
-        Result->SetArrayField(TEXT("warnings"), Warnings);
+        for (const FString& Warning : Warnings)
+        {
+            McpHandlerUtils::AppendWarning(Result, Warning);
+        }
     }
     return Found;
 }
