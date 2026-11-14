@@ -9,7 +9,7 @@ import { bool, int, num, str, strArr } from '../shared/schema-props.js';
 export type PropertyMap = JsonObject;
 
 export const P = {
-  path: str('Canonical /Game sequence asset path.'),
+  path: str('The level sequence\'s /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session.'),
   name: str('Name for the new sequence or asset.'),
   assetPath: str('Canonical /Game asset path.'),
   newName: str('New name for the sequence asset.'),

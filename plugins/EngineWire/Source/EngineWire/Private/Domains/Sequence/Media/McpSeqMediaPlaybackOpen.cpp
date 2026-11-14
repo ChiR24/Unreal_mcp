@@ -73,7 +73,7 @@ bool OpenRequestedMedia(UObject *Player,
             ? LoadMediaObject(PlaylistPath, PlaylistClass, ResolvedPath, Error)
             : nullptr;
     const double IndexValue =
-        GetNumberAny(Payload, {TEXT("playlistIndex"), TEXT("index")});
+        GetNumberAny(Payload, {TEXT("playlistIndex")});
     const int32 Index = FMath::Max(0, FMath::TruncToInt32(IndexValue));
     UObject *PlaylistSource =
         Playlist ? CallObjectIntFunction(Playlist, TEXT("Get"), Index) : nullptr;

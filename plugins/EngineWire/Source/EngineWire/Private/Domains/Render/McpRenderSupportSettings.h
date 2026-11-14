@@ -34,6 +34,14 @@ inline void AddNumberArray(
     Result->SetArrayField(FieldName, JsonValues);
 }
 
+// A refusal of ApplyJsonSettings on an object written in place: Error, then the keys written before it, which stay until
+// undo takes them back (the caller's step holds them).
+inline FString McpPartlyAppliedError(const FString& Error, const TArray<FString>& Applied)
+{
+    return Applied.Num() == 0 ? Error
+        : FString::Printf(TEXT("%s (written before it, until undo: %s)"), *Error, *FString::Join(Applied, TEXT(", ")));
+}
+
 inline bool ApplyJsonSettings(
     void* Target,
     UStruct* StructType,

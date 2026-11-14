@@ -22,7 +22,7 @@ bool ResolveAssetTarget(const TSharedPtr<FJsonObject> &Params, FString &OutName,
                         FString &OutFolder, FString &OutPath) {
   OutPath = GetString(Params, TEXT("sequencePath"), TEXT("assetPath"));
   OutName = GetString(Params, TEXT("name"));
-  OutFolder = GetString(Params, TEXT("path"), TEXT("folder"));
+  OutFolder = GetString(Params, TEXT("path"));
   if (!OutPath.IsEmpty()) {
     // sequencePath + name means "create <name> inside this folder"; only a
     // sequencePath without a name is a full asset path. Splitting always used
@@ -159,7 +159,7 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
   // INVALID_SEQUENCE, as the sibling add_shot_track already does.
   ULevelSequence *Master = LoadSequence(Params, OutResult);
   if (!Master) return true;
-  const FString SubPath = GetString(Params, TEXT("subsequencePath"), TEXT("subSequencePath"));
+  const FString SubPath = GetString(Params, TEXT("subsequencePath"));
   // Through the shared canonicalizer and the registry, as the sequence path is.
   ULevelSequence *Sub = Cast<ULevelSequence>(McpLoadAsset(SanitizeProjectRelativePath(SubPath)));
   if (!Sub) {
@@ -248,7 +248,7 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   const FString ShotName =
-      GetString(Params, TEXT("shotName"), TEXT("displayName"));
+      GetString(Params, TEXT("displayName"));
   if (!ShotName.IsEmpty())
     Shot->SetShotDisplayName(ShotName);
   MovieScene->Modify();

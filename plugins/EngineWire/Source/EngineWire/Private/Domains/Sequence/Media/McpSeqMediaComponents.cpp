@@ -16,14 +16,11 @@ AActor *FindMediaActorByName(const FString &ActorName) {
   if (ActorName.IsEmpty() || !GEditor) {
     return nullptr;
   }
-  // The play world first (live actors), then the editor level.
-  if (AActor *Actor = FindActorByNameInWorldForMcp(GEditor->PlayWorld, ActorName, true)) {
+  // The play world first (live actors, and the running game's roles), then the editor level.
+  if (AActor *Actor = McpHandlerUtils::FindActorByName(ActorName)) {
     return Actor;
   }
-  if (AActor *Actor = FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), ActorName, true)) {
-    return Actor;
-  }
-  return McpHandlerUtils::FindActorByName(ActorName);
+  return FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), ActorName, true);
 }
 
 }

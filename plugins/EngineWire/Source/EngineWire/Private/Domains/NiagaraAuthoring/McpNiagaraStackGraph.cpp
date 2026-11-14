@@ -1,5 +1,6 @@
 #include "Domains/NiagaraAuthoring/McpNiagaraContext.h"
 #include "Domains/NiagaraGraph/McpNiagaraModuleOrder.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -128,8 +129,9 @@ bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptU
     return true;
 }
 
-// The pin default the Niagara stack writes for Value: an enum entry by name (matched here by display name, name or
-// value), a bool as true/false, an int as its digits. Empty when Value fits none; Allowed then names what fits.
+// The pin default the Niagara stack writes for Value: an enum entry by name (a word through the shared enum reader, a
+// number by the entry's value), a bool as true/false, an int as its digits. Empty when Value fits none; Allowed then
+// names what fits.
 static FString StaticSwitchDefault(const UEdGraphPin& Pin, const TSharedPtr<FJsonValue>& Value, FString& Allowed)
 {
     FString Text;
@@ -143,15 +145,14 @@ static FString StaticSwitchDefault(const UEdGraphPin& Pin, const TSharedPtr<FJso
         for (int32 Index = 0; Index < Count; ++Index)
         {
             const int64 EntryValue = Enum->GetValueByIndex(Index);
-            const FString Display = Enum->GetDisplayNameTextByIndex(Index).ToString();
-            const FString Name = Enum->GetNameStringByValue(EntryValue);
-            Allowed += (Allowed.IsEmpty() ? TEXT("") : TEXT(", ")) + Display;
-            if ((bNumber && EntryValue == static_cast<int64>(Number)) || (bText && (Text.Equals(Display, ESearchCase::IgnoreCase) || Text.Equals(Name, ESearchCase::IgnoreCase))))
+            Allowed += (Allowed.IsEmpty() ? TEXT("") : TEXT(", ")) + Enum->GetDisplayNameTextByIndex(Index).ToString();
+            if (bNumber && EntryValue == static_cast<int64>(Number))
             {
-                Match = Name;
+                Match = Enum->GetNameStringByValue(EntryValue);
             }
         }
-        return Match;
+        int64 Parsed = 0;
+        return bText ? (McpParseEnumToken(Enum, Text, Parsed) ? Enum->GetNameStringByValue(Parsed) : FString()) : Match;
     }
     if (PinStructName(Pin) == FName(TEXT("NiagaraBool")))
     {

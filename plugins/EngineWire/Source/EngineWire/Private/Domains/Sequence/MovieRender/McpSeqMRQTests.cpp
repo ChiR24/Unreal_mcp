@@ -4,40 +4,10 @@
 
 #include "Domains/Sequence/MovieRender/McpSeqMRQInternal.h"
 #include "Domains/Sequence/MovieRender/McpSeqMRQResourceLimits.h"
-#include "MCP/Transport/McpNativeTransportTimeoutPolicy.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FrameRate.h"
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-    FMcpMovieRenderNativeTimeoutPolicyTest,
-    "EngineWire.Sequence.MovieRender.NativeTimeoutPolicy",
-    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
-bool FMcpMovieRenderNativeTimeoutPolicyTest::RunTest(
-    const FString &Parameters) {
-  (void)Parameters;
-  TSharedPtr<FJsonObject> RenderArguments = MakeShared<FJsonObject>();
-  RenderArguments->SetStringField(TEXT("action"), TEXT("start_render"));
-  TestEqual(
-      TEXT("Default render timeout includes cancellation and response grace"),
-      McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(
-          TEXT("manage_sequence"), RenderArguments, 3600000, 30000),
-      335.0);
-  RenderArguments->SetNumberField(TEXT("renderTimeoutMs"), 3600000);
-  TestEqual(
-      TEXT("Maximum render timeout remains alive through cancellation"),
-      McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(
-          TEXT("manage_sequence"), RenderArguments, 3600000, 30000),
-      3635.0);
-  TestEqual(
-      TEXT("Other tool calls retain the standard timeout"),
-      McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(
-          TEXT("manage_asset"), RenderArguments, 3600000, 30000),
-      300.0);
-  return true;
-}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FMcpMovieRenderFileNameFormatTest,

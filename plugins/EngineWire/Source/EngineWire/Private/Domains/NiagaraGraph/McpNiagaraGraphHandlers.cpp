@@ -152,27 +152,18 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
             SendAutomationError(RequestingSocket, RequestId, FailMessage, FailCode);
             return true;
         }
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        McpNiagaraGraphHandlers::SaveNiagaraGraphEdit(System, Payload, Result);
-        McpHandlerUtils::AddVerification(Result, System);
+        const TSharedPtr<FJsonObject>& Result = Context.Result;
+        McpNiagaraAuthoringHandlers::MarkDirtyAndVerify(Context, System);
         Result->SetStringField(TEXT("modulePath"), ModulePath);
         Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
         if (StackIndex != INDEX_NONE)
         {
             Result->SetNumberField(TEXT("stackIndex"), StackIndex);
         }
-        // What the editor's stack shows for the system now, as the typed module adds report it.
-        TArray<TSharedPtr<FJsonValue>> StackErrors;
-        TArray<TSharedPtr<FJsonValue>> StackWarnings;
-        McpNiagaraAuthoringHandlers::CollectNiagaraSystemStackIssues(System, StackErrors, StackWarnings);
-        Result->SetArrayField(TEXT("stackErrors"), StackErrors);
-        if (StackWarnings.Num() > 0)
-        {
-            Result->SetArrayField(TEXT("warnings"), StackWarnings);
-        }
-
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("Module node added."), Result);
+        // What the editor's stack shows for the system now (stackErrors, and its warnings), as the typed module adds
+        // report it: the context's send adds it for an add_*_module sub-action.
+        Context.SubAction = SubAction;
+        Context.SendSuccess(true, TEXT("Module node added."));
         return true;
     }
 

@@ -162,31 +162,37 @@ void SendStartRecordingResult(
                 if (!Recorder)
                 {
                     WaitState->bCompleted = true;
-                    SendTakeRecorderStartFailure(
-                        Subsystem,
-                        Socket, RequestId,
-                        TEXT("Take Recorder was released before recording started"),
-                        TEXT("RECORDING_START_FAILED"), WaitState);
+                    Subsystem->RunLatentReply(RequestId, TEXT("manage_sequence start_recording"), [&]() {
+                        SendTakeRecorderStartFailure(
+                            Subsystem,
+                            Socket, RequestId,
+                            TEXT("Take Recorder was released before recording started"),
+                            TEXT("RECORDING_START_FAILED"), WaitState);
+                    });
                     return false;
                 }
                 const ETakeRecorderState State = Recorder->GetState();
                 if (State == ETakeRecorderState::Started)
                 {
                     WaitState->bCompleted = true;
-                    Subsystem->SendAutomationResponse(
-                        Socket, RequestId, true, TEXT("Take recording started"),
-                        MakeStartedRecordingResult(Recorder));
+                    Subsystem->RunLatentReply(RequestId, TEXT("manage_sequence start_recording"), [&]() {
+                        Subsystem->SendAutomationResponse(
+                            Socket, RequestId, true, TEXT("Take recording started"),
+                            MakeStartedRecordingResult(Recorder));
+                    });
                     return false;
                 }
                 if (State == ETakeRecorderState::Stopped ||
                     State == ETakeRecorderState::Cancelled)
                 {
                     WaitState->bCompleted = true;
-                    SendTakeRecorderStartFailure(
-                        Subsystem,
-                        Socket, RequestId,
-                        TEXT("Take Recorder stopped before recording began"),
-                        TEXT("RECORDING_START_FAILED"), WaitState);
+                    Subsystem->RunLatentReply(RequestId, TEXT("manage_sequence start_recording"), [&]() {
+                        SendTakeRecorderStartFailure(
+                            Subsystem,
+                            Socket, RequestId,
+                            TEXT("Take Recorder stopped before recording began"),
+                            TEXT("RECORDING_START_FAILED"), WaitState);
+                    });
                     return false;
                 }
                 if (FPlatformTime::Seconds() >= DeadlineSeconds)
@@ -194,11 +200,13 @@ void SendStartRecordingResult(
                     WaitState->bCompleted = true;
                     if (UTakeRecorderBlueprintLibrary::GetActiveRecorder() == Recorder)
                         UTakeRecorderBlueprintLibrary::CancelRecording();
-                    SendTakeRecorderStartFailure(
-                        Subsystem,
-                        Socket, RequestId,
-                        TEXT("Timed out waiting for Take Recorder to start"),
-                        TEXT("RECORDING_START_TIMEOUT"), WaitState);
+                    Subsystem->RunLatentReply(RequestId, TEXT("manage_sequence start_recording"), [&]() {
+                        SendTakeRecorderStartFailure(
+                            Subsystem,
+                            Socket, RequestId,
+                            TEXT("Timed out waiting for Take Recorder to start"),
+                            TEXT("RECORDING_START_TIMEOUT"), WaitState);
+                    });
                     return false;
                 }
                 return true;

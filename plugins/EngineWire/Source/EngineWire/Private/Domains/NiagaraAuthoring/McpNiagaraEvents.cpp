@@ -67,7 +67,7 @@ static bool AddEventGenerator(FActionContext& Context)
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!LoadSystemAndEmitter(Context, System, Handle))
+    if (!StackEditsAvailableOrRefuse(Context) || !LoadSystemAndEmitter(Context, System, Handle))
     {
         return true;
     }

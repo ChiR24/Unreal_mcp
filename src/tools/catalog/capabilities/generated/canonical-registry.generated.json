@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2033fd4321b3c975",
+  "catalogRevision": "43a82f49e4e32b54",
   "recordCount": 489,
   "records": [
     {
@@ -106584,7 +106584,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "actorName": {
               "type": "string",
@@ -106722,11 +106722,11 @@
             },
             "subsequencePath": {
               "type": "string",
-              "description": "Alias of shotSequencePath."
+              "description": "The sequence to add: add_subsequence's subsequence, or a shot's sequence (as shotSequencePath)."
             },
             "displayName": {
               "type": "string",
-              "description": "Shot display name (alias of shotName)."
+              "description": "The shot's display name (the shot settings also take it as shotName)."
             },
             "trackKind": {
               "type": "string",
@@ -107038,8 +107038,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60fdb19faaecbba1ecc715964dc06e6be7eb8a86c71a197f764bced9d5bcfb70",
-        "content": "60be6aa556dae516e156073bdc59127643ce3bf29e09dee8a41ba36fd1b954b9"
+        "schema": "b826b5f0657ffad70c2167199edc9906f8848d80fcbdbce1413a3e4f3f835239",
+        "content": "d9e231bcaaf1247997895747c7aac917ee61362cf942231a6c19603c4c40c545"
       }
     },
     {
@@ -107253,7 +107253,7 @@
             },
             "displayName": {
               "type": "string",
-              "description": "Shot display name (alias of shotName)."
+              "description": "The shot's display name (the shot settings also take it as shotName)."
             },
             "sectionIndex": {
               "type": "integer",
@@ -107478,8 +107478,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "64de903b31a362ab73bd452521f8d56b9b1fb0efd3b69ad3192821c212808e12",
-        "content": "c3b18751afb6ba43ef83cfe39c41e8038c263bd29bcc69153c027b48a9718698"
+        "schema": "9395a5b2a0f42a3119855c93206d892eb658c357b8dd9246ac6f9eb7836e7793",
+        "content": "4267754af8ed19b8175970c00f903de9afcdeac724829f9e971011b296a063c4"
       }
     },
     {
@@ -108178,7 +108178,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "trackName": {
               "type": "string",
@@ -108345,8 +108345,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b3ed7e3226d6ab64dfd84641ee1c2ab0a75555396c6b9b1f806f755698b7dd0a",
-        "content": "c4a5de7662c4d25f829e28e79e7db97778f213adb418ea30d100af75bd08a1e0"
+        "schema": "70964c418cad11a4410fe2742c1262483d568c5e09228df973e1ed02e06e6ba3",
+        "content": "7afd4a054b518a464aa3cba0e0c037de5de4ae32793159c1a8eec0975e4611b4"
       }
     },
     {
@@ -108438,7 +108438,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "actorName": {
               "type": "string",
@@ -108636,8 +108636,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3c1689c43006bebe6d4a9393a2b7a95e3dc50c3eba5c37e4048074e97461778d",
-        "content": "ca817a1b8b483a445c9c47480b68eeec2f7ec50f40da56d418b6e8a193e7f5fc"
+        "schema": "cb844b5b7bec5e2a8a6ed8a1dbfe8c146ef054c5ee3f5c1cb1955f60f7582b49",
+        "content": "e5edd15c88d5e5d217d58e58b7c34e6a8ad765c93159e1b304df40296b9e8abb"
       }
     },
     {
@@ -108765,7 +108765,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "trackType": {
               "type": "string",
@@ -109134,8 +109134,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b04ced27acefe20d22927285b811529ce7e65cce060ed2aeb3e0c39bd2873479",
-        "content": "c07bf5b3ce5417a0deb0f2361ccf28a1051d581b48ddbe939134a933badd7cd3"
+        "schema": "99f2e6756e3df4cab840e2e5ac99e81cb0baea04cd3a7c015e12d097addfe9d0",
+        "content": "1764d3508b75c050e1bc8593ad40d423390a40aa5793c69f49b6785a360385cd"
       }
     },
     {
@@ -109173,7 +109173,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "key": {
               "type": "string",
@@ -109291,8 +109291,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "383366883099e4d6bf96c10c737ec23cd838823610079c0e76139270d4eae28a",
-        "content": "43695cce10886f5886d805a62c55ab2bbea10c77240adf38a99818fd01481d35"
+        "schema": "06dfa2393884a8a594bba45589764d93cfa872c5660eb3212b43181b0421f1aa",
+        "content": "15e0952a00a19155fee647df7e55a49a0fbc4a9713db662d3499fd7d59c5b93f"
       }
     },
     {
@@ -109398,7 +109398,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "trackName": {
               "type": "string",
@@ -109807,8 +109807,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d81b70a82915a4f3ecfad7dd4599291c0b0eac33fb13645edef317f58d245d5d",
-        "content": "6e1754a296ac83e356ed4609385f8c91cdd4adb72dd4ba9d17875440c56b1fce"
+        "schema": "4ca913d920d2a4f3b2ee7a16a1d8e89abccdc9f1c01e9f068a48980afa7e9811",
+        "content": "fa8c5878bbc5b0254a10030df3591af3ae21fb3f28e0fb2849b72f7802a31f4a"
       }
     },
     {
@@ -109903,7 +109903,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "Folder the new asset is made in (a /Game path)."
             },
             "assetPath": {
               "type": "string",
@@ -110271,8 +110271,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4d81a65f01c59b95b4ab63fe41f3ffe42754a9d4ab1e25d2b46c1a09ce8c839c",
-        "content": "8dd12d723e1e949abeabf44aa470c7eb61a7ad6cf535b7abf53cd512a84ad538"
+        "schema": "ca7e5ae36a36e076a87777c21d708bd5a0622e2473aa0d14c554992996123cd8",
+        "content": "5d8b797797da3781e6547f34ca8707fdb3d97d79e42a9c023d6bee3e0eb980f6"
       }
     },
     {
@@ -112284,7 +112284,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "startTime": {
               "type": "number",
@@ -112407,8 +112407,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "718378c31cc6c246cf7495007965996a4ea02830ae69498d176a5a9bc2a7a520",
-        "content": "ed7a5fc65f96126dd31d82b9a32c29a01825a61074aba8ddb4f0f24d561a2418"
+        "schema": "7572ed686e11a2aba50dabe59b87608af7fdb0d964b961b422ab4bf9c51a7295",
+        "content": "2bb0c4071ac49a08f6808a63f68b340182db872c26a48376a6bc4cd9378414a5"
       }
     },
     {
@@ -112946,7 +112946,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "metadata": {
               "type": "object",
@@ -113045,8 +113045,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f1064e3e6ba331b223b2f11235c7fe42a58116bb3f81d24a1a0b216bd416a404",
-        "content": "606550a1fcdbf525ff7bf7be5a4c537af1352634c9e625b07fe20d5b0ab533cb"
+        "schema": "abb9889e278293f781bd4976b24c5e16885f66b3b4ef46897983e63584cbc3cb",
+        "content": "30548de32fc033751bc3c4f49dba4d47c1058b52fd7b4f3a1e4bfa6b0f9e5269"
       }
     },
     {
@@ -113143,7 +113143,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
             },
             "frameRate": {
               "type": [
@@ -113339,8 +113339,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "300de9767b2cb37d9008625cd64cf9d488f93627ac4e75bd3868487f36c587e8",
-        "content": "79eafe6134a6d7af96388aff727304216d3097a8860b72ea053a40ab1cdf781a"
+        "schema": "7106491e5bc8641c9677879988741890d148388318d227de91c9af3cde7178c5",
+        "content": "7bcc3dec1b680715a44aef836672aa538a5b21c6e1069d74ba8770ef55e47152"
       }
     },
     {

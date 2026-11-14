@@ -34,33 +34,28 @@ static bool AddDataInterface(FActionContext& Context, const TCHAR* Label, UClass
 
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction)
 {
-    if (SubAction == TEXT("add_skeletal_mesh_data_interface"))
+    // Each data interface by its class in the Niagara module: their headers moved between versions (the static mesh
+    // one twice), and on 5.1 the collision query one cannot be included from another module.
+    struct FDataInterfaceKind
     {
-        return AddDataInterface(Context, TEXT("SkeletalMesh"), UNiagaraDataInterfaceSkeletalMesh::StaticClass());
-    }
-    if (SubAction == TEXT("add_static_mesh_data_interface"))
+        const TCHAR* Action;
+        const TCHAR* Label;
+        const TCHAR* ClassPath;
+    };
+    static const FDataInterfaceKind Kinds[] = {
+        {TEXT("add_skeletal_mesh_data_interface"), TEXT("SkeletalMesh"), TEXT("/Script/Niagara.NiagaraDataInterfaceSkeletalMesh")},
+        {TEXT("add_static_mesh_data_interface"), TEXT("StaticMesh"), TEXT("/Script/Niagara.NiagaraDataInterfaceStaticMesh")},
+        {TEXT("add_spline_data_interface"), TEXT("Spline"), TEXT("/Script/Niagara.NiagaraDataInterfaceSpline")},
+        {TEXT("add_audio_spectrum_data_interface"), TEXT("AudioSpectrum"), TEXT("/Script/Niagara.NiagaraDataInterfaceAudioSpectrum")},
+        {TEXT("add_collision_query_data_interface"), TEXT("CollisionQuery"), TEXT("/Script/Niagara.NiagaraDataInterfaceCollisionQuery")},
+    };
+    for (const FDataInterfaceKind& Kind : Kinds)
     {
-#if MCP_HAS_NIAGARA_STATIC_MESH_DI
-        return AddDataInterface(Context, TEXT("StaticMesh"), UNiagaraDataInterfaceStaticMesh::StaticClass());
-#else
-        return AddDataInterface(Context, TEXT("StaticMesh"),
-            StaticLoadClass(UNiagaraDataInterface::StaticClass(), nullptr, TEXT("/Script/Niagara.NiagaraDataInterfaceStaticMesh")));
-#endif
+        if (SubAction == Kind.Action)
+        {
+            return AddDataInterface(Context, Kind.Label, FindObject<UClass>(nullptr, Kind.ClassPath));
+        }
     }
-    if (SubAction == TEXT("add_spline_data_interface"))
-    {
-        return AddDataInterface(Context, TEXT("Spline"), UNiagaraDataInterfaceSpline::StaticClass());
-    }
-    if (SubAction == TEXT("add_audio_spectrum_data_interface"))
-    {
-        return AddDataInterface(Context, TEXT("AudioSpectrum"), UNiagaraDataInterfaceAudioSpectrum::StaticClass());
-    }
-#if MCP_HAS_NIAGARA_COLLISION_QUERY_DI
-    if (SubAction == TEXT("add_collision_query_data_interface"))
-    {
-        return AddDataInterface(Context, TEXT("CollisionQuery"), UNiagaraDataInterfaceCollisionQuery::StaticClass());
-    }
-#endif
     return false;
 }
 }

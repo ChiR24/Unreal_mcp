@@ -37,8 +37,7 @@ TSubclassOf<UMoviePipelineExecutorBase> ResolveExecutorClass(
     const TSharedPtr<FJsonObject> &Payload, FString &OutMessage,
     FString &OutCode) {
   FString ExecutorClassPath;
-  if (Payload.IsValid())
-    Payload->TryGetStringField(TEXT("executorClass"), ExecutorClassPath);
+  Payload->TryGetStringField(TEXT("executorClass"), ExecutorClassPath);
   if (!ExecutorClassPath.IsEmpty()) {
     if (!ValidateExecutorClassAllowlist(ExecutorClassPath, OutMessage,
                                         OutCode))

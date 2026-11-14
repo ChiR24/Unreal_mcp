@@ -138,12 +138,9 @@ bool HandleCreateMediaPlaylist(UEngineWireSubsystem *Subsystem,
     return true;
   }
   FMediaAssetCreateResult Created;
+  FString ErrorCode;
   if (!CreateMediaAssetFromPayload(Payload, TEXT("/Game/Media/Playlists"),
-                                   TEXT("MediaPlaylist"), Created, Error)) {
-    const FString ErrorCode =
-        Error.Contains(TEXT("[MEDIA_ASSET_ALREADY_EXISTS]"))
-            ? TEXT("MEDIA_ASSET_ALREADY_EXISTS")
-            : TEXT("MEDIA_ASSET_CREATE_FAILED");
+                                   TEXT("MediaPlaylist"), Created, Error, ErrorCode)) {
     SendMediaError(Subsystem, Socket, RequestId,
                    ErrorCode, Error);
     return true;

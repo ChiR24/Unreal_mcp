@@ -6,32 +6,15 @@
 
 #include "EngineWireSubsystem.h"
 #include "Dom/JsonObject.h"
-#include "EdGraph/EdGraphNodeUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Modules/ModuleManager.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
-#include "EditorAssetLibrary.h"
-#include "HAL/FileManager.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/PackageName.h"
 #include "Engine/StaticMesh.h"
 #include "NiagaraComponent.h"
-#include "NiagaraConstants.h"
 #include "NiagaraDataInterface.h"
-#include "NiagaraDataInterfaceAudioSpectrum.h"
-// UE 5.1's Niagara module keeps NiagaraStats.h in its Private folder without adding that folder to its
-// public include paths, so NiagaraDataInterfaceCollisionQuery.h (which includes NiagaraCollision.h,
-// which includes NiagaraStats.h) cannot be included from another module. Epic added the path in 5.2.
-#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1)
-#include "NiagaraDataInterfaceCollisionQuery.h"
-#define MCP_HAS_NIAGARA_COLLISION_QUERY_DI 1
-#else
-#define MCP_HAS_NIAGARA_COLLISION_QUERY_DI 0
-#endif
-#include "NiagaraDataInterfaceSpline.h"
-#include "NiagaraEditorModule.h"
 #include "NiagaraEditorUtilities.h"
 #include "NiagaraEmitter.h"
 #include "NiagaraEmitterHandle.h"
@@ -41,15 +24,12 @@
 #include "NiagaraNodeFunctionCall.h"
 #include "NiagaraNodeInput.h"
 #include "NiagaraNodeOutput.h"
-#include "NiagaraParameterMapHistory.h"
 #include "NiagaraParameterStore.h"
 #include "NiagaraRendererProperties.h"
 #include "NiagaraRibbonRendererProperties.h"
 #include "NiagaraScript.h"
 #include "NiagaraScriptSource.h"
-#include "NiagaraScriptVariable.h"
 #include "NiagaraSimulationStageBase.h"
-#include "NiagaraStackEditorData.h"
 #include "NiagaraSystem.h"
 #include "NiagaraTypes.h"
 #include "NiagaraLightRendererProperties.h"
@@ -81,20 +61,6 @@
 // engine exports only from 5.3: on 5.1 and 5.2 GetOrCreateStackFunctionInputOverridePin does not link.
 #define MCP_HAS_NIAGARA_INPUT_OVERRIDES (MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES && ENGINE_MINOR_VERSION >= 3)
 
-#include "NiagaraDataInterfaceSkeletalMesh.h"
-
-#if __has_include("NiagaraDataInterfaceStaticMesh.h")
-#include "NiagaraDataInterfaceStaticMesh.h"
-#define MCP_HAS_NIAGARA_STATIC_MESH_DI 1
-#elif __has_include("DataInterface/NiagaraDataInterfaceStaticMesh.h")
-#include "DataInterface/NiagaraDataInterfaceStaticMesh.h"
-#define MCP_HAS_NIAGARA_STATIC_MESH_DI 1
-#elif __has_include("Internal/DataInterface/NiagaraDataInterfaceStaticMesh.h")
-#include "Internal/DataInterface/NiagaraDataInterfaceStaticMesh.h"
-#define MCP_HAS_NIAGARA_STATIC_MESH_DI 1
-#else
-#define MCP_HAS_NIAGARA_STATIC_MESH_DI 0
-#endif
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -166,13 +132,38 @@ struct FEmitterTarget
 #endif
 };
 bool LoadEmitterTarget(FActionContext& Context, FEmitterTarget& Target);
-void MarkDirtyAndVerify(FActionContext& Context, UObject* Object);
+// A graph or stack edit persists: dirty the system, then save it unless the caller sent save:false.
+// Dirtying alone let every module add, removal and wire vanish at the next editor start.
+inline void SaveNiagaraGraphEdit(UNiagaraSystem* System, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)
+{
+    // Compiled too: until then the system ran its old scripts and a module just added had no inputs to list or set.
+    System->RequestCompile(false);
+    System->MarkPackageDirty();
+    if (GetJsonBoolField(Payload, TEXT("save"), true))
+    {
+        Result->SetBoolField(TEXT("saved"), McpSafeOperations::McpSafeAssetSave(System));
+    }
+}
+// SaveNiagaraGraphEdit for the action's system, then the verification block.
+void MarkDirtyAndVerify(FActionContext& Context, UNiagaraSystem* System);
 UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
     FNiagaraEmitterHandle* Handle,
     const FString& ModuleScriptPath,
     ENiagaraScriptUsage TargetUsage,
     const FString& SuggestedName = FString());
 UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle);
+// False after refusing UNSUPPORTED_VERSION on UE 5.0, which has no stack utilities to add a module with (every add
+// returned null there and was answered as that one module failing).
+inline bool StackEditsAvailableOrRefuse(FActionContext& Context)
+{
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+    return true;
+#else
+    Context.SendError(TEXT("Adding a module to an emitter stack needs UE 5.1 or later; 5.0 has no Niagara stack utilities. "
+        "Nothing was changed."), TEXT("UNSUPPORTED_VERSION"));
+    return false;
+#endif
+}
 bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptUsage ScriptUsage, FGuid ScriptUsageId);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
 // The system's user parameter named ParamName, of any type ("User." is added to a bare name); null when it has none.

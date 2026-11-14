@@ -65,76 +65,81 @@ void SendStartRenderCompletion(
   const bool bWasTimedOut = bTimedOut || State->bTimedOut;
   State->bCompleted = true;
   const bool bRenderStillActive = Executor && Executor->IsRendering();
-  DiscardPreparedRenderStart(Executor, State);
   UEngineWireSubsystem *Subsystem = WeakSubsystem.Get();
   if (!Subsystem) {
+    DiscardPreparedRenderStart(Executor, State);
     return;
   }
+  // The teardown (the enabled flags onlyJob overrode) and the reply inside the request's brackets: from the executor's
+  // delegates and core tickers they ran outside them, without the caller's principal or a journal entry.
+  Subsystem->RunLatentReply(RequestId, TEXT("manage_sequence start_render"), [&]() {
+    DiscardPreparedRenderStart(Executor, State);
 
-  bool bFinalSuccess = bSuccess && !State->bHadFatalError;
-  int32 OutputFileCount = 0;
-  TSharedPtr<FJsonObject> Result =
-      BuildRenderResult(Executor, WeakJob.Get(), WeakQueue.Get(), !bWasTimedOut,
-                        bFinalSuccess, bWasTimedOut, *State, OutputFileCount);
-  if (State->bOutputPathInvalidated) {
-    Result->SetBoolField(TEXT("renderSucceeded"), false);
-    Result->SetStringField(TEXT("outputPathValidationError"),
-                           State->OutputPathValidationError);
+    bool bFinalSuccess = bSuccess && !State->bHadFatalError;
+    int32 OutputFileCount = 0;
+    TSharedPtr<FJsonObject> Result =
+        BuildRenderResult(Executor, WeakJob.Get(), WeakQueue.Get(), !bWasTimedOut,
+                          bFinalSuccess, bWasTimedOut, *State, OutputFileCount);
+    if (State->bOutputPathInvalidated) {
+      Result->SetBoolField(TEXT("renderSucceeded"), false);
+      Result->SetStringField(TEXT("outputPathValidationError"),
+                             State->OutputPathValidationError);
+      Subsystem->SendAutomationResponse(
+          Socket, RequestId, false,
+          TEXT("Movie Render Queue output path changed during rendering."),
+          Result, TEXT("MRQ_OUTPUT_PATH_CHANGED"));
+      return;
+    }
+    if (OutputFileCount == INDEX_NONE) {
+      Result->SetBoolField(TEXT("renderSucceeded"), false);
+      Subsystem->SendAutomationResponse(
+          Socket, RequestId, false,
+          TEXT("MRQ output discovery exceeded its configured scan limit."), Result,
+          TEXT("MRQ_OUTPUT_SCAN_LIMIT_EXCEEDED"));
+      return;
+    }
+
+    if (!bWasTimedOut && bFinalSuccess && OutputFileCount <= 0) {
+      bFinalSuccess = false;
+      Result->SetBoolField(TEXT("renderSucceeded"), false);
+      Result->SetStringField(
+          TEXT("failureReason"),
+          TEXT("Movie Render Queue completed without producing output files."));
+    }
+    Result->SetNumberField(TEXT("fatalErrorCount"), State->FatalErrorCount);
+    if (State->bHadFatalError) {
+      Result->SetStringField(TEXT("fatalError"), State->LastFatalError);
+    }
+    if (bWasTimedOut) {
+      Result->SetBoolField(TEXT("cancellationRequested"),
+                           State->bCancellationRequested);
+      Result->SetBoolField(TEXT("cancellationCompleted"), !bRenderStillActive);
+      Result->SetBoolField(TEXT("cancellationDeadlineExpired"),
+                           State->bCancellationDeadlineExpired);
+      Result->SetBoolField(TEXT("renderContinuesAsynchronously"),
+                           bRenderStillActive);
+      Subsystem->SendAutomationResponse(
+          Socket, RequestId, false,
+          bRenderStillActive
+              ? TEXT("Movie Render Queue render timed out; cancellation did not settle before the configured deadline.")
+              : TEXT("Movie Render Queue render timed out and cancellation completed."),
+          Result, TEXT("MRQ_RENDER_TIMEOUT"));
+      return;
+    }
+
+    if (bFinalSuccess) {
+      Subsystem->SendAutomationResponse(Socket, RequestId, true,
+                                        TEXT("Movie Render Queue render completed."), Result);
+      return;
+    }
+    // A render that succeeded without a fatal error but proved no files.
+    const bool bProducedNoOutput = bSuccess && !State->bHadFatalError;
     Subsystem->SendAutomationResponse(
         Socket, RequestId, false,
-        TEXT("Movie Render Queue output path changed during rendering."),
-        Result, TEXT("MRQ_OUTPUT_PATH_CHANGED"));
-    return;
-  }
-  if (OutputFileCount == INDEX_NONE) {
-    Result->SetBoolField(TEXT("renderSucceeded"), false);
-    Subsystem->SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("MRQ output discovery exceeded its configured scan limit."), Result,
-        TEXT("MRQ_OUTPUT_SCAN_LIMIT_EXCEEDED"));
-    return;
-  }
-
-  if (!bWasTimedOut && bFinalSuccess && OutputFileCount <= 0) {
-    bFinalSuccess = false;
-    Result->SetBoolField(TEXT("renderSucceeded"), false);
-    Result->SetStringField(
-        TEXT("failureReason"),
-        TEXT("Movie Render Queue completed without producing output files."));
-  }
-  Result->SetNumberField(TEXT("fatalErrorCount"), State->FatalErrorCount);
-  if (State->bHadFatalError) {
-    Result->SetStringField(TEXT("fatalError"), State->LastFatalError);
-  }
-  if (bWasTimedOut) {
-    Result->SetBoolField(TEXT("cancellationRequested"),
-                         State->bCancellationRequested);
-    Result->SetBoolField(TEXT("cancellationCompleted"), !bRenderStillActive);
-    Result->SetBoolField(TEXT("cancellationDeadlineExpired"),
-                         State->bCancellationDeadlineExpired);
-    Result->SetBoolField(TEXT("renderContinuesAsynchronously"),
-                         bRenderStillActive);
-    Subsystem->SendAutomationResponse(
-        Socket, RequestId, false,
-        bRenderStillActive
-            ? TEXT("Movie Render Queue render timed out; cancellation did not settle before the configured deadline.")
-            : TEXT("Movie Render Queue render timed out and cancellation completed."),
-        Result, TEXT("MRQ_RENDER_TIMEOUT"));
-    return;
-  }
-
-  if (bFinalSuccess) {
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                                      TEXT("Movie Render Queue render completed."), Result);
-    return;
-  }
-  // A render that succeeded without a fatal error but proved no files.
-  const bool bProducedNoOutput = bSuccess && !State->bHadFatalError;
-  Subsystem->SendAutomationResponse(
-      Socket, RequestId, false,
-      bProducedNoOutput ? TEXT("Movie Render Queue render produced no output files.")
-                        : TEXT("Movie Render Queue render failed."),
-      Result, bProducedNoOutput ? TEXT("MRQ_RENDER_NO_OUTPUT") : TEXT("MRQ_RENDER_FAILED"));
+        bProducedNoOutput ? TEXT("Movie Render Queue render produced no output files.")
+                          : TEXT("Movie Render Queue render failed."),
+        Result, bProducedNoOutput ? TEXT("MRQ_RENDER_NO_OUTPUT") : TEXT("MRQ_RENDER_FAILED"));
+  });
 }
 
 }

@@ -77,8 +77,6 @@ bool HandleAddSkeletalAnimationTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   FString AnimPath =
       GetString(Params, TEXT("animationSequencePath"), TEXT("animationPath"));
-  if (AnimPath.IsEmpty())
-    AnimPath = GetString(Params, TEXT("animSequencePath"));
   // Through the shared canonicalizer and the registry, as the sequence path is.
   UAnimSequence *Anim = Cast<UAnimSequence>(McpLoadAsset(SanitizeProjectRelativePath(AnimPath)));
   if (!Anim) {

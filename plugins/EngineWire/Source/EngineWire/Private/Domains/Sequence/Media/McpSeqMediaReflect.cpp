@@ -130,7 +130,8 @@ bool CreateMediaAssetFromPayload(const TSharedPtr<FJsonObject> &Payload,
                                  const FString &DefaultFolder,
                                  const FString &ClassName,
                                  FMediaAssetCreateResult &OutCreated,
-                                 FString &OutError) {
+                                 FString &OutError, FString &OutCode) {
+  OutCode = TEXT("MEDIA_ASSET_CREATE_FAILED");
   FString PackageName;
   FString AssetName;
   FString ObjectPath;
@@ -141,7 +142,7 @@ bool CreateMediaAssetFromPayload(const TSharedPtr<FJsonObject> &Payload,
   UClass *AssetClass = ResolveMediaClass(ClassName, OutError);
   return AssetClass &&
          CreateMediaAsset(AssetClass, PackageName, AssetName, OutCreated,
-                          OutError);
+                          OutError, OutCode);
 }
 
 UClass *ResolveMediaClass(const FString &ClassName, FString &OutError) {
@@ -182,13 +183,15 @@ bool CreateMediaAsset(UClass *AssetClass,
                       const FString &PackageName,
                       const FString &AssetName,
                       FMediaAssetCreateResult &OutCreated,
-                      FString &OutError) {
+                      FString &OutError, FString &OutCode) {
   const FString ObjectPath = PackageName + TEXT(".") + AssetName;
   // McpLoadAsset asks the asset registry first: LoadObject on a free path logged "Failed to find object" on every create.
+  OutCode = TEXT("MEDIA_ASSET_CREATE_FAILED");
   if (UObject *Existing = McpLoadAsset(ObjectPath)) {
-    OutError = Existing->IsA(AssetClass)
-                   ? TEXT("[MEDIA_ASSET_ALREADY_EXISTS] A media asset already exists at this path")
-                   : TEXT("An asset of another class already uses this path");
+    const bool bSameClass = Existing->IsA(AssetClass);
+    OutCode = bSameClass ? TEXT("MEDIA_ASSET_ALREADY_EXISTS") : TEXT("MEDIA_ASSET_CREATE_FAILED");
+    OutError = bSameClass ? TEXT("A media asset already exists at this path")
+                          : TEXT("An asset of another class already uses this path");
     return false;
   }
   if (FPackageName::DoesPackageExist(PackageName)) {

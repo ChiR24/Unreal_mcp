@@ -134,8 +134,7 @@ bool HandleStartRender(UEngineWireSubsystem *Subsystem,
   if (!ExecutorClass)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   double TimeoutMs = 300000.0;
-  if (Payload.IsValid())
-    Payload->TryGetNumberField(TEXT("renderTimeoutMs"), TimeoutMs);
+  Payload->TryGetNumberField(TEXT("renderTimeoutMs"), TimeoutMs);
   if (!ValidateRenderTimeoutResourceLimit(TimeoutMs, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   UMoviePipelineExecutorBase *Executor =

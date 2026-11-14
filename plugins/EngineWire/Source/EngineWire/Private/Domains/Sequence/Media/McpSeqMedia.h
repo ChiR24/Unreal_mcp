@@ -84,17 +84,18 @@ bool CreateMediaAssetFromPayload(const TSharedPtr<FJsonObject> &Payload,
                                  const FString &DefaultFolder,
                                  const FString &ClassName,
                                  FMediaAssetCreateResult &OutCreated,
-                                 FString &OutError);
+                                 FString &OutError, FString &OutCode);
 UClass *ResolveMediaClass(const FString &ClassName, FString &OutError);
 UObject *LoadMediaObject(const FString &ObjectPath,
                          UClass *ExpectedClass,
                          FString &OutResolvedPath,
                          FString &OutError);
+// OutCode: MEDIA_ASSET_ALREADY_EXISTS for a media asset of that class already there, else MEDIA_ASSET_CREATE_FAILED.
 bool CreateMediaAsset(UClass *AssetClass,
                       const FString &PackageName,
                       const FString &AssetName,
                       FMediaAssetCreateResult &OutCreated,
-                      FString &OutError);
+                      FString &OutError, FString &OutCode);
 void DiscardCreatedMediaAsset(FMediaAssetCreateResult &Created);
 TSharedPtr<FJsonObject> BuildAssetResponse(
     const FMediaAssetCreateResult &Created,

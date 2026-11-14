@@ -82,7 +82,7 @@ export const A = {
   /** HandleAddParticleTrack Tracks.cpp:189; MediaComponents.cpp:122. */
   activate: bool('Whether the key activates (true) or deactivates (false).'),
   /** HandleAddShotTrack Assets.cpp:233; ShotSettings.cpp:56,65. */
-  displayName: str('Shot display name (alias of shotName).'),
+  displayName: str('The shot\'s display name (the shot settings also take it as shotName).'),
   /** HandleConfigureShotSettings ShotSettings.cpp:51. */
   sectionIndex: int('Index of the shot section to configure.'),
   /** HandleAddCameraShakeTrack CameraTracks.cpp:19. */

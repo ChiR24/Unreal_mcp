@@ -28786,7 +28786,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "displayName": {
           "type": "string",
-          "description": "Shot display name (alias of shotName)."
+          "description": "The shot's display name (the shot settings also take it as shotName)."
         },
         "dryRun": {
           "type": "boolean",
@@ -29734,7 +29734,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "subsequencePath": {
           "type": "string",
-          "description": "Alias of shotSequencePath."
+          "description": "The sequence to add: add_subsequence's subsequence, or a shot's sequence (as shotSequencePath)."
         },
         "takePresetPath": {
           "type": "string",

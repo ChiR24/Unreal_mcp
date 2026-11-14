@@ -67,8 +67,10 @@ bool HandleRenderLightingAction(
         // package the edit was in-memory only while the reply said "configured".
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Lightmass Settings")),
                                                 EMcpMutationDurability::EditorStateOnly, {WorldSettings});
+        // A staged copy, as the post-process arms write one: a refused key left the keys before it written.
+        FLightmassWorldInfoSettings Staged = WorldSettings->LightmassSettings;
         if (!ApplyJsonSettings(
-                &WorldSettings->LightmassSettings,
+                &Staged,
                 FLightmassWorldInfoSettings::StaticStruct(),
                 Settings,
                 false,
@@ -76,9 +78,11 @@ bool HandleRenderLightingAction(
                 Unsupported,
                 Error))
         {
+            Transaction.Cancel(); // nothing was written
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
+        WorldSettings->LightmassSettings = Staged;
         WorldSettings->MarkPackageDirty();
         TSharedPtr<FJsonObject> Result = MakeRenderResult();
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
@@ -203,7 +207,7 @@ bool HandleRenderLightingAction(
                     Unsupported,
                     Error))
             {
-                Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+                Subsystem->SendAutomationError(RequestingSocket, RequestId, McpPartlyAppliedError(Error, Applied), TEXT("INVALID_SETTING"));
                 return true;
             }
             Component->MarkRenderStateDirty();

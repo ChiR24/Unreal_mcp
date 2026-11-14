@@ -97,7 +97,7 @@ bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction)
     }
     UNiagaraSystem* System = nullptr;
     FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
+    if (!StackEditsAvailableOrRefuse(Context) || !LoadSystemAndEmitter(Context, System, Handle))
     {
         return true;
     }

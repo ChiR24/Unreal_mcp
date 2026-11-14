@@ -71,21 +71,13 @@ FActionContext MakeActionContext(
     Context.Payload = Payload;
     Context.RequestingSocket = RequestingSocket;
     Context.Name = GetJsonStringField(Payload, TEXT("name"));
-    Context.Path = GetJsonStringField(Payload, TEXT("path"), TEXT(""));
+    Context.Path = McpGetFirstStringField(Payload, {TEXT("path"), TEXT("savePath")});
     if (Context.Path.IsEmpty())
     {
-        Context.Path = GetJsonStringField(Payload, TEXT("savePath"), TEXT("/Game"));
+        Context.Path = TEXT("/Game");
     }
     Context.AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
-    Context.SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
-    if (Context.SystemPath.IsEmpty())
-    {
-        Context.SystemPath = GetJsonStringField(Payload, TEXT("system"));
-    }
-    if (Context.SystemPath.IsEmpty())
-    {
-        Context.SystemPath = Context.AssetPath;
-    }
+    Context.SystemPath = McpGetFirstStringField(Payload, {TEXT("systemPath"), TEXT("system"), TEXT("assetPath")});
     Context.EmitterPath = GetJsonStringField(Payload, TEXT("emitterPath"));
     Context.EmitterName = McpGetFirstStringField(Payload, {TEXT("emitterName"), TEXT("emitter")});
     Context.bSave = GetJsonBoolField(Payload, TEXT("save"), true);
@@ -243,26 +235,12 @@ bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNia
     return Handle != nullptr;
 }
 
-void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)
+void MarkDirtyAndVerify(FActionContext& Context, UNiagaraSystem* System)
 {
     // A module, renderer, event handler or simulation stage added to the stack ran nowhere until something compiled
-    // the system, and a save wrote the old scripts; compile it as add_niagara_module and add_emitter_to_system do.
-    if (UNiagaraSystem* System = Cast<UNiagaraSystem>(Object))
-    {
-        System->RequestCompile(false);
-    }
-    if (Object)
-    {
-        // Saved or not: a user parameter is written straight into the system's store with no Modify, so with save
-        // false nothing offered the system for saving and the value was gone at the next start.
-        Object->MarkPackageDirty();
-    }
-    if (Context.bSave && Object)
-    {
-        // Dirty alone never reached disk: module/parameter edits vanished at the next editor start.
-        const bool bSaved = McpSafeOperations::McpSafeAssetSave(Object);
-        Context.Result->SetBoolField(TEXT("saved"), bSaved);
-    }
-    McpHandlerUtils::AddVerification(Context.Result, Object);
+    // the system, and a save wrote the old scripts; a user parameter is written straight into the system's store with
+    // no Modify, so without the dirty mark save false left nothing to save: the graph edits' own step does both.
+    SaveNiagaraGraphEdit(System, Context.Payload, Context.Result);
+    McpHandlerUtils::AddVerification(Context.Result, System);
 }
 }

@@ -8,6 +8,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "ClothingAssetBase.h"
 #include "ClothingAsset.h"
+#include "Foundation/McpScopedEditorTransaction.h"
+#include "Rendering/SkeletalMeshLODModel.h"
+#include "Rendering/SkeletalMeshModel.h"
 
 using namespace McpSkeletonHandlers;
 
@@ -149,17 +152,34 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
         return Outcome;
     }
 
-    Mesh->Modify();
-    if (!ClothAsset->BindToSkeletalMesh(Mesh, MeshLodIndex, SectionIndex, AssetLodIndex))
+    const auto RefuseBind = [&]()
     {
         Outcome.Message = FString::Printf(
             TEXT("Failed to bind cloth asset '%s' to %s LOD %d section %d (asset LOD %d); check that the LOD, section and asset LOD exist"),
             *ClothAsset->GetName(), *Mesh->GetName(), MeshLodIndex, SectionIndex, AssetLodIndex);
         Outcome.ErrorCode = TEXT("BIND_FAILED");
         return Outcome;
+    };
+    // The mesh LOD, its section and the cloth asset's LOD, checked before the undo step: a refused bind left the mesh
+    // marked changed with nothing recorded.
+    const FSkeletalMeshModel* Model = Mesh->GetImportedModel();
+    const UClothingAssetCommon* ClothCommon = Cast<UClothingAssetCommon>(ClothAsset);
+    if (!Model || !Model->LODModels.IsValidIndex(MeshLodIndex) || !Model->LODModels[MeshLodIndex].Sections.IsValidIndex(SectionIndex) ||
+        (ClothCommon && !ClothCommon->LodData.IsValidIndex(AssetLodIndex)))
+    {
+        return RefuseBind();
     }
-    Mesh->PostEditChange();
-    Mesh->MarkPackageDirty();
+    {
+        // One undo step for the bind, closed before the save.
+        FMcpAssetEdit Edit(TEXT("Bind Cloth"), {Mesh}, Outcome.Result);
+        if (!ClothAsset->BindToSkeletalMesh(Mesh, MeshLodIndex, SectionIndex, AssetLodIndex))
+        {
+            Edit.Transaction.Cancel();
+            return RefuseBind();
+        }
+        Mesh->PostEditChange();
+        Mesh->MarkPackageDirty();
+    }
 
     Outcome.bSuccess = true;
     Outcome.Result->SetStringField(TEXT("clothAssetName"), ClothAsset->GetName());

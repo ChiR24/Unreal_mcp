@@ -17,6 +17,7 @@ import { buildRecord, MEDIA_PLUGINS, P } from './helpers.js';
 
 const F = 'media';
 const D = 'media';
+const FOLDER = { ...P.path, description: 'Folder the new asset is made in (a /Game path).' };
 
 export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -24,7 +25,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a MediaPlayer asset named name in path and save it: loop (default false) and playOnOpen (default true). mediaSourcePath opens that source on it at once (openStatus pending); a source that does not validate or that the player cannot play is refused with nothing created, and so is a taken name (MEDIA_ASSET_ALREADY_EXISTS). Its picture shows through a media texture and its sound through a media sound component; play_media plays it.',
     whenToUse: ['A media player asset must be created for video/audio playback.'],
     whenNotToUse: ['An existing media player should be reused.'],
-    inputProps: { name: P.name, path: P.path, assetPath: P.assetPath, mediaSourcePath: P.mediaSourcePath, sourcePath: P.sourcePath, autoPlay: A.autoPlay, playOnOpen: A.playOnOpen, loop: A.loop, looping: A.looping },
+    inputProps: { name: P.name, path: FOLDER, assetPath: P.assetPath, mediaSourcePath: P.mediaSourcePath, sourcePath: P.sourcePath, autoPlay: A.autoPlay, playOnOpen: A.playOnOpen, loop: A.loop, looping: A.looping },
     required: ['name', 'path'],
     // Native HandleCreateMediaPlayer (Media/MediaAssets.cpp:63-156) emits
     // assetType/assetPath/packageName/created/saved/classPath (+verification)
@@ -58,7 +59,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A media source asset must be created for a media file.'],
     whenNotToUse: ['An existing media source should be reused.'],
     inputProps: {
-      name: P.name, path: P.path, assetPath: P.assetPath,
+      name: P.name, path: FOLDER, assetPath: P.assetPath,
       sourceType: P.sourceType, filePath: P.filePath, precacheFile: P.precacheFile,
       defaultSourcePath: P.defaultSourcePath, platformSources: P.platformSources,
       mediaPath: A.mediaPath,
@@ -75,7 +76,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a MediaTexture asset and save it, bound to the MediaPlayer at mediaPlayerPath (MEDIA_PLAYER_NOT_FOUND when it does not load): use it in a material on a mesh or in a widget to show the player\'s picture. autoClear (default true) clears it when nothing plays; a taken name is MEDIA_ASSET_ALREADY_EXISTS.',
     whenToUse: ['A media texture must be created for video rendering.'],
     whenNotToUse: ['A media texture is not needed for audio-only playback.'],
-    inputProps: { name: P.name, path: P.path, mediaPlayerPath: P.mediaPlayerPath, playerPath: P.playerPath, autoClear: A.autoClear },
+    inputProps: { name: P.name, path: FOLDER, mediaPlayerPath: P.mediaPlayerPath, playerPath: P.playerPath, autoClear: A.autoClear },
     required: ['name', 'path'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: MEDIA_PLUGINS,
     exampleInput: { action: 'create_media_texture', name: 'MT_Cinematics', path: '/Game/Media', mediaPlayerPath: '/Game/Media/MP_Cinematics' },
@@ -98,7 +99,7 @@ export const MEDIA_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A playlist of multiple media sources must be created.'],
     whenNotToUse: ['Only a single media source is needed.'],
     inputProps: {
-      name: P.name, path: P.path,
+      name: P.name, path: FOLDER,
       sourcePaths: P.sourcePaths, filePaths: P.filePaths,
     },
     required: ['name', 'path'],

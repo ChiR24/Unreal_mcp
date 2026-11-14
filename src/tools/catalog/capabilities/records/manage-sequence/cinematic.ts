@@ -106,7 +106,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The master sequence already has a shot track.'],
     // Native HandleAddShotTrack (Assets.cpp) loads the master from path and
     // requires the shot sequence it adds as a section.
-    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, subsequencePath: { ...P.subsequencePath, description: 'Alias of shotSequencePath.' }, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
+    inputProps: { path: masterPath, shotSequencePath: P.shotSequencePath, subsequencePath: { ...P.subsequencePath, description: 'The sequence to add: add_subsequence\'s subsequence, or a shot\'s sequence (as shotSequencePath).' }, displayName: A.displayName, ...SECTION_RANGE, save: A.save },
     // The handler reads the shot as shotSequencePath, else subsequencePath.
     required: ['path'], requiredOneOf: ['shotSequencePath', 'subsequencePath'],
     outputProps: { sectionName: sectionNameOutput },

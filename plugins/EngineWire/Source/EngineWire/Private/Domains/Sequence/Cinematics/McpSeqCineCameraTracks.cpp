@@ -20,7 +20,7 @@ namespace {
 FString GetCameraShakePath(const TSharedPtr<FJsonObject> &Params) {
   FString Path = GetString(Params, TEXT("cameraShakePath"));
   if (Path.IsEmpty())
-    Path = GetString(Params, TEXT("cameraShakeClass"), TEXT("shakeClassPath"));
+    Path = GetString(Params, TEXT("cameraShakeClass"));
   return Path;
 }
 

@@ -155,11 +155,8 @@ bool HandleCreateMediaSource(UEngineWireSubsystem *Subsystem,
     return true;
   }
   FMediaAssetCreateResult Created;
-  if (!CreateMediaAsset(AssetClass, PackageName, AssetName, Created, Error)) {
-    SendMediaError(Subsystem, Socket, RequestId,
-                   Error.Contains(TEXT("[MEDIA_ASSET_ALREADY_EXISTS]"))
-                       ? TEXT("MEDIA_ASSET_ALREADY_EXISTS")
-                       : TEXT("MEDIA_ASSET_CREATE_FAILED"),
+  if (!CreateMediaAsset(AssetClass, PackageName, AssetName, Created, Error, Code)) {
+    SendMediaError(Subsystem, Socket, RequestId, Code,
                    Error.IsEmpty() ? TEXT("Failed to create media source") : Error);
     return true;
   }

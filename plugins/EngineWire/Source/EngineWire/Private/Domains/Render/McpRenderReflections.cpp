@@ -234,7 +234,7 @@ bool HandleRenderReflectionAction(
                                                 EMcpMutationDurability::EditorStateOnly, {Component});
         if (!ApplyJsonSettings(Component, Component->GetClass(), Settings, false, Applied, Unsupported, Error))
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, McpPartlyAppliedError(Error, Applied), TEXT("INVALID_SETTING"));
             return true;
         }
         Component->MarkRenderStateDirty();

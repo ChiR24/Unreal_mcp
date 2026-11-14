@@ -167,10 +167,12 @@ bool SeekDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const F
                     State->bCompleted = true;
                     if (CurrentSubsystem)
                     {
-                        CurrentSubsystem->SendAutomationError(
-                            Socket, RequestId,
-                            TEXT("Replay playback ended before the seek completed"),
-                            TEXT("REPLAY_SEEK_FAILED"));
+                        CurrentSubsystem->RunLatentReply(RequestId, TEXT("manage_sequence ") + Action, [&]() {
+                            CurrentSubsystem->SendAutomationError(
+                                Socket, RequestId,
+                                TEXT("Replay playback ended before the seek completed"),
+                                TEXT("REPLAY_SEEK_FAILED"));
+                        });
                     }
                     return false;
                 }
@@ -192,12 +194,14 @@ bool SeekDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const F
                         TEXT("seekToleranceSeconds"), SeekToleranceSeconds);
                     Result->SetBoolField(TEXT("seekCompleted"), true);
                     Result->SetBoolField(TEXT("seekPending"), false);
-                    CurrentSubsystem->SendAutomationResponse(
-                        Socket, RequestId, true,
-                        Action == TEXT("start_killcam")
-                            ? TEXT("Killcam playback reached its target")
-                            : TEXT("Demo seek completed"),
-                        Result);
+                    CurrentSubsystem->RunLatentReply(RequestId, TEXT("manage_sequence ") + Action, [&]() {
+                        CurrentSubsystem->SendAutomationResponse(
+                            Socket, RequestId, true,
+                            Action == TEXT("start_killcam")
+                                ? TEXT("Killcam playback reached its target")
+                                : TEXT("Demo seek completed"),
+                            Result);
+                    });
                     return false;
                 }
                 if (FPlatformTime::Seconds() >= Deadline)
@@ -213,10 +217,12 @@ bool SeekDemo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const F
                         TEXT("actualTimeSeconds"), CurrentTime);
                     Result->SetBoolField(TEXT("seekCompleted"), false);
                     Result->SetBoolField(TEXT("seekPending"), false);
-                    CurrentSubsystem->SendAutomationResponse(
-                        Socket, RequestId, false,
-                        TEXT("Timed out waiting for replay seek completion"),
-                        Result, TEXT("REPLAY_SEEK_TIMEOUT"));
+                    CurrentSubsystem->RunLatentReply(RequestId, TEXT("manage_sequence ") + Action, [&]() {
+                        CurrentSubsystem->SendAutomationResponse(
+                            Socket, RequestId, false,
+                            TEXT("Timed out waiting for replay seek completion"),
+                            Result, TEXT("REPLAY_SEEK_TIMEOUT"));
+                    });
                     return false;
                 }
                 return true;

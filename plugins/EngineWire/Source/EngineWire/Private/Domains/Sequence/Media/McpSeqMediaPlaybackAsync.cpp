@@ -85,9 +85,11 @@ void FinishMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State,
     State->Result->SetStringField(TEXT("currentUrl"), Player->GetUrl());
   }
 
+  // Inside the request's brackets (its principal, the change watch, the journal): from a ticker it was sent outside them.
   if (UEngineWireSubsystem *Subsystem = State->Subsystem.Get()) {
-    Subsystem->SendAutomationResponse(State->Socket, State->RequestId, bSuccess,
-                                      Message, State->Result, ErrorCode);
+    Subsystem->RunLatentReply(State->RequestId, TEXT("manage_sequence play_media"), [&]() {
+      Subsystem->SendAutomationResponse(State->Socket, State->RequestId, bSuccess, Message, State->Result, ErrorCode);
+    });
   }
 }
 

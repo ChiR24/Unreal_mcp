@@ -62,7 +62,13 @@ static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure 
 template <typename TAsset>
 static bool LoadRendererAsset(FActionContext& Context, const TCHAR* Field, TAsset*& OutAsset)
 {
-    const FString Path = GetJsonStringField(Context.Payload, Field);
+    FString Path = GetJsonStringField(Context.Payload, Field);
+    // Through the folder's sanitizer first, as every other path it loads: these two were loaded as sent.
+    if (!ValidateAndSanitizePath(Context, Path, Field))
+    {
+        OutAsset = nullptr;
+        return false;
+    }
     OutAsset = Path.IsEmpty() ? nullptr : LoadObject<TAsset>(nullptr, *Path);
     if (!Path.IsEmpty() && !OutAsset)
     {

@@ -44,15 +44,10 @@ bool CreateAssetForAction(UEngineWireSubsystem *Subsystem,
     return false;
   }
   UClass *AssetClass = ResolveMediaClass(ClassName, Error);
+  FString Code = TEXT("MEDIA_FRAMEWORK_UNAVAILABLE");
   if (!AssetClass ||
-      !CreateMediaAsset(AssetClass, PackageName, AssetName, OutCreated, Error)) {
-    const bool bAlreadyExists =
-        Error.Contains(TEXT("[MEDIA_ASSET_ALREADY_EXISTS]"));
-    SendMediaError(Subsystem, Socket, RequestId,
-                   bAlreadyExists ? TEXT("MEDIA_ASSET_ALREADY_EXISTS")
-                   : AssetClass ? TEXT("MEDIA_ASSET_CREATE_FAILED")
-                              : TEXT("MEDIA_FRAMEWORK_UNAVAILABLE"),
-                   Error);
+      !CreateMediaAsset(AssetClass, PackageName, AssetName, OutCreated, Error, Code)) {
+    SendMediaError(Subsystem, Socket, RequestId, Code, Error);
     return false;
   }
   return true;
