@@ -73,8 +73,7 @@ bool HandleNiagaraLifecycleAction(
     const FEffectActionContext& Context,
     const FString& LowerSubAction)
 {
-    // actorName is what activate, deactivate and advance_simulation declare; the undeclared
-    // systemName used to win over it.
+    // activate, deactivate and advance_simulation declare actorName and systemName; actorName comes first.
     const FString SystemName = McpGetFirstStringField(Context.Payload, {TEXT("actorName"), TEXT("systemName")});
     // activate_effect declares assetPath: "by asset" used to be read by nobody.
     const FString AssetPath = GetJsonStringField(Context.Payload, TEXT("assetPath"));

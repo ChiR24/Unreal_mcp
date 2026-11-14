@@ -37,14 +37,13 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     const float SideFalloff = FMath::Max(0.0f, static_cast<float>(SideFalloffValue));
 
     bool bClosedLoop = false;
-    McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("closedLoop"), bClosedLoop);
-    McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("ClosedLoop"), bClosedLoop);
+    Payload->TryGetBoolField(TEXT("closedLoop"), bClosedLoop);
 
     const FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName")});
     bool bRaiseTerrain = true;
     bool bLowerTerrain = true;
-    McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("raiseTerrain"), bRaiseTerrain);
-    McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("lowerTerrain"), bLowerTerrain);
+    Payload->TryGetBoolField(TEXT("raiseTerrain"), bRaiseTerrain);
+    Payload->TryGetBoolField(TEXT("lowerTerrain"), bLowerTerrain);
 
     TArray<FVector> WorldPoints;
     WorldPoints.Reserve(Points->Num());
@@ -216,7 +215,7 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
         return false;
     }
 
-    const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("name")});
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), Landscape->GetActorLocation());
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), Landscape->GetActorRotation());
 

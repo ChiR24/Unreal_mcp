@@ -14,7 +14,8 @@ bool CreateNiagaraEffectFromPayload(
     const FEffectActionContext& Context,
     const FString& EffectName,
     const FString& DefaultSystemPath,
-    const TSharedPtr<FJsonObject>& ExtraFields)
+    const TSharedPtr<FJsonObject>& ExtraFields,
+    const FRotator& Rotation)
 {
     // An explicit (non-empty) systemPath or alias wins over the caller-supplied default;
     // an empty payload field no longer clobbers the default the way TryGetStringField did.
@@ -55,7 +56,7 @@ bool CreateNiagaraEffectFromPayload(
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
         ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
-        FRotator::ZeroRotator);
+        Rotation);
     if (!Spawned)
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
@@ -75,10 +76,6 @@ bool CreateNiagaraEffectFromPayload(
 
     FString Name;
     Context.Payload->TryGetStringField(TEXT("name"), Name);
-    if (Name.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("actorName"), Name);
-    }
     Spawned->SetActorLabel(
         !Name.IsEmpty()
             ? Name

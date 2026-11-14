@@ -60,15 +60,10 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         return false;
     }
 
-    const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name")});
-    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    const FString EffectiveActorName = ActorName.IsEmpty() ? DefaultActorName : ActorName;
-    bool bSpawned = false;
     // Unnamed, a configure targets the level's actor of this kind; the default label only names a
     // new one. Matching that label exactly spawned a second actor beside one labelled otherwise.
-    AActor *Actor = ActorName.IsEmpty() && bFirstOfClassWhenUnnamed ? McpFindActorByNameOrClass(ActorClass, FString()) : nullptr;
-    Actor = Actor ? Actor : McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation, &bSpawned);
+    bool bSpawned = false;
+    AActor *Actor = McpFindOrSpawnEnvironmentActor(Payload, ActorClass, DefaultActorName, bFirstOfClassWhenUnnamed, &bSpawned);
     const bool bExistedBefore = !bSpawned;
     if (OutActor)
     {

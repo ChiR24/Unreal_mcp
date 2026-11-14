@@ -129,7 +129,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
 bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FString &DefaultName,
                                       TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
 AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName,
-                                        bool bFirstOfClassWhenUnnamed = false);
+                                        bool bFirstOfClassWhenUnnamed = false, bool *bOutSpawned = nullptr);
 // Applies payload settings onto Target and reports them on Resp; returns how many applied.
 int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
 AActor *McpFindActorFromEnvironmentPayload(const TSharedPtr<FJsonObject> &Payload);

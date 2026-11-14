@@ -108,7 +108,7 @@ bool McpResolveEnvironmentSnapshotPath(
         OutError = TEXT("INVALID_ARGUMENT: Snapshot payload is missing");
         return false;
     }
-    FString RelativePath = McpGetFirstStringField(Payload, {TEXT("path"), TEXT("outputPath")});
+    FString RelativePath = GetJsonStringField(Payload, TEXT("path"));
     FString Filename;
     Payload->TryGetStringField(TEXT("filename"), Filename);
     if (RelativePath.IsEmpty())

@@ -38,11 +38,7 @@ FString FindNiagaraSystemForPreset(const FString& Preset, TArray<FString>& OutCa
         {
             continue;
         }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        const FString ObjectPath = Asset.GetObjectPathString();
-#else
-        const FString ObjectPath = Asset.ObjectPath.ToString();
-#endif
+        const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(Asset);
         OutCandidates.Add(ObjectPath);
         const bool bExact = AssetName.Equals(Preset, ESearchCase::IgnoreCase) ||
             AssetName.Equals(TEXT("NS_") + Preset, ESearchCase::IgnoreCase);
@@ -61,11 +57,7 @@ FString FindNiagaraSystemForPreset(const FString& Preset, TArray<FString>& OutCa
         for (const FAssetData& Asset : Assets)
         {
             if (OutCandidates.Num() >= 8) { break; }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            OutCandidates.Add(Asset.GetObjectPathString());
-#else
-            OutCandidates.Add(Asset.ObjectPath.ToString());
-#endif
+            OutCandidates.Add(MCP_ASSET_DATA_GET_SOFT_PATH(Asset));
         }
     }
     return Exact.IsEmpty() ? Partial : Exact;
@@ -90,10 +82,6 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
     }
     FString Name;
     Context.Payload->TryGetStringField(TEXT("name"), Name);
-    if (Name.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("actorName"), Name);
-    }
     Emitter->SetActorLabel(
         !Name.IsEmpty() ? Name : FString::Printf(TEXT("Particle_%lld"), FDateTime::Now().ToUnixTimestamp()));
 
@@ -117,7 +105,7 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
     FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
     if (SystemPath.IsEmpty() && Preset.StartsWith(TEXT("/")))
     {
-        // The stdio layer rewrites named presets into asset paths before dispatch.
+        // A preset that is a path names the system itself.
         SystemPath = Preset;
     }
     if (SystemPath.IsEmpty() && Preset.IsEmpty())
@@ -146,14 +134,10 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
                 Details, TEXT("NOT_SUPPORTED"));
             return true;
         }
-        TArray<TSharedPtr<FJsonValue>> CandidateValues;
-        for (int32 Index = 0; Index < Candidates.Num() && Index < 10; ++Index)
-        {
-            CandidateValues.Add(MakeShared<FJsonValueString>(Candidates[Index]));
-        }
         Details->SetStringField(TEXT("resolvedSystemPath"), SystemPath);
         Details->SetStringField(TEXT("presetResolvedBy"), TEXT("asset-registry-name-match"));
-        Details->SetArrayField(TEXT("presetCandidates"), CandidateValues);
+        Details->SetArrayField(TEXT("presetCandidates"), McpHandlerUtils::ToJsonStringArray(
+            TArray<FString>(Candidates.GetData(), FMath::Min(Candidates.Num(), 10))));
     }
 
     UObject* Asset = LoadEffectAsset(SystemPath);
@@ -179,6 +163,7 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
         return true;
     }
     Details->SetStringField(TEXT("backend"), TEXT("niagara"));
-    return CreateNiagaraEffectFromPayload(Context, TEXT("particle"), SystemPath, Details);
+    return CreateNiagaraEffectFromPayload(Context, TEXT("particle"), SystemPath, Details,
+                                          ExtractRotatorField(Context.Payload, TEXT("rotation"), FRotator::ZeroRotator));
 }
 }

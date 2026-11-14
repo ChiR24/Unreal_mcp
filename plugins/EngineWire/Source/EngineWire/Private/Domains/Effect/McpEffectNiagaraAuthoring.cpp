@@ -114,10 +114,6 @@ FString ResolveSystemFolder(const FEffectActionContext& Context, const FString& 
     Context.Payload->TryGetStringField(TEXT("path"), Folder);
     if (Folder.IsEmpty())
     {
-        Context.Payload->TryGetStringField(TEXT("savePath"), Folder);
-    }
-    if (Folder.IsEmpty())
-    {
         Folder = TEXT("/Game/Effects");
     }
     const FString Requested = Folder;
@@ -150,10 +146,6 @@ bool AuthorProceduralNiagaraSystem(
     OutDetails = McpHandlerUtils::CreateResultObject();
     FString Name;
     Context.Payload->TryGetStringField(TEXT("name"), Name);
-    if (Name.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("systemName"), Name);
-    }
     if (Name.IsEmpty())
     {
         Name = DefaultSystemName(EffectName);
@@ -193,7 +185,7 @@ bool AuthorProceduralNiagaraSystem(
     {
         // Resolved before the asset exists: a wrong templateEmitterPath used to author an
         // empty system and report success with templateEmitterFound false.
-        FString TemplatePath = McpGetFirstStringField(Context.Payload, {TEXT("templateEmitterPath"), TEXT("emitterPath")});
+        FString TemplatePath = GetJsonStringField(Context.Payload, TEXT("templateEmitterPath"));
         const bool bExplicitTemplate = !TemplatePath.IsEmpty();
         if (!bExplicitTemplate)
         {

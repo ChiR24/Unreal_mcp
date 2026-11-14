@@ -23,7 +23,7 @@ bool UEngineWireSubsystem::HandleEffectAction(
     // default, which is set_parameter_value's job; it used to fall to the actor form and
     // answer "Actor '' not found".
     if (NativeSubAction == TEXT("set_niagara_parameter") &&
-        McpGetFirstStringField(LocalPayload, {TEXT("actorName"), TEXT("systemName")}).IsEmpty() &&
+        GetJsonStringField(LocalPayload, TEXT("actorName")).IsEmpty() &&
         !McpGetFirstStringField(LocalPayload, {TEXT("assetPath"), TEXT("systemPath")}).IsEmpty())
     {
         LocalPayload->SetStringField(TEXT("subAction"), TEXT("set_parameter_value"));

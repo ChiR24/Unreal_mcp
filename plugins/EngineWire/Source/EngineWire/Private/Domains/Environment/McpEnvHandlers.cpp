@@ -14,13 +14,6 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString Lower = Action.ToLower();
-    if (!Lower.Equals(TEXT("build_environment"), ESearchCase::IgnoreCase) &&
-        !Lower.StartsWith(TEXT("build_environment")))
-    {
-        return false;
-    }
-
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -89,7 +82,7 @@ bool UEngineWireSubsystem::HandleBuildEnvironmentAction(
         }
         return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), PaintPayload, RequestingSocket);
     }
-    else if (LowerSub == TEXT("add_foliage_type") || LowerSub == TEXT("add_foliage") || LowerSub == TEXT("create_foliage_type"))
+    else if (LowerSub == TEXT("add_foliage") || LowerSub == TEXT("create_foliage_type"))
     {
         return HandleAddFoliageType(RequestId, TEXT("add_foliage_type"),
                                     Payload, RequestingSocket);

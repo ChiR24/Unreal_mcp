@@ -5,22 +5,6 @@
 #endif
 
 namespace McpLandscapeHandlers {
-bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue)
-{
-    if (!Payload.IsValid())
-    {
-        return false;
-    }
-
-    if (Payload->TryGetBoolField(FieldName, OutValue))
-    {
-        return true;
-    }
-
-    const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
-    return Payload->TryGetObjectField(TEXT("settings"), SettingsObj) && SettingsObj && SettingsObj->IsValid() &&
-           (*SettingsObj)->TryGetBoolField(FieldName, OutValue);
-}
 bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVector &OutPoint)
 {
     if (!PointValue.IsValid())

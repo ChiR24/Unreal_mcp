@@ -100,17 +100,11 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = MakeUniqueObjectName(World, ALevelStreamingVolume::StaticClass(),
-        FName(*FString::Printf(TEXT("StreamingVolume_%s"), *LevelName)));
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    ALevelStreamingVolume* NewVolume = World->SpawnActor<ALevelStreamingVolume>(
-        ALevelStreamingVolume::StaticClass(),
-        VolumeLocation,
-        FRotator::ZeroRotator,
-        SpawnParams
-    );
+    // A spawned volume has no brush: scaling it left bounds of zero, a volume no viewer is ever inside, so the level
+    // never streamed by distance. Spawned with a box reaching streamingDistance from location on each axis.
+    ALevelStreamingVolume* NewVolume = VolumeHelpers::SpawnVolumeActor<ALevelStreamingVolume>(
+        World, FString::Printf(TEXT("StreamingVolume_%s"), *LevelName), VolumeLocation, FRotator::ZeroRotator,
+        FVector(StreamingDistance));
 
     if (!NewVolume)
     {
@@ -119,13 +113,7 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    NewVolume->SetActorLabel(FString::Printf(TEXT("StreamingVolume_%s"), *LevelName));
-
     NewVolume->StreamingUsage = static_cast<EStreamingVolumeUsage>(Usage);
-
-    // A spawned volume has no brush: scaling it left bounds of zero, a volume no viewer is ever inside, so the level
-    // never streamed by distance. A box reaching streamingDistance from location on each axis.
-    VolumeHelpers::CreateBoxBrushForVolume(NewVolume, FVector(StreamingDistance));
 
     // As the Details panel does: the change event updates each streaming volume's list of levels, which Play reads.
     // Without it the volume streamed nothing until the level was saved and loaded again.

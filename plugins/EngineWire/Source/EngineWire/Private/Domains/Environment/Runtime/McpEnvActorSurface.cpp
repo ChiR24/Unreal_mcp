@@ -3,7 +3,7 @@
 namespace McpEnvironmentHandlers {
 
 AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName,
-                                        bool bFirstOfClassWhenUnnamed)
+                                        bool bFirstOfClassWhenUnnamed, bool *bOutSpawned)
 {
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name")});
     if (AActor *Existing = ActorName.IsEmpty() && bFirstOfClassWhenUnnamed ? McpFindActorByNameOrClass(ActorClass, FString()) : nullptr)
@@ -12,7 +12,7 @@ AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, U
     }
     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    return McpFindOrSpawnActor(ActorClass, ActorName.IsEmpty() ? DefaultActorName : ActorName, Location, Rotation);
+    return McpFindOrSpawnActor(ActorClass, ActorName.IsEmpty() ? DefaultActorName : ActorName, Location, Rotation, bOutSpawned);
 }
 int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp)
 {

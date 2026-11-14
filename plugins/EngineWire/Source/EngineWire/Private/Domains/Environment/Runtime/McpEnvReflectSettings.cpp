@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpEnvShared.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/Reflection/McpReflectedInvoke.h"
 #include "Engine/TextureCube.h"
 #include "UObject/Script.h"
 
@@ -38,53 +39,46 @@ bool McpSetObjectPropertyValue(UObject *Object, const FString &PropertyName, UOb
     }
     return false;
 }
+// The function's only parameter, when it is an object property; null for any other parameter list, which a call made
+// with one object pointer would read or write past.
+static FObjectPropertyBase *McpOnlyObjectParam(UFunction *Function)
+{
+    FObjectPropertyBase *Only = nullptr;
+    int32 Count = 0;
+    for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+    {
+        ++Count;
+        Only = CastField<FObjectPropertyBase>(*It);
+    }
+    return Count == 1 ? Only : nullptr;
+}
 UObject *McpInvokeObjectGetter(UObject *Object, const FName &FunctionName)
 {
-    if (!Object)
+    UFunction *Function = Object ? Object->FindFunction(FunctionName) : nullptr;
+    FObjectPropertyBase *Return = Function ? McpOnlyObjectParam(Function) : nullptr;
+    if (!Return || !Return->HasAnyPropertyFlags(CPF_ReturnParm))
     {
         return nullptr;
     }
-
-    UFunction *Function = Object->FindFunction(FunctionName);
-    if (!Function)
-    {
-        return nullptr;
-    }
-
-    struct FObjectGetterParams
-    {
-        UObject *ReturnValue = nullptr;
-    };
-
+    FMcpScopedParamBlock Block(Function);
     // AActor::ProcessEvent runs nothing in an editor world unless script execution is allowed.
     FEditorScriptExecutionGuard ScriptGuard;
-    FObjectGetterParams Params;
-    Object->ProcessEvent(Function, &Params);
-    return Params.ReturnValue;
+    Object->ProcessEvent(Function, Block.Data());
+    return Return->GetObjectPropertyValue_InContainer(Block.Data());
 }
 bool McpInvokeObjectSetter(UObject *Object, const FName &FunctionName, UObject *Value)
 {
-    if (!Object)
+    UFunction *Function = Object ? Object->FindFunction(FunctionName) : nullptr;
+    FObjectPropertyBase *Param = Function ? McpOnlyObjectParam(Function) : nullptr;
+    if (!Param || Param->HasAnyPropertyFlags(CPF_ReturnParm | CPF_OutParm))
     {
         return false;
     }
-
-    UFunction *Function = Object->FindFunction(FunctionName);
-    if (!Function)
-    {
-        return false;
-    }
-
-    struct FObjectSetterParams
-    {
-        UObject *Value = nullptr;
-    };
-
+    FMcpScopedParamBlock Block(Function);
+    Param->SetObjectPropertyValue_InContainer(Block.Data(), Value);
     // Without the guard a water body's SetWaterWaves silently never ran and the call still reported success.
     FEditorScriptExecutionGuard ScriptGuard;
-    FObjectSetterParams Params;
-    Params.Value = Value;
-    Object->ProcessEvent(Function, &Params);
+    Object->ProcessEvent(Function, Block.Data());
     return true;
 }
 bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double Value,

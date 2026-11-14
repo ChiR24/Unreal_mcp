@@ -155,10 +155,6 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
         : TEXT("create_impact_effect");
 
     FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
-    if (bCreateTrail && SystemPath.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("emitter"), SystemPath);
-    }
     if (!SystemPath.IsEmpty())
     {
         // An existing system was named: place it, never author a duplicate.

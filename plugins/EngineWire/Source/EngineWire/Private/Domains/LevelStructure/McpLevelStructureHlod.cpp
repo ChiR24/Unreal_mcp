@@ -165,20 +165,10 @@ bool HandleCreateMinimapVolume(
         return true;
     }
 
-    // Spawn the AWorldPartitionMiniMapVolume
-    FActorSpawnParameters SpawnParams;
-    // CRITICAL FIX: Use MakeUniqueObjectName to prevent "Cannot generate unique name" crash
-    // This prevents fatal error when multiple volumes with same name are created
-    SpawnParams.Name = MakeUniqueObjectName(World, AWorldPartitionMiniMapVolume::StaticClass(), FName(*VolumeName));
-    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;  // Auto-generate unique name if still taken
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    AWorldPartitionMiniMapVolume* MiniMapVolume = World->SpawnActor<AWorldPartitionMiniMapVolume>(
-        AWorldPartitionMiniMapVolume::StaticClass(),
-        VolumeLocation,
-        FRotator::ZeroRotator,
-        SpawnParams
-    );
+    // Spawned, labelled and given the box brush the editor gives a placed volume: a volume from SpawnActor has none, so
+    // scaling it left bounds of zero and the minimap builder, which captures the volume's bounds, drew nothing.
+    AWorldPartitionMiniMapVolume* MiniMapVolume = VolumeHelpers::SpawnVolumeActor<AWorldPartitionMiniMapVolume>(
+        World, VolumeName, VolumeLocation, FRotator::ZeroRotator, VolumeExtent);
 
     if (!MiniMapVolume)
     {
@@ -186,13 +176,6 @@ bool HandleCreateMinimapVolume(
             TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
-
-    // Set actor label to the requested name (may differ from internal name if collision occurred)
-    MiniMapVolume->SetActorLabel(*VolumeName);
-
-    // A volume from SpawnActor has no brush, so scaling it left bounds of zero and the minimap builder, which captures
-    // the volume's bounds, drew nothing. Build the box brush the editor gives a placed volume.
-    VolumeHelpers::CreateBoxBrushForVolume(MiniMapVolume, VolumeExtent);
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, MiniMapVolume);

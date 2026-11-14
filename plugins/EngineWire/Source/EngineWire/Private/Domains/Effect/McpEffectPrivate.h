@@ -73,5 +73,6 @@ bool CreateNiagaraEffectFromPayload(
     const FEffectActionContext& Context,
     const FString& EffectName,
     const FString& DefaultSystemPath,
-    const TSharedPtr<FJsonObject>& ExtraFields = nullptr);
+    const TSharedPtr<FJsonObject>& ExtraFields = nullptr,
+    const FRotator& Rotation = FRotator::ZeroRotator);
 }

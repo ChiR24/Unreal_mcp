@@ -125,7 +125,7 @@ UNiagaraComponent* FindNiagaraComponent(AActor& Actor, const FString& ComponentN
 // actor's Niagara component (componentName picks one of several).
 bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
 {
-    const FString ActorName = McpGetFirstStringField(Context.Payload, {TEXT("actorName"), TEXT("systemName")});
+    const FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
     FString ComponentName;
     Context.Payload->TryGetStringField(TEXT("componentName"), ComponentName);
     FString ParameterName;

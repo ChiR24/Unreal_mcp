@@ -11,14 +11,20 @@ bool HandleAddLandscapeLayer(UEngineWireSubsystem* Bridge, const FString& Reques
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'layerName'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
+    // A name an object cannot carry: 'Sub/Grass' passed the package test as a folder and a name.
+    FText NameReason;
+    if (!FName(*LayerName).IsValidObjectName(NameReason)) {
+      Bridge->SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("Invalid layer info name '%s': %s"), *LayerName, *NameReason.ToString()), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
 
     // The layer info asset goes in `path` when given, else beside the material.
     // materialPath names the material, not a folder: it used to be taken as the
     // folder, so a material path grew a fake folder named after the material.
     FString Path;
     Payload->TryGetStringField(TEXT("path"), Path);
-    // assetPath: what a build_material_graph step carries (the batch sets it).
-    const FString MaterialRef = McpGetFirstStringField(Payload, {TEXT("materialPath"), TEXT("assetPath")});
+    const FString MaterialRef = GetJsonStringField(Payload, TEXT("materialPath"));
     if (Path.IsEmpty() && !MaterialRef.IsEmpty()) {
       const FString SafeMaterial = SanitizeProjectRelativePath(MaterialRef);
       if (SafeMaterial.IsEmpty() || !LoadObject<UMaterialInterface>(nullptr, *SafeMaterial)) {

@@ -19,8 +19,8 @@ namespace McpEffectHandlers
 bool HandleCreateDynamicLight(const FEffectActionContext& Context)
 {
     // location is optional in the contract (the origin by default); it used to be refused when omitted.
-    // The published contract names the actor `name`; the older lightName no longer wins over it.
-    const FString LightName = McpGetFirstStringField(Context.Payload, {TEXT("name"), TEXT("lightName")});
+    // The contract names the actor `name`.
+    const FString LightName = GetJsonStringField(Context.Payload, TEXT("name"));
     FString LightType;
     Context.Payload->TryGetStringField(TEXT("lightType"), LightType);
     if (LightType.IsEmpty())
