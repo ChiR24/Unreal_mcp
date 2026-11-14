@@ -17,6 +17,13 @@
 #include "Tracks/MovieSceneSkeletalAnimationTrack.h"
 
 namespace McpSequenceCinematics {
+UMovieSceneTrack *FindOrAddBindingTrack(UMovieScene *MovieScene, UClass *TrackClass, const FGuid &BindingGuid,
+                                        bool &bOutCreated, const FName &TrackName) {
+  UMovieSceneTrack *Track = MovieScene ? MovieScene->FindTrack(TrackClass, BindingGuid, TrackName) : nullptr;
+  bOutCreated = !Track;
+  return Track ? Track : AddTrackForBinding(MovieScene, TrackClass, BindingGuid);
+}
+
 namespace {
 UMovieSceneSection *AddSection(ULevelSequence *Sequence, UClass *TrackClass,
                                const FGuid &Guid) {
@@ -179,8 +186,11 @@ bool HandleAddTransformTrack(const TSharedPtr<FJsonObject> &Params,
   if (!LoadSequenceAndBinding(Params, TEXT("add_transform_track"), Sequence, Guid,
                               OutResult, NewBinding))
     return true;
-  UMovieSceneSection *Section =
-      AddSection(Sequence, UMovieScene3DTransformTrack::StaticClass(), Guid);
+  // One transform track per binding, as Sequencer keeps it: a second call adds a section to it.
+  bool bCreatedTrack = false;
+  UMovieSceneTrack *Track = FindOrAddBindingTrack(Sequence->GetMovieScene(), UMovieScene3DTransformTrack::StaticClass(), Guid,
+                                                 bCreatedTrack);
+  UMovieSceneSection *Section = AddTrackSection(Sequence->GetMovieScene(), Track, bCreatedTrack);
   if (!Section) {
     OutResult = MakeResult(false, TEXT("add_transform_track"),
                            TEXT("Failed to create transform section"),

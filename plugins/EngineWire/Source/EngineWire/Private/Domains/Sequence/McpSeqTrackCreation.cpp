@@ -59,6 +59,13 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
     TrackClass = ResolveUClass(TEXT("MovieScene") + ResolvedTrackType + TEXT("Track"));
   }
 
+  // AddTrack makes the track with NewObject: for an abstract class an engine ensure, nulled out on save.
+  if (TrackClass && TrackClass->HasAnyClassFlags(CLASS_Abstract)) {
+    Subsystem->SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Track class '%s' is abstract: list_track_types gives the names add_track takes"), *TrackClass->GetName()),
+        TEXT("INVALID_CLASS_TYPE"));
+    return true;
+  }
   if (TrackClass && TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {
     // One undo step for the track and its name; AddTrack's own Modify recorded nothing without a transaction.
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Sequence Track")),
@@ -93,11 +100,9 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
     Resp->SetStringField(TEXT("trackType"), TrackType);
-    if (NewTrack) {
-      Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // addressable id
-      Resp->SetStringField(TEXT("trackClass"), NewTrack->GetClass()->GetName());
-      Resp->SetStringField(TEXT("trackPath"), NewTrack->GetPathName());
-    }
+    Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // addressable id
+    Resp->SetStringField(TEXT("trackClass"), NewTrack->GetClass()->GetName());
+    Resp->SetStringField(TEXT("trackPath"), NewTrack->GetPathName());
     // Read back: a track type that takes no name kept its own while the reply named the one asked for.
     Resp->SetStringField(TEXT("trackName"), NewTrack->GetDisplayName().ToString());
     if (!ActorName.IsEmpty()) {

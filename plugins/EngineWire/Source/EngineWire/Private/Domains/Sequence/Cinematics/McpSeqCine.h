@@ -128,6 +128,10 @@ UMovieSceneTrack *AddTrackForBinding(UMovieScene *MovieScene, UClass *TrackClass
 void RemoveTrackAfterSectionFailure(UMovieScene *MovieScene,
                                     UMovieSceneTrack *Track,
                                     bool bTrackCreated);
+// The binding's track of TrackClass (whose track name is TrackName when it is set), else a new one, as Sequencer adds
+// them: bOutCreated says which. Defined in McpSeqCineBindingTracks.cpp.
+UMovieSceneTrack *FindOrAddBindingTrack(UMovieScene *MovieScene, UClass *TrackClass, const FGuid &BindingGuid,
+                                        bool &bOutCreated, const FName &TrackName = NAME_None);
 // A new section added to Track; null (and the track removed again when this call created it) on failure.
 UMovieSceneSection *AddTrackSection(UMovieScene *MovieScene, UMovieSceneTrack *Track, bool bTrackCreated);
 bool MaybeSaveSequence(ULevelSequence *Sequence,

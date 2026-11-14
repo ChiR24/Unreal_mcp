@@ -7,7 +7,6 @@ class AActor;
 class APostProcessVolume;
 class FJsonObject;
 class FMcpBridgeWebSocket;
-class UEditorActorSubsystem;
 class UEngineWireSubsystem;
 
 namespace McpLightingHandlers
@@ -18,6 +17,7 @@ APostProcessVolume* ResolvePostProcessOrReply(UEngineWireSubsystem& Subsystem, c
 bool HandleListLightTypes(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleSpawnLight(
     UEngineWireSubsystem& Subsystem,
@@ -42,8 +42,7 @@ bool HandleEnsureSingleSkyLight(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS);
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleBuildLighting(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
@@ -58,8 +57,7 @@ bool HandleSetupVolumetricFog(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS);
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleSetupGlobalIllumination(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,

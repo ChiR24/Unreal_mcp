@@ -33,11 +33,16 @@ bool ReadTakeRecorderStringArray(
     {
         FString Text;
         if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Text) ||
-            Text.TrimStartAndEnd().IsEmpty() ||
-            Text.TrimStartAndEnd().Len() > MaxStringLength)
+            Text.TrimStartAndEnd().IsEmpty())
         {
             OutError = FString::Printf(
                 TEXT("%s must contain non-empty strings"), FieldName);
+            return false;
+        }
+        if (Text.TrimStartAndEnd().Len() > MaxStringLength)
+        {
+            OutError = FString::Printf(TEXT("%s holds a name over %d characters (MaxTakeRecorderStringLength)"),
+                                       FieldName, MaxStringLength);
             return false;
         }
         OutValues.AddUnique(Text.TrimStartAndEnd());
@@ -54,10 +59,15 @@ bool ReadTakeRecorderName(
     if (!Payload->HasField(FieldName)) return true;
     FString Text;
     const int32 MaxStringLength = FMath::Max(1, GetDefault<UEngineWireSettings>()->MaxTakeRecorderStringLength);
-    if (!Payload->TryGetStringField(FieldName, Text) || Text.TrimStartAndEnd().IsEmpty() ||
-        Text.TrimStartAndEnd().Len() > MaxStringLength)
+    if (!Payload->TryGetStringField(FieldName, Text) || Text.TrimStartAndEnd().IsEmpty())
     {
         OutError = FString::Printf(TEXT("%s must be a non-empty string"), FieldName);
+        return false;
+    }
+    if (Text.TrimStartAndEnd().Len() > MaxStringLength)
+    {
+        OutError = FString::Printf(TEXT("%s is over %d characters (MaxTakeRecorderStringLength)"), FieldName,
+                                   MaxStringLength);
         return false;
     }
     OutValues.AddUnique(Text.TrimStartAndEnd());

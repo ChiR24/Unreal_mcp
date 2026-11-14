@@ -23,7 +23,7 @@ bool ResolveSourceConfig(const TSharedPtr<FJsonObject> &Payload,
                          FMediaSourceConfig &OutConfig, FString &OutClassName,
                          FString &OutCode, FString &OutError) {
   OutConfig.SourceType =
-      GetStringAny(Payload, {TEXT("sourceType"), TEXT("type")}, TEXT("file"))
+      GetStringAny(Payload, {TEXT("sourceType")}, TEXT("file"))
           .ToLower();
   if (OutConfig.SourceType == TEXT("file")) {
     OutClassName = TEXT("FileMediaSource");
@@ -46,7 +46,7 @@ bool ResolveSourceConfig(const TSharedPtr<FJsonObject> &Payload,
       return false;
     }
     OutConfig.bPrecacheFile =
-        GetBoolAny(Payload, {TEXT("precacheFile"), TEXT("precache")});
+        GetBoolAny(Payload, {TEXT("precacheFile")});
     return true;
   }
   if (OutConfig.SourceType == TEXT("stream")) {
@@ -72,7 +72,7 @@ bool ResolveSourceConfig(const TSharedPtr<FJsonObject> &Payload,
   OutClassName = TEXT("PlatformMediaSource");
   UClass *MediaSourceClass = ResolveMediaClass(TEXT("MediaSource"), OutError);
   const FString DefaultSourcePath =
-      GetStringAny(Payload, {TEXT("defaultSourcePath"), TEXT("sourcePath")});
+      GetStringAny(Payload, {TEXT("defaultSourcePath")});
   FString ResolvedPath;
   OutConfig.DefaultSource =
       MediaSourceClass && !DefaultSourcePath.IsEmpty()
@@ -178,7 +178,6 @@ bool HandleCreateMediaSource(UEngineWireSubsystem *Subsystem,
   TSharedPtr<FJsonObject> Result = BuildAssetResponse(Created, ClassName);
   Result->SetStringField(TEXT("sourceType"), Config.SourceType);
   Result->SetStringField(TEXT("url"), GetMediaUrl(Created.Object));
-  Result->SetBoolField(TEXT("valid"), true);
   if (!Created.bSaved) {
     DiscardCreatedMediaAsset(Created);
     SendMediaError(Subsystem, Socket, RequestId, TEXT("ASSET_SAVE_FAILED"),

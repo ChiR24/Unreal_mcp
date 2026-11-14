@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -40,7 +41,8 @@ bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, 
     FString SourceNodeId, TargetNodeId, InputName, SourcePin;
     Payload->TryGetStringField(TEXT("sourceNodeId"), SourceNodeId);
     Payload->TryGetStringField(TEXT("targetNodeId"), TargetNodeId);
-    Payload->TryGetStringField(TEXT("inputName"), InputName);
+    // The record publishes the target pin as targetPin; inputName is the name it had before.
+    InputName = McpGetFirstStringField(Payload, {TEXT("inputName"), TEXT("targetPin")});
     Payload->TryGetStringField(TEXT("sourcePin"), SourcePin);
 
     UMaterialExpression *SourceExpr = FIND_EXPR_IN_HOST(SourceNodeId);

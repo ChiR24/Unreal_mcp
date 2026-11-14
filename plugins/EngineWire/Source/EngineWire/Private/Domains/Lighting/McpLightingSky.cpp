@@ -100,8 +100,7 @@ bool HandleEnsureSingleSkyLight(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS)
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // The level's actors are not listed during Play, so a second sky light was spawned into the running game.
     if (GEditor && GEditor->PlayWorld)
@@ -119,6 +118,7 @@ bool HandleEnsureSingleSkyLight(
     }
 
     TArray<AActor*> SkyLights;
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
         if (Actor && Actor->IsA<ASkyLight>())

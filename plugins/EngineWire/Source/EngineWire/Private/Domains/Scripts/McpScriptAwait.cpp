@@ -5,7 +5,7 @@
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseEnrichment.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
-#include "Domains/SystemControl/McpSystemValidateDelta.h"
+#include "Core/Journal/McpValidateDelta.h"
 #include "EngineWireSubsystem.h"
 #include "HAL/PlatformTime.h"
 

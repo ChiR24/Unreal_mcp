@@ -76,12 +76,9 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
                                EMovieSceneTransformChannel Channels,
                                TSharedPtr<FJsonObject> &OutResult, FNewBinding &NewBinding) {
   UMovieScene *MovieScene = Sequence->GetMovieScene();
+  bool bCreatedTrack = false;
   UMovieSceneTrack *Track =
-      MovieScene->FindTrack(UMovieScene3DTransformTrack::StaticClass(), Guid);
-  const bool bCreatedTrack = !Track;
-  if (!Track) {
-    Track = AddTrackForBinding(MovieScene, UMovieScene3DTransformTrack::StaticClass(), Guid);
-  }
+      FindOrAddBindingTrack(MovieScene, UMovieScene3DTransformTrack::StaticClass(), Guid, bCreatedTrack);
   UMovieScene3DTransformSection *Section =
       Cast<UMovieScene3DTransformSection>(AddTrackSection(MovieScene, Track, bCreatedTrack));
   if (!Section) {
@@ -208,8 +205,14 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
         TEXT("PROPERTY_TYPE_MISMATCH"));
     return true;
   }
+  // The binding's track of this property path gains a section; another path of the same name gets its own track.
+  bool bCreatedTrack = false;
   UMovieScenePropertyTrack *Track = Cast<UMovieScenePropertyTrack>(
-      AddTrackForBinding(Sequence->GetMovieScene(), TrackClass, Guid));
+      FindOrAddBindingTrack(Sequence->GetMovieScene(), TrackClass, Guid, bCreatedTrack, Property->GetFName()));
+  if (Track && !bCreatedTrack && Track->GetPropertyPath().ToString() != PropertyPath) {
+    Track = Cast<UMovieScenePropertyTrack>(AddTrackForBinding(Sequence->GetMovieScene(), TrackClass, Guid));
+    bCreatedTrack = true;
+  }
   if (!Track) {
     OutResult = MakeResult(false, TEXT("add_property_track"),
                            TEXT("Failed to create property track"),
@@ -217,7 +220,7 @@ bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   Track->SetPropertyNameAndPath(Property->GetFName(), PropertyPath);
-  UMovieSceneSection *Section = AddTrackSection(Sequence->GetMovieScene(), Track, true);
+  UMovieSceneSection *Section = AddTrackSection(Sequence->GetMovieScene(), Track, bCreatedTrack);
   if (!Section) {
     OutResult = MakeResult(false, TEXT("add_property_track"),
                            TEXT("Failed to create property section"),

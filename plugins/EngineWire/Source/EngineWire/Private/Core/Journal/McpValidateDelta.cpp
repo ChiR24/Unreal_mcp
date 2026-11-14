@@ -1,4 +1,4 @@
-#include "Domains/SystemControl/McpSystemValidateDelta.h"
+#include "Core/Journal/McpValidateDelta.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Core/Journal/McpChangeJournal.h"

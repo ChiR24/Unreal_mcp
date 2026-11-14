@@ -25,9 +25,10 @@ bool HandleConfigureBurnIns(UEngineWireSubsystem *Subsystem,
   if (!Job)
     return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
+  if (!Config)
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   const TSharedPtr<FJsonObject> *BurnInObj = nullptr;
-  if (!Config || !Payload.IsValid() ||
-      !Payload->TryGetObjectField(TEXT("burnIn"), BurnInObj) ||
+  if (!Payload->TryGetObjectField(TEXT("burnIn"), BurnInObj) ||
       !BurnInObj || !BurnInObj->IsValid())
     return SendError(Subsystem, RequestId, Socket,
                      TEXT("configure_burn_ins requires burnIn."),

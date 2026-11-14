@@ -54,12 +54,14 @@ inline bool IsBlueprintGraphAction(const FString& Action) { return BlueprintGrap
 inline bool IsGameFrameworkAction(const FString& Action) { return GameFramework().Contains(Action); }
 inline bool IsInputAction(const FString& Action) { return Input().Contains(Action); }
 inline bool IsLightingAction(const FString& Action) { return Lighting().Contains(Action); }
+inline bool IsMaterialAuthoringAction(const FString& Action) { return MaterialAuthoring().Contains(Action); }
 inline bool IsPerformanceAction(const FString& Action) { return Performance().Contains(Action); }
 inline bool IsRenderingAction(const FString& Action) { return Rendering().Contains(Action); }
 inline bool IsSessionAction(const FString& Action) { return Sessions().Contains(Action); }
 inline bool IsSkeletonAction(const FString& Action) { return Skeleton().Contains(Action); }
 inline bool IsSplineAction(const FString& Action) { return Splines().Contains(Action); }
 inline bool IsSystemUiAction(const FString& Action) { return SystemUi().Contains(Action); }
+inline bool IsTextureAction(const FString& Action) { return Texture().Contains(Action); }
 inline bool IsVolumeAction(const FString& Action) { return Volumes().Contains(Action); }
 inline bool IsWidgetAuthoringAction(const FString& Action) { return WidgetAuthoring().Contains(Action); }
 }

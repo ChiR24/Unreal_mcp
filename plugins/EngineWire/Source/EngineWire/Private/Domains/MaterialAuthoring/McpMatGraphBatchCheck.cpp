@@ -86,12 +86,7 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, c
   Out->SetStringField(TEXT("subAction"), Edit);
   ExpandEndpoint(Out, TEXT("from"), TEXT("sourceNodeId"), TEXT("sourcePin"));
   ExpandEndpoint(Out, TEXT("to"), TEXT("targetNodeId"), TEXT("inputName"));
-  // connect_nodes reads the target pin as inputName, and add_material_node reads
-  // only x/y; the published spellings are targetPin and posX/posY.
-  FString Pin;
-  if (!Out->HasField(TEXT("inputName")) && Out->TryGetStringField(TEXT("targetPin"), Pin)) {
-    Out->SetStringField(TEXT("inputName"), Pin);
-  }
+  // add_material_node reads only x/y; the published spellings are posX/posY.
   double Coord = 0.0;
   if (!Out->HasField(TEXT("x")) && Out->TryGetNumberField(TEXT("posX"), Coord)) {
     Out->SetNumberField(TEXT("x"), Coord);

@@ -10,6 +10,7 @@
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/LightComponent.h"
 #include "Dom/JsonObject.h"
+#include "Editor.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "HAL/IConsoleManager.h"
 #include "Subsystems/EditorActorSubsystem.h"
@@ -21,8 +22,7 @@ bool HandleSetupVolumetricFog(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS)
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // Checked before a fog actor can be spawned for a call that sets nothing.
     if (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("viewDistance")))
@@ -35,6 +35,7 @@ bool HandleSetupVolumetricFog(
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Volumetric Fog")), EMcpMutationDurability::EditorStateOnly,
                                             TArray<UObject*>());
     AExponentialHeightFog* FogActor = nullptr;
+    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
         if (Actor && Actor->IsA<AExponentialHeightFog>())

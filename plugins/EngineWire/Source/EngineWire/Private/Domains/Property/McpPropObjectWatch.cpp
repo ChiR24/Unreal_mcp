@@ -4,7 +4,7 @@
 #include "Containers/Ticker.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
-#include "Domains/SystemControl/McpSystemValidateDelta.h"
+#include "Core/Journal/McpValidateDelta.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"

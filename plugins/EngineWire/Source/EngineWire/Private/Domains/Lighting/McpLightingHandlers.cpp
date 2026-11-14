@@ -6,9 +6,6 @@
 
 #include "Dom/JsonObject.h"
 
-#include "Editor.h"
-#include "Subsystems/EditorActorSubsystem.h"
-
 bool UEngineWireSubsystem::HandleLightingAction(
     const FString& RequestId,
     const FString& Action,
@@ -28,123 +25,27 @@ bool UEngineWireSubsystem::HandleLightingAction(
         }
     }
 
-    const FString Lower = EffectiveAction.ToLower();
-    const bool bKnownLightingAction =
-        Lower.StartsWith(TEXT("spawn_light")) ||
-        Lower.StartsWith(TEXT("spawn_sky_light")) ||
-        Lower.StartsWith(TEXT("create_sky_light")) ||
-        Lower.StartsWith(TEXT("create_light")) ||
-        Lower.StartsWith(TEXT("build_lighting")) ||
-        Lower.StartsWith(TEXT("bake_lightmap")) ||
-        Lower.StartsWith(TEXT("ensure_single_sky_light")) ||
-        Lower.StartsWith(TEXT("create_lighting_enabled_level")) ||
-        Lower.StartsWith(TEXT("create_lightmass_volume")) ||
-        Lower.StartsWith(TEXT("create_dynamic_light")) ||
-        Lower.StartsWith(TEXT("setup_volumetric_fog")) ||
-        Lower.StartsWith(TEXT("setup_global_illumination")) ||
-        Lower.StartsWith(TEXT("configure_shadows")) ||
-        Lower.StartsWith(TEXT("set_exposure")) ||
-        Lower.StartsWith(TEXT("list_light_types")) ||
-        Lower.StartsWith(TEXT("set_ambient_occlusion"));
-
-    if (!bKnownLightingAction)
-    {
-        if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
-        {
-            const bool bMissingSubAction =
-                EffectiveAction.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase);
-            SendAutomationError(
-                RequestingSocket,
-                RequestId,
-                bMissingSubAction
-                    ? TEXT("manage_lighting requires a non-empty 'action' field in payload")
-                    : FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
-                bMissingSubAction ? TEXT("INVALID_ARGUMENT") : TEXT("UNKNOWN_ACTION"));
-            return true;
-        }
-
-        return false;
-    }
-
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Lighting payload missing"), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
-    UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-    if (!ActorSS)
-    {
-        SendAutomationError(
-            RequestingSocket,
-            RequestId,
-            TEXT("EditorActorSubsystem not available"),
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-
+    // The handler table sends the names of the shared Lighting() set, HandleBakeLightmap none.
     using namespace McpLightingHandlers;
-    if (Lower == TEXT("list_light_types"))
-    {
-        return HandleListLightTypes(*this, RequestId, RequestingSocket);
-    }
-    if (Lower == TEXT("spawn_light") || Lower == TEXT("create_light") ||
-        Lower == TEXT("create_dynamic_light"))
-    {
-        return HandleSpawnLight(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("spawn_sky_light") || Lower == TEXT("create_sky_light"))
-    {
-        return HandleSpawnSkyLight(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("build_lighting") || Lower == TEXT("bake_lightmap"))
-    {
-        return HandleBuildLighting(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("ensure_single_sky_light"))
-    {
-        return HandleEnsureSingleSkyLight(*this, RequestId, Payload, RequestingSocket, ActorSS);
-    }
-    if (Lower == TEXT("create_lightmass_volume"))
-    {
-        return HandleCreateLightmassVolume(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("setup_volumetric_fog"))
-    {
-        return HandleSetupVolumetricFog(*this, RequestId, Payload, RequestingSocket, ActorSS);
-    }
-    if (Lower == TEXT("setup_global_illumination"))
-    {
-        return HandleSetupGlobalIllumination(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("configure_shadows"))
-    {
-        return HandleConfigureShadows(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("set_exposure"))
-    {
-        return HandleSetExposure(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("set_ambient_occlusion"))
-    {
-        return HandleSetAmbientOcclusion(*this, RequestId, Payload, RequestingSocket);
-    }
-    if (Lower == TEXT("create_lighting_enabled_level"))
-    {
-        return HandleCreateLightingEnabledLevel(*this, RequestId, Payload, RequestingSocket);
-    }
-
-    if (Action.Equals(TEXT("manage_lighting"), ESearchCase::IgnoreCase))
-    {
-        SendAutomationError(
-            RequestingSocket,
-            RequestId,
-            FString::Printf(TEXT("Unknown manage_lighting action: %s"), *EffectiveAction),
-            TEXT("UNKNOWN_ACTION"));
-        return true;
-    }
-
-    return false;
+    using FHandler = bool (*)(UEngineWireSubsystem&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>);
+    static const TMap<FString, FHandler> Handlers = {
+        {TEXT("list_light_types"), &HandleListLightTypes},
+        {TEXT("spawn_light"), &HandleSpawnLight},
+        {TEXT("create_light"), &HandleSpawnLight},
+        {TEXT("create_dynamic_light"), &HandleSpawnLight},
+        {TEXT("spawn_sky_light"), &HandleSpawnSkyLight},
+        {TEXT("create_sky_light"), &HandleSpawnSkyLight},
+        {TEXT("build_lighting"), &HandleBuildLighting},
+        {TEXT("ensure_single_sky_light"), &HandleEnsureSingleSkyLight},
+        {TEXT("create_lightmass_volume"), &HandleCreateLightmassVolume},
+        {TEXT("setup_volumetric_fog"), &HandleSetupVolumetricFog},
+        {TEXT("setup_global_illumination"), &HandleSetupGlobalIllumination},
+        {TEXT("configure_shadows"), &HandleConfigureShadows},
+        {TEXT("set_exposure"), &HandleSetExposure},
+        {TEXT("set_ambient_occlusion"), &HandleSetAmbientOcclusion},
+        {TEXT("create_lighting_enabled_level"), &HandleCreateLightingEnabledLevel}};
+    const FHandler* Handler = Handlers.Find(EffectiveAction);
+    return Handler && (*Handler)(*this, RequestId, Payload, RequestingSocket);
 }
 
 bool UEngineWireSubsystem::HandleBakeLightmap(
@@ -152,15 +53,8 @@ bool UEngineWireSubsystem::HandleBakeLightmap(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString Lower = Action.ToLower();
-    if (!Lower.Equals(TEXT("bake_lightmap"), ESearchCase::IgnoreCase))
-    {
-        return false;
-    }
-
     TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
     if (Payload.IsValid()) { P->Values = Payload->Values; }
     if (!P->HasField(TEXT("quality"))) { P->SetStringField(TEXT("quality"), TEXT("Preview")); }
-    return HandleLightingAction(RequestId, TEXT("bake_lightmap"), P, RequestingSocket);
-
+    return McpLightingHandlers::HandleBuildLighting(*this, RequestId, P, RequestingSocket);
 }

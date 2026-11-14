@@ -1,9 +1,6 @@
 #include "EngineWireSubsystem.h"
 
 #include "Core/Routing/McpConsolidatedActionRouting.h"
-#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
-
-#include <initializer_list>
 
 namespace
 {
@@ -18,24 +15,6 @@ struct FSubRoute
     FHandlerMethod Handler;
     const TCHAR* Domain;
 };
-
-// connect_material_pins spells its endpoints several ways; the material
-// authoring handler reads only the canonical names.
-void NormalizeMaterialConnectionAliases(const TSharedPtr<FJsonObject>& Payload)
-{
-    const auto Alias = [&Payload](const TCHAR* Canonical, std::initializer_list<const TCHAR*> Aliases)
-    {
-        const FString Value = McpGetFirstStringField(Payload, Aliases);
-        if (McpGetFirstStringField(Payload, {Canonical}).IsEmpty() && !Value.IsEmpty())
-        {
-            Payload->SetStringField(Canonical, Value);
-        }
-    };
-    Alias(TEXT("sourceNodeId"), {TEXT("fromNodeId"), TEXT("fromNode"), TEXT("sourceNode")});
-    Alias(TEXT("targetNodeId"), {TEXT("toNodeId"), TEXT("toNode"), TEXT("targetNode")});
-    Alias(TEXT("sourcePin"), {TEXT("fromPin"), TEXT("outputPin"), TEXT("sourceOutputPin")});
-    Alias(TEXT("inputName"), {TEXT("targetPin"), TEXT("toPin"), TEXT("inputPin")});
-}
 
 // Action names are lower_snake_case identifiers; anything else is a typo in a
 // registration table, so refuse it loudly instead of registering it.
@@ -129,36 +108,10 @@ void UEngineWireSubsystem::InitializeHandlers()
     Route(TEXT("system_control"), &S::HandleSystemControlAction, {
         {&IsPerformanceAction, &S::HandlePerformanceAction, TEXT("manage_performance")},
         {&IsSystemUiAction, &S::HandleUiAction, nullptr}});
-
-    // manage_asset renames three material sub-actions to the authoring
-    // handler's own verbs before routing them.
-    RegisterHandler(TEXT("manage_asset"), [this](
-        const FString& R, const FString& A, const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> Socket)
-    {
-        FString SubAction = GetPayloadSubAction(P);
-        if (Texture().Contains(SubAction))
-        {
-            return HandleManageTextureAction(R, TEXT("manage_texture"), WithPayloadSubAction(P, SubAction), Socket);
-        }
-        if (!MaterialAuthoring().Contains(SubAction))
-        {
-            return HandleAssetAction(R, A, P, Socket);
-        }
-        static const TMap<FString, FString> Renamed = {
-            {TEXT("connect_material_pins"), TEXT("connect_nodes")},
-            {TEXT("break_material_connections"), TEXT("disconnect_nodes")},
-            {TEXT("rebuild_material"), TEXT("compile_material")}};
-        if (const FString* Verb = Renamed.Find(SubAction))
-        {
-            SubAction = *Verb;
-        }
-        const TSharedPtr<FJsonObject> Routed = WithPayloadSubAction(P, SubAction);
-        if (SubAction == TEXT("connect_nodes") && Routed.IsValid())
-        {
-            NormalizeMaterialConnectionAliases(Routed);
-        }
-        return HandleManageMaterialAuthoringAction(R, TEXT("manage_material_authoring"), Routed, Socket);
-    });
+    // The material dispatcher renames its old verbs (connect_material_pins, rebuild_material...) itself.
+    Route(TEXT("manage_asset"), &S::HandleAssetAction, {
+        {&IsTextureAction, &S::HandleManageTextureAction, TEXT("manage_texture")},
+        {&IsMaterialAuthoringAction, &S::HandleManageMaterialAuthoringAction, TEXT("manage_material_authoring")}});
 }
 
 bool UEngineWireSubsystem::RegisterHandler(

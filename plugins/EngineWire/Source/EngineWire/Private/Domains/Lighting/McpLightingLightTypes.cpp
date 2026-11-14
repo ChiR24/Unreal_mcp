@@ -14,6 +14,7 @@ namespace McpLightingHandlers
 bool HandleListLightTypes(
     UEngineWireSubsystem& Subsystem,
     const FString& RequestId,
+    const TSharedPtr<FJsonObject>&,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // The four engine lights and the sky light create_light also makes (an AInfo, no ALight) first, then every other

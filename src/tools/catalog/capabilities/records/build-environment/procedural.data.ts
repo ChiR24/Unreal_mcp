@@ -42,7 +42,7 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.bake_lightmap', action: 'bake_lightmap', family: F,
-    summary: 'Build the level\'s static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level that forces no precomputed lighting answers skipped. Can take minutes; nothing is saved.',
+    summary: 'Build the level\'s static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED). Can take minutes; nothing is saved.',
     whenToUse: ['Lightmaps must be baked for static lighting.'],
     whenNotToUse: ['Dynamic lighting is sufficient.'],
     inputProps: { quality: P.quality },

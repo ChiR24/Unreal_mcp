@@ -91,8 +91,7 @@ FTakeRecorderPanelConfiguration ActivePanelConfiguration;
 
 FString GetRequestedSequencePath(const TSharedPtr<FJsonObject>& Payload)
 {
-    return McpGetFirstStringField(Payload, {TEXT("sequencePath"), TEXT("path"),
-                                            TEXT("recordingSequencePath"), TEXT("takeSequencePath")});
+    return McpGetFirstStringField(Payload, {TEXT("sequencePath"), TEXT("recordingSequencePath"), TEXT("takeSequencePath")});
 }
 }
 

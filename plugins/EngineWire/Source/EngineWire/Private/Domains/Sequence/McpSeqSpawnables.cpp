@@ -26,6 +26,14 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
                         TEXT("CLASS_NOT_FOUND"));
     return true;
   }
+  // The spawner makes the template with NewObject: for an abstract class an engine ensure, nulled out on save.
+  if (ResolvedClass->HasAnyClassFlags(CLASS_Abstract)) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Class %s is abstract and cannot be spawned; name one of its subclasses."),
+                                        *ResolvedClass->GetName()),
+                        TEXT("INVALID_CLASS"));
+    return true;
+  }
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     // The sequence's own spawners make a template the sequence owns. AddSpawnable with the class default object
@@ -57,34 +65,24 @@ bool UEngineWireSubsystem::HandleSequenceGetBindings(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  FString SeqPath;
-  UObject *SeqObj = McpSequence::LoadAssetOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_get_bindings"), SeqPath);
-  if (!SeqObj) {
+  UMovieScene *MovieScene = nullptr;
+  if (!McpSequence::LoadOrReply(this, RequestId, Socket, LocalPayload, TEXT("sequence_get_bindings"), MovieScene)) {
     return true;
   }
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-
-  if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-    if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-      TArray<TSharedPtr<FJsonValue>> BindingsArray;
-      for (const FMovieSceneBinding &B :
-           const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-        TSharedPtr<FJsonObject> Bobj = McpHandlerUtils::CreateResultObject();
-        Bobj->SetStringField(TEXT("id"), B.GetObjectGuid().ToString());
-
-        FString BindingName = GetBindingName(MovieScene, B.GetObjectGuid());
-
-        Bobj->SetStringField(TEXT("name"), BindingName);
-        BindingsArray.Add(MakeShared<FJsonValueObject>(Bobj));
-      }
-      Resp->SetArrayField(TEXT("bindings"), BindingsArray);
-      SendAutomationResponse(Socket, RequestId, true, TEXT("bindings listed"),
-                             Resp, FString());
-      return true;
+  TArray<TSharedPtr<FJsonValue>> BindingsArray;
+  for (const FMovieSceneBinding &B : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+    TSharedPtr<FJsonObject> Bobj = McpHandlerUtils::CreateResultObject();
+    Bobj->SetStringField(TEXT("id"), B.GetObjectGuid().ToString());
+    Bobj->SetStringField(TEXT("name"), GetBindingName(MovieScene, B.GetObjectGuid()));
+    // A component bound under its actor goes by its bare name; its actor's binding tells several apart.
+    const FMovieScenePossessable *Possessable = MovieScene->FindPossessable(B.GetObjectGuid());
+    if (Possessable && Possessable->GetParent().IsValid()) {
+      Bobj->SetStringField(TEXT("parentId"), Possessable->GetParent().ToString());
     }
+    BindingsArray.Add(MakeShared<FJsonValueObject>(Bobj));
   }
-  Resp->SetArrayField(TEXT("bindings"), TArray<TSharedPtr<FJsonValue>>());
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("bindings listed (empty)"), Resp, FString());
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetArrayField(TEXT("bindings"), BindingsArray);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("bindings listed"), Resp, FString());
   return true;
 }

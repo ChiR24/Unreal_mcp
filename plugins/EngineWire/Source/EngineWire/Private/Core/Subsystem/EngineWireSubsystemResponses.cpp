@@ -11,7 +11,7 @@
 #include "Core/Subsystem/EngineWireSubsystemResponseEnrichment.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
 #include "Domains/Debug/Contracts/McpContracts.h"
-#include "Domains/SystemControl/McpSystemValidateDelta.h"
+#include "Core/Journal/McpValidateDelta.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Core/Subsystem/EngineWireSubsystemResponseSanitization.h"

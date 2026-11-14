@@ -90,6 +90,8 @@ bool HandleConfigureAntiAliasing(UEngineWireSubsystem *Subsystem,
   if (!Job)
     return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
+  if (!Config)
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   int32 SpatialSamples = 0;
   const bool bHasSpatial =
       TryGetIntEither(Payload, TEXT("spatialSampleCount"), SpatialSamples);
@@ -102,11 +104,8 @@ bool HandleConfigureAntiAliasing(UEngineWireSubsystem *Subsystem,
                      TEXT("MRQ sample counts must be positive."),
                      TEXT("INVALID_AA_SAMPLES")),
            true;
-  UMoviePipelineAntiAliasingSetting *ExistingAA =
-      Config ? Cast<UMoviePipelineAntiAliasingSetting>(
-                   Config->FindSettingByClass(
-                       UMoviePipelineAntiAliasingSetting::StaticClass(), true))
-             : nullptr;
+  UMoviePipelineAntiAliasingSetting *ExistingAA = Cast<UMoviePipelineAntiAliasingSetting>(
+      Config->FindSettingByClass(UMoviePipelineAntiAliasingSetting::StaticClass(), true));
   const int32 EffectiveSpatial =
       bHasSpatial ? SpatialSamples
                   : ExistingAA ? ExistingAA->SpatialSampleCount : 1;
@@ -127,11 +126,8 @@ bool HandleConfigureAntiAliasing(UEngineWireSubsystem *Subsystem,
                                      *Method),
                      TEXT("INVALID_AA_METHOD")),
            true;
-  UMoviePipelineAntiAliasingSetting *AA =
-      Config ? Cast<UMoviePipelineAntiAliasingSetting>(
-                   Config->FindOrAddSettingByClass(
-                       UMoviePipelineAntiAliasingSetting::StaticClass(), true))
-             : nullptr;
+  UMoviePipelineAntiAliasingSetting *AA = Cast<UMoviePipelineAntiAliasingSetting>(
+      Config->FindOrAddSettingByClass(UMoviePipelineAntiAliasingSetting::StaticClass(), true));
   if (!AA)
     return SendError(Subsystem, RequestId, Socket,
                      TEXT("MRQ anti-aliasing setting is unavailable."),
@@ -165,9 +161,10 @@ bool HandleConfigureConsoleVariables(UEngineWireSubsystem *Subsystem,
   if (!Job)
     return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
+  if (!Config)
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   const TSharedPtr<FJsonObject> *Object = nullptr;
-  if (!Config || !Payload.IsValid() ||
-      !Payload->TryGetObjectField(TEXT("consoleVariables"), Object))
+  if (!Payload->TryGetObjectField(TEXT("consoleVariables"), Object))
     return SendError(Subsystem, RequestId, Socket,
                      TEXT("configure_console_variables requires consoleVariables."),
                      TEXT("INVALID_CONSOLE_VARIABLES")),

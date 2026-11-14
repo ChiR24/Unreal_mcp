@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dcea6fd862547b3f",
+  "catalogRevision": "41d9c32646155e9f",
   "recordCount": 489,
   "records": [
     {
@@ -29477,7 +29477,7 @@
         "topics": [
           "bake_lightmap"
         ],
-        "summary": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level that forces no precomputed lighting answers skipped. Can take minutes; nothing is saved.",
+        "summary": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED). Can take minutes; nothing is saved.",
         "whenToUse": [
           "Lightmaps must be baked for static lighting."
         ],
@@ -29530,7 +29530,7 @@
       },
       "examples": [
         {
-          "title": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level that forces no precomputed lighting answers skipped. Can take minutes; nothing is saved.",
+          "title": "Build the level's static lighting (Lightmass) at quality (default Preview; Medium, High, Production): the same build as build_lighting, which defaults to Production. Reflection captures are not rebuilt, and a level whose World Settings force no precomputed lighting is refused (PRECOMPUTED_LIGHTING_DISABLED). Can take minutes; nothing is saved.",
           "input": {
             "action": "bake_lightmap",
             "quality": "Preview"
@@ -29568,7 +29568,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a10f74ed675679247d7a9cf126e8120acaa401aedcf9b80453c4e33f58cbd8ce",
-        "content": "a6719b238e1ae1dc3199a9aaf02b866e628bbfa1ead713d33f02be285fd31fa7"
+        "content": "9bd161c11783b877a8bb2f1d58987f68c69ece7d62fa5f40f9a29e421e0e1f02"
       }
     },
     {
