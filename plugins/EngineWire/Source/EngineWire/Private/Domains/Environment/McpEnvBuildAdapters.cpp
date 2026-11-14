@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpEnvShared.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -68,11 +69,24 @@ bool HandleBuildEnvironmentEditorAction(
     FString ErrorCode;
     FEnvironmentBuildContext Context{Payload, Resp, bSuccess, Message, ErrorCode};
 
+    // The sky, weather and water arms spawn and change level actors: one undo step for the call, named after the
+    // action and closed before the reply. Not for the colour curves (new assets saved to disk, which no undo step
+    // reverts) nor the water body's material and collision, which open their own.
+    const auto LevelEditArms = [&]()
+    {
+        TOptional<FMcpScopedEditorTransaction> Step;
+        if (!LowerSub.EndsWith(TEXT("_color_curve")) && LowerSub != TEXT("configure_water_material") &&
+            LowerSub != TEXT("configure_water_collision"))
+        {
+            Step.Emplace(FText::FromString(FName::NameToDisplayString(LowerSub, false)),
+                         EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
+        }
+        return HandleBuildSkyWeatherAction(LowerSub, Context) || HandleBuildWaterAction(LowerSub, Context);
+    };
     const bool bHandled =
         HandleBuildSnapshotAndDeletionAction(LowerSub, Context) ||
         HandleBuildLandscapeAndFoliageAction(LowerSub, Context) ||
-        HandleBuildSkyWeatherAction(LowerSub, Context) ||
-        HandleBuildWaterAction(LowerSub, Context);
+        LevelEditArms();
 
     if (!bHandled)
     {

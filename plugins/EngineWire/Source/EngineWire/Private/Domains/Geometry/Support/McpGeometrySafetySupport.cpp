@@ -85,7 +85,7 @@ int32 DeclaredSegments(const TSharedPtr<FJsonObject>& Payload, std::initializer_
 {
     for (const TCHAR* Name : Names)
     {
-        if (Payload.IsValid() && Payload->HasField(Name))
+        if (Payload->HasField(Name))
         {
             return ClampSegments(GetJsonIntField(Payload, Name, Default), Default);
         }

@@ -70,48 +70,18 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // Checked before anything is made, at the rate the new scene takes (its constructor's legacy conversion rate):
-        // past 35791 s at 60000 fps the end tick clamped to INT32_MAX and the +1 below wrapped it negative.
+        // Made through the shared creation, which refuses a duration past what the scene's tick rate holds before
+        // anything is made.
         const double SafeDuration = FMath::Max(Duration, 0.01);
-        FFrameNumber EndTick;
         FString DurationError;
-        if (!McpSequenceFrameMath::TrySecondsToFrame(SafeDuration, GetLegacyConversionFrameRate(), EndTick, DurationError) ||
-            !McpSequenceFrameMath::TryAddFrames(EndTick, 1, EndTick, DurationError))
+        UWidgetAnimation* NewAnim = McpCreateWidgetAnimation(WidgetBP, AnimationName, SafeDuration, DurationError);
+        if (!NewAnim)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("duration %g s is too long for an animation: %s"), Duration, *DurationError),
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
-        UWidgetAnimation* NewAnim = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
-        if (!NewAnim)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation"), TEXT("CREATE_FAILED"));
-            return true;
-        }
-
-        // CRITICAL: Create and assign MovieScene immediately - GetMovieScene() returns nullptr until we do this
-        // This matches the engine's pattern in AnimationTabSummoner.cpp
-        NewAnim->MovieScene = NewObject<UMovieScene>(NewAnim, FName(*AnimationName), RF_Transactional);
-        if (!NewAnim->MovieScene)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create animation MovieScene"), TEXT("CREATE_FAILED"));
-            return true;
-        }
-
-        UMovieScene* MovieScene = NewAnim->GetMovieScene();
-
-        // Set display rate (20 fps is the UE default for widget animations)
-        MovieScene->SetDisplayRate(FFrameRate(20, 1));
-
-        const FFrameTime InFrame = 0.0 * MovieScene->GetTickResolution();
-        const FFrameTime OutFrame = SafeDuration * MovieScene->GetTickResolution();
-        MovieScene->SetPlaybackRange(TRange<FFrameNumber>(InFrame.FrameNumber, OutFrame.FrameNumber + 1));
-
-        // CRITICAL: Register animation GUID and add to Animations array
-        // This prevents ensure failures in WidgetBlueprintCompiler.cpp line 805
-        RegisterAnimationGuid(WidgetBP, NewAnim);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         // The animation is a variable a graph reads (PlayAnimation's target): until a compile gave the generated

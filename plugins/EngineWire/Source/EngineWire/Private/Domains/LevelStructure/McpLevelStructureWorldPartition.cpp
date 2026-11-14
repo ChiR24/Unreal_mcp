@@ -133,29 +133,26 @@ bool HandleConfigureGridSize(
     for (int32 i = 0; i < ArrayHelper.Num(); ++i)
     {
         FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
-        if (Grid)
+        if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
         {
-            if (GridName.IsEmpty() || Grid->GridName == TargetGridName)
+            if (!bHasValue)
             {
-                if (!bHasValue)
-                {
-                    Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Grid '%s' found; pass "
-                        "gridCellSize, loadingRange, bBlockOnSlowStreaming or priority to change it. Nothing was changed."),
-                        *Grid->GridName.ToString()), TEXT("INVALID_ARGUMENT"));
-                    return true;
-                }
-                // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new
-                // values); only what was sent changes: the defaults of the fields left out overwrote the grid's own.
-                BeginGridEdit();
-                if (Payload->HasField(TEXT("gridCellSize"))) { Grid->CellSize = GridCellSize; }
-                if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }
-                if (Payload->HasField(TEXT("bBlockOnSlowStreaming"))) { Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming; }
-                if (Payload->HasField(TEXT("priority"))) { Grid->Priority = Priority; }
-
-                bFound = true;
-                ModifiedIndex = i;
-                break;
+                Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Grid '%s' found; pass "
+                    "gridCellSize, loadingRange, bBlockOnSlowStreaming or priority to change it. Nothing was changed."),
+                    *Grid->GridName.ToString()), TEXT("INVALID_ARGUMENT"));
+                return true;
             }
+            // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new
+            // values); only what was sent changes: the defaults of the fields left out overwrote the grid's own.
+            BeginGridEdit();
+            if (Payload->HasField(TEXT("gridCellSize"))) { Grid->CellSize = GridCellSize; }
+            if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }
+            if (Payload->HasField(TEXT("bBlockOnSlowStreaming"))) { Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming; }
+            if (Payload->HasField(TEXT("priority"))) { Grid->Priority = Priority; }
+
+            bFound = true;
+            ModifiedIndex = i;
+            break;
         }
     }
 
@@ -164,23 +161,20 @@ bool HandleConfigureGridSize(
         BeginGridEdit();
         int32 NewIndex = ArrayHelper.AddValue();
         FSpatialHashRuntimeGrid* NewGrid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(NewIndex));
-        if (NewGrid)
-        {
-            NewGrid->GridName = FName(*GridName);
-            NewGrid->CellSize = GridCellSize;
-            NewGrid->LoadingRange = LoadingRange;
-            NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
-            NewGrid->Priority = Priority;
+        NewGrid->GridName = FName(*GridName);
+        NewGrid->CellSize = GridCellSize;
+        NewGrid->LoadingRange = LoadingRange;
+        NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
+        NewGrid->Priority = Priority;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-            NewGrid->Origin = FVector2D::ZeroVector;
+        NewGrid->Origin = FVector2D::ZeroVector;
 #endif
-            NewGrid->DebugColor = FLinearColor::MakeRandomColor();
-            NewGrid->bClientOnlyVisible = false;
-            NewGrid->HLODLayer = nullptr;
+        NewGrid->DebugColor = FLinearColor::MakeRandomColor();
+        NewGrid->bClientOnlyVisible = false;
+        NewGrid->HLODLayer = nullptr;
 
-            bCreated = true;
-            ModifiedIndex = NewIndex;
-        }
+        bCreated = true;
+        ModifiedIndex = NewIndex;
     }
 
     if (!bFound && !bCreated)
@@ -189,10 +183,7 @@ bool HandleConfigureGridSize(
         for (int32 i = 0; i < ArrayHelper.Num(); ++i)
         {
             FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
-            if (Grid)
-            {
-                AvailableGrids.Add(Grid->GridName.ToString());
-            }
+            AvailableGrids.Add(Grid->GridName.ToString());
         }
 
         FString AvailableStr = AvailableGrids.Num() > 0
@@ -211,17 +202,14 @@ bool HandleConfigureGridSize(
     for (int32 i = 0; i < ArrayHelper.Num(); ++i)
     {
         FSpatialHashRuntimeGrid* Grid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(i));
-        if (Grid)
-        {
-            TSharedPtr<FJsonObject> GridObj = McpHandlerUtils::CreateResultObject();
-            GridObj->SetStringField(TEXT("gridName"), Grid->GridName.ToString());
-            GridObj->SetNumberField(TEXT("cellSize"), Grid->CellSize);
-            GridObj->SetNumberField(TEXT("loadingRange"), Grid->LoadingRange);
-            GridObj->SetBoolField(TEXT("blockOnSlowStreaming"), Grid->bBlockOnSlowStreaming);
-            GridObj->SetNumberField(TEXT("priority"), Grid->Priority);
-            GridObj->SetBoolField(TEXT("modified"), i == ModifiedIndex);
-            GridsArray.Add(MakeShared<FJsonValueObject>(GridObj));
-        }
+        TSharedPtr<FJsonObject> GridObj = McpHandlerUtils::CreateResultObject();
+        GridObj->SetStringField(TEXT("gridName"), Grid->GridName.ToString());
+        GridObj->SetNumberField(TEXT("cellSize"), Grid->CellSize);
+        GridObj->SetNumberField(TEXT("loadingRange"), Grid->LoadingRange);
+        GridObj->SetBoolField(TEXT("blockOnSlowStreaming"), Grid->bBlockOnSlowStreaming);
+        GridObj->SetNumberField(TEXT("priority"), Grid->Priority);
+        GridObj->SetBoolField(TEXT("modified"), i == ModifiedIndex);
+        GridsArray.Add(MakeShared<FJsonValueObject>(GridObj));
     }
 
     // The grid as it now stands: a field left out keeps the grid's own value, which the reply printed as the default.

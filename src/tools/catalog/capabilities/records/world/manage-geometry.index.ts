@@ -24,9 +24,10 @@ import { MANAGE_GEOMETRY_FOLDS } from '../folds/manage-geometry.folds.js';
 // operations/deform/optimize), so concatenating them preserves that order
 // verbatim. Keep that historical order: the generated registry sorts by id, so
 // re-sorting here only reshuffles generated output.
-// The whole tool compiles out of a UE 5.0 build: its handler is MCP_HAS_FULL_GEOMETRY_SCRIPT (5.1 and later).
+// The whole tool compiles out of a UE 5.0 build: its handler is MCP_HAS_FULL_GEOMETRY_SCRIPT (5.1 and later). A record
+// that declares a later version keeps it (the collision family, 5.4).
 const fromEngine51 = (record: CapabilityRecordSource): CapabilityRecordSource =>
-  ({ ...record, availability: { ...record.availability, minEngineVersion: '5.1' } });
+  ({ ...record, availability: { ...record.availability, minEngineVersion: record.availability.minEngineVersion ?? '5.1' } });
 
 /** The authored records before folding; per-action contract tests pin these. */
 export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [

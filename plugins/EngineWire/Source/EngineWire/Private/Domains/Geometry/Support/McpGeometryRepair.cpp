@@ -49,7 +49,7 @@ bool HandleFillHoles(UEngineWireSubsystem* Self, const FString& RequestId,
     FGeometryScriptFillHolesOptions FillOptions;
     FillOptions.FillMethod = EGeometryScriptFillHolesMethod::Automatic;
 
-    // UE 5.7: FillAllMeshHoles now takes 5 arguments (added NumFilledHoles and NumFailedHoleFills out params)
+    // FillAllMeshHoles reports how many holes it filled and how many it could not.
     int32 NumFilledHoles = 0;
     int32 NumFailedHoleFills = 0;
 

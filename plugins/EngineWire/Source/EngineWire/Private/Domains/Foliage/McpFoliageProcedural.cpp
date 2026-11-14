@@ -149,16 +149,20 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
 
   Package->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(Spawner);
+  // Saved before the volume's undo step opens: a save inside it is a write no undo reverts.
+  McpSafeAssetSave(Spawner);
 
+  // The volume, its brush, its spawner and the simulation's instances are one undo step, closed before the reply.
+  TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
   AProceduralFoliageVolume *Volume = Cast<AProceduralFoliageVolume>(
       SpawnActorInActiveWorld<AActor>(AProceduralFoliageVolume::StaticClass(),
                                       Location, FRotator::ZeroRotator, Name));
   if (!Volume) {
+    if (SpawnStep) SpawnStep->Cancel(); // nothing was added
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to spawn volume"), TEXT("SPAWN_FAILED"));
     return true;
   }
-  McpSafeAssetSave(Spawner);
   // A spawned volume has no brush: scaling it left bounds of zero, an area with no tiles to fill.
   VolumeHelpers::CreateBoxBrushForVolume(Volume, Size * 0.5);
 
@@ -168,6 +172,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
     ProcComp->TileOverlap = 0.0f;
     bResimulated = McpResimulateInEditor(Volume) && ProcComp->HasSpawnedAnyInstances();
   } else {
+    SpawnStep.Reset();
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Procedural foliage component not available on spawned volume"),
                         TEXT("COMPONENT_NOT_FOUND"));
@@ -185,6 +190,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
   McpHandlerUtils::AddVerification(Resp, Volume);
   McpHandlerUtils::AddVerification(Resp, Spawner);
 
+  SpawnStep.Reset();
   // A simulation that failed placed nothing; it used to be reported as a success.
   SendAutomationResponse(RequestingSocket, RequestId, bResimulated,
                          bResimulated ? FString(TEXT("Procedural foliage created"))

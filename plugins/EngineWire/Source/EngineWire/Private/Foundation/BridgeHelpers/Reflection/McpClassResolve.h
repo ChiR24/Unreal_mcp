@@ -202,6 +202,32 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   return nullptr;
 }
 
+// A struct from any spelling a request uses: a /Script path (/Script/CoreUObject.Vector), a user struct's object path
+// (/Game/Data/S_Row.S_Row) or package path (/Game/Data/S_Row), or the short name of a loaded struct with or without the
+// F a C++ name carries (Vector, FVector, S_Row), a native one first. Null when none resolves; a miss logs nothing.
+static inline UScriptStruct *McpResolveStructByName(const FString &Identifier) {
+  const FString Name = Identifier.TrimStartAndEnd();
+  if (Name.IsEmpty())
+    return nullptr;
+  if (!FPackageName::IsShortPackageName(Name)) {
+    if (UScriptStruct *Struct = LoadObject<UScriptStruct>(nullptr, *Name, nullptr, LOAD_NoWarn | LOAD_Quiet))
+      return Struct;
+    return Name.Contains(TEXT(".")) ? nullptr
+                                    : LoadObject<UScriptStruct>(nullptr, *(Name + TEXT(".") + FPackageName::GetShortName(Name)),
+                                                                nullptr, LOAD_NoWarn | LOAD_Quiet);
+  }
+  const FString Unprefixed = Name.StartsWith(TEXT("F"), ESearchCase::CaseSensitive) ? Name.Mid(1) : Name;
+  UScriptStruct *Found = nullptr;
+  for (TObjectIterator<UScriptStruct> It; It; ++It) {
+    if (It->GetName().Equals(Name, ESearchCase::IgnoreCase) || It->GetName().Equals(Unprefixed, ESearchCase::IgnoreCase)) {
+      if (It->GetPathName().StartsWith(TEXT("/Script/")))
+        return *It;
+      Found = Found ? Found : *It;
+    }
+  }
+  return Found;
+}
+
 // Why ClassName names no class, as a find says it: the forms a class takes, and where an asset of that name lives
 // (a wrong folder was the usual miss). A find that answered 0 for a class that does not exist read like a level
 // with none of them.

@@ -52,7 +52,7 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
             return true;
         }
 
-        UClass* AbilityClass = ResolveClassFromAssetOrScriptPath(AbilityPath, UGameplayAbility::StaticClass());
+        UClass* AbilityClass = ResolveGASClass(AbilityPath, UGameplayAbility::StaticClass());
         if (!AbilityClass)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,

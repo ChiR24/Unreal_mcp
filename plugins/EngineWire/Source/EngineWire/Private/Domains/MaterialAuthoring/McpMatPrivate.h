@@ -224,11 +224,8 @@ inline bool SanitizeMaterialPathOrReply(UEngineWireSubsystem* Bridge, const FStr
 // Declares Material*, Function*, HostOuter (whichever is non-null), and X/Y.
 // Exactly one of {Material, Function} will be non-null on success.
 #define LOAD_MATERIAL_OR_FUNCTION_OR_RETURN()                                  \
-  FString AssetPath;                                                           \
-  if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||            \
-       AssetPath.IsEmpty()) &&                                                 \
-      (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||         \
-       AssetPath.IsEmpty())) {                                                 \
+  FString AssetPath = McpGetFirstStringField(Payload, {TEXT("assetPath"), TEXT("materialPath")}); \
+  if (AssetPath.IsEmpty()) {                                                   \
     Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."), \
                         TEXT("INVALID_ARGUMENT"));                             \
     return true;                                                               \

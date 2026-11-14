@@ -60,6 +60,8 @@ describe('a value the engine answers with a fatal error is refused first', () =>
     expect(valid).toBeGreaterThan(-1);
     expect(helper).toContain('PackagePath.Len() >= NAME_SIZE');
     expect(valid).toBeLessThan(helper.indexOf('UPackage *Package = McpCreatePackageOrNull(PackagePath);'));
+    // Every bare create refuses a loaded package that already holds an asset, whatever its own check missed.
+    expect(helper).toContain('return Loaded && Loaded->FindAssetInPackage() ? nullptr : CreatePackage(*PackagePath);');
     for (const file of [
       ['AssetWorkflow', 'Structs', 'McpAssetStructsLifecycle.cpp'],
       ['AssetWorkflow', 'Structs', 'McpAssetStructsAssetOpsRename.cpp'],
@@ -84,7 +86,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
   it('no handler hands the engine a package name it stops the editor on', () => {
     // Read as written: the comment strip would cut the line at the "//" the check names.
     expect(readFileSync(join(PRIVATE, 'Foundation', 'BridgeHelpers', 'Assets', 'McpAssetCreation.h'), 'utf8'))
-      .toContain('PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE ? nullptr : CreatePackage(*PackagePath)');
+      .toContain('if (PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE)');
     const bare = filesNaming('CreatePackage(')
       .filter((file) => !/Tests?\.cpp$/u.test(file) && !file.endsWith('McpAssetCreation.h'))
       .filter((file) => /(?<!\w)CreatePackage\(/u.test(strip(readFileSync(join(PRIVATE, file), 'utf8'))));
@@ -250,7 +252,9 @@ describe('a value the engine answers with a fatal error is refused first', () =>
     const create = code('Domains', 'WidgetAuthoring', 'Animation', 'McpWidgetAnimCore.cpp');
     const held = create.indexOf('Validity == EValidatorResult::AlreadyInUse || FindObject<UObject>(WidgetBP, *AnimationName) != nullptr');
     expect(held).toBeGreaterThan(-1);
-    expect(held).toBeLessThan(create.indexOf('NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName)'));
+    // Made by the shared creation (Support/McpWidgetGuidReg.cpp), called after the check.
+    expect(held).toBeLessThan(create.indexOf('McpCreateWidgetAnimation(WidgetBP, AnimationName,'));
+    expect(code('Domains', 'WidgetAuthoring', 'Support', 'McpWidgetGuidReg.cpp')).toContain('NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName)');
     expect(create).toContain('INameValidatorInterface::GetErrorString(AnimationName, Validity)');
   });
 

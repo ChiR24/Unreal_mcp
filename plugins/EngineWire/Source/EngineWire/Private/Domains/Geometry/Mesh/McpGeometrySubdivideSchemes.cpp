@@ -156,9 +156,6 @@ bool SubdivideByScheme(UEngineWireSubsystem* Self, const FString& RequestId, TSh
     Result->SetNumberField(TEXT("trianglesBefore"), TrianglesBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), Target.Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("cageFaces"), CageFaces);
-    Result->SetNumberField(TEXT("iterations"), Level);
-    Result->SetNumberField(TEXT("originalTriangles"), TrianglesBefore);
-    Result->SetNumberField(TEXT("subdividedTriangles"), Target.Mesh->GetTriangleCount());
     McpHandlerUtils::AddVerification(Result, Target.Actor);
     Self->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Mesh subdivided (%s, level %d)"), *Scheme, Level), Result);
 #else

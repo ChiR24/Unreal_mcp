@@ -15,7 +15,8 @@ const read = (...segments: readonly string[]): string => readFileSync(join(GATEW
 
 describe('minEngineVersion', () => {
   // Each version is the guard its handler compiles under: MCP_HAS_IKRIG_BATCH_RETARGET (5.8), the skinning calls of
-  // MCP_HAS_GEOMETRY_SCRIPT (5.5), MCP_HAS_METASOUND_FRONTEND_V2 (5.5), MCP_HAS_FULL_GEOMETRY_SCRIPT (5.1).
+  // MCP_HAS_GEOMETRY_SCRIPT (5.5), MCP_HAS_METASOUND_FRONTEND_V2 (5.5), MCP_HAS_FULL_GEOMETRY_SCRIPT (5.1), and the
+  // mesh collision family's own refusal below 5.4.
   it('marks the capabilities older engines compile out', () => {
     const index = capabilityIndex();
     const declared = (id: string): string | undefined => index.byId.get(id)?.availability.minEngineVersion;
@@ -24,7 +25,9 @@ describe('minEngineVersion', () => {
     expect(declared('manage_audio.get_metasound_graph')).toBe('5.5');
     const geometry = index.byParentTool.get('manage_geometry') ?? [];
     expect(geometry.length).toBeGreaterThan(0);
-    expect(geometry.filter((record) => record.availability.minEngineVersion !== '5.1')).toEqual([]);
+    expect(declared('manage_geometry.configure_mesh_collision')).toBe('5.4');
+    expect(geometry.filter((record) => record.id !== 'manage_geometry.configure_mesh_collision' &&
+      record.availability.minEngineVersion !== '5.1')).toEqual([]);
   });
 
   it('names a later 5.x, never 5.0 (every supported engine) or a malformed version', () => {

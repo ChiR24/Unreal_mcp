@@ -1,6 +1,11 @@
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponses.h"
-#include "Domains/Environment/McpEnvShared.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "LandscapeLayerInfoObject.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Safety/McpSafeOperations.h"
 #include "Domains/Landscape/McpLandscapeShared.h"
 
 namespace McpLandscapeHandlers {

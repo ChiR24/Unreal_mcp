@@ -3,6 +3,7 @@
 #include "K2Node_Event.h"
 #include "Domains/BlueprintGraph/Code/McpGraphCodeParse.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
+#include "Foundation/Blueprint/McpBlueprintUtils.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -148,24 +149,11 @@ static UEdGraph* FindTargetGraph(
     }
     else
     {
-        for (UEdGraph* Graph : Blueprint->FunctionGraphs)
-        {
-            if (Graph->GetName() == GraphName)
-            {
-                TargetGraph = Graph;
-                break;
-            }
-        }
+        // A function graph first, then an event graph of that name.
+        TargetGraph = McpBlueprintUtils::FindGraphNamed(Blueprint->FunctionGraphs, GraphName);
         if (!TargetGraph)
         {
-            for (UEdGraph* Graph : Blueprint->UbergraphPages)
-            {
-                if (Graph->GetName() == GraphName)
-                {
-                    TargetGraph = Graph;
-                    break;
-                }
-            }
+            TargetGraph = McpBlueprintUtils::FindGraphNamed(Blueprint->UbergraphPages, GraphName);
         }
     }
 
@@ -175,7 +163,7 @@ static UEdGraph* FindTargetGraph(
         Blueprint->GetAllGraphs(AllGraphs);
         for (UEdGraph* Graph : AllGraphs)
         {
-            if (Graph->GetName() == GraphName)
+            if (Graph && Graph->GetName() == GraphName)
             {
                 TargetGraph = Graph;
                 break;

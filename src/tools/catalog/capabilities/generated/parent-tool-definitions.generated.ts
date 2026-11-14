@@ -15389,10 +15389,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Step id -> node id for every node the batch created."
         },
-        "nodeName": {
-          "type": "string",
-          "description": "Expression object name."
-        },
         "nodeType": {
           "type": "string",
           "description": "Expression class name."
@@ -22097,7 +22093,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_gpu_simulation",
             "connect_pins"
           ],
-          "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression.\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
+          "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
         },
         "emitter": {
           "type": "string",

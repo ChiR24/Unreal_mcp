@@ -110,8 +110,8 @@ void ApplyConversionCollision(UStaticMesh* Mesh, const FString& Mode)
     // from converted meshes even though the asset itself rendered fine. Give the asset a body (see Mode) and cook it
     // synchronously, so the converted mesh is standable in PIE without a separate round-trip.
     //
-    // Built from explicit convex-hull vertices in body space via the long-stable UBodySetup/FKAggregateGeom API
-    // rather than version-drifting Geometry Script static-mesh collision helpers.
+    // Built through UBodySetup/FKAggregateGeom, stable across 5.0 to 5.8, rather than Geometry Script's static-mesh
+    // collision helpers, which drift between versions.
     UBodySetup* BodySetup = Mesh->GetBodySetup();
     if (!BodySetup)
     {

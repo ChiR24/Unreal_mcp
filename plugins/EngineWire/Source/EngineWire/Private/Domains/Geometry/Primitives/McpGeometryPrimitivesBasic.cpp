@@ -109,7 +109,7 @@ bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
 {
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides")}, 16);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -148,7 +148,7 @@ bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
         GetJsonNumberField(Payload, TEXT("baseRadius"), DefaultBaseRadius);
     double TopRadius = GetJsonNumberField(Payload, TEXT("topRadius"), 0.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides")}, 16);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -181,8 +181,7 @@ bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Length = GetJsonNumberField(Payload, TEXT("length"), GetJsonNumberField(Payload, TEXT("height"), 100.0));
     int32 HemisphereSteps = DeclaredSegments(Payload, {TEXT("numRings")}, 4);
-    // radialSegments is the declared capsule name, so it wins over the numSides fallback.
-    int32 Segments = DeclaredSegments(Payload, {TEXT("radialSegments"), TEXT("numSides")}, 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("radialSegments")}, 16);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

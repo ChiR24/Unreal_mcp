@@ -64,7 +64,7 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
 
-        UClass* EffectClass = ResolveGameplayEffectClassFromPath(EffectPath);
+        UClass* EffectClass = ResolveGASClass(EffectPath, UGameplayEffect::StaticClass());
         if (!EffectClass)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,

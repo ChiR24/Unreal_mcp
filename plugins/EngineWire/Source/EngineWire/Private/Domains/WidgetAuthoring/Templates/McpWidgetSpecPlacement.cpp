@@ -217,13 +217,13 @@ UWidgetAnimation* McpAddOpacityAnimation(UWidgetBlueprint* WidgetBP, const FStri
     {
         return nullptr;
     }
-    UWidgetAnimation* Animation = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
-    Animation->MovieScene = NewObject<UMovieScene>(Animation, FName(*AnimationName), RF_Transactional);
-    UMovieScene* Scene = Animation->GetMovieScene();
-    Scene->SetDisplayRate(FFrameRate(20, 1));
-    const FFrameTime End = Keys.Last().X * Scene->GetTickResolution();
-    Scene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), End.FrameNumber + 1));
-    RegisterAnimationGuid(WidgetBP, Animation);
+    // A last key past what the scene's tick rate holds (a fadeTime has no ceiling) makes no animation.
+    FString EndError;
+    UWidgetAnimation* Animation = McpCreateWidgetAnimation(WidgetBP, AnimationName, Keys.Last().X, EndError);
+    if (!Animation)
+    {
+        return nullptr;
+    }
     for (const FVector2D& Key : Keys)
     {
         TSharedPtr<FJsonObject> KeyPayload = MakeShared<FJsonObject>();

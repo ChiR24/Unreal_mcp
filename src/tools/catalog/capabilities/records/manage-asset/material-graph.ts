@@ -55,7 +55,6 @@ const NODE_DETAILS_OUT = schema({
   success: bool('Operation succeeded.'),
   nodeId: str('Resolved node ID.'),
   nodeType: str('Expression class name.'),
-  nodeName: str('Expression object name.'),
   assetType: str('Material or MaterialFunction.'),
   parameterName: str('Parameter name, for parameter expressions.'),
   scalarDefault: num('DefaultValue, for scalar parameter expressions.'),

@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Domains/Blueprint/Timeline/McpBPTimeline.h"
 
 #include "AnimGraphNode_Base.h"
@@ -121,11 +122,7 @@ void CreateDynamicNode(
     {
         FString StructPath;
         Context.Payload->TryGetStringField(TEXT("structPath"), StructPath);
-        StructType = StructPath.IsEmpty() ? nullptr : LoadObject<UScriptStruct>(nullptr, *StructPath);
-        if (!StructType && !StructPath.IsEmpty() && !StructPath.Contains(TEXT(".")))
-        {
-            StructType = LoadObject<UScriptStruct>(nullptr, *McpToObjectPath(StructPath));
-        }
+        StructType = McpResolveStructByName(StructPath);
         if (!StructType)
         {
             Context.SendError(

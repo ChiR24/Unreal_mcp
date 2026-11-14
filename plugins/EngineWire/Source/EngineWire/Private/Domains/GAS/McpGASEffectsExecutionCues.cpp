@@ -63,7 +63,7 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
         // Accepts the package path create_execution_calculation returns
         // ("/Game/X/GEC"), the generated-class form ("/Game/X/GEC.GEC_C") and
         // native "/Script/Module.Class" references.
-        UClass* CalcClass = ResolveClassFromAssetOrScriptPath(CalculationClassPath, UGameplayEffectExecutionCalculation::StaticClass());
+        UClass* CalcClass = ResolveGASClass(CalculationClassPath, UGameplayEffectExecutionCalculation::StaticClass());
         if (!CalcClass)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,

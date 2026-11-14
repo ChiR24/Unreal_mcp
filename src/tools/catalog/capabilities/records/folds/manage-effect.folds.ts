@@ -39,7 +39,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_niagara_system', selector: 'edit',
-    summary: 'Edit a Niagara system: add an emitter (an asset, or a copy of another system\'s), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.',
+    summary: 'Edit a Niagara system: add an emitter (an asset, or a copy of another system\'s), user parameters or parameter bindings, set parameter values or dynamic inputs (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below), emitter properties, GPU simulation, connect pins.',
     topics: ['niagara parameter', 'user parameter', 'emitter properties', 'dynamic input', 'gpu simulation', 'add emitter', 'copy emitter', 'gpu particles', 'particle lifetime', 'static switch', 'ribbon width', 'make the fire bigger or the smoke darker', 'make an explosion bigger'],
     members: {
       add_emitter: 'add_emitter_to_system', add_user_parameter: 'add_user_parameter', bind_parameter: 'bind_parameter_to_source', set_parameter_value: 'set_parameter_value',

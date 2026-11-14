@@ -69,11 +69,10 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bRing)
 {
     // A ring is a disc with a hole.
-    // The declared name wins: outerRadius for a ring, radius for a disc.
-    const TCHAR* const RadiusField = bRing ? TEXT("outerRadius") : TEXT("radius");
-    const double Radius = GetJsonNumberField(Payload, RadiusField, GetJsonNumberField(Payload, bRing ? TEXT("radius") : TEXT("outerRadius"), 50.0));
+    // Each reads its declared name: outerRadius for a ring, radius for a disc.
+    const double Radius = GetJsonNumberField(Payload, bRing ? TEXT("outerRadius") : TEXT("radius"), 50.0);
     const double HoleRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), bRing ? 25.0 : 0.0);
-    const int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, bRing ? 32 : 16);
+    const int32 Segments = DeclaredSegments(Payload, {TEXT("numSides")}, bRing ? 32 : 16);
 
     // Local space: the actor transform is the single source of placement.
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());

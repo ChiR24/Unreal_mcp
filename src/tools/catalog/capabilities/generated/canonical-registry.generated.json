@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "43a82f49e4e32b54",
+  "catalogRevision": "df795076f812717b",
   "recordCount": 489,
   "records": [
     {
@@ -63810,7 +63810,7 @@
           "chase the player",
           "enemy that follows the player"
         ],
-        "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step.",
+        "summary": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step. add_node, add_subnode, connect, break_connections, set_node_properties and remove_node edit the editor graph, which needs UE 5.3 or later (NOT_SUPPORTED below).",
         "whenToUse": [
           "edit=add_composite: A Behavior Tree needs a Selector, Sequence or Simple Parallel branch.",
           "edit=add_task: A Behavior Tree branch needs a leaf task. An enemy that chases the player is a Sequence with a MoveTo task whose Blackboard key (an Object key such as TargetActor) holds the player, run on its AI controller with run_behavior_tree.",
@@ -64014,7 +64014,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step.",
+          "title": "Edit a Behavior Tree graph: add composite, task, decorator, service or generic nodes and subnodes, connect or break connections, configure or remove nodes. Each edit is one undo step. add_node, add_subnode, connect, break_connections, set_node_properties and remove_node edit the editor graph, which needs UE 5.3 or later (NOT_SUPPORTED below).",
           "input": {
             "action": "edit_behavior_tree",
             "behaviorTreePath": "/Game/AI/BT_Enemy",
@@ -64212,7 +64212,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "105aa3ca51bd75b43e31bc9959279f29346873e99be6787cfff022282644c222",
-        "content": "b12297cac4c08c218bb99d2ec69a22ae7d679f818d4a635b5e1b8d3199bd3f83"
+        "content": "efa66c1901b05bee55d98dbe03fb15370a7fb815804652892f71530692191ebe"
       }
     },
     {
@@ -78246,7 +78246,7 @@
           "make the fire bigger or the smoke darker",
           "make an explosion bigger"
         ],
-        "summary": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
+        "summary": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below), emitter properties, GPU simulation, connect pins.",
         "whenToUse": [
           "edit=add_emitter: System needs an emitter.",
           "edit=add_emitter: An emitter built in one system is wanted in another.",
@@ -78422,7 +78422,7 @@
                 "enable_gpu_simulation",
                 "connect_pins"
               ],
-              "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression.\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
+              "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
             }
           },
           "required": [
@@ -78502,7 +78502,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
+          "title": "Edit a Niagara system: add an emitter (an asset, or a copy of another system's), user parameters or parameter bindings, set parameter values or dynamic inputs (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below), emitter properties, GPU simulation, connect pins.",
           "input": {
             "action": "edit_niagara_system",
             "systemPath": "/Game/NS_Fire",
@@ -78732,8 +78732,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2e21962508bd592ea6e779785480165874a247cd663a7d6d98bfeda003e47831",
-        "content": "f59299d05869ba17a54e2a8a860559b6173d6a9fd1110d7f232c64789cfc2691"
+        "schema": "0dba74e2a496e121f65d16122628618d9f346a9f180166eb34fba82070bbbbe5",
+        "content": "620b8b5f9741d6faefa2158d243f4cd2114e89b9b9f74c6aef08699df7657f55"
       }
     },
     {
@@ -81565,7 +81565,7 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "minEngineVersion": "5.4"
       },
       "behavior": {
         "effect": "write",
@@ -81615,7 +81615,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "897f411f0a65fda2d44fe7604026c9fc8acba1847dee7b357db4a195192c8d24",
-        "content": "ad4c231cc0c2a9cf22ffe9f346648ffb3387cb80d928e2f17cf9cc8698fcfb30"
+        "content": "d05f8ce0b0bed663389dd921c06256606d4037eb8c27fdb3d05a1cf857cfd323"
       }
     },
     {
@@ -103997,7 +103997,7 @@
         "topics": [
           "configure_layer_blend"
         ],
-        "summary": "Add a Landscape Layer Blend node to a landscape material, listing the paint layers in order (layers; the first previews at full weight), each with its blend: weight, height or alpha. Every call adds a new node, at x, y (default 0, 0); wire its output with connect_nodes (blendNodeId). An unknown blend type is refused. The material recompiles and is saved unless save is false (saved).",
+        "summary": "Add a Landscape Layer Blend node to a landscape material, listing the paint layers in order (layers; the first previews at full weight), each with its blend: weight, height or alpha. Every call adds a new node, at x, y (default 0, 0); wire its output with connect_nodes (nodeId). An unknown blend type is refused. The material recompiles and is saved unless save is false (saved).",
         "whenToUse": [
           "A landscape material needs a Landscape Layer Blend node listing its paint layers, each with a weight, height or alpha blend.",
           "All named layers must be added to one blend node in one call (layers takes [{name, blendType}] or plain names)."
@@ -104121,7 +104121,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b77f44cbb0785528995121d3b937b5dbf14c9083b4a871d1b738192cd31934aa",
-        "content": "a598a49674160f04e13ba11391ec31f694a3d0aff6a220bf3f30f95335a76b7e"
+        "content": "fd33b286bb663c3b1d9d60dce3baacf24d10facbb3f7ad3f05d8234a0effc23c"
       }
     },
     {
@@ -105371,10 +105371,6 @@
               "type": "string",
               "description": "Expression class name."
             },
-            "nodeName": {
-              "type": "string",
-              "description": "Expression object name."
-            },
             "parameterName": {
               "type": "string",
               "description": "Parameter name, for parameter expressions."
@@ -105584,8 +105580,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "305cadc77ce79576349389661de57757ef7159697a0eb95534d8ef6f367192e0",
-        "content": "92c24d47ccfd6c04ab3719cd29281c0c93d5b3e978bfd8741b11e32722a2d9aa"
+        "schema": "e7e129bf1bf96d469dac7f7e047ed7dff5b6ea658d4a201d8de4acd15858cca8",
+        "content": "1e26fe0616dcb0cf951947a7c59ab3c381ce94c948dcca9df4c6cea901bfd088"
       }
     },
     {

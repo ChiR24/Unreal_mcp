@@ -270,10 +270,10 @@ bool HandleBakeVertexColors(UEngineWireSubsystem* Self, const FString& RequestId
     Result->SetNumberField(TEXT("coarseShare"), McpRoundTo(CoarseShare, 100.0));
     if (CoarseShare > CoarseShareWarning)
     {
-        Result->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray({FString::Printf(
+        McpHandlerUtils::AppendWarning(Result, FString::Printf(
             TEXT("%.0f%% of the surface lies in triangles longer than aoDistance (%.0f cm): each takes its masks from its three corners, "
                  "so a large flat face reads as dark or as edged as the places it meets its neighbours. Add vertices inside the large "
-                 "faces (loop_cut) and bake again."), CoarseShare * 100.0, Distance)}));
+                 "faces (loop_cut) and bake again."), CoarseShare * 100.0, Distance));
     }
     McpHandlerUtils::AddVerification(Result, Target->Actor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertex colours baked"), Result);

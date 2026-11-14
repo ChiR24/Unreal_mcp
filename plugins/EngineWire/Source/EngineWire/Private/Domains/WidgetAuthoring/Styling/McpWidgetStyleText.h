@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -55,7 +56,9 @@ inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Pa
     Applied.Add(MakeShared<FJsonValueString>(TEXT("copyStyleFrom")));
   }
   if (bFamily) {
-    UFont *Asset = LoadObject<UFont>(nullptr, *Family);
+    const FString SafeFamily = SanitizeProjectRelativePath(Family);
+    FString ResolvedFamily;
+    UFont *Asset = SafeFamily.IsEmpty() ? nullptr : McpLoadCanonicalAsset<UFont>(SafeFamily, ResolvedFamily);
     if (!Asset) {
       OutUnsupported = FString::Printf(TEXT("fontFamily '%s' is not a Font asset (e.g. /Engine/EngineFonts/Roboto)."), *Family);
       return false;

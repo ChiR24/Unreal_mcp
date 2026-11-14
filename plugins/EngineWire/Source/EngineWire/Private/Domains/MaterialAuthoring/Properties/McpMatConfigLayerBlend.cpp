@@ -7,25 +7,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("configure_layer_blend")) {
-    FString AssetPath;
-    if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) &&
-        (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty())) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' or 'materialPath'."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    // SECURITY: Validate path BEFORE loading asset
-    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
-      return true;
-
-    UMaterial *Material = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (!Material) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not load Material."),
-                          TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
-
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
     const TArray<TSharedPtr<FJsonValue>> *LayersArray;
     if (!Payload->TryGetArrayField(TEXT("layers"), LayersArray) ||
         LayersArray->Num() == 0) {
@@ -33,10 +15,6 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-
-    int32 BaseX = 0, BaseY = 0;
-    Payload->TryGetNumberField(TEXT("x"), BaseX);
-    Payload->TryGetNumberField(TEXT("y"), BaseY);
 
     // A landscape layer blend is one LandscapeLayerBlend expression whose
     // FLayerBlendInput entries name the layers; scalar weight parameters are not a layer blend.
@@ -52,11 +30,8 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
       return Text.IsEmpty() || Text.Contains(TEXT("Weight"), ESearchCase::IgnoreCase) ||
              Text.Contains(TEXT("Height"), ESearchCase::IgnoreCase) || Text.Contains(TEXT("Alpha"), ESearchCase::IgnoreCase);
     };
-    UMaterialExpressionLandscapeLayerBlend *BlendNode = NewObject<UMaterialExpressionLandscapeLayerBlend>(
-        Material, UMaterialExpressionLandscapeLayerBlend::StaticClass(), NAME_None, RF_Transactional);
-    BlendNode->MaterialExpressionEditorX = BaseX;
-    BlendNode->MaterialExpressionEditorY = BaseY;
-    TArray<FString> LayerNames;
+    // The layers are read before the node is made: a refusal after NewObject left an orphan expression under the host.
+    TArray<FLayerBlendInput> Inputs;
     for (int32 i = 0; i < LayersArray->Num(); ++i) {
       const TSharedPtr<FJsonObject> *LayerObj;
       FString LayerName;
@@ -80,29 +55,21 @@ bool HandleConfigureLayerBlend(UEngineWireSubsystem* Bridge, const FString& Requ
       Input.LayerName = FName(*LayerName);
       Input.BlendType = ParseBlendType(BlendType);
       Input.PreviewWeight = (i == 0) ? 1.0f : 0.0f;
-      BlendNode->Layers.Add(Input);
-      LayerNames.Add(LayerName);
+      Inputs.Add(Input);
     }
-    if (BlendNode->Layers.Num() == 0) {
+    if (Inputs.Num() == 0) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("No layer names found in 'layers' (use [{name, blendType?}] or [\"Name\"])"), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(BlendNode);
-    McpRecompileMaterialHost(Material);
-    Material->MarkPackageDirty();
-
+    UMaterialExpressionLandscapeLayerBlend *BlendNode = NewObject<UMaterialExpressionLandscapeLayerBlend>(
+        HostOuter, UMaterialExpressionLandscapeLayerBlend::StaticClass(), NAME_None, RF_Transactional);
+    BlendNode->Layers = Inputs;
+    // Placed like every adder: added to the host, recompiled, and answered with nodeId and the placement fields.
+    TSharedPtr<FJsonObject> Result = PlaceMaterialExpression(RequestId, Material, Function, BlendNode, X, Y);
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
-    const bool bSaved = bSave && McpSafeAssetSave(Material);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("saved"), bSaved);
+    Result->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(HostOuter));
     Result->SetNumberField(TEXT("layerCount"), BlendNode->Layers.Num());
-    Result->SetStringField(TEXT("blendNodeId"), MCP_NODE_ID(BlendNode));
-    Result->SetStringField(TEXT("expressionClass"), TEXT("MaterialExpressionLandscapeLayerBlend"));
-
-    Result->SetArrayField(TEXT("nodeIds"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(MCP_NODE_ID(BlendNode))});
 
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Layer blend configured with %d layers."),

@@ -21,7 +21,7 @@ static int32 ApplyMeshCollision(UDynamicMesh* Mesh, UDynamicMeshComponent* DMC, 
 bool HandleGenerateCollision(UEngineWireSubsystem* Self, const FString& RequestId,
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bComplex)
 {
-    // generate_complex_collision is convex decomposition into maxHullCount (or hullCount) hulls.
+    // generate_complex_collision is convex decomposition into maxHullCount (or its own hullCount) hulls.
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FString CollisionType = bComplex ? TEXT("convex_decomposition") : GetJsonStringField(Payload, TEXT("collisionType"), TEXT("convex"));
 
@@ -31,14 +31,14 @@ bool HandleGenerateCollision(UEngineWireSubsystem* Self, const FString& RequestI
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
     EGeometryScriptCollisionGenerationMethod Method = EGeometryScriptCollisionGenerationMethod::MinVolumeShapes;
     int32 MaxHulls = 1;
-    if (CollisionType == TEXT("box") || CollisionType == TEXT("boxes")) Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
-    else if (CollisionType == TEXT("sphere") || CollisionType == TEXT("spheres")) Method = EGeometryScriptCollisionGenerationMethod::MinimalSpheres;
-    else if (CollisionType == TEXT("capsule") || CollisionType == TEXT("capsules")) Method = EGeometryScriptCollisionGenerationMethod::Capsules;
+    if (CollisionType == TEXT("box")) Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
+    else if (CollisionType == TEXT("sphere")) Method = EGeometryScriptCollisionGenerationMethod::MinimalSpheres;
+    else if (CollisionType == TEXT("capsule")) Method = EGeometryScriptCollisionGenerationMethod::Capsules;
     else if (CollisionType == TEXT("convex")) Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
     else if (CollisionType == TEXT("convex_decomposition"))
     {
         Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
-        MaxHulls = FMath::Clamp(GetJsonIntField(Payload, TEXT("maxHullCount"), GetJsonIntField(Payload, TEXT("hullCount"), 8)), 1, 64);
+        MaxHulls = FMath::Clamp(GetJsonIntField(Payload, TEXT("maxHullCount"), bComplex ? GetJsonIntField(Payload, TEXT("hullCount"), 8) : 8), 1, 64);
     }
     else
     {

@@ -1,4 +1,5 @@
 #include "CoreMinimal.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Dom/JsonObject.h"
 #include "UObject/UnrealType.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -177,11 +178,7 @@ bool HandleStructPropertyAction(
             return Fail(TEXT("MISSING_PARAMETER"), TEXT("set_instanced_struct_property requires structType"));
         }
 
-        UScriptStruct* TargetStruct = FindObject<UScriptStruct>(nullptr, *StructType);
-        if (!TargetStruct)
-        {
-            TargetStruct = LoadObject<UScriptStruct>(nullptr, *StructType);
-        }
+        UScriptStruct* TargetStruct = McpResolveStructByName(StructType);
         if (!TargetStruct)
         {
             return Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Struct type not found: %s"), *StructType));

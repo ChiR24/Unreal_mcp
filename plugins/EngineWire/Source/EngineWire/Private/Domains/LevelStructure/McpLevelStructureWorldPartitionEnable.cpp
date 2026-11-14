@@ -26,11 +26,24 @@ bool HandleEnableWorldPartition(
     if (!World)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
         return true;
     }
 
     UWorldPartition* WorldPartition = World->GetWorldPartition();
+    // bUseExternalActors moves the level's actors into one-file-per-actor packages, the same conversion the World
+    // Settings "Use External Actors" toggle performs. True when it moved them.
+    const auto MoveActorsToExternalPackages = [&Payload, World]()
+    {
+        if (!GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false) || !World->PersistentLevel ||
+            World->PersistentLevel->IsUsingExternalActors())
+        {
+            return false;
+        }
+        World->PersistentLevel->SetUseExternalActors(true);
+        World->PersistentLevel->ConvertAllActorsToPackaging(true);
+        return true;
+    };
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);
@@ -52,14 +65,8 @@ bool HandleEnableWorldPartition(
         }
         WorldSettings->MarkPackageDirty();
         World->MarkPackageDirty();
-        // bUseExternalActors moves the level's actors into one-file-per-actor packages, the same conversion the
-        // World Settings "Use External Actors" toggle performs.
         const bool bExternalize = GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false);
-        if (bExternalize && World->PersistentLevel && !World->PersistentLevel->IsUsingExternalActors())
-        {
-            World->PersistentLevel->SetUseExternalActors(true);
-            World->PersistentLevel->ConvertAllActorsToPackaging(true);
-        }
+        MoveActorsToExternalPackages();
         ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), true);
         ResponseJson->SetBoolField(TEXT("usesExternalActors"), World->PersistentLevel && World->PersistentLevel->IsUsingExternalActors());
         ResponseJson->SetBoolField(TEXT("requiresSaveAndReload"), true);
@@ -80,13 +87,13 @@ bool HandleEnableWorldPartition(
     }
 
     FString Message;
+    bool bMoved = false;
     if (WorldPartition)
     {
         Message = TEXT("World Partition is enabled for this level");
-        if (GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false) && World->PersistentLevel && !World->PersistentLevel->IsUsingExternalActors())
+        bMoved = MoveActorsToExternalPackages();
+        if (bMoved)
         {
-            World->PersistentLevel->SetUseExternalActors(true);
-            World->PersistentLevel->ConvertAllActorsToPackaging(true);
             Message = TEXT("World Partition is enabled for this level; actors moved to external packages");
         }
         ResponseJson->SetBoolField(TEXT("usesExternalActors"), World->PersistentLevel && World->PersistentLevel->IsUsingExternalActors());
@@ -96,6 +103,12 @@ bool HandleEnableWorldPartition(
         Message = TEXT("World Partition is not enabled for this level");
     }
 
+    // A call that changed nothing answers so, without the save note a change carries.
+    if (!bMoved)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        return true;
+    }
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }

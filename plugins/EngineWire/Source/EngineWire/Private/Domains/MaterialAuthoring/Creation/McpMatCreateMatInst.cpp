@@ -67,28 +67,26 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    // savePath is the published spelling (reading only `path` once dropped it and created
-    // the asset under the default folder while reporting success); path is the legacy one.
-    FString RequestedPath = GetJsonStringField(Payload, TEXT("savePath"));
-    if (RequestedPath.IsEmpty()) {
-      RequestedPath = GetJsonStringField(Payload, TEXT("path"));
-    }
-    if (!PrepareNewMaterialAsset(Bridge, RequestId, Socket, GetJsonStringField(Payload, TEXT("name")),
-                                 RequestedPath, TEXT("/Game/Materials"), TEXT("MaterialInstanceConstant"),
-                                 Name, ValidatedPath, bParentFolderCreated)) {
-      return true;
-    }
+    // The parent before the new asset's folders are made: a call refused for its parent left them behind.
     // SECURITY: Validate parentMaterial path before loading
     if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("parentMaterial"), ParentMaterial))
       return true;
 
     // Any material interface: a child instance of another instance is how a material family is built, and loading
     // only a UMaterial refused every instance as a parent.
-    UMaterialInterface *Parent = LoadObject<UMaterialInterface>(nullptr, *ParentMaterial);
+    FString ResolvedParent;
+    UMaterialInterface *Parent = McpLoadCanonicalAsset<UMaterialInterface>(ParentMaterial, ResolvedParent);
     if (!Parent) {
       Bridge->SendAutomationError(Socket, RequestId,
                           TEXT("Could not load parent material (a Material or a Material Instance)."),
                           TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    // savePath is the published spelling (reading only `path` once dropped it and created the asset under the
+    // default folder while reporting success); path is an instances entry's.
+    if (!PrepareNewMaterialAsset(Bridge, RequestId, Socket, GetJsonStringField(Payload, TEXT("name")),
+                                 McpGetFirstStringField(Payload, {TEXT("savePath"), TEXT("path")}), TEXT("/Game/Materials"),
+                                 TEXT("MaterialInstanceConstant"), Name, ValidatedPath, bParentFolderCreated)) {
       return true;
     }
 

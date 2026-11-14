@@ -3,6 +3,8 @@
 #include "Animation/WidgetAnimation.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
+#include "Domains/Sequence/Validation/McpSeqFrameMath.h"
+#include "MovieScene.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EngineWireLog.h"
 #include "WidgetBlueprint.h"
@@ -74,6 +76,29 @@ void RegisterAnimationGuid(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animati
     {
         WidgetBP->Animations.Add(Animation);
     }
+}
+
+UWidgetAnimation* McpCreateWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName, double EndSeconds,
+                                           FString& OutError)
+{
+    // At the rate the new scene takes (its constructor's legacy conversion rate): past 35791 s at 60000 fps the end tick
+    // clamped to INT32_MAX and the +1 below wrapped it negative.
+    FFrameNumber EndTick;
+    if (!McpSequenceFrameMath::TrySecondsToFrame(EndSeconds, GetLegacyConversionFrameRate(), EndTick, OutError) ||
+        !McpSequenceFrameMath::TryAddFrames(EndTick, 1, EndTick, OutError))
+    {
+        return nullptr;
+    }
+    // The MovieScene at once: GetMovieScene() is null until it is set (the UMG editor's AnimationTabSummoner does the same).
+    UWidgetAnimation* Animation = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
+    Animation->MovieScene = NewObject<UMovieScene>(Animation, FName(*AnimationName), RF_Transactional);
+    UMovieScene* Scene = Animation->GetMovieScene();
+    Scene->SetDisplayRate(FFrameRate(20, 1)); // the UMG default for a widget animation
+    const FFrameTime End = EndSeconds * Scene->GetTickResolution();
+    Scene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), End.FrameNumber + 1));
+    // Registered and added to Animations, or the widget compiler's ensure fires.
+    RegisterAnimationGuid(WidgetBP, Animation);
+    return Animation;
 }
 
 void RemoveWidgetAnimation(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation)

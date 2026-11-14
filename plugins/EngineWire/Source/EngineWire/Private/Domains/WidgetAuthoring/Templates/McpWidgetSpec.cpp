@@ -98,14 +98,16 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
 
 UTexture2D* McpLoadSpecTexture(const FString& TexturePath)
 {
-    return TexturePath.IsEmpty() ? nullptr
-        : Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath));
+    // Through the shared canonicalizer and the strict loader, as every other asset path a request names.
+    const FString SafePath = SanitizeProjectRelativePath(TexturePath);
+    FString Resolved;
+    return SafePath.IsEmpty() ? nullptr : McpLoadCanonicalAsset<UTexture2D>(SafePath, Resolved);
 }
 
 UMaterialInterface* McpLoadSpecMaterial(const FString& MaterialPath)
 {
-    return MaterialPath.IsEmpty() ? nullptr
-        : Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), nullptr, *MaterialPath));
+    FString Resolved, Error;
+    return MaterialPath.IsEmpty() ? nullptr : LoadMaterialForMcp(MaterialPath, Resolved, Error);
 }
 
 TSharedPtr<FJsonObject> McpParseWidgetSpec(const TCHAR* Json)

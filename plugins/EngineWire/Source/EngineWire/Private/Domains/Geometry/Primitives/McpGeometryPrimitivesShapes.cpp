@@ -20,7 +20,7 @@ bool HandleCreatePipe(UEngineWireSubsystem* Self, const FString& RequestId,
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    int32 RadialSteps = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 24);
+    int32 RadialSteps = DeclaredSegments(Payload, {TEXT("numSides")}, 24);
     int32 HeightSteps = DeclaredSegments(Payload, {TEXT("heightSegments")}, 1);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());

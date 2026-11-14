@@ -139,8 +139,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     }
 
     // Read back from the mesh: the reply used to echo the request.
-    bool bNaniteOn = false;
-    bNaniteOn = CreatedMesh && MCP_STATIC_MESH_NANITE_ENABLED(CreatedMesh);
+    const bool bNaniteOn = MCP_STATIC_MESH_NANITE_ENABLED(CreatedMesh);
     if (bNanite && !bNaniteOn)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(

@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 #include "Engine/DataTable.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -14,23 +15,6 @@
 namespace McpInspectHandlers
 {
 
-// Resolve a UScriptStruct by object path, asset path, or bare struct name.
-static UScriptStruct* ResolveStruct(const FString& Identifier)
-{
-    if (Identifier.IsEmpty())
-    {
-        return nullptr;
-    }
-
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-    if (FPackageName::IsShortPackageName(Identifier))
-    {
-        return FindFirstObject<UScriptStruct>(*Identifier, EFindFirstObjectOptions::NativeFirst);
-    }
-#endif
-    return LoadObject<UScriptStruct>(nullptr, *Identifier, nullptr, LOAD_NoWarn);
-}
-
 bool HandleInspectStructAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
@@ -43,7 +27,7 @@ bool HandleInspectStructAction(
         return true;
     }
 
-    UScriptStruct* Struct = ResolveStruct(StructPath);
+    UScriptStruct* Struct = McpResolveStructByName(StructPath);
     if (!Struct)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));

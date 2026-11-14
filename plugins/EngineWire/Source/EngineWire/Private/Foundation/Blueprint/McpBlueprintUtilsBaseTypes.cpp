@@ -1,5 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "EngineUtils.h"
 
 #include "EdGraphSchema_K2.h"
@@ -129,7 +130,7 @@ bool ResolveBaseType(
                 *Token, *StructPath);
             return false;
         }
-        if (!SetStructPin(LoadObject<UScriptStruct>(nullptr, *StructPath), OutPin))
+        if (!SetStructPin(McpResolveStructByName(StructPath), OutPin))
         {
             OutError = FString::Printf(TEXT("Unresolved struct '%s'"), *StructPath);
             return false;
@@ -137,18 +138,10 @@ bool ResolveBaseType(
         return true;
     }
 
-    if (Token.Contains(TEXT("/Script/")) && SetStructPin(LoadObject<UScriptStruct>(nullptr, *Token), OutPin))
+    // A /Script path, a user struct's path, or a bare struct name with or without its F prefix.
+    if (UScriptStruct* Struct = McpResolveStructByName(Token))
     {
-        return true;
-    }
-    // A bare struct name, with or without its F prefix.
-    const FString StructName = Token.StartsWith(TEXT("F")) ? Token.Mid(1) : Token;
-    for (TObjectIterator<UScriptStruct> It; It; ++It)
-    {
-        if (It->GetName().Equals(StructName, ESearchCase::IgnoreCase))
-        {
-            return SetStructPin(*It, OutPin);
-        }
+        return SetStructPin(Struct, OutPin);
     }
     UEnum* Enum = FindObject<UEnum>(nullptr, *Token);
     // A bare enum name (EMovementMode) is no path FindObject takes: it was refused as an unknown type.

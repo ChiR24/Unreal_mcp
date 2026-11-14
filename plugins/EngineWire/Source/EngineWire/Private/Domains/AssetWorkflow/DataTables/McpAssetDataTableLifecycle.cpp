@@ -1,4 +1,5 @@
 #include "Domains/AssetWorkflow/DataTables/McpAssetDataTableShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Domains/AssetWorkflow/Structs/McpAssetStructsShared.h"
 
 
@@ -6,7 +7,7 @@ namespace
 {
     UScriptStruct* ResolveRowStruct(const FString& StructPath, TSharedPtr<FJsonObject>& OutResult)
     {
-        UScriptStruct* S = LoadObject<UScriptStruct>(nullptr, *StructPath);
+        UScriptStruct* S = McpResolveStructByName(StructPath);
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), *FString::Printf(TEXT("No struct at rowStructPath '%s'."), *StructPath)); }
         return S;
     }

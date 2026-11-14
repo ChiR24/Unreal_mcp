@@ -283,7 +283,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'bind_parameter_to_source', systemPath: '/Game/NS_Fire', parameterName: 'InitializeParticle.Color', sourceBinding: 'User.Tint' } }),
   buildRecord({ parentTool: T, id: `${T}.set_niagara_dynamic_input`, action: 'set_niagara_dynamic_input', family: F,
-    summary: 'Configure a Niagara dynamic input expression.', whenToUse: ['Expression-driven value needed.'], whenNotToUse: ['Use set_parameter_value.'],
+    summary: 'Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).', whenToUse: ['Expression-driven value needed.'], whenNotToUse: ['Use set_parameter_value.'],
     inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, targetNodeId: E.targetNodeId, moduleName: { type: 'string', description: 'Module (function call) name that owns inputName; alternative to targetNodeId.' }, inputName: E.inputName, dynamicInputScriptPath: E.dynamicInputScriptPath, replaceExisting: E.replaceExisting, save: SAVE }, required: ['inputName'], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'set_niagara_dynamic_input', systemPath: '/Game/NS_Fire', inputName: 'EmitterState.ScaleSpawnCountCurve', dynamicInputScriptPath: '/Niagara/DynamicInputs/Add/Add_Float.Add_Float' } }),

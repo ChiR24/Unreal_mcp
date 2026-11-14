@@ -74,7 +74,9 @@ bool HandleWidgetAuthoringAdvancedStyling(
         }
 
         // FontInfo.FontObject serves only a Font asset: a texture or a material was written under a success reply.
-        UObject* Loaded = FontPath.IsEmpty() ? nullptr : StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
+        const FString SafeFontPath = SanitizeProjectRelativePath(FontPath);
+        FString ResolvedFontPath;
+        UObject* Loaded = SafeFontPath.IsEmpty() ? nullptr : McpLoadCanonicalAsset<UObject>(SafeFontPath, ResolvedFontPath);
         UFont* FontObject = Cast<UFont>(Loaded);
         if (!FontPath.IsEmpty() && !FontObject)
         {

@@ -11,6 +11,7 @@
 
 #include "DynamicMeshEditor.h"
 #include "TransformTypes.h"
+#include "Misc/ScopeExit.h"
 
 namespace McpGeometryHandlers
 {
@@ -70,6 +71,7 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
 
     UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
     UDynamicMesh* Part = NewObject<UDynamicMesh>(GetTransientPackage());
+    ON_SCOPE_EXIT { Part->MarkAsGarbage(); }; // the transient copy goes on every way out
     FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     // lod render copies the mesh as it draws: for a Nanite mesh its fallback, often a twentieth of the source triangles.
     const bool bRender = GetJsonStringField(Payload, TEXT("lod")) == TEXT("render");
@@ -81,7 +83,6 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
     }
     if (Outcome != EGeometryScriptOutcomePins::Success)
     {
-        Part->MarkAsGarbage();
         Self->SendAutomationError(Socket, RequestId, Source ? FString::Printf(TEXT("Could not read geometry from %s"), *MeshPath)
                                                             : FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath),
                                   Source ? TEXT("MESH_READ_FAILED") : TEXT("ASSET_NOT_FOUND"));
@@ -98,7 +99,6 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
         if (!(*Placements)[Index]->TryGetObject(Placement) || !Placement->IsValid() || !ReadRepeatGrid(*Placement, Out.Grid)
             || !ReadSlotIds(*Placement, Slots, Out.SlotIds))
         {
-            Part->MarkAsGarbage();
             Self->SendAutomationError(Socket, RequestId, FString::Printf(
                 TEXT("placements[%d]: materialIds takes one entry per material slot of %s (%d), each an id 0 to %d or a list of them, and repeat count, rows and layers 1 to 1000"),
                 Index, *MeshPath, Slots, MAX_MATERIAL_ID), TEXT("INVALID_MESH_PLACEMENT"));
@@ -110,7 +110,6 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
     const int32 PartTriangles = Part->GetTriangleCount();
     if (Copies > MaxMeshCopies)
     {
-        Part->MarkAsGarbage();
         Self->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("placements come to %lld copies once repeated, more than %d; append them in several calls"), Copies, MaxMeshCopies), TEXT("INVALID_MESH_PLACEMENT"));
         return true;
@@ -118,18 +117,13 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
     const int64 Estimated = static_cast<int64>(Mesh->GetTriangleCount()) + PartTriangles * Copies;
     if (Estimated > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
-        Part->MarkAsGarbage();
         const TCHAR* Remedy = bRender ? TEXT("append fewer copies")
                                       : TEXT("lod \"render\" copies the mesh as it draws (a Nanite mesh's much lighter fallback), or append fewer copies");
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%lld copies of %d triangles would bring the mesh to ~%lld triangles (max %d): %s"),
             Copies, PartTriangles, Estimated, MAX_TRIANGLES_PER_DYNAMIC_MESH, Remedy), TEXT("POLYGON_LIMIT_EXCEEDED"));
         return true;
     }
-    if (!GuardMeshBudget(Self, RequestId, Socket, Estimated, TEXT("Append mesh")))
-    {
-        Part->MarkAsGarbage();
-        return true;
-    }
+    if (!GuardMeshBudget(Self, RequestId, Socket, Estimated, TEXT("Append mesh"))) return true;
 
     Part->ProcessMesh([&](const UE::Geometry::FDynamicMesh3& PartMesh)
     {
@@ -167,7 +161,6 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
             }
         });
     });
-    Part->MarkAsGarbage();
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

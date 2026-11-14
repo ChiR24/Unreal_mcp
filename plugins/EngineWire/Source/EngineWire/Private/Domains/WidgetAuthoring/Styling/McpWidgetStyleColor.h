@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetResolve.h"
 
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -12,6 +13,8 @@
 #include "Components/Widget.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Engine/Texture.h"
+#include "Slate/SlateTextureAtlasInterface.h"
 #include "Sound/SoundBase.h"
 #include "Styling/SlateBrush.h"
 #include "Styling/SlateColor.h"
@@ -151,9 +154,10 @@ inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FStri
                                *Widget->GetClass()->GetName(), Field);
     return false;
   }
-  UObject *Sound = SoundPath.IsEmpty()
-                       ? nullptr
-                       : StaticLoadObject(USoundBase::StaticClass(), nullptr, *SoundPath);
+  // Through the shared canonicalizer and the strict loader, as every other asset path a request names.
+  const FString SafeSoundPath = SanitizeProjectRelativePath(SoundPath);
+  FString ResolvedSoundPath;
+  UObject *Sound = SafeSoundPath.IsEmpty() ? nullptr : McpLoadCanonicalAsset<USoundBase>(SafeSoundPath, ResolvedSoundPath);
   if (!SoundPath.IsEmpty() && !Sound) {
     OutError = FString::Printf(TEXT("`%s` %s is not a sound asset; pass a SoundCue, SoundWave or ")
                                TEXT("MetaSound path such as /Game/Audio/SC_Click."), Field, *SoundPath);
@@ -264,8 +268,17 @@ inline bool McpApplyWidgetStyleConvenience(
   FString TexturePath;
   if (Payload->TryGetStringField(TEXT("texturePath"), TexturePath) &&
       !TexturePath.IsEmpty()) {
-    UObject *Texture = StaticLoadObject(UObject::StaticClass(), nullptr,
-                                        *TexturePath);
+    // Through the shared canonicalizer and the strict loader; a brush draws only a texture, a material or a texture
+    // atlas (FSlateBrush ResourceObject's AllowedClasses), so another object is refused.
+    const FString SafeTexturePath = SanitizeProjectRelativePath(TexturePath);
+    FString ResolvedTexturePath;
+    UObject *Texture = SafeTexturePath.IsEmpty() ? nullptr : McpLoadCanonicalAsset<UObject>(SafeTexturePath, ResolvedTexturePath);
+    if (Texture && !Texture->IsA<UTexture>() && !Texture->IsA<UMaterialInterface>() &&
+        !Texture->GetClass()->ImplementsInterface(USlateTextureAtlasInterface::StaticClass())) {
+      OutUnsupported = FString::Printf(TEXT("`texturePath` %s is a %s, which a brush cannot draw; pass a texture or a material."),
+                                       *TexturePath, *Texture->GetClass()->GetName());
+      return false;
+    }
     if (!Texture) {
       OutUnsupported = FString::Printf(
           TEXT("`texturePath` %s could not be loaded; pass a canonical asset ")

@@ -147,10 +147,18 @@ inline bool McpAssetToolsCanCreate(const FString &Folder, const FString &Name, F
 
 // CreatePackage, except that a path the engine would stop the editor on answers null: CreatePackage is a Fatal log for
 // a name holding "//" (a folder ending in a slash joined to a name, or a name like "a//b"), and so is the FName under
-// it for one past the 1023 characters a name holds. Handlers make their packages through this, never the engine call.
+// it for one past the 1023 characters a name holds. A loaded package that already holds an asset answers null too:
+// CreatePackage hands it back, and the NewObject, factory or CreateBlueprint after it rebuilt that asset in place or,
+// for another class, brought the editor down. Every caller checks the registry or the disk first, which an asset made
+// in memory and never saved or registered passes. Handlers make their packages through this, never the engine call.
 static inline UPackage *McpCreatePackageOrNull(const FString &PackagePath)
 {
-  return PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE ? nullptr : CreatePackage(*PackagePath);
+  if (PackagePath.Contains(TEXT("//")) || PackagePath.Len() >= NAME_SIZE)
+  {
+    return nullptr;
+  }
+  const UPackage *Loaded = FindPackage(nullptr, *PackagePath);
+  return Loaded && Loaded->FindAssetInPackage() ? nullptr : CreatePackage(*PackagePath);
 }
 
 // The package for a NEW asset at PackagePath (/Game/Folder/Name), or null with OutError and OutCode when that is not

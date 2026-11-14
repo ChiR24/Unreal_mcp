@@ -5,35 +5,13 @@ namespace McpMaterialAuthoringHandlers
 bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("get_material_node_details")) {
-    FString AssetPath, NodeId;
-    // The published capability schema spells this `materialPath`, but this handler read only
-    // `assetPath`. With additionalProperties:false that made the capability uncallable by any
-    // input at all. Prefer the contract spelling and keep `assetPath` as the fallback.
-    if ((!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty()) &&
-        (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-    // A node is named by nodeId, or by its position in the expression list
-    // (expressionIndex, which was declared and never read).
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    // A node is named by nodeId, or by its position in the expression list.
+    FString NodeId;
     double ExpressionIndex = -1.0;
     const bool bHasIndex = Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex);
     if ((!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) && !bHasIndex) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' (or 'expressionIndex')."), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    // Validate path security BEFORE loading asset
-    if (!SanitizeMaterialPathOrReply(Bridge, RequestId, Socket, TEXT("path"), AssetPath))
-      return true;
-
-    UMaterial *Material = nullptr;
-    UMaterialFunction *Function = nullptr;
-    LoadMaterialOrFunction(AssetPath, Material, Function);
-    if (!Material && !Function) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("Could not load Material or Material Function."),
-                          TEXT("ASSET_NOT_FOUND"));
       return true;
     }
 
@@ -53,13 +31,11 @@ bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& R
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
     Result->SetStringField(TEXT("nodeType"), Expr->GetClass()->GetName());
-    Result->SetStringField(TEXT("nodeName"), Expr->GetName());
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
 
-    // Parameter defaults. Without these there is no way to read back what a parameter is
-    // actually set to: get_material_info lists names only, and get_node_properties returns
-    // nothing, so a written value could never be confirmed.
+    // Parameter defaults and function pins, which get_material_info does not list (get_node_properties answers them
+    // under its own keys).
     if (UMaterialExpressionScalarParameter *ScalarParam = Cast<UMaterialExpressionScalarParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), ScalarParam->ParameterName.ToString());
       Result->SetNumberField(TEXT("scalarDefault"), McpHandlerUtils::ReadableFloat(ScalarParam->DefaultValue));

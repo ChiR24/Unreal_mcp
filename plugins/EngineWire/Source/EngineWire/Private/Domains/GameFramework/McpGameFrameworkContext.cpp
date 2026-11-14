@@ -2,6 +2,7 @@
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
+#include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 
 DEFINE_LOG_CATEGORY(LogMcpGameFrameworkHandlers);
@@ -76,11 +77,7 @@ bool ValidateCommonFields(FActionContext& Context)
         Context.Path = SanitizedPath;
     }
 
-    Context.GameModeBlueprint = GetJsonStringField(Context.Payload, TEXT("gameModeBlueprint"));
-    if (Context.GameModeBlueprint.IsEmpty())
-    {
-        Context.GameModeBlueprint = GetJsonStringField(Context.Payload, TEXT("blueprintPath"));
-    }
+    Context.GameModeBlueprint = McpGetFirstStringField(Context.Payload, {TEXT("gameModeBlueprint"), TEXT("blueprintPath")});
 
     if (!Context.GameModeBlueprint.IsEmpty())
     {

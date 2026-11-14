@@ -39,7 +39,7 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     bool bClosedLoop = false;
     Payload->TryGetBoolField(TEXT("closedLoop"), bClosedLoop);
 
-    const FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName")});
+    const FString LayerName = GetJsonStringField(Payload, TEXT("layerName"));
     bool bRaiseTerrain = true;
     bool bLowerTerrain = true;
     Payload->TryGetBoolField(TEXT("raiseTerrain"), bRaiseTerrain);
@@ -91,13 +91,6 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     for (const FVector &WorldPoint : WorldPoints)
     {
         ULandscapeSplineControlPoint *ControlPoint = NewObject<ULandscapeSplineControlPoint>(SplinesComponent, NAME_None, RF_Transactional);
-        if (!ControlPoint)
-        {
-            OutMessage = TEXT("Failed to create landscape spline control point");
-            OutErrorCode = TEXT("CREATION_FAILED");
-            return false;
-        }
-
         ControlPoint->Location = SplineToWorld.InverseTransformPosition(WorldPoint);
         ControlPoint->Width = Width;
         ControlPoint->SideFalloff = SideFalloff;
@@ -126,23 +119,13 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
         SplineControlPoints->Add(ControlPoint);
     }
 
+    // Count - 1 open segments, and the closing one of a loop, its second point taken modulo the count.
     TArray<ULandscapeSplineSegment *> Segments;
-    for (int32 Index = 0; Index < ControlPoints.Num() - 1; ++Index)
+    const int32 SegmentCount = ControlPoints.Num() - 1 + (bClosedLoop && ControlPoints.Num() > 2 ? 1 : 0);
+    for (int32 Index = 0; Index < SegmentCount; ++Index)
     {
-        if (ULandscapeSplineSegment *Segment = McpAddLandscapeSplineSegment(SplinesComponent, ControlPoints[Index], ControlPoints[Index + 1]))
-        {
-            Segment->bRaiseTerrain = bRaiseTerrain;
-            Segment->bLowerTerrain = bLowerTerrain;
-            if (!LayerName.IsEmpty())
-            {
-                Segment->LayerName = FName(*LayerName);
-            }
-            Segments.Add(Segment);
-        }
-    }
-    if (bClosedLoop && ControlPoints.Num() > 2)
-    {
-        if (ULandscapeSplineSegment *Segment = McpAddLandscapeSplineSegment(SplinesComponent, ControlPoints.Last(), ControlPoints[0]))
+        if (ULandscapeSplineSegment *Segment = McpAddLandscapeSplineSegment(SplinesComponent, ControlPoints[Index],
+                                                                         ControlPoints[(Index + 1) % ControlPoints.Num()]))
         {
             Segment->bRaiseTerrain = bRaiseTerrain;
             Segment->bLowerTerrain = bLowerTerrain;
@@ -183,7 +166,7 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     Resp->SetBoolField(TEXT("terrainShaped"), bShaped);
 
     Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
-    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage() ? Landscape->GetPackage()->GetPathName() : Landscape->GetPathName());
+    Resp->SetStringField(TEXT("landscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("actorPath"), Landscape->GetPathName());
     Resp->SetStringField(TEXT("componentName"), SplinesComponent->GetName());
     Resp->SetStringField(TEXT("componentPath"), SplinesComponent->GetPathName());
@@ -253,7 +236,7 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Proxy));
     Resp->SetStringField(TEXT("actorPath"), Proxy->GetPathName());
     Resp->SetStringField(TEXT("sourceLandscapeName"), Landscape->GetActorLabel());
-    Resp->SetStringField(TEXT("sourceLandscapePath"), Landscape->GetPackage() ? Landscape->GetPackage()->GetPathName() : Landscape->GetPathName());
+    Resp->SetStringField(TEXT("sourceLandscapePath"), Landscape->GetPackage()->GetPathName());
     Resp->SetStringField(TEXT("sourceLandscapeActorPath"), Landscape->GetPathName());
     Resp->SetStringField(TEXT("landscapeGuid"), Landscape->GetLandscapeGuid().ToString());
     Resp->SetBoolField(TEXT("linkedToLandscape"), Proxy->GetLandscapeActor() == Landscape);

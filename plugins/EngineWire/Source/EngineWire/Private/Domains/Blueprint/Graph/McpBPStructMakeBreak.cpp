@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
@@ -25,10 +26,8 @@ static UStruct* McpResolveStructTarget(const FString& StructPath)
         }
         return nullptr;
     }
-    // One lookup covers both: a UUserDefinedStruct is a UScriptStruct. Trying the user-defined class
-    // first logged "Failed to find object 'UserDefinedStruct /Script/SlateCore.SlateColor'" for every
-    // native struct, and that line reached the reply as a warning.
-    return LoadObject<UScriptStruct>(nullptr, *StructPath);
+    // One lookup covers both: a UUserDefinedStruct is a UScriptStruct, and a miss logs nothing into the reply.
+    return McpResolveStructByName(StructPath);
 }
 
 // Locate a graph by name across the Blueprint's graph collections.

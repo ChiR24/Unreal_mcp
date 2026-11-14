@@ -1,7 +1,5 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
 
-#include "MaterialShared.h"
-#include "RHI.h"
 
 namespace McpMaterialAuthoringHandlers
 {
