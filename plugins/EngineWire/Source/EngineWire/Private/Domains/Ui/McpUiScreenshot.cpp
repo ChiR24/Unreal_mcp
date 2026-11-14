@@ -29,7 +29,7 @@ namespace McpUiHandlers {
 
 bool HandleScreenshotAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
-    bool bIsSystemControl, const FString &LowerSub,
+    const FString &LowerSub,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const TSharedPtr<FJsonObject> &Resp, bool &bSuccess, FString &Message,
@@ -42,7 +42,7 @@ bool HandleScreenshotAction(
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   Mode = Mode.TrimStartAndEnd().ToLower();
-  if (Mode.IsEmpty() && bIsSystemControl) {
+  if (Mode.IsEmpty()) {
     bResponseSent = true;
     return ScreenshotFallback();
   }
@@ -87,7 +87,7 @@ bool HandleScreenshotAction(
 
   UGameViewportClient *ViewportClient = nullptr;
   bool bUsingPieViewport = false;
-  if (GEditor && GEditor->PlayWorld) {
+  if (GEditor->PlayWorld) {
     if (UWorld *PlayWorld = GEditor->PlayWorld.Get()) {
       ViewportClient = PlayWorld->GetGameViewport();
       bUsingPieViewport = ViewportClient != nullptr;

@@ -89,7 +89,7 @@ struct FOutputSettingsSnapshot {
 bool ResolveGameModeOverride(const TSharedPtr<FJsonObject> &Payload, bool &bOutSet,
                              UClass *&OutClass, FString &OutMessage, FString &OutCode) {
   FString Path;
-  bOutSet = Payload.IsValid() && Payload->TryGetStringField(TEXT("gameModeOverride"), Path) &&
+  bOutSet = Payload->TryGetStringField(TEXT("gameModeOverride"), Path) &&
             !Path.IsEmpty();
   OutClass = nullptr;
   if (!bOutSet || Path.Equals(TEXT("level"), ESearchCase::IgnoreCase))
@@ -140,8 +140,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   const FOutputSettingsSnapshot Snapshot(Output);
 
   FString TextValue;
-  if (Payload.IsValid() &&
-      Payload->TryGetStringField(TEXT("outputDirectory"), TextValue) &&
+  if (Payload->TryGetStringField(TEXT("outputDirectory"), TextValue) &&
       !TextValue.IsEmpty()) {
     FString ResolvedDirectory;
     FString ValidationError;
@@ -153,14 +152,12 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
     }
     Output->OutputDirectory.Path = ResolvedDirectory;
   }
-  if (Payload.IsValid() &&
-      Payload->TryGetStringField(TEXT("fileNameFormat"), TextValue) &&
+  if (Payload->TryGetStringField(TEXT("fileNameFormat"), TextValue) &&
       !TextValue.IsEmpty())
     Output->FileNameFormat = TextValue;
 
   FIntPoint Resolution = Output->OutputResolution;
-  if (Payload.IsValid() &&
-      Payload->TryGetStringField(TEXT("resolution"), TextValue) &&
+  if (Payload->TryGetStringField(TEXT("resolution"), TextValue) &&
       !TextValue.IsEmpty()) {
     if (!TryParseResolution(TextValue, Resolution)) {
       OutMessage = TEXT("resolution must use WIDTHxHEIGHT format.");
@@ -170,7 +167,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
     Output->OutputResolution = Resolution;
   }
   int32 Width = 0, Height = 0;
-  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("width"), Width) &&
+  if (Payload->TryGetNumberField(TEXT("width"), Width) &&
       Payload->TryGetNumberField(TEXT("height"), Height)) {
     if (Width <= 0 || Height <= 0) {
       OutMessage = TEXT("width and height must be positive.");
@@ -182,7 +179,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
 
   FFrameRate FrameRate;
   FString FrameRateError;
-  if (Payload.IsValid() && Payload->HasField(TEXT("frameRate")) &&
+  if (Payload->HasField(TEXT("frameRate")) &&
       McpSequenceFrameRate::TryParse(
           Payload, TEXT("frameRate"), FrameRate, FrameRateError)) {
     Output->bUseCustomFrameRate = true;
@@ -190,7 +187,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   }
 
   int32 StartFrame = 0, EndFrame = 0;
-  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("startFrame"), StartFrame) &&
+  if (Payload->TryGetNumberField(TEXT("startFrame"), StartFrame) &&
       Payload->TryGetNumberField(TEXT("endFrame"), EndFrame)) {
     // The MRQ playback range is END-EXCLUSIVE, so endFrame == startFrame is an
     // empty render, not a one-frame render. Accepting it queued a job that
@@ -233,7 +230,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   }
   // A .wav of what the world played during the render, beside the frames.
   bool bAudio = false;
-  if (Payload.IsValid() && Payload->TryGetBoolField(TEXT("audioOutput"), bAudio)) {
+  if (Payload->TryGetBoolField(TEXT("audioOutput"), bAudio)) {
     if (bAudio)
       Config->FindOrAddSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true);
     else if (UMoviePipelineSetting *Wave =

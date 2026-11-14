@@ -33,25 +33,20 @@ bool HandleInventoryCraftingRecipeActions(UEngineWireSubsystem& Bridge, const FS
         static_cast<int32>(GetJsonNumberField(Payload, TEXT("outputQuantity"), 1));
     const double CraftTime = GetJsonNumberField(Payload, TEXT("craftTime"), 1.0);
     bool bSaved = false;
-    if (NewInventoryDataAsset(Package, Payload, bSaved, [&](UMcpGenericDataAsset& Recipe) {
-          Recipe.Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
-          Recipe.Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
-          Recipe.Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
-        })) {
-      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      Result->SetBoolField(TEXT("saved"), bSaved);
-      Result->SetStringField(TEXT("recipePath"), Package->GetName());
-      Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
-      Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
-      Result->SetNumberField(TEXT("outputQuantity"), OutputQuantity);
-      Result->SetNumberField(TEXT("craftTime"), CraftTime);
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Crafting recipe created"), Result);
-    } else {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create recipe asset"),
-                          TEXT("ASSET_CREATE_FAILED"));
-    }
+    NewInventoryDataAsset(Package, Payload, bSaved, [&](UMcpGenericDataAsset& Recipe) {
+      Recipe.Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
+      Recipe.Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
+      Recipe.Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
+    });
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    Result->SetStringField(TEXT("recipePath"), Package->GetName());
+    Result->SetStringField(TEXT("assetPath"), McpToObjectPath(Package->GetName())); // consistent object path
+    Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
+    Result->SetNumberField(TEXT("outputQuantity"), OutputQuantity);
+    Result->SetNumberField(TEXT("craftTime"), CraftTime);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Crafting recipe created"), Result);
     return true;
   }
 

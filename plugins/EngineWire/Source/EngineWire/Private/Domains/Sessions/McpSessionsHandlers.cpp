@@ -1,4 +1,3 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpSessionsPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"

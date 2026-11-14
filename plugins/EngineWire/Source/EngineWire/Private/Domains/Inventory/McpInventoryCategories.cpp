@@ -5,7 +5,7 @@ bool HandleInventoryCategoryActions(UEngineWireSubsystem& Bridge, const FString&
 {
   if (SubAction == TEXT("create_item_category")) {
     return CreateGenericInventoryAsset(Bridge, RequestId, RequestingSocket, Payload, TEXT("/Game/Items/Categories"), TEXT("categoryPath"),
-                                       TEXT("Item category created"), TEXT("category"));
+                                       TEXT("Item category created"));
   }
 
   if (SubAction == TEXT("assign_item_category")) {

@@ -9,9 +9,8 @@ bool HandleExtrude(UEngineWireSubsystem* Self, const FString& RequestId,
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FVector Offset = ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
-    // extrude declares amount, so it wins over the distance spelling the other face operators use.
-    const double Distance = Offset.IsNearlyZero()
-        ? GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("distance"), 10.0)) : Offset.Size();
+    // extrude declares amount; distance is the other face operators' parameter.
+    const double Distance = Offset.IsNearlyZero() ? GetJsonNumberField(Payload, TEXT("amount"), 10.0) : Offset.Size();
     const FVector Direction = Offset.IsNearlyZero() ? FVector::UpVector : Offset.GetSafeNormal();
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);

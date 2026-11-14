@@ -128,7 +128,7 @@ bool HandleSave(UEngineWireSubsystem& Bridge, const FString& RequestId, const TS
 {
     auto Refuse = [&](const TCHAR* Code, const FString& Message)
     {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Message, nullptr, Code);
+        Bridge.SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
     const FString Name = GetJsonStringField(Payload, TEXT("name"));

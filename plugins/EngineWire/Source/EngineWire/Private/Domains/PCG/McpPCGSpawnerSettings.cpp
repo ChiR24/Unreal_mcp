@@ -14,7 +14,7 @@ static bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& 
     UPCGSpawnActorSettings* SpawnActorSettings = Cast<UPCGSpawnActorSettings>(Settings);
     if (!SpawnActorSettings)
     {
-        OutError = FString::Printf(TEXT("PCG settings '%s' are not actor spawner settings."), Settings ? *Settings->GetClass()->GetName() : TEXT("<null>"));
+        OutError = FString::Printf(TEXT("PCG settings '%s' are not actor spawner settings."), *Settings->GetClass()->GetName());
         return false;
     }
 
@@ -56,7 +56,7 @@ static bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString
     UPCGStaticMeshSpawnerSettings* SpawnerSettings = Cast<UPCGStaticMeshSpawnerSettings>(Settings);
     if (!SpawnerSettings)
     {
-        OutError = FString::Printf(TEXT("PCG settings '%s' are not static mesh spawner settings."), Settings ? *Settings->GetClass()->GetName() : TEXT("<null>"));
+        OutError = FString::Printf(TEXT("PCG settings '%s' are not static mesh spawner settings."), *Settings->GetClass()->GetName());
         return false;
     }
 
@@ -97,10 +97,6 @@ static bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString
 bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Settings, const TSharedPtr<FJsonObject>& Payload, FString& OutError, int32& OutAppliedCount)
 {
     OutAppliedCount = 0;
-    if (!Settings || !Payload.IsValid())
-    {
-        return true;
-    }
 
     if (SubAction == TEXT("add_texture_data_node") || Payload->HasField(TEXT("texturePath")))
     {

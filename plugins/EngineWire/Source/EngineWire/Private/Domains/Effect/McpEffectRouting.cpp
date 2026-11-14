@@ -1,28 +1,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
 namespace McpEffectHandlers
 {
-FString NormalizeNativeSubAction(
-    const FString& Lower,
-    const TSharedPtr<FJsonObject>& Payload)
-{
-    FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
-    if (SubAction.IsEmpty() && !Lower.Equals(TEXT("manage_effect")) &&
-        !Lower.Equals(TEXT("create_effect")))
-    {
-        // The dispatcher's own action name: a handler-table or in-file name, with no '-' or ' '.
-        SubAction = Lower;
-    }
-    if (!SubAction.IsEmpty())
-    {
-        Payload->SetStringField(TEXT("subAction"), SubAction);
-    }
-    return SubAction;
-}
-
 bool IsNiagaraAuthoringSubAction(const FString& SubAction)
 {
     static const TSet<FString> NiagaraAuthoringActions = {
@@ -69,16 +50,12 @@ bool IsNiagaraGraphSubAction(const FString& SubAction)
 {
     return SubAction == TEXT("add_niagara_module") ||
            SubAction == TEXT("connect_niagara_pins") ||
-           SubAction == TEXT("remove_niagara_node") ||
-           SubAction == TEXT("add_module") ||
-           SubAction == TEXT("connect_pins") ||
-           SubAction == TEXT("remove_node");
+           SubAction == TEXT("remove_niagara_node");
 }
 
-bool HandleCreateEffectSubAction(
-    const FEffectActionContext& Context,
-    const FString& LowerSubAction)
+bool HandleCreateEffectSubAction(const FEffectActionContext& Context)
 {
+    const FString& LowerSubAction = Context.SubAction;
     if (LowerSubAction == TEXT("debug_shape"))
     {
         return HandleDrawDebugShape(Context);
@@ -86,11 +63,6 @@ bool HandleCreateEffectSubAction(
     if (LowerSubAction == TEXT("particle"))
     {
         return HandleParticleEffect(Context);
-    }
-    if (LowerSubAction == TEXT("niagara") ||
-        LowerSubAction == TEXT("spawn_niagara"))
-    {
-        return false;
     }
     if (LowerSubAction == TEXT("set_niagara_parameter"))
     {
@@ -108,7 +80,7 @@ bool HandleCreateEffectSubAction(
     }
     if (LowerSubAction == TEXT("cleanup"))
     {
-        return HandleCleanup(Context, true);
+        return HandleCleanup(Context);
     }
     return false;
 }

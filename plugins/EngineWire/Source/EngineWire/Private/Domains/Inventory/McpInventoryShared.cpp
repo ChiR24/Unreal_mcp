@@ -31,13 +31,10 @@ UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const TSharedPtr<
                                             TFunctionRef<void(UMcpGenericDataAsset&)> Fill)
 {
   UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, InventoryAssetName(Package), RF_Public | RF_Standalone);
-  OutSaved = false;
-  if (Asset) {
-    Fill(*Asset);
-    Asset->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(Asset);
-    OutSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Asset);
-  }
+  Fill(*Asset);
+  Asset->MarkPackageDirty();
+  FAssetRegistryModule::AssetCreated(Asset);
+  OutSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Asset);
   return Asset;
 }
 
@@ -100,7 +97,7 @@ UBlueprint* LoadInventoryBlueprintOrError(UEngineWireSubsystem& Bridge,
 
 bool CreateGenericInventoryAsset(UEngineWireSubsystem& Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                  const TSharedPtr<FJsonObject>& Payload, const TCHAR* DefaultPath, const TCHAR* PathField,
-                                 const TCHAR* Created, const TCHAR* What)
+                                 const TCHAR* Created)
 {
   const FString Name = GetJsonStringField(Payload, TEXT("name"));
   const FString Path = GetJsonStringField(Payload, TEXT("path"), DefaultPath);
@@ -113,11 +110,7 @@ bool CreateGenericInventoryAsset(UEngineWireSubsystem& Bridge, const FString& Re
     return true;
   }
   bool bSaved = false;
-  if (!NewInventoryDataAsset(Package, Payload, bSaved)) {
-    Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Failed to create %s asset"), What),
-                               TEXT("ASSET_CREATE_FAILED"));
-    return true;
-  }
+  NewInventoryDataAsset(Package, Payload, bSaved);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("saved"), bSaved);
   Result->SetStringField(PathField, Package->GetName());

@@ -38,35 +38,12 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   const bool bLogSubscriptionAction =
       Lower == TEXT("subscribe") || Lower == TEXT("unsubscribe") ||
       Lower == TEXT("read_log");
-  // system_control publishes console_command/execute_command, but the native
-  // accept list never included them, so both answered NOT_IMPLEMENTED on this
-  // transport while control_editor.console_command worked. Same published-but-
-  // unreachable drift as set_pin_default_value; forward instead of refusing.
+  // system_control publishes console_command and execute_command: both go to the console command handler.
   const bool bConsoleAction =
       Lower == TEXT("console_command") || Lower == TEXT("execute_command");
   const bool bPluginAction = Lower == TEXT("list_plugins") ||
                              Lower == TEXT("enable_plugin") ||
                              Lower == TEXT("disable_plugin");
-  const bool bFileAction =
-      Lower == TEXT("list_output_files") || Lower == TEXT("delete_output_file") ||
-      Lower == TEXT("list_save_games") || Lower == TEXT("edit_save_game");
-  const bool bPackageAction =
-      Lower == TEXT("package_project") || Lower == TEXT("package_status") ||
-      Lower == TEXT("launch_build");
-  if (!bPluginAction && !bConsoleAction && !bPackageAction && !bFileAction &&
-      !Lower.StartsWith(TEXT("run_ubt")) &&
-      !Lower.StartsWith(TEXT("run_tests")) &&
-      !bInsightsAction &&
-      !bLogSubscriptionAction &&
-      Lower != TEXT("validate_assets") &&
-      Lower != TEXT("get_plugin_info") && Lower != TEXT("create_plugin") && Lower != TEXT("remove_plugin") &&
-      Lower != TEXT("list_game_features") && Lower != TEXT("set_game_feature_active") &&
-      Lower != TEXT("create_cpp_class") && Lower != TEXT("remove_cpp_class") &&
-      Lower != TEXT("execute_python") &&
-      Lower != TEXT("run_script") &&
-      Lower != TEXT("save_recipe") && Lower != TEXT("run_recipe") && Lower != TEXT("list_recipes")) {
-    return false;
-  }
 
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,

@@ -5,10 +5,6 @@ namespace McpPCGHandlers
 {
 FString GetNodeTitleString(UPCGNode* Node)
 {
-    if (!Node)
-    {
-        return FString();
-    }
     if (Node->NodeTitle != NAME_None)
     {
         return Node->NodeTitle.ToString();
@@ -24,14 +20,11 @@ TSharedPtr<FJsonObject> BuildNodeResult(UPCGGraph* Graph, UPCGNode* Node, const 
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("graphPath"), GraphPath);
-    if (Node)
+    Result->SetStringField(TEXT("nodeId"), Node->GetName());
+    Result->SetStringField(TEXT("title"), GetNodeTitleString(Node));
+    if (UPCGSettings* Settings = Node->GetSettings())
     {
-        Result->SetStringField(TEXT("nodeId"), Node->GetName());
-        Result->SetStringField(TEXT("title"), GetNodeTitleString(Node));
-        if (UPCGSettings* Settings = Node->GetSettings())
-        {
-            Result->SetStringField(TEXT("nodeType"), Settings->GetClass()->GetName());
-        }
+        Result->SetStringField(TEXT("nodeType"), Settings->GetClass()->GetName());
     }
     // The asset the call changed is the graph, whatever node it touched.
     McpHandlerUtils::AddVerification(Result, Graph);
@@ -40,7 +33,7 @@ TSharedPtr<FJsonObject> BuildNodeResult(UPCGGraph* Graph, UPCGNode* Node, const 
 
 UPCGNode* FindPCGNode(UPCGGraph* Graph, const FString& NodeId)
 {
-    if (!Graph || NodeId.IsEmpty())
+    if (NodeId.IsEmpty())
     {
         return nullptr;
     }
@@ -109,22 +102,11 @@ FString DescribePCGPinLabels(const TArray<TObjectPtr<UPCGPin>>& Pins)
 
 UPCGPin* GetPCGPinByLabel(UPCGNode* Node, bool bOutputPin, const FName& Label)
 {
-    if (!Node)
-    {
-        return nullptr;
-    }
-
     return bOutputPin ? Node->GetOutputPin(Label) : Node->GetInputPin(Label);
 }
 
 bool TryResolvePCGPinLabel(UPCGNode* Node, bool bOutputPin, const FString& RequestedPinLabel, FName& OutPinLabel, FString& OutError)
 {
-    if (!Node)
-    {
-        OutError = TEXT("PCG node is invalid.");
-        return false;
-    }
-
     const TCHAR* PinKind = bOutputPin ? TEXT("output") : TEXT("input");
     const TArray<TObjectPtr<UPCGPin>>& Pins = bOutputPin ? Node->GetOutputPins() : Node->GetInputPins();
     if (!RequestedPinLabel.IsEmpty())
@@ -163,11 +145,6 @@ bool TryResolvePCGPinLabel(UPCGNode* Node, bool bOutputPin, const FString& Reque
 
 bool HasPCGEdge(const UPCGPin* SourcePin, const UPCGPin* TargetPin)
 {
-    if (!SourcePin || !TargetPin)
-    {
-        return false;
-    }
-
     for (const TObjectPtr<UPCGEdge>& Edge : SourcePin->Edges)
     {
         if (Edge && Edge->IsValid() && Edge->GetOtherPin(SourcePin) == TargetPin)
@@ -181,11 +158,6 @@ bool HasPCGEdge(const UPCGPin* SourcePin, const UPCGPin* TargetPin)
 
 void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, bool bNameIsTitle)
 {
-    if (!Node || !Payload.IsValid())
-    {
-        return;
-    }
-
     // An explicit title wins: set_pcg_node_settings LOCATES the node by nodeName, and reading nodeName as the title
     // re-titled the node with its own locator (its object name, when found by that).
     const FString Title = bNameIsTitle ? McpGetFirstStringField(Payload, {TEXT("title"), TEXT("nodeName"), TEXT("name")})
@@ -212,12 +184,6 @@ void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload, b
 bool SaveGraphIfRequested(UPCGGraph* Graph, bool bSave, bool& bOutSaved, FString& OutError)
 {
     bOutSaved = false;
-    if (!Graph)
-    {
-        OutError = TEXT("PCG graph is invalid.");
-        return false;
-    }
-
     Graph->PostEditChange();
     Graph->MarkPackageDirty();
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)

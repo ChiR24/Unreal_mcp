@@ -38,7 +38,7 @@ bool HandleEnableInputMapping(
 
     // A mapping context is enabled on a running local player; outside PIE there is none, and the
     // old success reply (enabled: true) described a context nothing had enabled.
-    if (!GEditor || !GEditor->PlayWorld)
+    if (!GEditor->PlayWorld)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
             TEXT("No PIE session is running, so there is no local player to enable the context on. Start PIE (control_editor play) first; for the packaged game, add the context from the player controller's BeginPlay with an Add Mapping Context node."),

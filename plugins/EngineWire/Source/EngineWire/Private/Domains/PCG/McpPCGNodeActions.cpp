@@ -5,6 +5,22 @@ namespace McpPCGHandlers
 {
 namespace
 {
+// The graph's node names, which FindPCGNode takes, for a refusal that found none.
+FString DescribePCGGraphNodeNames(UPCGGraph* Graph)
+{
+    TArray<FString> Names;
+    for (const UPCGNode* Node : Graph->GetNodes())
+    {
+        if (Node)
+        {
+            Names.Add(Node->GetName());
+        }
+    }
+    Names.Add(TEXT("input"));
+    Names.Add(TEXT("output"));
+    return FString::Join(Names, TEXT(", "));
+}
+
 // Applies the payload's settings object, convenience settings and metadata to Node, saves when asked and replies
 // with the node result. bEdit: an existing node, found by nodeName rather than titled by it.
 bool ConfigurePCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction,
@@ -79,10 +95,8 @@ bool HandleAddPCGNode(UEngineWireSubsystem* Bridge, const FString& RequestId, co
         return true;
     }
 
-    TSubclassOf<UPCGSettings> SettingsSubclass;
-    SettingsSubclass = SettingsClass;
     UPCGSettings* DefaultSettings = nullptr;
-    UPCGNode* Node = Graph->AddNodeOfType(SettingsSubclass, DefaultSettings);
+    UPCGNode* Node = Graph->AddNodeOfType(SettingsClass, DefaultSettings);
     if (!Node || !DefaultSettings)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to add PCG node."), TEXT("CREATE_FAILED"));
@@ -107,7 +121,11 @@ bool HandleConnectPCGPins(UEngineWireSubsystem* Bridge, const FString& RequestId
     UPCGNode* TargetNode = FindPCGNode(Graph, TargetNodeId);
     if (!SourceNode || !TargetNode)
     {
-        Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not resolve source or target PCG node."), TEXT("NODE_NOT_FOUND"));
+        const FString Missing = !SourceNode && !TargetNode
+            ? FString::Printf(TEXT("source '%s' and target '%s'"), *SourceNodeId, *TargetNodeId)
+            : !SourceNode ? FString::Printf(TEXT("source '%s'"), *SourceNodeId) : FString::Printf(TEXT("target '%s'"), *TargetNodeId);
+        Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No PCG node matches %s. The graph's nodes: %s."), *Missing,
+            *DescribePCGGraphNodeNames(Graph)), TEXT("NODE_NOT_FOUND"));
         return true;
     }
 

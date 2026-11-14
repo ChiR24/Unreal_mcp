@@ -94,9 +94,9 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     }
 
     // -------------------------------------------------------------------------
-    // add_module: Add Niagara module (function call) node
+    // add_niagara_module: Add Niagara module (function call) node
     // -------------------------------------------------------------------------
-    if (SubAction == TEXT("add_module"))
+    if (SubAction == TEXT("add_niagara_module"))
     {
         FString ModulePath;
         Payload->TryGetStringField(TEXT("modulePath"), ModulePath);
@@ -177,18 +177,18 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     }
 
     // -------------------------------------------------------------------------
-    // connect_pins: Connect two pins in Niagara graph
+    // connect_niagara_pins: Connect two pins in Niagara graph
     // -------------------------------------------------------------------------
-    if (SubAction == TEXT("connect_pins"))
+    if (SubAction == TEXT("connect_niagara_pins"))
     {
         return McpNiagaraGraphHandlers::HandleConnectPins(
             this, RequestId, Payload, RequestingSocket, System, TargetGraph);
     }
 
     // -------------------------------------------------------------------------
-    // remove_node: Remove node from Niagara graph
+    // remove_niagara_node: Remove node from Niagara graph
     // -------------------------------------------------------------------------
-    if (SubAction == TEXT("remove_node"))
+    if (SubAction == TEXT("remove_niagara_node"))
     {
         FString NodeId;
         Payload->TryGetStringField(TEXT("nodeId"), NodeId);

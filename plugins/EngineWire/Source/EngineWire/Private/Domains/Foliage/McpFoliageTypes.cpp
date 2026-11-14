@@ -89,10 +89,7 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   // reported as created (success) at a location the caller never asked for.
   // Sanitized because it becomes a package path.
   FString PackagePath;
-  if (!Payload->TryGetStringField(TEXT("path"), PackagePath) ||
-      PackagePath.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("savePath"), PackagePath);
-  }
+  Payload->TryGetStringField(TEXT("path"), PackagePath);
   const FString RequestedPath = PackagePath;
   PackagePath = PackagePath.IsEmpty()
                     ? FString(TEXT("/Game/Foliage"))

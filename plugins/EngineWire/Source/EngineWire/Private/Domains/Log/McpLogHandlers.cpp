@@ -31,17 +31,15 @@ public:
 
     virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category) override
     {
-        // Guard against null or destroyed subsystem
-        if (!Subsystem || !Subsystem->IsValidLowLevel())
+        // Guard against a destroyed subsystem
+        if (!Subsystem.IsValid())
         {
             return;
         }
 
         // ---------------------------------------------------------------------
-        // Filter noisy categories to prevent log spam
+        // Filter noisy categories to prevent log spam (FName compares: no string per line)
         // ---------------------------------------------------------------------
-        const FString CategoryStr = Category.ToString();
-
         // Filter own logs to prevent infinite recursion
         if (Category == LogEngineWireSubsystem.GetCategoryName())
         {
@@ -49,19 +47,19 @@ public:
         }
 
         // Filter highly verbose engine categories
-        static const TArray<FString> NoisyCategories = {
-            TEXT("LogRHI"),
-            TEXT("LogEOSSDK"),
-            TEXT("LogCsvProfiler")
-        };
-
-        if (NoisyCategories.Contains(CategoryStr))
+        static const FName McpLogNoisyCategories[] = {FName(TEXT("LogRHI")), FName(TEXT("LogEOSSDK")), FName(TEXT("LogCsvProfiler"))};
+        static const FName McpLogSlateStyle(TEXT("LogSlateStyle"));
+        static const FName McpLogStats(TEXT("LogStats"));
+        for (const FName& Noisy : McpLogNoisyCategories)
         {
-            return;
+            if (Category == Noisy)
+            {
+                return;
+            }
         }
 
         // Filter specific noisy warnings
-        if (Verbosity == ELogVerbosity::Warning && CategoryStr == TEXT("LogSlateStyle"))
+        if (Verbosity == ELogVerbosity::Warning && Category == McpLogSlateStyle)
         {
             // "Missing Resource from 'ProfileVisualizerStyle'" is known engine warning
             if (FString(V).Contains(TEXT("Missing Resource from 'ProfileVisualizerStyle'")))
@@ -71,11 +69,12 @@ public:
         }
 
         // Filter "no thread with id" noise from stat commands
-        if (CategoryStr == TEXT("LogStats") && FString(V).Contains(TEXT("There is no thread with id")))
+        if (Category == McpLogStats && FString(V).Contains(TEXT("There is no thread with id")))
         {
             return;
         }
 
+        const FString CategoryStr = Category.ToString();
         const FString VerbosityString =
             ToString(static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask));
 
@@ -83,10 +82,8 @@ public:
         // dismount logs under it), so it never asks the engine which content mounts are registered.
         const FString Message =
             SanitizeEngineErrorForResponse(FString(V), /*bNameMounts=*/false).Left(2048);
-        TWeakObjectPtr<UEngineWireSubsystem> WeakSubsystem(Subsystem);
-
         AsyncTask(ENamedThreads::GameThread,
-            [WeakSubsystem, CategoryStr, VerbosityString, Message]()
+            [WeakSubsystem = Subsystem, CategoryStr, VerbosityString, Message]()
         {
             if (UEngineWireSubsystem* StrongSubsystem = WeakSubsystem.Get())
             {
@@ -106,7 +103,7 @@ public:
     }
 
 private:
-    UEngineWireSubsystem* Subsystem;
+    TWeakObjectPtr<UEngineWireSubsystem> Subsystem;
 };
 
 void UEngineWireSubsystem::ReconcileLogCaptureDevice()
@@ -138,13 +135,7 @@ bool UEngineWireSubsystem::HandleLogAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
+    // Its one caller, system_control's dispatcher, has refused a missing payload already.
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
     auto SendLogSubscriptionResponse = [this, RequestingSocket, &RequestId](
@@ -155,8 +146,6 @@ bool UEngineWireSubsystem::HandleLogAction(
     {
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetBoolField(TEXT("success"), true);
-        Result->SetStringField(TEXT("action"), TEXT("manage_logs"));
-        Result->SetStringField(TEXT("subAction"), ResponseAction);
         Result->SetBoolField(TEXT("subscribed"), bSubscribed);
         if (ResponseAction == TEXT("subscribe"))
         {

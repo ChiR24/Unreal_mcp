@@ -78,7 +78,7 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
 {
     auto Refuse = [&](const FString& Code, const FString& Message)
     {
-        Subsystem.SendAutomationResponse(Socket, RequestId, false, Sentence(Message) + TEXT(" Nothing ran."), nullptr, Code);
+        Subsystem.SendAutomationError(Socket, RequestId, Sentence(Message) + TEXT(" Nothing ran."), Code);
         return true;
     };
     FMcpCapabilityPrincipal Principal;

@@ -143,7 +143,7 @@ static bool DrawShape(
 
 bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
 {
-    if (Context.Lower.Equals(TEXT("list_debug_shapes")))
+    if (Context.SubAction.Equals(TEXT("list_debug_shapes")))
     {
         TArray<TSharedPtr<FJsonValue>> Shapes;
         for (const TCHAR* Shape : {
@@ -188,7 +188,7 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         return true;
     }
 
-    if (!Context.Lower.Equals(TEXT("clear_debug_shapes")))
+    if (!Context.SubAction.Equals(TEXT("clear_debug_shapes")))
     {
         return false;
     }

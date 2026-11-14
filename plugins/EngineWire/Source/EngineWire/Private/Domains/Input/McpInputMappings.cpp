@@ -76,7 +76,7 @@ bool HandleAddInputMapping(
         return true;
     }
 
-    FKey Key = FKey(FName(*KeyName));
+    FKey Key = InputKeyFromName(KeyName);
     if (!Key.IsValid())
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,

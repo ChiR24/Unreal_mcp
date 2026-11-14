@@ -18,8 +18,8 @@ struct FEffectActionContext
 {
     UEngineWireSubsystem& Bridge;
     const FString& RequestId;
-    const FString& Action;
-    const FString& Lower;
+    // The normalized sub-action, the lifecycle aliases mapped onto activate_niagara and deactivate_niagara.
+    const FString& SubAction;
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> Socket;
 
@@ -29,9 +29,6 @@ struct FEffectActionContext
     }
 };
 
-FString NormalizeNativeSubAction(
-    const FString& Lower,
-    const TSharedPtr<FJsonObject>& Payload);
 bool IsNiagaraAuthoringSubAction(const FString& SubAction);
 bool IsNiagaraGraphSubAction(const FString& SubAction);
 
@@ -48,9 +45,7 @@ UObject* LoadEffectAsset(const FString& AssetPath);
 AActor* FindActorByLabel(const FString& ActorName);
 
 bool HandleEffectDiscoveryAction(const FEffectActionContext& Context);
-bool HandleCreateEffectSubAction(
-    const FEffectActionContext& Context,
-    const FString& LowerSubAction);
+bool HandleCreateEffectSubAction(const FEffectActionContext& Context);
 bool HandleDrawDebugShape(const FEffectActionContext& Context);
 bool HandleParticleEffect(const FEffectActionContext& Context);
 FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload);
@@ -65,10 +60,10 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context);
 bool HandleNiagaraLifecycleAction(
     const FEffectActionContext& Context,
     const FString& LowerSubAction);
-bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffect);
+bool HandleSpawnNiagara(const FEffectActionContext& Context);
 bool HandleCreateDynamicLight(const FEffectActionContext& Context);
-bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect);
-bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsCreateEffect);
+bool HandleCleanup(const FEffectActionContext& Context);
+bool HandleProceduralEffectAction(const FEffectActionContext& Context);
 bool CreateNiagaraEffectFromPayload(
     const FEffectActionContext& Context,
     const FString& EffectName,

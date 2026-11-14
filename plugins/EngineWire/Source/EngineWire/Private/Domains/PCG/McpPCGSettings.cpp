@@ -63,10 +63,6 @@ UClass* ResolvePCGSettingsClass(const FString& RawClassName)
 bool ApplySettingsObject(UPCGSettings* Settings, const TSharedPtr<FJsonObject>& SettingsObject, FString& OutError, int32& OutAppliedCount)
 {
     OutAppliedCount = 0;
-    if (!Settings || !SettingsObject.IsValid())
-    {
-        return true;
-    }
 
     // Every property is found before any is written: a key the class lacks left the ones before it changed in memory,
     // with no PostEditChange, notification or save.
@@ -99,7 +95,7 @@ bool ApplySettingsObject(UPCGSettings* Settings, const TSharedPtr<FJsonObject>& 
 
 bool ApplyStringSetting(UPCGSettings* Settings, const TCHAR* PropertyName, const FString& Value, FString& OutError)
 {
-    if (!Settings || Value.IsEmpty())
+    if (Value.IsEmpty())
     {
         return true;
     }

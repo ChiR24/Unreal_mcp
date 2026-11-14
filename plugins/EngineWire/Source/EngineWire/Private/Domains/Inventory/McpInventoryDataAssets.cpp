@@ -22,18 +22,12 @@ bool HandleInventoryDataAssetActions(UEngineWireSubsystem& Bridge, const FString
 
     bool bSaved = false;
     UMcpGenericDataAsset* ItemAsset = NewInventoryDataAsset(Package, Payload, bSaved);
-    if (ItemAsset) {
-      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      Result->SetBoolField(TEXT("saved"), bSaved);
-      Result->SetStringField(TEXT("assetName"), SanitizedName);
-      McpHandlerUtils::AddVerification(Result, ItemAsset);
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                             TEXT("Item data asset created"), Result);
-    } else {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Failed to create item data asset"),
-                          TEXT("ASSET_CREATE_FAILED"));
-    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    Result->SetStringField(TEXT("assetName"), SanitizedName);
+    McpHandlerUtils::AddVerification(Result, ItemAsset);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("Item data asset created"), Result);
     return true;
   }
 

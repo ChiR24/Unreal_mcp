@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Foliage/McpFoliagePrivate.h"
 #include "Domains/Volume/McpVolumeGeometry.h"
+#include "Foundation/Reflection/McpReflectedInvoke.h"
 
 // The Resimulate button's own path (FoliageEdit's ProceduralFoliageEditorLibrary), which traces the generated
 // instances onto the surfaces in the volume and adds them; its class is not exported, so it is called by name.
@@ -13,13 +14,10 @@ static bool McpResimulateInEditor(AProceduralFoliageVolume *Volume) {
   if (!Element) {
     return false;
   }
-  void *Params = FMemory::Malloc(Function->ParmsSize, Function->GetMinAlignment());
-  Function->InitializeStruct(Params);
-  FScriptArrayHelper Helper(Volumes, Volumes->ContainerPtrToValuePtr<void>(Params));
+  FMcpScopedParamBlock Params(Function);
+  FScriptArrayHelper Helper(Volumes, Volumes->ContainerPtrToValuePtr<void>(Params.Data()));
   Element->SetObjectPropertyValue(Helper.GetRawPtr(Helper.AddValue()), Volume);
-  Library->GetDefaultObject()->ProcessEvent(Function, Params);
-  Function->DestroyStruct(Params);
-  FMemory::Free(Params);
+  Library->GetDefaultObject()->ProcessEvent(Function, Params.Data());
   return true;
 }
 

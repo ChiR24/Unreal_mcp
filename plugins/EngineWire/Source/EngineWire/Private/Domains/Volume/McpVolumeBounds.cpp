@@ -9,7 +9,6 @@
 #include "Domains/Volume/McpVolumeResponses.h"
 #include "Domains/Volume/McpVolumeWorldResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/McpScopedEditorTransaction.h"
 
 namespace McpVolumeHandlers
 {
@@ -68,8 +67,6 @@ bool HandleSetVolumeBounds(UEngineWireSubsystem* Subsystem, const FString& Reque
             FString::Printf(TEXT("Volume not found: %s"), *VolumeName), TEXT("NOT_FOUND"));
         return true;
     }
-    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set Volume Bounds")), EMcpMutationDurability::EditorStateOnly,
-                                            {VolumeActor});
     VolumeActor->SetActorLocation(Center);
     SetVolumeExtentGeometry(VolumeActor, Extent);
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();

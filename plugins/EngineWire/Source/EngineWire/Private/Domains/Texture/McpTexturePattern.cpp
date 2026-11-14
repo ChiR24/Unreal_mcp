@@ -34,8 +34,9 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     const float LineWidth = static_cast<float>(GetJsonNumberField(Params, TEXT("lineWidth"), 0.02));
     const float BrickRatio = static_cast<float>(GetJsonNumberField(Params, TEXT("brickRatio"), 2.0));
     const float Offset = static_cast<float>(GetJsonNumberField(Params, TEXT("offset"), 0.5));
-    const FLinearColor PrimaryColor = ExtractLinearColorField(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1));
-    const FLinearColor SecondaryColor = ExtractLinearColorField(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1));
+    // Clamped to 0..1: written as bytes, an HDR or negative component wrapped.
+    const FLinearColor PrimaryColor = ExtractLinearColorField(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1)).GetClamped();
+    const FLinearColor SecondaryColor = ExtractLinearColorField(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1)).GetClamped();
 
 
     TArray<uint8> PixelData;

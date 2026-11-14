@@ -188,12 +188,16 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   {
       CreatedOverride.Rollback();
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
+      // Nothing was written: the step goes, or undo would hold a 'Set Property' that changes nothing.
+      Transaction->Cancel();
       return true;
   }
   // A material instance takes a written parent as its editor gives one (its own shaders compiled for it), or keeps its own.
   if (!McpMaterialParent::ApplyWrittenParent(RootObject, ResolvedPath, ParentBefore, ConversionError))
   {
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("INVALID_PARENT"));
+      // The refused parent was put back: the step goes too.
+      Transaction->Cancel();
       return true;
   }
   const int32 FollowersUpdated = McpPropertyCdoPropagation::ApplyToFollowers(Followers, ResolvedPath, ValueField);

@@ -9,26 +9,9 @@ bool UEngineWireSubsystem::HandleUiAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString LowerAction = Action.ToLower();
-  const bool bIsSystemControl =
-      LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
-  if (!bIsSystemControl) {
-    return false;
-  }
-
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Payload missing."),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString SubAction;
-  if (Payload->HasField(TEXT("subAction"))) {
-    SubAction = GetJsonStringField(Payload, TEXT("subAction"));
-  } else {
-    Payload->TryGetStringField(TEXT("action"), SubAction);
-  }
-  const FString LowerSub = SubAction.ToLower();
+  // Both callers, system_control's sub-route and control_editor's game_viewport screenshot, pass a payload whose
+  // subAction names the action.
+  const FString LowerSub = GetJsonStringField(Payload, TEXT("subAction")).ToLower();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("action"), LowerSub);
@@ -55,7 +38,7 @@ bool UEngineWireSubsystem::HandleUiAction(
                                                  Resp, bSuccess, Message,
                                                  ErrorCode) ||
       McpUiHandlers::HandleScreenshotAction(
-          *this, RequestId, bIsSystemControl, LowerSub, Payload,
+          *this, RequestId, LowerSub, Payload,
           RequestingSocket, Resp, bSuccess, Message, ErrorCode, bResponseSent,
           ScreenshotFallback) ||
       McpUiHandlers::HandleProjectSettingsAction(LowerSub, Payload, Resp,

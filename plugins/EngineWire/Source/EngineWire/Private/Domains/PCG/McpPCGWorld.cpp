@@ -71,19 +71,9 @@ UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const F
 
 UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName)
 {
-    if (!Actor)
-    {
-        return nullptr;
-    }
-
     Actor->Modify();
     const FName NewComponentName = ComponentName.IsEmpty() ? NAME_None : FName(*ComponentName);
     UPCGComponent* Component = NewObject<UPCGComponent>(Actor, NewComponentName, RF_Transactional);
-    if (!Component)
-    {
-        return nullptr;
-    }
-
     Actor->AddInstanceComponent(Component);
     Component->RegisterComponent();
     Component->Modify();

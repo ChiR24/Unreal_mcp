@@ -99,7 +99,7 @@ bool HandleRenderSettingsAction(const FString &LowerSub, const TSharedPtr<FJsonO
   TArray<TSharedPtr<FJsonValue>> Unavailable;
   // Every value is checked before any is written, so a bad one leaves the project as it was.
   for (const FMcpRenderSetting &Setting : McpRenderSettings()) {
-    if (!Payload.IsValid() || !Payload->HasField(Setting.Param)) {
+    if (!Payload->HasField(Setting.Param)) {
       continue;
     }
     FProperty *Property = FindFProperty<FProperty>(URendererSettings::StaticClass(), Setting.Property);

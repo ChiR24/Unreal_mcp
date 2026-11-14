@@ -38,7 +38,7 @@ bool HandleWidgetAuthoringAction(
 
 bool HandleScreenshotAction(
     UEngineWireSubsystem &Bridge, const FString &RequestId,
-    bool bIsSystemControl, const FString &LowerSub,
+    const FString &LowerSub,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const TSharedPtr<FJsonObject> &Resp, bool &bSuccess, FString &Message,

@@ -205,11 +205,11 @@ bool UEngineWireSubsystem::HandleInspectAction(
     }
 
     const FString ObjectPath = McpGetFirstStringField(
-        Payload, {TEXT("objectPath"), TEXT("actorName"), TEXT("name"), TEXT("blueprintPath")});
+        Payload, {TEXT("objectPath"), TEXT("actorName"), TEXT("name")});
     if (ObjectPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("objectPath, actorName, name, or blueprintPath required"),
+                            TEXT("objectPath, actorName or name required"),
                             TEXT("INVALID_ARGUMENT"));
         return true;
     }

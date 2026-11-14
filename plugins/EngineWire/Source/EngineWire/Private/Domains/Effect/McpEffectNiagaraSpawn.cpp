@@ -1,5 +1,4 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -10,17 +9,10 @@
 
 namespace McpEffectHandlers
 {
-bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffect)
+bool HandleSpawnNiagara(const FEffectActionContext& Context)
 {
-    bool bSpawnNiagara = Context.Lower.Equals(TEXT("spawn_niagara"));
-    if (bIsCreateEffect)
-    {
-        const FString LowerSubAction = McpConsolidatedActions::GetPayloadSubAction(Context.Payload);
-        bSpawnNiagara =
-            bSpawnNiagara || LowerSubAction == TEXT("niagara") ||
-            LowerSubAction == TEXT("spawn_niagara");
-    }
-    if (!bSpawnNiagara)
+    // spawn_niagara, and create_effect's niagara kind.
+    if (!Context.SubAction.Equals(TEXT("spawn_niagara")) && !Context.SubAction.Equals(TEXT("niagara")))
     {
         return false;
     }

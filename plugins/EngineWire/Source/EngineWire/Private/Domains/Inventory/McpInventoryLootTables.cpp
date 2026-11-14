@@ -5,7 +5,7 @@ bool HandleInventoryLootTableActions(UEngineWireSubsystem& Bridge, const FString
 {
   if (SubAction == TEXT("create_loot_table")) {
     return CreateGenericInventoryAsset(Bridge, RequestId, RequestingSocket, Payload, TEXT("/Game/Data/LootTables"), TEXT("lootTablePath"),
-                                       TEXT("Loot table created"), TEXT("loot table"));
+                                       TEXT("Loot table created"));
   }
 
   if (SubAction == TEXT("add_loot_entry")) {

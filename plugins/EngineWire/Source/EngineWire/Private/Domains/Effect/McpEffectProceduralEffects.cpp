@@ -1,5 +1,4 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
-#include "Core/Routing/McpConsolidatedActionRouting.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -12,18 +11,8 @@
 
 namespace McpEffectHandlers
 {
-bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
+bool HandleCleanup(const FEffectActionContext& Context)
 {
-    bool bCleanup = Context.Lower.Equals(TEXT("cleanup"));
-    if (bIsCreateEffect)
-    {
-        bCleanup = bCleanup || McpConsolidatedActions::GetPayloadSubAction(Context.Payload) == TEXT("cleanup");
-    }
-    if (!bCleanup)
-    {
-        return false;
-    }
-
     FString Filter;
     Context.Payload->TryGetStringField(TEXT("filter"), Filter);
     if (Filter.IsEmpty())
@@ -124,35 +113,21 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
     return true;
 }
 
-bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsCreateEffect)
+bool HandleProceduralEffectAction(const FEffectActionContext& Context)
 {
-    bool bCreateRibbon = Context.Lower.Equals(TEXT("create_niagara_ribbon"));
-    bool bCreateFog = Context.Lower.Equals(TEXT("create_volumetric_fog"));
-    bool bCreateTrail = Context.Lower.Equals(TEXT("create_particle_trail"));
-    bool bCreateEnvironment = Context.Lower.Equals(TEXT("create_environment_effect"));
-    bool bCreateImpact = Context.Lower.Equals(TEXT("create_impact_effect"));
-    if (bIsCreateEffect)
-    {
-        const FString LowerSubAction = McpConsolidatedActions::GetPayloadSubAction(Context.Payload);
-        bCreateRibbon = bCreateRibbon || LowerSubAction == TEXT("create_niagara_ribbon");
-        bCreateFog = bCreateFog || LowerSubAction == TEXT("create_volumetric_fog");
-        bCreateTrail = bCreateTrail || LowerSubAction == TEXT("create_particle_trail");
-        bCreateEnvironment = bCreateEnvironment || LowerSubAction == TEXT("create_environment_effect");
-        bCreateImpact = bCreateImpact || LowerSubAction == TEXT("create_impact_effect");
-    }
-    if (bCreateFog)
+    if (Context.SubAction.Equals(TEXT("create_volumetric_fog")))
     {
         return HandleCreateVolumetricFog(Context);
     }
 
-    if (!bCreateRibbon && !bCreateTrail && !bCreateEnvironment && !bCreateImpact)
+    // The four creators that place, or author and place, a Niagara system; each is its own effect name.
+    static const TSet<FString> ProceduralCreators = {TEXT("create_niagara_ribbon"), TEXT("create_particle_trail"),
+        TEXT("create_environment_effect"), TEXT("create_impact_effect")};
+    if (!ProceduralCreators.Contains(Context.SubAction))
     {
         return false;
     }
-    const FString EffectName = bCreateRibbon ? TEXT("create_niagara_ribbon")
-        : bCreateTrail ? TEXT("create_particle_trail")
-        : bCreateEnvironment ? TEXT("create_environment_effect")
-        : TEXT("create_impact_effect");
+    const FString& EffectName = Context.SubAction;
 
     FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
     if (!SystemPath.IsEmpty())

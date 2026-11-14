@@ -1,6 +1,14 @@
 #pragma once
 
-#include "Domains/GAS/McpGASAssetValidate.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineWireSubsystem.h"
+
+#include "CoreMinimal.h"
+#include "Misc/PackageName.h"
+#include "Misc/Paths.h"
+
+#include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
+#include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Domains/GAS/McpGASRequestContext.h"
@@ -35,11 +43,6 @@ static inline UBlueprint* CreateGASBlueprint(
     if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError))
     {
         OutError = PathError;
-        return nullptr;
-    }
-    if (!IsValidAssetPath(PackageName))
-    {
-        OutError = FString::Printf(TEXT("Invalid asset path: %s"), *PackageName);
         return nullptr;
     }
 

@@ -77,7 +77,6 @@ bool HandleCreateLightingEnabledLevel(
         Resp->SetBoolField(TEXT("alreadyExisted"), true);
         Resp->SetBoolField(TEXT("opened"), false);
         Resp->SetBoolField(TEXT("existsAfter"), true);
-        Resp->SetStringField(TEXT("levelPath"), Path);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("A level already exists at %s; nothing was created or opened"), *Path), Resp);
         return true;
@@ -148,17 +147,10 @@ bool HandleCreateLightingEnabledLevel(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), Path);
-    Resp->SetStringField(TEXT("message"), TEXT("Level created with lighting"));
     Resp->SetBoolField(TEXT("existsAfter"), true);
     Resp->SetBoolField(TEXT("opened"), true);
-    Resp->SetStringField(TEXT("levelPath"), Path);
     Resp->SetStringField(TEXT("createdAssetPath"), Path);
-    TArray<TSharedPtr<FJsonValue>> Spawned;
-    for (const TCHAR* Label : {TEXT("Sun"), TEXT("SkyAtmosphere"), TEXT("SkyLight")})
-    {
-        Spawned.Add(MakeShared<FJsonValueString>(Label));
-    }
-    Resp->SetArrayField(TEXT("actors"), Spawned);
+    Resp->SetArrayField(TEXT("actors"), McpHandlerUtils::ToJsonStringArray({TEXT("Sun"), TEXT("SkyAtmosphere"), TEXT("SkyLight")}));
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level created with lighting"), Resp);
     return true;
 }
