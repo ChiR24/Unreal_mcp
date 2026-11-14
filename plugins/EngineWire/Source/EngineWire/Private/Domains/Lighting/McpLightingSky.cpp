@@ -45,11 +45,11 @@ bool HandleSpawnSkyLight(
     // One undo step for the spawn and its settings. During Play the sky light goes into the running game, whose
     // objects never reach the undo buffer, so no step is opened there.
     TOptional<FMcpScopedEditorTransaction> Transaction;
-    if (GEditor && !GEditor->PlayWorld)
+    if (!GEditor->PlayWorld)
     {
         Transaction.Emplace(FText::FromString(TEXT("Spawn Sky Light")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
     }
-    AActor* SkyLight = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(), Location, Rotation);
+    AActor* SkyLight = SpawnActorInActiveWorld<ASkyLight>(ASkyLight::StaticClass(), Location, Rotation);
     if (!SkyLight)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn SkyLight"), TEXT("SPAWN_FAILED"));
@@ -103,7 +103,7 @@ bool HandleEnsureSingleSkyLight(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     // The level's actors are not listed during Play, so a second sky light was spawned into the running game.
-    if (GEditor && GEditor->PlayWorld)
+    if (GEditor->PlayWorld)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
             TEXT("ensure_single_sky_light works on the edited level; stop Play first"), TEXT("PIE_ACTIVE"));
@@ -181,7 +181,7 @@ bool HandleEnsureSingleSkyLight(
     }
     if (bSpawned)
     {
-        Kept = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, TargetName);
+        Kept = SpawnActorInActiveWorld<ASkyLight>(ASkyLight::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, TargetName);
         if (!Kept)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn SkyLight"), TEXT("SPAWN_FAILED"));

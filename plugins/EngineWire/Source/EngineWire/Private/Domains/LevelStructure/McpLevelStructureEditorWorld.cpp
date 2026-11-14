@@ -1,5 +1,6 @@
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
+#include "Domains/Level/World/McpLevelWorldAccess.h"
 #include "Editor.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
@@ -8,7 +9,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
-#include "Safety/McpSafeOperations.h"
+#include "Safety/McpSafeOperationsLevelSave.h"
 #include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/LevelStreamingDynamic.h"
 #include "EngineWireLog.h"
@@ -19,46 +20,13 @@
 namespace LevelStructureHelpers
 {
 
-namespace
-{
-// Strip a trailing ".umap" and a trailing ".ObjectName" so
-// "/Game/Maps/Foo.Foo", "/Game/Maps/Foo.umap" and "/Game/Maps/Foo" compare
-// equal. Only the last segment is considered: a dot inside a directory name
-// ("/Game/Maps.v2/Arena") is part of the path.
-FString NormalizeLevelPath(const FString& In)
-{
-    FString Path = In.TrimStartAndEnd();
-    Path.RemoveFromEnd(TEXT(".umap"), ESearchCase::IgnoreCase);
-    int32 LastSlash = INDEX_NONE;
-    Path.FindLastChar(TEXT('/'), LastSlash);
-    const int32 Dot = Path.Find(TEXT("."), ESearchCase::CaseSensitive, ESearchDir::FromStart, LastSlash + 1);
-    if (Dot != INDEX_NONE)
-    {
-        Path.LeftInline(Dot);
-    }
-    return Path;
-}
-} // namespace
-
 ULevel* ResolveTargetLevelForBlueprintRequest(
     UWorld* World, const TSharedPtr<FJsonObject>& Payload, FString& OutError, bool bAllowTransient)
 {
     OutError.Reset();
-    if (!World)
-    {
-        OutError = TEXT("No editor world available");
-        return nullptr;
-    }
-
-    FString Requested;
-    if (Payload.IsValid())
-    {
-        if (!Payload->TryGetStringField(TEXT("levelPath"), Requested) || Requested.IsEmpty())
-        {
-            Payload->TryGetStringField(TEXT("level"), Requested);
-        }
-    }
-    const FString NormalizedRequested = NormalizeLevelPath(Requested);
+    const FString Requested = GetJsonStringField(Payload, TEXT("levelPath"));
+    // "/Game/Maps/Foo.Foo", "/Game/Maps/Foo.umap" and "/Game/Maps/Foo" name one package.
+    const FString NormalizedRequested = FPackageName::ObjectPathToPackageName(Requested.TrimStartAndEnd());
 
     ULevel* Target = nullptr;
     if (!NormalizedRequested.IsEmpty())
@@ -68,8 +36,7 @@ ULevel* ResolveTargetLevelForBlueprintRequest(
         // of silently editing whatever level happens to be open.
         for (ULevel* Level : World->GetLevels())
         {
-            if (Level && NormalizeLevelPath(Level->GetOutermost()->GetName())
-                             .Equals(NormalizedRequested, ESearchCase::IgnoreCase))
+            if (Level && Level->GetOutermost()->GetName().Equals(NormalizedRequested, ESearchCase::IgnoreCase))
             {
                 Target = Level;
                 break;
@@ -134,13 +101,14 @@ UClass* ResolveLevelStreamingClass(const FString& StreamingMethod)
 
 void SendLevelEditResult(
     UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result)
+    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result,
+    bool bSaveByDefault)
 {
     if (!Result.IsValid())
     {
         Result = McpHandlerUtils::CreateResultObject();
     }
-    if (GetJsonBoolField(Payload, TEXT("save"), false))
+    if (GetJsonBoolField(Payload, TEXT("save"), bSaveByDefault))
     {
         const FString PackageName = Level ? Level->GetOutermost()->GetName() : FString();
         if (PackageName.IsEmpty() || PackageName.StartsWith(TEXT("/Temp/")))
@@ -169,22 +137,24 @@ void SendLevelEditResult(
         TEXT(" The level is not saved yet; pass save: true, or save it with manage_level save."), Result);
 }
 
-ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)
+ULevelStreaming* FindOrAddStreamingLevelOrReply(UEngineWireSubsystem* Subsystem, const FString& RequestId,
+                                                TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, const FString& LevelName,
+                                                bool bAddFromDisk)
 {
     // Package name, object path or short name, case-insensitively (create_sublevel reported the
-    // level under /Game/.../Sub but the configurators could not find it).
-    FString WantedPackage = LevelName;
-    int32 DotIndex = INDEX_NONE;
-    if (WantedPackage.FindChar(TEXT('.'), DotIndex)) { WantedPackage.LeftInline(DotIndex); }
-    const FString WantedShort = FPackageName::GetShortName(WantedPackage);
-    for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
+    // level under /Game/.../Sub but the configurators could not find it). A short name two sublevels share
+    // configured whichever came first.
+    const FString WantedPackage = FPackageName::ObjectPathToPackageName(LevelName);
+    const TArray<ULevelStreaming*> Matches = McpLevelHandlers::FindStreamingLevels(World, WantedPackage);
+    if (Matches.Num() == 1)
     {
-        const FString PackageName = StreamingLevel ? StreamingLevel->GetWorldAssetPackageName() : FString();
-        if (StreamingLevel && (PackageName.Equals(WantedPackage, ESearchCase::IgnoreCase) ||
-                               FPackageName::GetShortName(PackageName).Equals(WantedShort, ESearchCase::IgnoreCase)))
-        {
-            return StreamingLevel;
-        }
+        return Matches[0];
+    }
+    if (Matches.Num() > 1)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s names %d streaming levels; pass the "
+            "package path of the one to configure."), *LevelName, Matches.Num()), TEXT("AMBIGUOUS_LEVEL"));
+        return nullptr;
     }
     // A sublevel that exists on disk but is not streamed by this world yet.
     TArray<FString> Candidates;
@@ -196,7 +166,7 @@ ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName
     Candidates.Add(FString(TEXT("/Game/")) / LevelName);
     for (const FString& Candidate : Candidates)
     {
-        if (!Candidate.EndsWith(TEXT(".umap")) && FPackageName::DoesPackageExist(Candidate))
+        if (bAddFromDisk && !Candidate.EndsWith(TEXT(".umap")) && FPackageName::DoesPackageExist(Candidate))
         {
             ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
             NewStreamingLevel->SetWorldAssetByPackageName(FName(*Candidate));
@@ -208,6 +178,8 @@ ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName
             return NewStreamingLevel;
         }
     }
+    Subsystem->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), TEXT("LEVEL_NOT_FOUND"));
     return nullptr;
 }
 

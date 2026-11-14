@@ -31,12 +31,6 @@ FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload);
 bool HasActiveTrace();
 void AddTraceStatus(TSharedPtr<FJsonObject>& Result);
 FString StartModeToString(ETraceStartMode Mode);
-bool TryBuildStartRequest(
-    const TSharedPtr<FJsonObject>& Payload,
-    bool bForceFileMode,
-    FTraceStartRequest& OutRequest,
-    FString& OutError,
-    FString& OutErrorCode);
 bool TryReadChannels(
     const TSharedPtr<FJsonObject>& Payload,
     FString& OutChannels,
@@ -44,8 +38,6 @@ bool TryReadChannels(
 bool TryResolveTracePath(
     const TSharedPtr<FJsonObject>& Payload,
     bool bRequireExistingFile,
-    bool bAppendTraceExtension,
-    bool bAllowGeneratedDefault,
     FString& OutPath,
     FString& OutError,
     FString& OutErrorCode,

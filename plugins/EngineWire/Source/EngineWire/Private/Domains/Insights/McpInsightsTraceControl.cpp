@@ -52,7 +52,6 @@ void AddStartFields(
         Result->SetNumberField(TEXT("port"), Request.Port);
     }
 }
-}
 
 bool TryBuildStartRequest(
     const TSharedPtr<FJsonObject>& Payload,
@@ -76,15 +75,9 @@ bool TryBuildStartRequest(
     {
         OutRequest.Mode = ETraceStartMode::File;
     }
-    else if (Mode == TEXT("network") || Mode == TEXT("server"))
+    else if (Mode == TEXT("network"))
     {
         OutRequest.Mode = ETraceStartMode::Network;
-    }
-    else if (Mode == TEXT("relay") || Mode == TEXT("none") || Mode == TEXT("memory"))
-    {
-        OutError = TEXT("Trace connectionType is not supported by the live bridge.");
-        OutErrorCode = TEXT("NOT_SUPPORTED");
-        return false;
     }
     else
     {
@@ -104,15 +97,12 @@ bool TryBuildStartRequest(
 
     if (OutRequest.Mode == ETraceStartMode::File)
     {
-        return TryResolveTracePath(Payload, false, true, true,
+        return TryResolveTracePath(Payload, false,
             OutRequest.OutputPath, OutError, OutErrorCode);
     }
-    if (OutRequest.Mode == ETraceStartMode::Network)
-    {
-        return TryReadHostAndPort(Payload, true, OutRequest.Host,
-            OutRequest.Port, OutError, OutErrorCode);
-    }
-    return true;
+    return TryReadHostAndPort(Payload, true, OutRequest.Host,
+        OutRequest.Port, OutError, OutErrorCode);
+}
 }
 
 bool HandleStartSession(

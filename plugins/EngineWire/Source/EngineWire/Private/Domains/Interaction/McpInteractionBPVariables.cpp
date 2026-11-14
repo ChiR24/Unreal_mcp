@@ -4,7 +4,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpNewBlueprint.h"
 #include "Foundation/BridgeHelpers/Responses/McpMutationEvidence.h"
 
-#include "EditorAssetLibrary.h"
 
 namespace McpInteractionHandlers
 {

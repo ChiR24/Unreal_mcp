@@ -10,17 +10,14 @@ bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamN
     }
     FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
     FNiagaraVariable Param{FNiagaraTypeDefinition(DataInterfaceClass), FName(*ParamName)};
-    UserStore.AddParameter(Param, true);
+    // Not initialized: the store would make a data interface that the one named after the parameter replaces.
+    UserStore.AddParameter(Param, false);
     if (!UserStore.FindParameterVariable(Param))
     {
         return false;
     }
     UNiagaraDataInterface* DataInterface = NewObject<UNiagaraDataInterface>(System, DataInterfaceClass,
         MakeUniqueObjectName(System, DataInterfaceClass, FName(*ParamName)), RF_Transactional);
-    if (!DataInterface)
-    {
-        return false;
-    }
     UserStore.SetDataInterface(DataInterface, Param);
     return UserStore.GetDataInterface(Param) == DataInterface;
 }

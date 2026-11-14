@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "UObject/UnrealType.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
@@ -24,8 +25,9 @@ bool HandleConfigureGridSize(
     using namespace LevelStructureHelpers;
 
     FString GridName = GetJsonStringField(Payload, TEXT("gridName"), TEXT(""));
-    int32 GridCellSize = GetJsonIntField(Payload, TEXT("gridCellSize"), 12800);
-    float LoadingRange = static_cast<float>(GetJsonNumberField(Payload, TEXT("loadingRange"), 25600.0));
+    // The editor's own bounds (its change handler holds them): a cell under 1600 units, or 0, broke streaming generation.
+    int32 GridCellSize = FMath::Max(GetJsonIntField(Payload, TEXT("gridCellSize"), 12800), 1600);
+    float LoadingRange = FMath::Max(static_cast<float>(GetJsonNumberField(Payload, TEXT("loadingRange"), 25600.0)), 0.0f);
     bool bBlockOnSlowStreaming = GetJsonBoolField(Payload, TEXT("bBlockOnSlowStreaming"), false);
     int32 Priority = GetJsonIntField(Payload, TEXT("priority"), 0);
     bool bCreateIfMissing = GetJsonBoolField(Payload, TEXT("createIfMissing"), true);
@@ -35,16 +37,16 @@ bool HandleConfigureGridSize(
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_WORLD"));
         return true;
     }
 
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     if (!WorldPartition)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled for this level"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("World Partition is not enabled for this level"), TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
 
@@ -52,8 +54,8 @@ bool HandleConfigureGridSize(
     UWorldPartitionRuntimeHash* RuntimeHash = WorldPartition->RuntimeHash;
     if (!RuntimeHash)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition RuntimeHash not available"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("World Partition RuntimeHash not available"), TEXT("RUNTIME_HASH_UNAVAILABLE"));
         return true;
     }
 
@@ -98,16 +100,16 @@ bool HandleConfigureGridSize(
     FProperty* GridsProperty = SpatialHash->GetClass()->FindPropertyByName(TEXT("Grids"));
     if (!GridsProperty)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Could not find Grids property on RuntimeSpatialHash"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Could not find Grids property on RuntimeSpatialHash"), TEXT("REFLECTION_FAILED"));
         return true;
     }
 
     FArrayProperty* ArrayProp = CastField<FArrayProperty>(GridsProperty);
     if (!ArrayProp)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Grids property is not an array"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Grids property is not an array"), TEXT("REFLECTION_FAILED"));
         return true;
     }
 
@@ -118,6 +120,15 @@ bool HandleConfigureGridSize(
     bool bCreated = false;
     int32 ModifiedIndex = -1;
     FName TargetGridName = GridName.IsEmpty() ? FName(NAME_None) : FName(*GridName);
+    // One undo step for the grid edit, opened at the change: a refusal before it (no value to change, no such grid)
+    // leaves no step and the level as it was.
+    TUniquePtr<FMcpScopedEditorTransaction> GridStep;
+    const auto BeginGridEdit = [&GridStep, SpatialHash]()
+    {
+        GridStep = MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Configure World Partition Grid")),
+                                                           EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{SpatialHash});
+        SpatialHash->Modify();
+    };
 
     for (int32 i = 0; i < ArrayHelper.Num(); ++i)
     {
@@ -135,7 +146,7 @@ bool HandleConfigureGridSize(
                 }
                 // Before the change, so undo returns to it (the snapshot was taken after, so undo restored the new
                 // values); only what was sent changes: the defaults of the fields left out overwrote the grid's own.
-                SpatialHash->Modify();
+                BeginGridEdit();
                 if (Payload->HasField(TEXT("gridCellSize"))) { Grid->CellSize = GridCellSize; }
                 if (Payload->HasField(TEXT("loadingRange"))) { Grid->LoadingRange = LoadingRange; }
                 if (Payload->HasField(TEXT("bBlockOnSlowStreaming"))) { Grid->bBlockOnSlowStreaming = bBlockOnSlowStreaming; }
@@ -150,7 +161,7 @@ bool HandleConfigureGridSize(
 
     if (!bFound && bCreateIfMissing && !GridName.IsEmpty())
     {
-        SpatialHash->Modify();
+        BeginGridEdit();
         int32 NewIndex = ArrayHelper.AddValue();
         FSpatialHashRuntimeGrid* NewGrid = reinterpret_cast<FSpatialHashRuntimeGrid*>(ArrayHelper.GetRawPtr(NewIndex));
         if (NewGrid)
@@ -188,8 +199,8 @@ bool HandleConfigureGridSize(
             ? FString::Join(AvailableGrids, TEXT(", "))
             : TEXT("(none - use createIfMissing=true to create a new grid)");
 
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Grid '%s' not found. Available grids: %s"), *GridName, *AvailableStr), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Grid '%s' not found. Available grids: %s"), *GridName, *AvailableStr), TEXT("GRID_NOT_FOUND"));
         return true;
     }
 
@@ -230,6 +241,7 @@ bool HandleConfigureGridSize(
     FString Action = bCreated ? TEXT("Created") : TEXT("Configured");
     FString Message = FString::Printf(TEXT("%s grid '%s': CellSize=%d, LoadingRange=%.0f"),
         *Action, *Edited->GridName.ToString(), Edited->CellSize, Edited->LoadingRange);
+    GridStep.Reset(); // closed before the level is saved
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 

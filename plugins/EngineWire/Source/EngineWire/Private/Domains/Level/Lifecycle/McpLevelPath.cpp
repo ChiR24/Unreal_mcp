@@ -75,7 +75,7 @@ bool TryResolveWritableGameMapFilename(const FString& PackagePath,
                                      ErrorMessage, ErrorCode);
 }
 
-void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMapFilename, bool bRecursive) {
+void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMapFilename) {
   IAssetRegistry& AssetRegistry =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
   if (!AbsoluteMapFilename.IsEmpty() && IFileManager::Get().FileExists(*AbsoluteMapFilename)) {
@@ -87,7 +87,8 @@ void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMap
   if (!PackageDir.IsEmpty()) {
     TArray<FString> PathsToScan;
     PathsToScan.Add(PackageDir);
-    AssetRegistry.ScanPathsSynchronous(PathsToScan, bRecursive);
+    // Not forced: a forced rescan reads every asset under the folder again and still keeps a deleted file's entry.
+    AssetRegistry.ScanPathsSynchronous(PathsToScan, false);
   }
 }
 

@@ -40,11 +40,9 @@ bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestI
     return true;
   }
 
-  UMaterialExpression *Expr = Material
-      ? FindExpressionByIdOrName(Material, NodeId)
-      : FindExpressionByIdOrNameInFunction(Function, NodeId);
+  UMaterialExpression *Expr = FIND_EXPR_IN_HOST(NodeId);
   if (!Expr) {
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
     return true;
   }
 
@@ -55,7 +53,8 @@ bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestI
                                                   EMcpMutationDurability::EditorStateOnly, {Expr});
     Expr->MaterialExpressionEditorX = static_cast<int32>(PosX);
     Expr->MaterialExpressionEditorY = static_cast<int32>(PosY);
-    FINALIZE_HOST();
+    // A move cannot change a shader: no recompile, only the host marked changed.
+    HostOuter->MarkPackageDirty();
     Result = McpMaterialHostResult(HostOuter);
     Transaction.DescribeInto(Result);
   }

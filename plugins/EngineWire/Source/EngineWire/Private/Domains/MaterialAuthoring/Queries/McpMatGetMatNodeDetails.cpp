@@ -46,7 +46,7 @@ bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& R
       if (Exprs.IsValidIndex(Index)) { Expr = Exprs[Index]; }
     }
     if (!Expr) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
       return true;
     }
 

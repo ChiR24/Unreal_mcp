@@ -19,12 +19,14 @@ namespace LevelStructureHelpers
 {
 using McpHandlerUtils::GetEditorWorld;
 
-// Replies success with Message and Result, first saving Level when the payload's `save` is true (default false).
+// Replies success with Message and Result, first saving Level when the payload's `save` is true (default
+// bSaveByDefault).
 // A save request on an unsaved /Temp/ level, or a failed save, replies SAVE_FAILED instead; the edit itself stays
 // in memory. Shared by the level-structure and volume edits, which all change the open level.
 void SendLevelEditResult(
     UEngineWireSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
-    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result);
+    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result,
+    bool bSaveByDefault = false);
 
 // streamingMethod "Blueprint" names ULevelStreamingDynamic and "AlwaysLoaded" ULevelStreamingAlwaysLoaded
 // (case-insensitive); null for anything else.
@@ -38,9 +40,14 @@ inline bool IsValidLevelName(const FString& Name, FText& OutReason)
            FFileHelper::IsFilenameValidForSaving(Name, OutReason);
 }
 
-// The editor world's streaming level whose package (or its short name) is LevelName; when none is and the package
-// exists at LevelName, under the persistent level's folder, or under /Game, a ULevelStreamingDynamic is added for it.
-ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName);
+// The editor world's streaming level LevelName names (its package, object path or short name, as manage_level finds a
+// sublevel: McpLevelHandlers::FindStreamingLevels); when none does, bAddFromDisk is set and the package exists at
+// LevelName, under the persistent level's folder, or under /Game, a ULevelStreamingDynamic is added for it. Null once the
+// refusal is sent:
+// LEVEL_NOT_FOUND, or AMBIGUOUS_LEVEL for a short name two sublevels share.
+ULevelStreaming* FindOrAddStreamingLevelOrReply(UEngineWireSubsystem* Subsystem, const FString& RequestId,
+                                                TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, const FString& LevelName,
+                                                bool bAddFromDisk = true);
 
 /**
  * Resolve the level a level-blueprint request targets.

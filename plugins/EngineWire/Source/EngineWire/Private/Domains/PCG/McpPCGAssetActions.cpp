@@ -32,7 +32,7 @@ bool HandleCreatePCGSubgraph(UEngineWireSubsystem* Bridge, const FString& Reques
 {
     FString SubgraphPath;
     FString Error;
-    if (!TryGetPCGAssetPath(Payload, {TEXT("subgraphPath"), TEXT("graphPath"), TEXT("assetPath")}, SubgraphPath, Error))
+    if (!TryGetPCGAssetPath(Payload, {TEXT("subgraphPath")}, SubgraphPath, Error))
     {
         Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
         return true;

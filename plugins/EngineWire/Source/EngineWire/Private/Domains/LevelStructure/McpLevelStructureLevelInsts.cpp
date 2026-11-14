@@ -37,7 +37,6 @@ bool ResolveInstancedLevel(UEngineWireSubsystem* Subsystem, const FString& Reque
     const FString Requested = GetJsonStringField(Payload, TEXT("levelAssetPath"));
     const FString Sanitized = Requested.IsEmpty() ? FString() : SanitizeProjectRelativePath(Requested);
     OutPackage = Sanitized.IsEmpty() ? FString() : FPackageName::ObjectPathToPackageName(Sanitized);
-    OutPackage.RemoveFromEnd(TEXT(".umap"));
     if (OutPackage.IsEmpty() || !FPackageName::DoesPackageExist(OutPackage))
     {
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
@@ -57,12 +56,9 @@ bool ResolveInstancedLevel(UEngineWireSubsystem* Subsystem, const FString& Reque
 }
 
 // A saved level saves by default; an unsaved /Temp/ level cannot, so it defaults to not saving.
-void DefaultSaveToLevelState(const TSharedPtr<FJsonObject>& Payload, UWorld* World)
+bool SavesByDefault(const UWorld* World)
 {
-    if (Payload.IsValid() && !Payload->HasField(TEXT("save")))
-    {
-        Payload->SetBoolField(TEXT("save"), World && !World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/")));
-    }
+    return World && !World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/"));
 }
 
 #if MCP_HAS_PACKED_LEVEL_BUILDER
@@ -125,6 +121,8 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
 
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    // One undo step for the placement, closed before the level is saved.
+    TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     ALevelInstance* Instance = World->SpawnActor<ALevelInstance>(ALevelInstance::StaticClass(), Location, Rotation, SpawnParams);
     if (!Instance)
     {
@@ -135,6 +133,7 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     if (!Instance->SetWorldAsset(WorldAsset))
     {
         World->DestroyActor(Instance);
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was placed
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("The engine refused '%s' as the instance's level (it would instance the open level through its own level instances). Nothing was placed."),
             *Package), TEXT("LEVEL_INSTANCE_LOOP"));
@@ -150,6 +149,7 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     if (!Instance->IsLoaded() || !Instance->GetLoadedLevel())
     {
         World->DestroyActor(Instance);
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was placed
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
             TEXT("'%s' did not load as a Level Instance, so nothing was placed. Open the level on its own to check it loads, then retry."),
             *Package), TEXT("LEVEL_INSTANCE_NOT_LOADED"));
@@ -164,10 +164,10 @@ bool HandleCreateLevelInstance(UEngineWireSubsystem* Subsystem, const FString& R
     Result->SetBoolField(TEXT("loaded"), Instance->IsLoaded());
     Result->SetNumberField(TEXT("childActorCount"), ChildActors);
     McpHandlerUtils::AddVerification(Result, Instance);
-    DefaultSaveToLevelState(Payload, World);
+    SpawnStep.Reset();
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Instance->GetLevel(), FString::Printf(
         TEXT("Placed Level Instance '%s' of %s (%s, %d actors)"), *Label, *Package,
-        Instance->IsLoaded() ? TEXT("loaded") : TEXT("not loaded"), ChildActors), Result);
+        Instance->IsLoaded() ? TEXT("loaded") : TEXT("not loaded"), ChildActors), Result, SavesByDefault(World));
     return true;
 }
 
@@ -248,17 +248,20 @@ bool HandleCreatePackedLevelActor(UEngineWireSubsystem* Subsystem, const FString
     }
     FActorSpawnParameters SpawnParams;
     SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     AActor* Spawned = World->SpawnActor<AActor>(BP->GeneratedClass, ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector), FRotator::ZeroRotator, SpawnParams);
     if (!Spawned)
     {
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was placed
         Subsystem->SendAutomationResponse(Socket, RequestId, false, Message + TEXT(", but the actor could not be placed."), Result, TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
     Spawned->SetActorLabel(FPackageName::GetShortName(BPPackage));
     Result->SetStringField(TEXT("actorName"), Spawned->GetName());
     McpHandlerUtils::AddVerification(Result, Spawned);
-    DefaultSaveToLevelState(Payload, World);
-    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Spawned->GetLevel(), Message + TEXT(" and placed it"), Result);
+    SpawnStep.Reset();
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Spawned->GetLevel(), Message + TEXT(" and placed it"), Result,
+                                               SavesByDefault(World));
 #else
     Subsystem->SendAutomationError(Socket, RequestId,
         TEXT("Packed Level Blueprints can be built from code on Unreal Engine 5.3 or later; on this version use the editor's Create Packed Level Blueprint command, or create_level_structure kind level_instance."),

@@ -86,7 +86,6 @@ bool HandleSimplifyCollision(UEngineWireSubsystem* Self, const FString& RequestI
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("trianglesBefore"), CurrentTris);
     Result->SetNumberField(TEXT("collisionSourceTriangles"), CollisionSource->GetTriangleCount());
     Result->SetNumberField(TEXT("renderTriangles"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);

@@ -49,14 +49,7 @@ static void AppendStackIssueWarnings(const FActionContext& Context, bool bSucces
     Context.Result->SetArrayField(TEXT("stackErrors"), Errors);
     if (Warnings.Num() > 0)
     {
-        const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
-        TArray<TSharedPtr<FJsonValue>> All;
-        if (Context.Result->TryGetArrayField(TEXT("warnings"), Existing) && Existing)
-        {
-            All = *Existing;
-        }
-        All.Append(Warnings);
-        Context.Result->SetArrayField(TEXT("warnings"), All);
+        McpHandlerUtils::AppendWarnings(Context.Result, Warnings);
     }
 }
 

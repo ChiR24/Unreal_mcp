@@ -38,7 +38,8 @@ bool HandleSetupVolumetricFog(
     UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     for (AActor* Actor : ActorSS->GetAllLevelActors())
     {
-        if (Actor && Actor->IsA<AExponentialHeightFog>())
+        // A fog in a level the request may not touch is passed over (F268).
+        if (Actor && Actor->IsA<AExponentialHeightFog>() && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
         {
             FogActor = Cast<AExponentialHeightFog>(Actor);
             break;
@@ -47,8 +48,8 @@ bool HandleSetupVolumetricFog(
 
     if (!FogActor)
     {
-        FogActor = Cast<AExponentialHeightFog>(
-            SpawnActorInActiveWorld<AActor>(AExponentialHeightFog::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator));
+        FogActor = SpawnActorInActiveWorld<AExponentialHeightFog>(AExponentialHeightFog::StaticClass(), FVector::ZeroVector,
+                                                                   FRotator::ZeroRotator);
     }
 
     if (!FogActor || !FogActor->GetComponent())

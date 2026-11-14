@@ -23,7 +23,8 @@ export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
     family: F, summary: 'Generate a PCG graph on a placed PCG component: the one actorName, componentName or componentPath names, or with createComponent a new one on actorName (one it already has is used; createdComponent says which). graphPath becomes the component\'s graph and generation is scheduled to run over the next frames (force, default true, regenerates an up-to-date component); read PCGComponent.bGenerated with inspect get_property to see it finished (partitioned actors keep it false). GENERATION_NOT_SCHEDULED when it is already generating, has no graph or has invalid bounds; save true also saves the level (default false), every other unsaved change in it with it.', whenToUse: ['A PCG graph must be generated in the level.'], whenNotToUse: ['Graph authoring is needed; use add_pcg_node or connect_pcg_pins.'],
     inputProps: {
       graphPath: P.graphPath, actorName: P.actorName, componentName: P.componentName,
-      componentPath: P.componentPath, createComponent: P.createComponent, force: P.force, save: P.save,
+      componentPath: P.componentPath, createComponent: P.createComponent, force: P.force,
+      save: { ...P.save, description: 'Save the level after the run (default false).' },
     }, required: ['graphPath'], effect: 'write',
     behavior: { longRunning: true, safeToRetry: false }, costLatency: 'long-running', costResources: 'high',
     exampleInput: { action: 'execute_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph', createComponent: true, save: true },

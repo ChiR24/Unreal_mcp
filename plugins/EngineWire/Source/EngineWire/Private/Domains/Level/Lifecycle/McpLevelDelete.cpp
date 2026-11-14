@@ -55,7 +55,7 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
     const FString ObjectPath = McpToObjectPath(LongPackageName);
     FLevelFileDeletion Deletion;
     DeleteLevelFiles(LongPackageName, false, Deletion);
-    ScanLevelPackagePath(LongPackageName, Deletion.MapFilename, true);
+    ScanLevelPackagePath(LongPackageName, Deletion.MapFilename);
 
     bool bCurrentWorldMatchesTarget = false;
     const int32 RemovedStreamingRefs = RemoveStreamingReferencesForLevelDelete(
@@ -78,7 +78,7 @@ bool HandleDeleteLevelAction(UEngineWireSubsystem& Subsystem, const FString& Req
       DeleteLevelFiles(LongPackageName, true, Deletion);
     }
 
-    ScanLevelPackagePath(LongPackageName, Deletion.MapFilename, true);
+    ScanLevelPackagePath(LongPackageName, Deletion.MapFilename);
 
     const bool bMapFileStillExists = !Deletion.MapFilename.IsEmpty() &&
                                      IFileManager::Get().FileExists(*Deletion.MapFilename);

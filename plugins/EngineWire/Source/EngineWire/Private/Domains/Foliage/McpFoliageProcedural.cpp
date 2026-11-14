@@ -38,9 +38,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
   const FVector Size = ExtractVectorField(Bounds, TEXT("size"), FVector(1000.0));
 
   const TArray<TSharedPtr<FJsonValue>> *FoliageTypesArr = nullptr;
-  if (!Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr)) {
-    Payload->TryGetArrayField(TEXT("types"), FoliageTypesArr);
-  }
+  Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr);
 
   int32 Seed = 12345;
   Payload->TryGetNumberField(TEXT("seed"), Seed);

@@ -182,7 +182,13 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
         return true;
     }
     const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-    UWidgetBlueprint* WidgetBP = WidgetPath.IsEmpty() ? nullptr : LoadWidgetBlueprint(WidgetPath);
+    if (WidgetPath.IsEmpty())
+    {
+        Subsystem.SendAutomationError(Socket, RequestId,
+            TEXT("widgetPath is required: the Widget Blueprint to build the tree in."), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
     if (!WidgetBP || !WidgetBP->WidgetTree)
     {
         Subsystem.SendAutomationError(Socket, RequestId,

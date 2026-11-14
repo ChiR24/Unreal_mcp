@@ -65,7 +65,10 @@ bool UEngineWireSubsystem::HandleCreateLandscape(
   Request.MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
   if (Request.MaterialPath.IsEmpty()) {
     Request.MaterialPath = TEXT("/Engine/EngineMaterials/WorldGridMaterial");
-  } else if (!McpLandscapeCreation::LoadLandscapeMaterial(Request.MaterialPath)) {
+  }
+  FString ResolvedMaterialPath, MaterialError;
+  Request.Material = LoadMaterialForMcp(Request.MaterialPath, ResolvedMaterialPath, MaterialError);
+  if (!Request.Material) {
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Material not found: %s. Nothing was created."), *Request.MaterialPath),
                         TEXT("ASSET_NOT_FOUND"));

@@ -4,7 +4,6 @@
 
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonNumbers.h"
@@ -28,8 +27,6 @@ namespace McpPropertyActorAccess
 {
 namespace
 {
-// A level actor reaches disk only when its level is saved, never here; these
-// shortcuts used to answer saved:true regardless.
 // The reply every actor shortcut sends: the property, the value that landed,
 // and saved:false - a level actor reaches disk only with its level.
 bool SendActorWrite(UEngineWireSubsystem& Subsystem, const FString& RequestId,
@@ -95,8 +92,7 @@ bool TryHandleSetActorProperty(
                             TArray<UObject*>{Actor});
     }
 
-    if (!bIsClassDefaultObject &&
-        PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase))
+    if (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase))
     {
         const FVector NewLoc = ReadJsonVector(ValueField, FVector::ZeroVector);
 
@@ -142,6 +138,9 @@ bool TryHandleSetActorProperty(
             bHidden = ValueField->AsNumber() != 0;
         }
 
+        // As the transform shortcuts: one undo step, and the change watch sees the actor change.
+        const FMcpScopedEditorTransaction HideStep(FText::FromString(TEXT("Set Actor Hidden")), EMcpMutationDurability::EditorStateOnly,
+                                                  TArray<UObject*>{Actor});
         Actor->SetActorHiddenInGame(bHidden);
 
         return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,

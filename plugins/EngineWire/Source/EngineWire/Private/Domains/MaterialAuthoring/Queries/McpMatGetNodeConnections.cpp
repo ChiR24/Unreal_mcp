@@ -35,8 +35,7 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
     bool bWantInputs  = (Direction == TEXT("inputs")  || Direction == TEXT("both"));
     bool bWantOutputs = (Direction == TEXT("outputs") || Direction == TEXT("both"));
 
-    double DepthD = GetJsonNumberField(Payload, TEXT("depth"), 1.0);
-    int32 MaxDepth = (int32)DepthD;
+    int32 MaxDepth = GetJsonIntField(Payload, TEXT("depth"), 1);
 
     bool bUpstream = false, bDownstream = false;
     Payload->TryGetBoolField(TEXT("upstream"), bUpstream);
@@ -95,8 +94,9 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
       Obj->SetStringField(TEXT("direction"), Direction);
       ResultConns.Add(MakeShared<FJsonValueObject>(Obj));
     };
-    TSet<FGuid> Visited;
-    Visited.Add(StartExpr->MaterialExpressionGuid);
+    // By the expression: two nodes can share a GUID (a pasted node keeps its source's).
+    TSet<const UMaterialExpression *> Visited;
+    Visited.Add(StartExpr);
 
     TArray<FNodeHop> Queue;
     Queue.Add({StartExpr, 0});
@@ -111,8 +111,8 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
         for (const FEdge &E : AllEdges) {
           if (E.Target != Current.Expr) continue;
           EmitEdge(MCP_NODE_ID(E.Source), E.OutputIndex, MCP_NODE_ID(Current.Expr), E.PinName, Current.Hop + 1, TEXT("input"));
-          if (!Visited.Contains(E.Source->MaterialExpressionGuid)) {
-            Visited.Add(E.Source->MaterialExpressionGuid);
+          if (!Visited.Contains(E.Source)) {
+            Visited.Add(E.Source);
             Queue.Add({E.Source, Current.Hop + 1});
           }
         }
@@ -123,8 +123,8 @@ bool HandleGetNodeConnections(UEngineWireSubsystem* Bridge, const FString& Reque
         for (const FEdge &E : AllEdges) {
           if (E.Source != Current.Expr) continue;
           EmitEdge(MCP_NODE_ID(Current.Expr), E.OutputIndex, MCP_NODE_ID(E.Target), E.PinName, Current.Hop + 1, TEXT("output"));
-          if (!Visited.Contains(E.Target->MaterialExpressionGuid)) {
-            Visited.Add(E.Target->MaterialExpressionGuid);
+          if (!Visited.Contains(E.Target)) {
+            Visited.Add(E.Target);
             Queue.Add({E.Target, Current.Hop + 1});
           }
         }

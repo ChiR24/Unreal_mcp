@@ -37,26 +37,6 @@ bool IsLoopbackHost(const FString& Host)
         Host.Equals(TEXT("127.0.0.1"), ESearchCase::CaseSensitive);
 }
 
-bool SplitTarget(const FString& Target, FString& OutHost, int32& OutPort)
-{
-    FString Host = Target;
-    FString PortText;
-    if (Target.Split(TEXT(":"), &Host, &PortText))
-    {
-        if (Host.Contains(TEXT(":")) || PortText.Contains(TEXT(":")))
-        {
-            return false;
-        }
-        if (!PortText.IsNumeric())
-        {
-            return false;
-        }
-        OutPort = FCString::Atoi(*PortText);
-    }
-    OutHost = Host.TrimStartAndEnd();
-    return true;
-}
-
 bool IsWithinProfilingRoot(const FString& Path)
 {
     FString Profiling = FPaths::ConvertRelativePathToFull(FPaths::ProfilingDir());
@@ -78,12 +58,6 @@ bool HasUnsafePathText(const FString& Path)
         Path.Contains(TEXT("`")) ||
         Path.Contains(TEXT("<")) || Path.Contains(TEXT(">")) ||
         Path.Contains(TEXT("\"")) || Path.Contains(TEXT("'"));
-}
-
-// The action's own declared name is read first, so an alias sent alongside it cannot override it.
-FString PickPathField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* PreferredField)
-{
-    return McpGetFirstStringField(Payload, {PreferredField, TEXT("traceFile"), TEXT("tracePath"), TEXT("snapshotPath")}).TrimStartAndEnd();
 }
 
 FString DefaultTracePath()
@@ -109,16 +83,6 @@ bool TryReadHostAndPort(
 {
     OutHost = TEXT("localhost");
     OutPort = 0;
-    FString Target;
-    if (Payload->TryGetStringField(TEXT("target"), Target))
-    {
-        if (!SplitTarget(Target.TrimStartAndEnd(), OutHost, OutPort))
-        {
-            OutError = TEXT("Trace target must be host or host:port.");
-            OutErrorCode = TEXT("INVALID_HOST");
-            return false;
-        }
-    }
     Payload->TryGetStringField(TEXT("host"), OutHost);
     Payload->TryGetNumberField(TEXT("port"), OutPort);
     OutHost.TrimStartAndEndInline();
@@ -152,17 +116,16 @@ bool TryReadHostAndPort(
 bool TryResolveTracePath(
     const TSharedPtr<FJsonObject>& Payload,
     bool bRequireExistingFile,
-    bool bAppendTraceExtension,
-    bool bAllowGeneratedDefault,
     FString& OutPath,
     FString& OutError,
     FString& OutErrorCode,
     const TCHAR* PreferredField)
 {
-    FString Path = PickPathField(Payload, PreferredField);
+    // An existing trace to read is named; a new one may be, else it gets a generated name and the .utrace extension.
+    FString Path = GetJsonStringField(Payload, PreferredField).TrimStartAndEnd();
     if (Path.IsEmpty())
     {
-        if (!bAllowGeneratedDefault)
+        if (bRequireExistingFile)
         {
             OutError = TEXT("Trace file path is required.");
             OutErrorCode = TEXT("MISSING_PATH");
@@ -182,7 +145,7 @@ bool TryResolveTracePath(
     }
     Path = FPaths::ConvertRelativePathToFull(Path);
     FPaths::NormalizeFilename(Path);
-    if (bAppendTraceExtension &&
+    if (!bRequireExistingFile &&
         !FPaths::GetExtension(Path).Equals(TEXT("utrace"), ESearchCase::IgnoreCase))
     {
         Path = FPaths::SetExtension(Path, TEXT("utrace"));

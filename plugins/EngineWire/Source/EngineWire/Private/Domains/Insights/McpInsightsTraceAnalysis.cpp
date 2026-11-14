@@ -20,7 +20,7 @@ bool HandleAnalyzeTrace(
     FString Path;
     FString Error;
     FString ErrorCode;
-    if (!TryResolveTracePath(Payload, true, false, false, Path, Error, ErrorCode))
+    if (!TryResolveTracePath(Payload, true, Path, Error, ErrorCode))
     {
         TSharedPtr<FJsonObject> Result =
             McpHandlerUtils::CreateResultObject();

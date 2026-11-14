@@ -3,7 +3,6 @@
 #include "Domains/Performance/McpPerfPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Subsystems/EditorActorSubsystem.h"
@@ -12,7 +11,6 @@
 #include "Dom/JsonValue.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
-#include "HAL/FileManager.h"
 #include "IMeshMergeUtilities.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #include "MeshMerge/MeshMergingSettings.h"
@@ -21,7 +19,6 @@
 #endif
 #include "MeshMergeModule.h"
 #include "Misc/PackageName.h"
-#include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
 #include "StaticMeshCompiler.h"
@@ -49,7 +46,8 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
-    if (!GEditor || !GEditor->GetEditorWorldContext().World())
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    if (!World)
     {
         Context.Bridge.SendAutomationError(
             Context.RequestingSocket, Context.RequestId,
@@ -58,7 +56,6 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
     TArray<AActor*> ActorsToMerge;
     TArray<FString> Unresolved;
     for (const TSharedPtr<FJsonValue>& Val : *NamesArray)
@@ -215,13 +212,10 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     MergedMesh->ClearFlags(RF_Transient);
     MergedMesh->MarkPackageDirty();
 
-    bool bSaved = false;
-    if (UPackage* MergedPackage = MergedMesh->GetOutermost())
-    {
-        MergedPackage->ClearFlags(RF_Transient);
-        MergedPackage->SetDirtyFlag(true);
-        bSaved = McpSafeAssetSave(MergedMesh);
-    }
+    UPackage* MergedPackage = MergedMesh->GetOutermost();
+    MergedPackage->ClearFlags(RF_Transient);
+    MergedPackage->SetDirtyFlag(true);
+    const bool bSaved = McpSafeAssetSave(MergedMesh);
 
     if (!bSaved)
     {

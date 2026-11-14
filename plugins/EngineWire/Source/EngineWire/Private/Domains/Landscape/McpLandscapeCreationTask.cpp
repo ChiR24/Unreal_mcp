@@ -8,6 +8,7 @@
 #include "Landscape.h"
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
+#include "Materials/MaterialInterface.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
@@ -44,9 +45,7 @@ void BuildLandscape(
   Landscape->SubsectionSizeQuads = QuadsPerSection;
   Landscape->NumSubsections = Request.SectionsPerComponent;
 
-  if (UMaterialInterface *Mat = LoadLandscapeMaterial(Request.MaterialPath)) {
-    Landscape->LandscapeMaterial = Mat;
-  }
+  Landscape->LandscapeMaterial = Request.Material;
 
 #if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
   // Import() owns the landscape GUID and the ULandscapeInfo on 5.5+, exactly

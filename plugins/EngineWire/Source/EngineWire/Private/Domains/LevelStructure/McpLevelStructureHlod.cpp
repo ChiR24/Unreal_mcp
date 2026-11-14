@@ -29,11 +29,7 @@ bool HandleConfigureHlodLayer(
     using namespace LevelStructureHelpers;
 
     // CRITICAL: hlodLayerName is required - no default fallback
-    FString HlodLayerName;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("hlodLayerName"), HlodLayerName);
-    }
+    const FString HlodLayerName = GetJsonStringField(Payload, TEXT("hlodLayerName"));
 
     if (HlodLayerName.IsEmpty())
     {
@@ -59,8 +55,14 @@ bool HandleConfigureHlodLayer(
     }
     HlodLayerPath = SafePath;
 
-    FString FullPath = HlodLayerPath / HlodLayerName;
-    FullPath = McpRootedContentPath(FullPath);
+    // The name is joined to the folder only when it is one an asset can take: it was joined unchecked and named the
+    // object, so a separator made a subfolder and a dot an object no path resolves.
+    FString FullPath, PathError, PathCode;
+    if (!McpBuildValidatedAssetPath(HlodLayerPath, HlodLayerName, TEXT("HLOD layer"), FullPath, PathError, PathCode))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, PathError, PathCode);
+        return true;
+    }
 
     // An unknown layerType was written as nothing and answered success with layerTypeApplied false: refused before
     // the asset exists.
@@ -85,12 +87,6 @@ bool HandleConfigureHlodLayer(
     }
 
     UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone);
-    if (!NewHLODLayer)
-    {
-        Subsystem->SendAutomationError(Socket, RequestId,
-            TEXT("Failed to create UHLODLayer object"), TEXT("ASSET_CREATION_FAILED"));
-        return true;
-    }
 
     // LayerType, bIsSpatiallyLoaded, CellSize and LoadingRange are reflected properties on every 5.x UHLODLayer
     // (5.7 moved only their public setters), so each is written through reflection and reported as applied or not.
@@ -140,7 +136,7 @@ bool HandleCreateMinimapVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));
@@ -151,8 +147,8 @@ bool HandleCreateMinimapVolume(
     UWorld* World = GetEditorWorld();
     if (!World)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("No editor world available"), TEXT("NO_EDITOR_WORLD"));
         return true;
     }
 
@@ -167,11 +163,14 @@ bool HandleCreateMinimapVolume(
 
     // Spawned, labelled and given the box brush the editor gives a placed volume: a volume from SpawnActor has none, so
     // scaling it left bounds of zero and the minimap builder, which captures the volume's bounds, drew nothing.
+    // One undo step for the placement, closed before the level is saved.
+    TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     AWorldPartitionMiniMapVolume* MiniMapVolume = VolumeHelpers::SpawnVolumeActor<AWorldPartitionMiniMapVolume>(
         World, VolumeName, VolumeLocation, FRotator::ZeroRotator, VolumeExtent);
 
     if (!MiniMapVolume)
     {
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was placed
         Subsystem->SendAutomationError(Socket, RequestId,
             TEXT("Failed to spawn AWorldPartitionMiniMapVolume actor"), TEXT("ACTOR_SPAWN_FAILED"));
         return true;
@@ -188,10 +187,11 @@ bool HandleCreateMinimapVolume(
 
     FString Message = FString::Printf(TEXT("Created minimap volume '%s' at (%f, %f, %f)"),
         *VolumeName, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
+    SpawnStep.Reset();
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, MiniMapVolume->GetLevel(), Message, ResponseJson);
 #else
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Minimap volume requires Unreal Engine 5.1 or later."), nullptr);
+    Subsystem->SendAutomationError(Socket, RequestId,
+        TEXT("Minimap volume requires Unreal Engine 5.1 or later."), TEXT("UNSUPPORTED_VERSION"));
 #endif
     return true;
 }

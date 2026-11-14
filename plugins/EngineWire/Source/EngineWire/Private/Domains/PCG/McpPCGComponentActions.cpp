@@ -15,7 +15,7 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     FString Error;
     FString GraphPath;
     UPCGGraph* Graph = nullptr;
-    const FString GraphRawPath = McpGetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});
+    const FString GraphRawPath = GetJsonStringField(Payload, TEXT("graphPath"));
     if (!GraphRawPath.IsEmpty())
     {
         Graph = LoadPCGAsset<UPCGGraph>(GraphRawPath, TEXT("PCG graph"), GraphPath, Error);

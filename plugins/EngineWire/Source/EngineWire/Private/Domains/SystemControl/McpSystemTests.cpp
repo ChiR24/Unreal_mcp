@@ -78,8 +78,10 @@ void McpSendTestRun(UEngineWireSubsystem* Self, const FString& RequestId, FSyste
   if (Run.NotRun > 0) {
     Message += FString::Printf(TEXT(", %d not run"), Run.NotRun);
   }
-  // A failed test is a finding, not a failed call: tests[] says which one and why.
-  Self->SendAutomationResponse(Socket, RequestId, true, Message, Result, FString());
+  // A failed test is a finding, not a failed call: tests[] says which one and why. Answered inside the request's
+  // brackets again, as every latent answer is: its principal, change watch and undo ledger.
+  Self->RunLatentReply(RequestId, TEXT("system_control run_tests"),
+                      [&]() { Self->SendAutomationResponse(Socket, RequestId, true, Message, Result, FString()); });
 }
 
 // One tick of the run: finish the test in progress when its commands are done (or it timed out), else start the

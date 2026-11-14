@@ -132,10 +132,23 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
     Folder = Folder.IsEmpty() ? FPackageName::GetLongPackagePath(Source->GetOutermost()->GetName()) : SanitizeProjectRelativePath(Folder);
     Folder.RemoveFromEnd(TEXT("/"));
     const FString Prefix = GetJsonStringField(Payload, TEXT("namePrefix"), Source->GetName() + TEXT("_Part"));
-    if (Folder.IsEmpty() || !FPackageName::IsValidLongPackageName(Folder / Prefix))
+    if (Folder.IsEmpty() || !FPackageName::IsValidLongPackageName(Folder))
     {
         Self->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("outputPath"), GetJsonStringField(Payload, TEXT("outputPath"))),
                                   TEXT("INVALID_PATH"));
+        return true;
+    }
+    if (!FPackageName::IsValidLongPackageName(Folder / Prefix))
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("namePrefix '%s' cannot begin a package name; use letters, "
+            "digits and underscores."), *Prefix), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // Engine content is never saved: the parts would stay in memory only.
+    if (McpSafeOperations::IsEngineContentPackage(Folder / Prefix))
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is engine content, which is never saved; pass outputPath, "
+            "a /Game folder, for the parts."), *Folder), TEXT("ENGINE_CONTENT"));
         return true;
     }
 
@@ -250,6 +263,11 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("meshPath"), Source->GetPathName());
     Result->SetArrayField(TEXT("meshes"), Rows);
+    if (!bDryRun)
+    {
+        // The receipt's changes[] reads changedAssets.
+        Result->SetArrayField(TEXT("changedAssets"), McpHandlerUtils::ToJsonStringArray(AssetPaths));
+    }
     Result->SetNumberField(TEXT("skippedSmall"), SkippedSmall);
     Result->SetNumberField(TEXT("droppedRepeats"), DroppedRepeats);
     Self->SendAutomationResponse(Socket, RequestId, true, bDryRun

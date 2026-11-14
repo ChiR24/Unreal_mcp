@@ -58,7 +58,7 @@ bool HandleUpdateCustomExpression(UEngineWireSubsystem* Bridge, const FString& R
     FINALIZE_HOST();
 
     TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
-    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
     FString Message = TEXT("Custom expression updated.");

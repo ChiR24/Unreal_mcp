@@ -27044,7 +27044,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gridCellSize": {
           "type": "number",
-          "description": "World Partition grid cell size."
+          "description": "Cell size in units, at least 1600 (the editor's own bound; a smaller value is stored as 1600)."
         },
         "gridName": {
           "type": "string",
@@ -27104,7 +27104,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "loadingRange": {
           "type": "number",
-          "description": "Loading range for grid cells."
+          "description": "How far from the player the grid's cells load, in units, 0 or more (a negative value is stored as 0)."
         },
         "location": {
           "oneOf": [
@@ -27261,7 +27261,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "hlod_layer",
             "data_layer_assignment"
           ],
-          "description": "Which configure level streaming variant to run; omit for 'streaming'.\nstreaming: Change how the open level streams a sublevel (levelName: its package path or short name): streamingMethod Blueprint or AlwaysLoaded (switched as the Levels panel does), bShouldBeVisible, bShouldBlockOnLoad and bDisableDistanceStreaming; only the fields sent change. A level on disk that the open level does not stream yet is added to it first; one that does not exist is LEVEL_NOT_FOUND. The open level stays unsaved unless save is true.\nstreaming_distance: Stream a sublevel by where the player is: place a Level Streaming Volume, a box reaching streamingDistance (default 10000) from volumeLocation (default the origin) on each axis, bound to the sublevel (levelName) so it loads while a viewer is inside it. streamingUsage picks what it controls (LoadingAndVisibility, the default, Loading, VisibilityBlockingOnLoad, BlockingOnLoad, LoadingNotVisible); an unknown one or a distance of 0 or less is refused before anything is placed. createVolume false only lists the volumes bound to the level. A level on disk the open level does not stream yet is added first. The open level stays unsaved unless save is true.\nworld_partition: Turn World Partition on for the open level in place: it creates the World Partition object on the level's World Settings (save and reload the level before streaming works); bUseExternalActors also moves every actor into its own package (one file per actor), which data layers need. Turning it off on a partitioned level is refused (NOT_SUPPORTED), as is a level that cannot take it. The level stays unsaved unless save is true.\ngrid_size: Set a World Partition streaming grid of the open level (gridName; omitted, the first grid, or MainPartition on a Runtime Hash Set level): gridCellSize, loadingRange (how far from the player its cells load), bBlockOnSlowStreaming and priority; only the fields sent change, and a grid missing by name is added with createIfMissing (default true), the others at their defaults (cell 12800, range 25600). On a Runtime Hash Set level the grid is a runtime partition row, which must have a Main Layer to hold the values (PARTITION_HAS_NO_LAYER otherwise). The reply gives the edited grid values as they now stand (on a Runtime Hash Set level, the values it set) and lists every grid; a grid found with nothing sent to change is refused. The level stays unsaved unless save is true.\nhlod_layer: Create an HLOD layer asset (hlodLayerName, in hlodLayerPath, default /Game/HLOD): layerType Instancing, MeshMerge (default), MeshSimplify or MeshApproximate, spatially loaded (default true) with its cellSize (default 25600) and loadingDistance (default 51200). An unknown layerType is refused before anything is created; each value reports whether it took (layerTypeApplied and the others). Saved unless save is false.\ndata_layer_assignment: Add a placed actor (actorName: label or name, or actorPath) to a data layer of the open level (dataLayerName: its short or full name), so it loads and shows with that layer. One already in the layer is reported (alreadyAssigned); a layer that is not there is refused with the ones that are. Needs World Partition with external actors; the level stays unsaved unless save is true.",
+          "description": "Which configure level streaming variant to run; omit for 'streaming'.\nstreaming: Change how the open level streams a sublevel (levelName: its package path or short name): streamingMethod Blueprint or AlwaysLoaded (switched as the Levels panel does), bShouldBeVisible, bShouldBlockOnLoad and bDisableDistanceStreaming; only the fields sent change. A level on disk that the open level does not stream yet is added to it first; one that does not exist is LEVEL_NOT_FOUND, and a short name two streamed sublevels share is AMBIGUOUS_LEVEL. The open level stays unsaved unless save is true.\nstreaming_distance: Stream a sublevel by where the player is: place a Level Streaming Volume, a box reaching streamingDistance (default 10000) from volumeLocation (default the origin) on each axis, bound to the sublevel (levelName) so it loads while a viewer is inside it. streamingUsage picks what it controls (LoadingAndVisibility, the default, Loading, VisibilityBlockingOnLoad, BlockingOnLoad, LoadingNotVisible); an unknown one or a distance of 0 or less is refused before anything is placed. createVolume false only lists the volumes bound to the level, each with its usage, and adds and saves nothing (a level the open level does not stream is LEVEL_NOT_FOUND there). Otherwise a level on disk the open level does not stream yet is added first, and the open level stays unsaved unless save is true.\nworld_partition: Turn World Partition on for the open level in place: it creates the World Partition object on the level's World Settings (save and reload the level before streaming works); bUseExternalActors also moves every actor into its own package (one file per actor), which data layers need. Turning it off on a partitioned level is refused (NOT_SUPPORTED), as is a level that cannot take it. The level stays unsaved unless save is true.\ngrid_size: Set a World Partition streaming grid of the open level (gridName; omitted, the first grid, or MainPartition on a Runtime Hash Set level): gridCellSize, loadingRange (how far from the player its cells load), bBlockOnSlowStreaming and priority; only the fields sent change, and a grid missing by name is added with createIfMissing (default true), the others at their defaults (cell 12800, range 25600). On a Runtime Hash Set level the grid is a runtime partition row, which must have a Main Layer to hold the values (PARTITION_HAS_NO_LAYER otherwise). The reply gives the edited grid values as they now stand (on a Runtime Hash Set level, the values it set) and lists every grid; a grid found with nothing sent to change is refused. The level stays unsaved unless save is true.\nhlod_layer: Create an HLOD layer asset (hlodLayerName, in hlodLayerPath, default /Game/HLOD): layerType Instancing, MeshMerge (default), MeshSimplify or MeshApproximate, spatially loaded (default true) with its cellSize (default 25600) and loadingDistance (default 51200). An unknown layerType is refused before anything is created; each value reports whether it took (layerTypeApplied and the others). Saved unless save is false.\ndata_layer_assignment: Add a placed actor (actorName: label or name, or actorPath) to a data layer of the open level (dataLayerName: its short or full name), so it loads and shows with that layer. One already in the layer is reported (alreadyAssigned); a layer that is not there is refused with the ones that are. Needs World Partition with external actors; the level stays unsaved unless save is true.",
           "default": "streaming"
         },
         "sourceNodeName": {
@@ -28398,7 +28398,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeName": {
           "type": "string",
-          "description": "Level blueprint node name."
+          "description": "A node title: a new node is given it; set_pcg_node_settings finds the node to change by it (its object name, title or index), as nodeId."
         },
         "nodeType": {
           "type": "string",
@@ -28472,7 +28472,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "title": {
           "type": "string",
-          "description": "Node title (alias of nodeName)."
+          "description": "set_pcg_node_settings: a new title for the node nodeName or nodeId found."
         },
         "x": {
           "type": "number",

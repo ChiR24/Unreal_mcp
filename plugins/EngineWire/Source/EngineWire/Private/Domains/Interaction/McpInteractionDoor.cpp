@@ -1,7 +1,6 @@
 #include "Domains/Interaction/McpInteractionPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 
-#include "EditorAssetLibrary.h"
 
 namespace McpInteractionHandlers
 {

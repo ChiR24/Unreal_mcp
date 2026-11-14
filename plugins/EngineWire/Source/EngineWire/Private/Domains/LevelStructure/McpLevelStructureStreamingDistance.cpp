@@ -25,11 +25,7 @@ bool HandleSetStreamingDistance(
     using namespace LevelStructureHelpers;
 
     // CRITICAL: levelName is required - no default fallback
-    FString LevelName;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("levelName"), LevelName);
-    }
+    const FString LevelName = GetJsonStringField(Payload, TEXT("levelName"));
 
     if (LevelName.IsEmpty())
     {
@@ -62,11 +58,10 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
+    // A read (createVolume false) adds no level: one the world does not stream has no volumes to list.
+    ULevelStreaming* FoundLevel = FindOrAddStreamingLevelOrReply(Subsystem, RequestId, Socket, World, LevelName, bCreateVolume);
     if (!FoundLevel)
     {
-        Subsystem->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 
@@ -83,7 +78,9 @@ bool HandleSetStreamingDistance(
             {
                 TSharedPtr<FJsonObject> VolumeObj = McpHandlerUtils::CreateResultObject();
                 VolumeObj->SetStringField(TEXT("name"), McpActorRef(Volume));
-                VolumeObj->SetNumberField(TEXT("usage"), static_cast<int32>(Volume->StreamingUsage));
+                // The usage's name, as the create branch answers it and streamingUsage takes it, not its number.
+                VolumeObj->SetStringField(TEXT("usage"),
+                    StaticEnum<EStreamingVolumeUsage>()->GetNameStringByValue(static_cast<int64>(Volume->StreamingUsage)).RightChop(4));
                 VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeObj));
             }
         }
@@ -95,11 +92,14 @@ bool HandleSetStreamingDistance(
         ResponseJson->SetNumberField(TEXT("volumeCount"), VolumesArray.Num());
         ResponseJson->SetStringField(TEXT("note"), TEXT("Use createVolume=true to create a streaming volume for distance-based loading"));
 
-        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel,
+        // A read: nothing to save, so no save and no note that the level is unsaved.
+        Subsystem->SendAutomationResponse(Socket, RequestId, true,
             FString::Printf(TEXT("Level '%s' has %d streaming volume(s)"), *LevelName, VolumesArray.Num()), ResponseJson);
         return true;
     }
 
+    // One undo step for the volume and the level's list of volumes, closed before the level is saved.
+    TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     // A spawned volume has no brush: scaling it left bounds of zero, a volume no viewer is ever inside, so the level
     // never streamed by distance. Spawned with a box reaching streamingDistance from location on each axis.
     ALevelStreamingVolume* NewVolume = VolumeHelpers::SpawnVolumeActor<ALevelStreamingVolume>(
@@ -108,15 +108,18 @@ bool HandleSetStreamingDistance(
 
     if (!NewVolume)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to spawn ALevelStreamingVolume actor"), nullptr);
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was placed
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Failed to spawn ALevelStreamingVolume actor"), TEXT("ACTOR_SPAWN_FAILED"));
         return true;
     }
 
     NewVolume->StreamingUsage = static_cast<EStreamingVolumeUsage>(Usage);
 
     // As the Details panel does: the change event updates each streaming volume's list of levels, which Play reads.
-    // Without it the volume streamed nothing until the level was saved and loaded again.
+    // Without it the volume streamed nothing until the level was saved and loaded again. The level is given
+    // RF_Transactional (as in configure_level_streaming), so undo takes the volume out of its list too.
+    FoundLevel->SetFlags(RF_Transactional);
     FoundLevel->Modify();
     FoundLevel->EditorStreamingVolumes.AddUnique(NewVolume);
     FPropertyChangedEvent VolumesChanged(FindFProperty<FProperty>(ULevelStreaming::StaticClass(),
@@ -139,6 +142,7 @@ bool HandleSetStreamingDistance(
 
     FString Message = FString::Printf(TEXT("Created streaming volume for level '%s' with distance %.0f at (%f, %f, %f)"),
         *LevelName, StreamingDistance, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
+    SpawnStep.Reset();
     SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }

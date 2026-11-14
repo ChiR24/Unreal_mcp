@@ -39,8 +39,8 @@ inline void MarkNoAssetsChanged(const TSharedPtr<FJsonObject>& Result)
     }
 }
 
-// Adds Text to the reply's warnings[], after the ones it already holds.
-inline void AppendWarning(const TSharedPtr<FJsonObject>& Result, const FString& Text)
+// Adds More to the reply's warnings[], after the ones it already holds.
+inline void AppendWarnings(const TSharedPtr<FJsonObject>& Result, const TArray<TSharedPtr<FJsonValue>>& More)
 {
     TArray<TSharedPtr<FJsonValue>> Warnings;
     const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
@@ -48,7 +48,13 @@ inline void AppendWarning(const TSharedPtr<FJsonObject>& Result, const FString& 
     {
         Warnings = *Existing;
     }
-    Warnings.Add(MakeShared<FJsonValueString>(Text));
+    Warnings.Append(More);
     Result->SetArrayField(TEXT("warnings"), Warnings);
+}
+
+// Adds Text to the reply's warnings[], after the ones it already holds.
+inline void AppendWarning(const TSharedPtr<FJsonObject>& Result, const FString& Text)
+{
+    AppendWarnings(Result, {MakeShared<FJsonValueString>(Text)});
 }
 }

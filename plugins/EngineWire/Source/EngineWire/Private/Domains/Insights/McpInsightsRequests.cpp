@@ -67,32 +67,13 @@ bool TryReadChannels(
     FString& OutChannels,
     FString& OutError)
 {
-    if (Payload->TryGetStringField(TEXT("channels"), OutChannels))
-    {
-        OutChannels.TrimStartAndEndInline();
-        return ValidateChannels(OutChannels, OutError);
-    }
-
-    const TArray<TSharedPtr<FJsonValue>>* ChannelArray = nullptr;
-    if (!Payload->TryGetArrayField(TEXT("channels"), ChannelArray))
+    // channels is declared a string: names between commas.
+    if (!Payload->TryGetStringField(TEXT("channels"), OutChannels))
     {
         OutChannels.Empty();
         return true;
     }
-
-    TArray<FString> Tokens;
-    for (const TSharedPtr<FJsonValue>& Value : *ChannelArray)
-    {
-        FString Token;
-        if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Token))
-        {
-            OutError = TEXT("Trace channel arrays must contain strings only.");
-            return false;
-        }
-        Token.TrimStartAndEndInline();
-        Tokens.Add(Token);
-    }
-    OutChannels = FString::Join(Tokens, TEXT(","));
+    OutChannels.TrimStartAndEndInline();
     return ValidateChannels(OutChannels, OutError);
 }
 

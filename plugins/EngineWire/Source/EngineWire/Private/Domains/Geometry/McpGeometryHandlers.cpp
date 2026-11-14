@@ -135,8 +135,6 @@ bool UEngineWireSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("array_linear")) return HandleArrayLinear(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("array_radial")) return HandleArrayRadial(this, RequestId, Payload, RequestingSocket);
 
-    // Mesh Topology Operations
-
     // UV Operations
     if (SubAction == TEXT("project_uv")) return HandleProjectUV(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("transform_uvs")) return HandleTransformUVs(this, RequestId, Payload, RequestingSocket);

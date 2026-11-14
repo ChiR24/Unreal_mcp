@@ -13,7 +13,7 @@ bool HandleLatticeDeform(UEngineWireSubsystem* Self, const FString& RequestId,
     auto [TargetActor, DMC, Mesh] = *Target;
 
     const int32 LatticeResolution = FMath::Clamp(GetJsonIntField(Payload, TEXT("latticeResolution"), 3), 2, 16);
-    const double Weight = FMath::Clamp(GetJsonNumberField(Payload, TEXT("weight"), GetJsonNumberField(Payload, TEXT("strength"), 0.25)), -2.0, 2.0);
+    const double Weight = FMath::Clamp(GetJsonNumberField(Payload, TEXT("weight"), 0.25), -2.0, 2.0);
     const FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
     if (!BBox.IsValid)
     {
@@ -89,7 +89,7 @@ bool HandleDisplaceByTexture(UEngineWireSubsystem* Self, const FString& RequestI
         return true;
     }
 
-    const double HeightScale = GetJsonNumberField(Payload, TEXT("heightScale"), GetJsonNumberField(Payload, TEXT("strength"), 10.0));
+    const double HeightScale = GetJsonNumberField(Payload, TEXT("heightScale"), 10.0);
     const double Midpoint = FMath::Clamp(GetJsonNumberField(Payload, TEXT("midpoint"), 0.5), 0.0, 1.0);
     const FVector DisplacementAxis = AxisVectorFromPayload(Payload);
     const FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);

@@ -17,9 +17,7 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
 
   TArray<FVector> Locations;
   const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
-  if ((Payload->TryGetArrayField(TEXT("locations"), LocationsArray) ||
-       Payload->TryGetArrayField(TEXT("location"), LocationsArray)) &&
-      LocationsArray && LocationsArray->Num() > 0) {
+  if (Payload->TryGetArrayField(TEXT("locations"), LocationsArray) && LocationsArray && LocationsArray->Num() > 0) {
     for (const TSharedPtr<FJsonValue> &Val : *LocationsArray) {
       Locations.Add(ReadJsonVector(Val, FVector::ZeroVector));
     }
@@ -28,11 +26,7 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
     if ((Payload->TryGetObjectField(TEXT("position"), PosObj) ||
          Payload->TryGetObjectField(TEXT("location"), PosObj)) &&
         PosObj) {
-      double X = 0, Y = 0, Z = 0;
-      (*PosObj)->TryGetNumberField(TEXT("x"), X);
-      (*PosObj)->TryGetNumberField(TEXT("y"), Y);
-      (*PosObj)->TryGetNumberField(TEXT("z"), Z);
-      Locations.Add(FVector(X, Y, Z));
+      Locations.Add(ReadJsonVector(MakeShared<FJsonValueObject>(*PosObj), FVector::ZeroVector));
     }
   }
 

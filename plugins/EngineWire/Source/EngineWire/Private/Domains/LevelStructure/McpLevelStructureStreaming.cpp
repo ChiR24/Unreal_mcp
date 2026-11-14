@@ -9,6 +9,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
@@ -24,15 +25,7 @@ bool HandleConfigureLevelStreaming(
     using namespace LevelStructureHelpers;
 
     // CRITICAL: levelName is required - no default fallback
-    FString LevelName;
-    if (Payload.IsValid())
-    {
-        // Accept every spelling the contracts use for the streaming level.
-        for (const TCHAR* Key : {TEXT("levelName"), TEXT("sublevelName"), TEXT("subLevelName"), TEXT("sublevelPath"), TEXT("subLevelPath"), TEXT("levelPath")})
-        {
-            if (Payload->TryGetStringField(Key, LevelName) && !LevelName.IsEmpty()) { break; }
-        }
-    }
+    const FString LevelName = GetJsonStringField(Payload, TEXT("levelName"));
 
     if (LevelName.IsEmpty())
     {
@@ -55,7 +48,7 @@ bool HandleConfigureLevelStreaming(
     }
 
     // streamingMethod used to be echoed back without ever changing the streaming class. Resolved
-    // before FindOrAddStreamingLevel, which may add the level to the world.
+    // before FindOrAddStreamingLevelOrReply, which may add the level to the world.
     UClass* StreamingClass = Payload->HasField(TEXT("streamingMethod")) ? ResolveLevelStreamingClass(StreamingMethod) : nullptr;
     if (Payload->HasField(TEXT("streamingMethod")) && !StreamingClass)
     {
@@ -64,11 +57,9 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
+    ULevelStreaming* FoundLevel = FindOrAddStreamingLevelOrReply(Subsystem, RequestId, Socket, World, LevelName);
     if (!FoundLevel)
     {
-        Subsystem->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Streaming level not found: %s"), *LevelName), TEXT("LEVEL_NOT_FOUND"));
         return true;
     }
 
@@ -87,11 +78,18 @@ bool HandleConfigureLevelStreaming(
         }
     }
 
-    // Only what was passed changes; an omitted flag keeps the level's current value.
-    FoundLevel->Modify();
-    if (Payload->HasField(TEXT("bShouldBeVisible"))) { FoundLevel->SetShouldBeVisible(bShouldBeVisible); }
-    if (Payload->HasField(TEXT("bShouldBlockOnLoad"))) { FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad; }
-    if (Payload->HasField(TEXT("bDisableDistanceStreaming"))) { FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming; }
+    {
+        // One undo step, closed before the level is saved. A streaming level carries no RF_Transactional until the
+        // editor's own visibility toggle gives it one (EditorLevelUtils::SetLevelVisibility), so it is given it here.
+        // Only what was passed changes; an omitted flag keeps the level's current value.
+        FoundLevel->SetFlags(RF_Transactional);
+        const FMcpScopedEditorTransaction FlagsStep(FText::FromString(TEXT("Configure Level Streaming")),
+                                                    EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{FoundLevel});
+        FoundLevel->Modify();
+        if (Payload->HasField(TEXT("bShouldBeVisible"))) { FoundLevel->SetShouldBeVisible(bShouldBeVisible); }
+        if (Payload->HasField(TEXT("bShouldBlockOnLoad"))) { FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad; }
+        if (Payload->HasField(TEXT("bDisableDistanceStreaming"))) { FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming; }
+    }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, FoundLevel);

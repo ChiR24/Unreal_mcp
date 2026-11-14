@@ -65,6 +65,8 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
     SpawnParams.Name = FName(*ActorName);
     SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 
+    // One undo step: control_editor undo takes the terrain back out of the level.
+    const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
     AActor *TerrainActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
     if (!TerrainActor)
     {
@@ -81,6 +83,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
     if (!ProcMesh)
     {
         TerrainActor->Destroy();
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was added
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Failed to create procedural mesh component"),
                             TEXT("COMPONENT_CREATION_FAILED"));
@@ -148,6 +151,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
         TerrainBounds.GetExtent().IsNearlyZero())
     {
         TerrainActor->Destroy();
+        if (SpawnStep) SpawnStep->Cancel(); // nothing was added
         SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Generated terrain geometry is empty"),
                             TEXT("EMPTY_GEOMETRY"));
@@ -168,6 +172,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralTerrain(
         {
             // A material that did not load was skipped behind a success.
             TerrainActor->Destroy();
+            if (SpawnStep) SpawnStep->Cancel(); // nothing was added
             SendAutomationError(RequestingSocket, RequestId,
                                 FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
                                 TEXT("ASSET_NOT_FOUND"));

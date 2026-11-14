@@ -9,10 +9,9 @@ namespace McpGeometryHandlers
 bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"), GetJsonStringField(Payload, TEXT("actorName")));
-    if (Name.IsEmpty()) Name = TEXT("ProceduralMesh");
-
-    const FTransform Transform = FTransform::Identity; // edit_dynamic_mesh declares no placement
+    // The label when name is not sent (SpawnPrimitiveOrReply reads name itself).
+    FString FallbackName = GetJsonStringField(Payload, TEXT("actorName"));
+    if (FallbackName.IsEmpty()) FallbackName = TEXT("ProceduralMesh");
     bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
@@ -44,13 +43,11 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
         }
         DynMesh->ProcessMesh([&CopiedTriangles](const UE::Geometry::FDynamicMesh3& Mesh) { CopiedTriangles = Mesh.TriangleCount(); });
     }
-    const FMcpScopedEditorTransaction Transaction(FText::Format(NSLOCTEXT("McpGeometry", "CreateProceduralMesh", "Create {0}"), FText::FromString(Name)),
-                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject*>());
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh);
+    // edit_dynamic_mesh declares no placement: the payload's transform is the identity.
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Payload, *FallbackName, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to spawn DynamicMeshActor"), TEXT("SPAWN_FAILED"));
         return true;
     }
 
@@ -63,11 +60,7 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
         }
     }
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), McpActorRef(NewActor));
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
-    Transaction.DescribeInto(Result);
     if (!MeshPath.IsEmpty())
     {
         Result->SetNumberField(TEXT("triangleCount"), CopiedTriangles);

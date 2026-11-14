@@ -4,6 +4,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "UObject/UnrealType.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
@@ -30,16 +31,16 @@ bool HandleConfigureRuntimeHashSetGrid(
     FProperty* PartitionsProperty = HashSet->GetClass()->FindPropertyByName(TEXT("RuntimePartitions"));
     if (!PartitionsProperty)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Could not find RuntimePartitions property on RuntimeHashSet"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Could not find RuntimePartitions property on RuntimeHashSet"), TEXT("REFLECTION_FAILED"));
         return true;
     }
 
     FArrayProperty* ArrayProp = CastField<FArrayProperty>(PartitionsProperty);
     if (!ArrayProp)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("RuntimePartitions property is not an array"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("RuntimePartitions property is not an array"), TEXT("REFLECTION_FAILED"));
         return true;
     }
 
@@ -51,8 +52,8 @@ bool HandleConfigureRuntimeHashSetGrid(
     FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp->Inner);
     if (!StructProp)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("RuntimePartitions array element is not a struct"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("RuntimePartitions array element is not a struct"), TEXT("REFLECTION_FAILED"));
         return true;
     }
     UStruct* PartitionStruct = StructProp->Struct;
@@ -91,6 +92,9 @@ bool HandleConfigureRuntimeHashSetGrid(
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // One undo step for the row and its grid layer, closed before the level is saved.
+    TUniquePtr<FMcpScopedEditorTransaction> PartitionStep = MakeUnique<FMcpScopedEditorTransaction>(
+        FText::FromString(TEXT("Configure World Partition Grid")), EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{HashSet});
     HashSet->Modify();
     const bool bCreated = Index == INDEX_NONE;
     if (bCreated)
@@ -98,7 +102,6 @@ bool HandleConfigureRuntimeHashSetGrid(
         Index = ArrayHelper.AddValue();
         NameProp->SetPropertyValue_InContainer(ArrayHelper.GetRawPtr(Index), TargetPartitionName);
     }
-    const bool bFound = true;
 
     // The first of Names that Owner has as a numeric property, set on Container to Value.
     auto SetNumber = [](const UStruct* Owner, void* Container, std::initializer_list<const TCHAR*> Names, double Value)
@@ -123,24 +126,23 @@ bool HandleConfigureRuntimeHashSetGrid(
     };
     bool bLoadingRangeApplied = false;
     bool bCellSizeApplied = false;
-    if (bFound)
+    // The grid settings live on the row's MainLayer partition object (a new row has none yet).
+    void* Row = ArrayHelper.GetRawPtr(Index);
+    FObjectPropertyBase* LayerProp = CastField<FObjectPropertyBase>(PartitionStruct->FindPropertyByName(TEXT("MainLayer")));
+    UObject* MainLayer = LayerProp ? LayerProp->GetObjectPropertyValue_InContainer(Row) : nullptr;
+    if (MainLayer)
     {
-        // The grid settings live on the row's MainLayer partition object (a new row has none yet).
-        void* Row = ArrayHelper.GetRawPtr(Index);
-        FObjectPropertyBase* LayerProp = CastField<FObjectPropertyBase>(PartitionStruct->FindPropertyByName(TEXT("MainLayer")));
-        UObject* MainLayer = LayerProp ? LayerProp->GetObjectPropertyValue_InContainer(Row) : nullptr;
-        if (MainLayer)
-        {
-            MainLayer->Modify();
-        }
-        auto SetField = [&](std::initializer_list<const TCHAR*> Names, double Value)
-        {
-            return SetNumber(PartitionStruct, Row, Names, Value) ||
-                   (MainLayer && SetNumber(MainLayer->GetClass(), MainLayer, Names, Value));
-        };
-        bLoadingRangeApplied = bSetRange && SetField({TEXT("LoadingRange")}, LoadingRange);
-        bCellSizeApplied = bSetCellSize && SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
+        // The hash set makes a row's layer without RF_Transactional; given it, undo restores the layer's values too.
+        MainLayer->SetFlags(RF_Transactional);
+        MainLayer->Modify();
     }
+    auto SetField = [&](std::initializer_list<const TCHAR*> Names, double Value)
+    {
+        return SetNumber(PartitionStruct, Row, Names, Value) ||
+               (MainLayer && SetNumber(MainLayer->GetClass(), MainLayer, Names, Value));
+    };
+    bLoadingRangeApplied = bSetRange && SetField({TEXT("LoadingRange")}, LoadingRange);
+    bCellSizeApplied = bSetCellSize && SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
     // A row with no grid layer holds neither value: it answered success with both flags false, and a created row
     // stayed in the hash set with nothing to stream by.
     if (!bLoadingRangeApplied && !bCellSizeApplied)
@@ -149,6 +151,7 @@ bool HandleConfigureRuntimeHashSetGrid(
         {
             ArrayHelper.RemoveValues(Index);
         }
+        PartitionStep->Cancel(); // nothing was set
         Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Partition '%s' has no grid layer to hold a "
             "cell size or loading range%s. Give it a Main Layer under World Settings > World Partition > Runtime Partitions, then "
             "retry."), *TargetPartitionName.ToString(), bCreated ? TEXT(" (a new row is made without one, so it was taken back)") : TEXT("")),
@@ -172,7 +175,7 @@ bool HandleConfigureRuntimeHashSetGrid(
         ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
     }
     ResponseJson->SetBoolField(TEXT("created"), bCreated);
-    ResponseJson->SetBoolField(TEXT("modified"), bFound);
+    ResponseJson->SetBoolField(TEXT("modified"), true);
     ResponseJson->SetBoolField(TEXT("loadingRangeApplied"), bLoadingRangeApplied);
     ResponseJson->SetBoolField(TEXT("cellSizeApplied"), bCellSizeApplied);
 
@@ -180,6 +183,7 @@ bool HandleConfigureRuntimeHashSetGrid(
         ? FString::Printf(TEXT("Created new partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString())
         : FString::Printf(TEXT("Updated partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString());
 
+    PartitionStep.Reset();
     LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }
