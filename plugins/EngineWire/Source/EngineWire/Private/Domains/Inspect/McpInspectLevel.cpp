@@ -112,7 +112,6 @@ bool HandleInspectLevelDetailsAction(
     }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     McpAppendLevelDetails(World, Resp);
-    Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Level details retrieved"), Resp, FString());
     return true;

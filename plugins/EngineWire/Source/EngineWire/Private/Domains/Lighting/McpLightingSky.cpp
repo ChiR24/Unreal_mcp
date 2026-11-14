@@ -85,7 +85,6 @@ bool HandleSpawnSkyLight(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(SkyLight));
     McpHandlerUtils::AddVerification(Resp, SkyLight);
     if (Transaction.IsSet())

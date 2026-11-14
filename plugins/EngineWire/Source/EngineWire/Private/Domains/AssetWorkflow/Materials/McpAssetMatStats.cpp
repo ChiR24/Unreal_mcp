@@ -131,7 +131,6 @@ bool UEngineWireSubsystem::HandleGetMaterialStats(
   Stats->SetArrayField(TEXT("resultNodeInputs"), ResultNodeInputs);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   // `details` is the field the asset.get_material_stats output contract declares.
   Resp->SetObjectField(TEXT("details"), Stats);
   SendAutomationResponse(Socket, RequestId, true,

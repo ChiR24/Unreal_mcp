@@ -16,6 +16,7 @@
 #include "GameFramework/Pawn.h"
 #include "Engine/Blueprint.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
@@ -36,7 +37,7 @@ void PossessByAI(UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Report) {
   Report->SetBoolField(TEXT("saved"), McpSafeAssetSave(Blueprint));
   Report->SetStringField(TEXT("aiControllerClass"), Pawn->AIControllerClass->GetPathName());
   Report->SetStringField(TEXT("autoPossessAI"),
-                         StaticEnum<EAutoPossessAI>()->GetNameStringByValue(static_cast<int64>(Pawn->AutoPossessAI)));
+                         McpEnumName(Pawn->AutoPossessAI));
 }
 } // namespace
 

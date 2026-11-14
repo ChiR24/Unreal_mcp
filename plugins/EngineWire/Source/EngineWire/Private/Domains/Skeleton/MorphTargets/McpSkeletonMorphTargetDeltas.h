@@ -14,7 +14,7 @@ namespace McpSkeletonHandlers
 //   {vertexIndex|index: number,
 //    positionDelta|delta|position: [x,y,z] or {x,y,z},
 //    normalDelta|tangentDelta (optional): [x,y,z] or {x,y,z}}
-// Returns false with OutError/OutErrorCode set: MISSING_PARAM when the array
+// Returns false with OutError/OutErrorCode set: MISSING_PARAMETER when the array
 // is absent, INVALID_ARGUMENT (naming the accepted shapes) for a bad item.
 bool ParseMorphTargetDeltas(const TSharedPtr<FJsonObject>& Payload, TArray<FMorphTargetDelta>& OutDeltas, FString& OutError, FString& OutErrorCode);
 

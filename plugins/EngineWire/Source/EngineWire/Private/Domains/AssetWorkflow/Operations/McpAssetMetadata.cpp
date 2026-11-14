@@ -25,7 +25,6 @@ bool UEngineWireSubsystem::HandleSetMetadata(
       !MetadataObjPtr) {
     // Treat missing/empty metadata as a no-op success; nothing to write.
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Resp->SetNumberField(TEXT("updatedKeys"), 0);
     SendAutomationResponse(Socket, RequestId, true,
@@ -106,7 +105,6 @@ bool UEngineWireSubsystem::HandleSetMetadata(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
   Resp->SetNumberField(TEXT("updatedKeys"), UpdatedCount);
 
@@ -134,7 +132,6 @@ bool UEngineWireSubsystem::HandleGetMetadata(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
 
   // 1. Asset Registry Tags

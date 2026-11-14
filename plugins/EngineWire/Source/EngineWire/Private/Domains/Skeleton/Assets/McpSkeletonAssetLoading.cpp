@@ -125,7 +125,7 @@ FSkeletonMeshTarget ResolveSkeletonMeshTarget(const TSharedPtr<FJsonObject>& Pay
     if (SkeletonPath.IsEmpty())
     {
         Target.Error = TEXT("skeletalMeshPath (or skeletonPath) is required");
-        Target.ErrorCode = TEXT("MISSING_PARAM");
+        Target.ErrorCode = TEXT("MISSING_PARAMETER");
         return Target;
     }
 

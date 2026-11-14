@@ -151,7 +151,6 @@ static void HandleFade(UEngineWireSubsystem* Self, const FString& RequestId, con
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
     Resp->SetNumberField(TEXT("fadeTime"), FadeTime);
@@ -257,7 +256,6 @@ bool HandleFadeAndReverbActions(
       AudioVolume->SetReverbSettings(ReverbSettings);
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-     Resp->SetBoolField(TEXT("success"), true);
      Resp->SetStringField(TEXT("actorName"), AudioVolume->GetName());
      Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
      McpHandlerUtils::AddVerification(Resp, AudioVolume);

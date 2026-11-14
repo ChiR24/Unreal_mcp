@@ -156,7 +156,6 @@ bool HandleWidgetAuthoringCreation(
         WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
         ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("parentClass"), NewParentClass->GetPathName());
         ResultJson->SetStringField(TEXT("previousParentClass"), PreviousParent);

@@ -31,7 +31,6 @@ bool HandleInspectSettingsAction(
                 Resp->SetBoolField(TEXT("startInVR"), ProjectSettings->bStartInVR);
             }
             McpAddShaderCompileState(Resp, nullptr);
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Project settings retrieved"), Resp, FString());
             return true;
@@ -50,7 +49,6 @@ bool HandleInspectSettingsAction(
             Resp->SetBoolField(TEXT("isEditor"), GIsEditor);
             Resp->SetNumberField(TEXT("gRunningCommandlet"), IsRunningCommandlet() ? 1 : 0);
             McpAddShaderCompileState(Resp, nullptr);
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Editor settings retrieved"), Resp, FString());
             return true;
@@ -88,7 +86,6 @@ bool HandleInspectSettingsAction(
                 // lightingBuilt...) shared with get_level_details.
                 McpAppendLevelDetails(World, Resp);
                 McpAddShaderCompileState(Resp, nullptr);
-                Resp->SetBoolField(TEXT("success"), true);
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                        TEXT("World settings retrieved"), Resp, FString());
             }
@@ -107,7 +104,6 @@ bool HandleInspectSettingsAction(
             // McpInspectViewport.cpp.
             McpAppendViewportInfo(Resp);
             McpAddShaderCompileState(Resp, nullptr);
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Viewport info retrieved"), Resp, FString());
             return true;
@@ -131,7 +127,6 @@ bool HandleInspectSettingsAction(
             Resp->SetArrayField(TEXT("actors"), ActorsArray);
             Resp->SetNumberField(TEXT("count"), ActorsArray.Num());
             McpAddShaderCompileState(Resp, nullptr);
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Selected actors retrieved"), Resp, FString());
             return true;

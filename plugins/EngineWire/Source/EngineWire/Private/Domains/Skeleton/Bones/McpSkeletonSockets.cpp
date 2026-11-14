@@ -58,13 +58,13 @@ bool UEngineWireSubsystem::HandleCreateSocket(
 
     if (SocketName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (BoneName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("attachBoneName or boneName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("attachBoneName or boneName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -126,7 +126,7 @@ bool UEngineWireSubsystem::HandleConfigureSocket(
     FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
     if (SocketName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     const FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
@@ -206,7 +206,7 @@ bool UEngineWireSubsystem::HandleDeleteSocket(
     FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
     if (SocketName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("socketName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

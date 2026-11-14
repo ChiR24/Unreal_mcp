@@ -152,7 +152,6 @@ bool UEngineWireSubsystem::HandleImportAsset(
             }
 
             TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-            Resp->SetBoolField(TEXT("success"), true);
             Resp->SetStringField(TEXT("assetPath"), FinalAssetPath);
             if (!bRenameSucceeded) {
               Resp->SetBoolField(TEXT("renameWarning"), true);
@@ -338,7 +337,6 @@ bool UEngineWireSubsystem::HandleDuplicateAsset(
   if (UObject *NewAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
     PrepareCopy(SourcePath, NewAsset);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
     Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewAsset));
     McpHandlerUtils::AddVerification(Resp, NewAsset);

@@ -60,7 +60,6 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
     }
     Actor->SetOwner(Owner);
 
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Owner ? FString::Printf(TEXT("Set owner of %s to %s"), *ActorName, *OwnerActorName) : FString::Printf(TEXT("Cleared owner of %s"), *ActorName));
     McpHandlerUtils::AddVerification(ResultJson, Actor);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Owner set"), ResultJson);
@@ -114,7 +113,6 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
     {
         return SaveBlueprintAndReply(Context, Blueprint, Detail, TEXT("Autonomous proxy configured"), true);
     }
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);

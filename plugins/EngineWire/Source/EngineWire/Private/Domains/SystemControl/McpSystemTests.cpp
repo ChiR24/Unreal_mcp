@@ -172,7 +172,7 @@ bool HandleRunTests(UEngineWireSubsystem* Self,
     Self->SendAutomationError(RequestingSocket, RequestId,
                               TEXT("Play In Editor is running, and the automation framework starts no test while "
                                    "a game runs: stop it (control_editor.stop) first."),
-                              TEXT("PIE_RUNNING"));
+                              TEXT("PIE_ACTIVE"));
     return true;
   }
   if (GIsAutomationTesting) {

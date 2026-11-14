@@ -20,13 +20,13 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
 
     if (SkeletonPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (SourceBone.IsEmpty() || TargetBone.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("sourceBoneName and targetBoneName are required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("sourceBoneName and targetBoneName are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -75,7 +75,7 @@ bool UEngineWireSubsystem::HandleCreateVirtualBone(
     {
         SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("A virtual bone from %s to %s already exists (list_virtual_bones)."), *SourceBone, *TargetBone),
-            TEXT("VIRTUAL_BONE_FAILED"));
+            TEXT("VIRTUAL_BONE_EXISTS"));
         return true;
     }
     FName NewVirtualBoneName;
@@ -113,7 +113,7 @@ bool UEngineWireSubsystem::HandleRenameBone(
     if (SkeletonPath.IsEmpty() || BoneName.IsEmpty() || NewBoneName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("skeletonPath, boneName, and newBoneName are required"), TEXT("MISSING_PARAM"));
+            TEXT("skeletonPath, boneName, and newBoneName are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -171,7 +171,7 @@ bool UEngineWireSubsystem::HandleListVirtualBones(
     if (SkeletonPath.IsEmpty() && SkeletalMeshPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("skeletonPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+            TEXT("skeletonPath or skeletalMeshPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     FString Error;
@@ -213,7 +213,7 @@ bool UEngineWireSubsystem::HandleDeleteVirtualBone(
     if (SkeletonPath.IsEmpty() || VirtualBoneName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("skeletonPath and virtualBoneName are required"), TEXT("MISSING_PARAM"));
+            TEXT("skeletonPath and virtualBoneName are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -230,7 +230,7 @@ bool UEngineWireSubsystem::HandleDeleteVirtualBone(
             [&VirtualBoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == VirtualBoneFName; }))
     {
         SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Virtual bone '%s' not found"), *VirtualBoneName), TEXT("VBONE_NOT_FOUND"));
+            FString::Printf(TEXT("Virtual bone '%s' not found"), *VirtualBoneName), TEXT("VIRTUAL_BONE_NOT_FOUND"));
         return true;
     }
 

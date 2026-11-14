@@ -1,4 +1,5 @@
 #include "Domains/Navigation/McpNavPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPLoadOrReply.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpScsLookup.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
@@ -62,7 +63,7 @@ bool HandleCreateNavModifierComponent(
 
     if (BlueprintPath.IsEmpty() && ActorName.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("Pass blueprintPath (a Blueprint asset) or actorName (a placed actor)"), TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Pass blueprintPath (a Blueprint asset) or actorName (a placed actor)"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     if (!BlueprintPath.IsEmpty() && !IsValidNavigationPath(BlueprintPath))
@@ -95,11 +96,9 @@ bool HandleCreateNavModifierComponent(
         return AddNavModifierToPlacedActor(Self, RequestId, Socket, ActorName, ComponentName, ResolvedAreaClass, FailsafeExtent);
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    UBlueprint* Blueprint = McpLoadBlueprintOrReply(Self, Socket, RequestId, BlueprintPath);
     if (!Blueprint)
     {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -163,13 +162,7 @@ bool HandleSetNavAreaClass(
 
     if (ActorName.IsEmpty() || AreaClassPath.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and areaClass are required"), TEXT("MISSING_PARAM"));
-        return true;
-    }
-    if (!IsValidActorName(ActorName))
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and areaClass are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     if (!IsValidNavigationPath(AreaClassPath))

@@ -245,7 +245,6 @@ bool HandleWidgetAuthoringTreeBuild(UEngineWireSubsystem& Subsystem, const FStri
     {
         Names.Add(MakeShared<FJsonValueString>(Widget->GetName()));
     }
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), RootName);
     ResultJson->SetArrayField(TEXT("widgets"), Names);

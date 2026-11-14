@@ -30,7 +30,7 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
 
         if (SkeletalMeshPath.IsEmpty())
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 

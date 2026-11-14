@@ -8,6 +8,7 @@
 // still work.
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
 #include "MetasoundFrontendDataTypeRegistry.h"
@@ -195,7 +196,7 @@ bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FSt
 			? FString::Printf(TEXT("pass the path of a %s asset as defaultValue"), *ObjectClass->GetName())
 			: FString(TEXT("pass a value of the input's own type, or connect a node output to it instead"));
 		OutError = FString::Printf(TEXT("input is %s and cannot be built from a %s value (playing the MetaSound would crash the editor); %s"),
-			*TypeName, *StaticEnum<EMetasoundFrontendLiteralType>()->GetNameStringByValue(static_cast<int64>(Out.GetType())), *Hint);
+			*TypeName, *McpEnumName(Out.GetType()), *Hint);
 		return false;
 	}
 	return true;

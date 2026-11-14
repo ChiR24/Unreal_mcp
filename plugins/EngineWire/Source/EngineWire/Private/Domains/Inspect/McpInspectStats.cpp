@@ -132,7 +132,6 @@ bool HandleInspectStatsAction(
             Resp->SetNumberField(TEXT("totalWorldActors"), TotalWorldActors);
             Resp->SetNumberField(TEXT("editorOnlyActorCount"), FMath::Max(0, TotalWorldActors - ActorCount));
             McpAppendSceneStatCategories(World, Resp);
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Scene stats retrieved"), Resp, FString());
             return true;
@@ -177,7 +176,6 @@ bool HandleInspectStatsAction(
                 }
             }
 
-            Resp->SetBoolField(TEXT("success"), true);
             Resp->SetStringField(TEXT("worldType"), WorldType);
             Resp->SetBoolField(TEXT("threadTimersAreProcessGlobal"), true);
             Resp->SetNumberField(TEXT("deltaSeconds"), DeltaSeconds);
@@ -232,7 +230,6 @@ bool HandleInspectStatsAction(
         {
             const FPlatformMemoryStats MemoryStats = FPlatformMemory::GetStats();
             const FPlatformMemoryConstants& MemoryConstants = FPlatformMemory::GetConstants();
-            Resp->SetBoolField(TEXT("success"), true);
             Resp->SetNumberField(TEXT("totalPhysicalBytes"), static_cast<double>(MemoryStats.TotalPhysical));
             Resp->SetNumberField(TEXT("availablePhysicalBytes"), static_cast<double>(MemoryStats.AvailablePhysical));
             Resp->SetNumberField(TEXT("usedPhysicalBytes"), static_cast<double>(MemoryStats.UsedPhysical));

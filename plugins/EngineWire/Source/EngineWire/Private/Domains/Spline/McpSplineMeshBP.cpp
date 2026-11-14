@@ -37,7 +37,7 @@ bool HandleCreateSplineMeshComponent(
     if (BlueprintPath.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("blueprintPath (Blueprint route) or actorName (level actor route) is required"), TEXT("MISSING_PARAM"));
+            TEXT("blueprintPath (Blueprint route) or actorName (level actor route) is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

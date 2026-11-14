@@ -34,7 +34,7 @@ public class EngineWire : ModuleRules {
 
         AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
-        PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "ClothingSystemRuntimeInterface", "PhysicsUtilities", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "SkeletalMeshDescription", "NavigationSystem", "MeshConversion", "AnimationCore", "BSPUtils", "MessageLog" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "ClothingSystemRuntimeInterface", "PhysicsUtilities", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "SkeletalMeshDescription", "NavigationSystem", "MeshConversion", "AnimationCore", "BSPUtils", "MessageLog", "CinematicCamera", "MediaAssets", "TypedElementFramework" });
 
         string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
         // PropertyBindingUtils (UE 5.6+) owns the base of the State Tree compiler log's message items, whose destructor the State Tree compile links against.
@@ -61,8 +61,6 @@ public class EngineWire : ModuleRules {
         bool bPcgApiPresent = Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 2;
         bool bHasPCG = bPcgApiPresent && ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
         PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
-        bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
-        bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
         // UE 5.0's MRQ job has no IsEnabled/SetIsEnabled, no OnIndividualJobFinished and no bRenderMainPass,
         // all of which the Movie Render Queue handlers need; 5.0 takes the existing NOT_SUPPORTED path instead.
         bool bHasMovieRenderPipeline = (Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 1) && AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
@@ -77,16 +75,13 @@ public class EngineWire : ModuleRules {
         bool bHasMoviePipelineLossless = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bUseLosslessCompression");
         bool bHasSmaa = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "SceneUtils.h"), "AAM_SMAA");
         bool bHasTakeRecorder = AddOptionalModuleGroup(EngineDir, "Take Recorder", new string[] { "TakesCore", "TakeRecorder", "TakeRecorderSources" });
-        bool bHasReplayApi = File.Exists(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"));
-        bool bHasReplaySubsystemTotalTime = bHasReplayApi && FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
+        bool bHasReplaySubsystemTotalTime = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
         bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
-        bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" });
         PublicDefinitions.AddRange(new string[] {
-            bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0",
             bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
             bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0",
-            bHasMoviePipelineLossless ? "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1" : "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0",
-            bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0",
+            bHasMoviePipelineLossless ? "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1" : "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0",
+            bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0",
             bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0"
         });
 

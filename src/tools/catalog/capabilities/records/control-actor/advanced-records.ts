@@ -181,7 +181,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: [
       'Only lifting a sunk actor or lowering a floating one onto the surface under it, keeping its turn: use fix_placement, which needs no simulation.',
       'Placing actors by relations (on, nextTo, facing): use arrange_by_relations.',
-      'While Play or Simulate runs or is starting: it refuses (PLAY_RUNNING), since it runs a Simulate session of its own.',
+      'While Play or Simulate runs or is starting: it refuses (PIE_ACTIVE), since it runs a Simulate session of its own.',
       'In a level whose game pauses itself in Simulate (a title screen, a pause menu): nothing falls, so it answers GAME_PAUSED and keeps nothing; give the level a plain game mode first (manage_level set_world_settings gameMode).',
     ],
     inputProps: {

@@ -25,7 +25,7 @@ bool UEngineWireSubsystem::HandleRemovePhysicsBody(
     if (PhysicsAssetPath.IsEmpty() || BoneName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("physicsAssetPath and boneName are required"), TEXT("MISSING_PARAM"));
+            TEXT("physicsAssetPath and boneName are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

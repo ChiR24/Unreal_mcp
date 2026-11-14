@@ -2,6 +2,7 @@
 
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "UObject/StructOnScope.h"
 
 
@@ -181,7 +182,7 @@ TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescripti
     Member->SetStringField(TEXT("default"), Var.DefaultValue);
     Member->SetStringField(TEXT("tooltip"), Var.ToolTip);
     Member->SetStringField(TEXT("containerType"),
-        StaticEnum<EPinContainerType>()->GetNameStringByValue(static_cast<int64>(Var.ContainerType)));
+        McpEnumName(Var.ContainerType));
 
     TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
@@ -198,7 +199,7 @@ TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescripti
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status)
 {
     // "UDSS_UpToDate" -> "UpToDate".
-    return StaticEnum<EUserDefinedStructureStatus>()->GetNameStringByValue(Status).RightChop(5);
+    return McpEnumName(Status).RightChop(5);
 }
 
 FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSharedPtr<FJsonValue>& JsonValue)

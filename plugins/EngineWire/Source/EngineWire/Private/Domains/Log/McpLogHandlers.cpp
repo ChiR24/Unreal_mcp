@@ -145,7 +145,6 @@ bool UEngineWireSubsystem::HandleLogAction(
         const FString& Message) -> void
     {
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
-        Result->SetBoolField(TEXT("success"), true);
         Result->SetBoolField(TEXT("subscribed"), bSubscribed);
         if (ResponseAction == TEXT("subscribe"))
         {
@@ -273,7 +272,6 @@ bool UEngineWireSubsystem::HandleLogAction(
             : FMcpLogHistory::Get().Read(MaxLines, Filter, GetJsonStringField(Payload, TEXT("category")), MinVerbosity,
                                          Matched);
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
-        Result->SetBoolField(TEXT("success"), true);
         Result->SetArrayField(TEXT("lines"), McpHandlerUtils::ToJsonStringArray(Lines));
         Result->SetNumberField(TEXT("returned"), Lines.Num());
         Result->SetNumberField(TEXT("matched"), Matched);

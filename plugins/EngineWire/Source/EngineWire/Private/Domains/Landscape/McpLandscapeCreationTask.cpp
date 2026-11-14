@@ -127,7 +127,6 @@ void BuildLandscape(
   const FBox BuiltBounds = Landscape->GetComponentsBoundingBox(true);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("builtComponents"), BuiltComponents);
   Resp->SetStringField(TEXT("landscapePath"),
                        Landscape->GetPackage()->GetPathName());

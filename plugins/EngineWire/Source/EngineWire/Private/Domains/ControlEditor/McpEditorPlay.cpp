@@ -12,7 +12,6 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   if (GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyPlaying"), true);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Play session already active"), Resp,
@@ -72,7 +71,6 @@ bool UEngineWireSubsystem::HandleControlEditorStop(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("alreadyStopped"), true);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Play session not active"), Resp, FString());
@@ -123,7 +121,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameSpeed(
   World->GetWorldSettings()->SetTimeDilation(static_cast<float>(Speed));
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   // The dilation the world now holds (SetTimeDilation clamps to the game's limits), not the one asked for.
   Resp->SetNumberField(TEXT("speed"), World->GetWorldSettings()->TimeDilation);
   Resp->SetNumberField(TEXT("timeDilation"), World->GetWorldSettings()->GetEffectiveTimeDilation());
@@ -249,7 +246,6 @@ bool UEngineWireSubsystem::HandleControlEditorStepFrame(
     if (Logged.Num() > 0) {
       Resp->SetArrayField(TEXT("warnings"), McpHandlerUtils::ToJsonStringArray(Logged));
     }
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("steps"), Stepped);
     Resp->SetStringField(TEXT("message"), Message);
     Self->SendAutomationResponse(ReplySocket, ReplyRequestId, true, Message,

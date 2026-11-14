@@ -89,7 +89,7 @@ UPhysicsAsset* ResolvePhysicsAssetOrReply(UEngineWireSubsystem& Subsystem, const
     }
     if (MeshPath.IsEmpty())
     {
-        Subsystem.SendAutomationError(Socket, RequestId, TEXT("physicsAssetPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        Subsystem.SendAutomationError(Socket, RequestId, TEXT("physicsAssetPath or skeletalMeshPath is required"), TEXT("MISSING_PARAMETER"));
         return nullptr;
     }
     USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, Error);

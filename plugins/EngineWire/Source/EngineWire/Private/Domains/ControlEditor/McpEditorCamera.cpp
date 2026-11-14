@@ -17,7 +17,7 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewTarget(
   if (!GEditor || !GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
     Details->SetBoolField(TEXT("notInPIE"), true);
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("PIE_NOT_RUNNING"),
                               TEXT("Cannot set game view target while PIE is not active"), Details);
     return true;
   }
@@ -138,7 +138,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewTarget(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
   Resp->SetStringField(TEXT("actorPath"), TargetActor->GetPathName());
   Resp->SetStringField(TEXT("playerController"), PlayerController->GetPathName());

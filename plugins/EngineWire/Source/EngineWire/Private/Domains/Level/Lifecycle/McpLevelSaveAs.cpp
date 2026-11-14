@@ -49,29 +49,21 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
       return true;
     }
 
-    // Validate path length BEFORE attempting save to prevent silent hangs
-    // McpSafeLevelSave validates internally but may not send error response in all code paths
+    // McpSafeLevelSave refuses a map file path past McpMaxMapFilePathLength too, but only into the log: said here.
+    FString AbsoluteFilePath;
+    const int32 MaxLength = McpSafeOperations::McpMaxMapFilePathLength;
+    if (TryGetAbsoluteMapFilename(SavePath, AbsoluteFilePath) && AbsoluteFilePath.Len() > MaxLength)
     {
-      FString AbsoluteFilePath;
-      if (FPackageName::TryConvertLongPackageNameToFilename(SavePath, AbsoluteFilePath, FPackageName::GetMapPackageExtension()))
-      {
-        AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
-        const int32 SafePathLength = 240;
-        if (AbsoluteFilePath.Len() > SafePathLength)
-        {
-          TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
-          ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
-          ErrorDetail->SetStringField(TEXT("absolutePath"), AbsoluteFilePath);
-          ErrorDetail->SetNumberField(TEXT("pathLength"), AbsoluteFilePath.Len());
-          ErrorDetail->SetNumberField(TEXT("maxLength"), SafePathLength);
-          Subsystem.SendAutomationResponse(
-              RequestingSocket, RequestId, false,
-              FString::Printf(TEXT("Path too long (%d chars, max %d): %s"),
-                  AbsoluteFilePath.Len(), SafePathLength, *SavePath),
-              ErrorDetail, TEXT("PATH_TOO_LONG"));
-          return true;
-        }
-      }
+      TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
+      ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
+      ErrorDetail->SetStringField(TEXT("absolutePath"), AbsoluteFilePath);
+      ErrorDetail->SetNumberField(TEXT("pathLength"), AbsoluteFilePath.Len());
+      ErrorDetail->SetNumberField(TEXT("maxLength"), MaxLength);
+      Subsystem.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("Path too long (%d chars, max %d): %s"), AbsoluteFilePath.Len(), MaxLength, *SavePath),
+          ErrorDetail, TEXT("PATH_TOO_LONG"));
+      return true;
     }
 
     bool bSaved = false;
@@ -88,9 +80,8 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
     }
     if (bSaved) {
       // The registry hears of the saved level at once, so rename and duplicate find it.
-      FString SavedFilename;
-      if (FPackageName::TryConvertLongPackageNameToFilename(SavePath, SavedFilename, FPackageName::GetMapPackageExtension())) {
-        ScanLevelPackagePath(SavePath, SavedFilename);
+      if (!AbsoluteFilePath.IsEmpty()) {
+        ScanLevelPackagePath(SavePath, AbsoluteFilePath);
       }
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

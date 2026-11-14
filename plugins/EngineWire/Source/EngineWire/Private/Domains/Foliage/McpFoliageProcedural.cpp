@@ -180,7 +180,6 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("volume_actor"), Volume->GetActorLabel());
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
   Resp->SetNumberField(TEXT("foliage_types_count"), Types.Num());

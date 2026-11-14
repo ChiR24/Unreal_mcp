@@ -66,7 +66,6 @@ bool HandleWidgetAuthoringManipulation(
         // The class still carried the removed widgets' variables, which kept their names taken too.
         WidgetAuthoringHelpers::CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("removedWidget"), SlotName);
 
@@ -134,7 +133,6 @@ bool HandleWidgetAuthoringManipulation(
         // The renamed variable widget has no property under its new name until a compile.
         WidgetAuthoringHelpers::CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("oldName"), OldName);
         ResultJson->SetStringField(TEXT("newName"), NewName);
@@ -202,7 +200,6 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("widgetClass"), TargetWidget->GetClass()->GetName());

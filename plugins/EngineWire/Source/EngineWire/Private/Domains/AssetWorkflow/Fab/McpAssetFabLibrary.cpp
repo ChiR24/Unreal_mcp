@@ -13,9 +13,9 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-// The ICoreProvider / DataStorage::Features API used below first ships in UE 5.7; the
-// TypedElementFramework module exists from 5.0, so MCP_HAS_TEDS alone is not enough.
-#if MCP_HAS_TEDS && __has_include("DataStorage/Features.h")
+// The ICoreProvider / DataStorage::Features API used below first ships in UE 5.7 (its module, TypedElementFramework,
+// is linked on every engine).
+#if __has_include("DataStorage/Features.h")
 #define MCP_FAB_LIBRARY_HAS_TEDS_API 1
 #else
 #define MCP_FAB_LIBRARY_HAS_TEDS_API 0

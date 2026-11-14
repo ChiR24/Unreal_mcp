@@ -182,7 +182,6 @@ bool HandleWidgetAuthoringScreens(
         }
     }
     const FString Message = FString::Printf(TEXT("Created %s '%s' (%d widgets)"), Screen->Label, *WidgetBP->GetPathName(), Created.Num());
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetNumberField(TEXT("widgetCount"), Created.Num());
     ResultJson->SetArrayField(TEXT("buttons"), Buttons);

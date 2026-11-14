@@ -142,7 +142,6 @@ void ReplyWidgetLayout(UEngineWireSubsystem& Subsystem, const FString& RequestId
                        TSharedPtr<FJsonObject> ResultJson, UWidgetBlueprint* WidgetBP, UWidget* Widget, const FString& Message)
 {
     ResultJson->SetBoolField(TEXT("saved"), MarkWidgetBlueprintModifiedAndSave(WidgetBP));
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), Widget->GetName());
     ResultJson->SetObjectField(TEXT("applied"), McpDescribeWidgetLayout(Widget));

@@ -83,7 +83,7 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     }
     if (SkeletalMeshPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath (or skeletonPath) is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath (or skeletonPath) is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -215,7 +215,7 @@ bool UEngineWireSubsystem::HandleSetPhysicsAsset(
     if (SkeletalMeshPath.IsEmpty() || PhysicsAssetPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("skeletalMeshPath and physicsAssetPath are required"), TEXT("MISSING_PARAM"));
+            TEXT("skeletalMeshPath and physicsAssetPath are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

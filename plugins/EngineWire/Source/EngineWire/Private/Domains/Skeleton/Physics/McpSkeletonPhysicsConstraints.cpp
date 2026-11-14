@@ -87,13 +87,13 @@ bool UEngineWireSubsystem::HandleAddPhysicsConstraint(
 
     if (PhysicsAssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (BodyA.IsEmpty() || BodyB.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -220,13 +220,13 @@ bool UEngineWireSubsystem::HandleConfigureConstraintLimits(
 
     if (PhysicsAssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (BodyA.IsEmpty() || BodyB.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required to identify constraint"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required to identify constraint"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

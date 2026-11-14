@@ -156,7 +156,6 @@ bool UEngineWireSubsystem::HandleControlActorRemoveTag(
   if (!Found->Tags.Contains(TagName)) {
     // Idempotent success
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("wasPresent"), false);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Found));
     Resp->SetStringField(TEXT("tag"), TagValue);

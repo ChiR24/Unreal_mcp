@@ -134,7 +134,6 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
             Resp->SetObjectField(TEXT("properties"), CompJson);
         }
         McpAddMissingProperties(Resp, PropertyNameFilter, {FoundComp->GetClass()});
-        Resp->SetBoolField(TEXT("success"), true);
         SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("CDO component inspected"), Resp, FString());
         return true;
@@ -212,7 +211,6 @@ bool UEngineWireSubsystem::HandleInspectCdoAction(
     McpAddMissingProperties(Resp, PropertyNameFilter, ListedClasses);
     Resp->SetArrayField(TEXT("components"), ComponentsArray);
     Resp->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
-    Resp->SetBoolField(TEXT("success"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("CDO inspection completed"), Resp, FString());
     return true;

@@ -89,7 +89,6 @@ bool CreateNiagaraEffectFromPayload(
         Spawned->GetUniqueID());
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("effectType"), EffectName);
     Response->SetStringField(TEXT("systemPath"), SystemPath);
     Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));

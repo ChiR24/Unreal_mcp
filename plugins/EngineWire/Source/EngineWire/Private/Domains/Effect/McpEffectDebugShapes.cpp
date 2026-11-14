@@ -130,7 +130,6 @@ static bool DrawShape(
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("shapeType"), ShapeType);
     Response->SetStringField(TEXT("location"), FString::Printf(TEXT("%.2f,%.2f,%.2f"), Location.X, Location.Y, Location.Z));
     Response->SetNumberField(TEXT("duration"), Duration);
@@ -197,7 +196,6 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
     {
         FlushPersistentDebugLines(GetEditorWorld());
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), true);
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, true,
             TEXT("Debug shapes cleared"), Response);

@@ -221,7 +221,6 @@ bool UEngineWireSubsystem::HandleListAssets(
     : FString();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("assets"), AssetsArray);
   Resp->SetArrayField(TEXT("folders"), FoldersJson);
   Resp->SetNumberField(TEXT("totalCount"), TotalCount);

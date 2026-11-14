@@ -81,14 +81,14 @@ bool HandleScatterMeshesAlongSpline(
     if (Spacing <= 0.0)
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("spacing must be greater than 0"), TEXT("INVALID_PARAM"));
+            TEXT("spacing must be greater than 0"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     if (RandomOffsetRange < 0.0 || MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("Invalid spline mesh randomization configuration"), TEXT("INVALID_PARAM"));
+            TEXT("Invalid spline mesh randomization configuration"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -101,7 +101,7 @@ bool HandleScatterMeshesAlongSpline(
     {
         Self->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("spacing %g along this spline of %.0f cm would scatter %.0f meshes; one call adds at most %d. Use a larger "
-                "spacing. Nothing was added."), Spacing, SplineLength, Steps + 1.0, MaxScatteredMeshes), TEXT("INVALID_PARAM"));
+                "spacing. Nothing was added."), Spacing, SplineLength, Steps + 1.0, MaxScatteredMeshes), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     int32 MeshCount = static_cast<int32>(Steps);

@@ -66,7 +66,7 @@ UObject *LoadAssetOrReply(UEngineWireSubsystem *Subsystem, const FString &Reques
                           TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
                           const TCHAR *Action, FString &OutPath);
 // The payload's level sequence and its movie scene; null after replying INVALID_SEQUENCE,
-// SEQUENCE_NOT_FOUND or MOVIESCENE_UNAVAILABLE.
+// or MOVIESCENE_UNAVAILABLE.
 ULevelSequence *LoadOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
                             TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
                             const TCHAR *Action, UMovieScene *&OutMovieScene);

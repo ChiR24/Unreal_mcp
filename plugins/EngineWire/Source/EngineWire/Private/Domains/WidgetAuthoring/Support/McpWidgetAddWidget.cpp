@@ -88,7 +88,6 @@ bool AddConfiguredWidget(
     CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
     const FString Message = FString::Printf(TEXT("Added %s"), Label);
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Message);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);

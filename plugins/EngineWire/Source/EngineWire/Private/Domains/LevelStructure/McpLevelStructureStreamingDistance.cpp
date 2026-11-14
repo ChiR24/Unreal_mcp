@@ -10,6 +10,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
@@ -80,7 +81,7 @@ bool HandleSetStreamingDistance(
                 VolumeObj->SetStringField(TEXT("name"), McpActorRef(Volume));
                 // The usage's name, as the create branch answers it and streamingUsage takes it, not its number.
                 VolumeObj->SetStringField(TEXT("usage"),
-                    StaticEnum<EStreamingVolumeUsage>()->GetNameStringByValue(static_cast<int64>(Volume->StreamingUsage)).RightChop(4));
+                    McpEnumName(Volume->StreamingUsage).RightChop(4));
                 VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeObj));
             }
         }
@@ -134,7 +135,7 @@ bool HandleSetStreamingDistance(
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
     ResponseJson->SetStringField(TEXT("volumeName"), NewVolume->GetActorLabel());
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
-    ResponseJson->SetStringField(TEXT("streamingUsage"), StaticEnum<EStreamingVolumeUsage>()->GetNameStringByValue(Usage).RightChop(4));
+    ResponseJson->SetStringField(TEXT("streamingUsage"), McpEnumName(NewVolume->StreamingUsage).RightChop(4));
 
     ResponseJson->SetObjectField(TEXT("volumeLocation"), McpHandlerUtils::VectorToJson(VolumeLocation));
 

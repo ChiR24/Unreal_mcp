@@ -99,7 +99,6 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
                 ? Name
                 : FString::Printf(TEXT("VolumetricFog_%lld"), FDateTime::Now().ToUnixTimestamp()));
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), true);
         Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
         Response->SetStringField(TEXT("effectType"), TEXT("volumetric_fog"));
         McpHandlerUtils::AddVerification(Response, Spawned);

@@ -32,7 +32,7 @@ bool HandleProjectThumbnailAction(const FString &LowerSub, const TSharedPtr<FJso
     };
     if (GEditor->PlayWorld)
     {
-        return Refuse(TEXT("PIE_RUNNING"), TEXT("The thumbnail is drawn from the level viewport, which the running game hides: stop Play In Editor first."));
+        return Refuse(TEXT("PIE_ACTIVE"), TEXT("The thumbnail is drawn from the level viewport, which the running game hides: stop Play In Editor first."));
     }
     FEditorViewportClient *Client = GetActiveEditorViewportClientForMcp();
     FViewport *Viewport = Client ? Client->Viewport : nullptr;

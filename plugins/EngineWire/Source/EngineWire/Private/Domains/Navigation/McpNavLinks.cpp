@@ -80,12 +80,7 @@ ANavLinkProxy* ResolveNavLinkOrReply(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (ActorName.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
-    }
-    else if (!IsValidActorName(ActorName))
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAMETER"));
     }
     else if (!World)
     {
@@ -123,15 +118,11 @@ bool SpawnNavLink(
     UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!Payload->HasField(TEXT("location")))
     {
-        return Fail(FString::Printf(TEXT("location is required for %s"), Action), TEXT("MISSING_PARAM"));
+        return Fail(FString::Printf(TEXT("location is required for %s"), Action), TEXT("MISSING_PARAMETER"));
     }
     if (!Payload->HasField(TEXT("startPoint")) || !Payload->HasField(TEXT("endPoint")))
     {
-        return Fail(FString::Printf(TEXT("startPoint and endPoint are required for %s to define the navigation link"), Action), TEXT("MISSING_PARAM"));
-    }
-    if (!ActorName.IsEmpty() && !IsValidActorName(ActorName))
-    {
-        return Fail(TEXT("Invalid actorName: must not contain path traversal (..), slashes, or drive letters"), TEXT("SECURITY_VIOLATION"));
+        return Fail(FString::Printf(TEXT("startPoint and endPoint are required for %s to define the navigation link"), Action), TEXT("MISSING_PARAMETER"));
     }
     if (!ReadNavLinkDirection(Payload, Ends.Direction))
     {

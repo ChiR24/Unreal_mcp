@@ -86,8 +86,8 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         Texture->MarkPackageDirty();
         Response->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Texture));
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("compressionSettings"), StaticEnum<TextureCompressionSettings>()->GetNameStringByValue(Compression));
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Compression set to %s"), *StaticEnum<TextureCompressionSettings>()->GetNameStringByValue(Compression)));
+        Response->SetStringField(TEXT("compressionSettings"), McpEnumName(Compression));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Compression set to %s"), *McpEnumName(Compression)));
         McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }
@@ -110,8 +110,8 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         Texture->MarkPackageDirty();
         Response->SetBoolField(TEXT("saved"), bSave && McpSafeAssetSave(Texture));
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("textureGroup"), StaticEnum<::TextureGroup>()->GetNameStringByValue(Group));
-        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture group set to %s"), *StaticEnum<::TextureGroup>()->GetNameStringByValue(Group)));
+        Response->SetStringField(TEXT("textureGroup"), McpEnumName(Group));
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture group set to %s"), *McpEnumName(Group)));
         McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }

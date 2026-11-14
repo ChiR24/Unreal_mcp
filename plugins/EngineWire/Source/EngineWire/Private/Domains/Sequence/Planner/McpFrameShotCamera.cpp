@@ -12,10 +12,8 @@
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include MCP_HIT_RESULT_HEADER
-#if MCP_HAS_CINEMATIC_CAMERA
 #include "CineCameraActor.h"
 #include "CineCameraComponent.h"
-#endif
 
 namespace McpFrameShot
 {
@@ -71,7 +69,6 @@ void ReadCamera(AActor* Actor, const FString& Label, double Asked, double Defaul
         OutError = FString::Printf(TEXT("'%s' is no camera: name a camera actor to move, or a new name to spawn a CineCameraActor under."), *Label);
         return;
     }
-#if MCP_HAS_CINEMATIC_CAMERA
     // A cine camera's frame, its sensor read back from its own field of view so a crop or squeeze it has counts.
     const UCineCameraComponent* Cine = Actor ? Cast<UCineCameraComponent>(Out.Component) : GetDefault<UCineCameraComponent>();
     if (Cine)
@@ -88,7 +85,6 @@ void ReadCamera(AActor* Actor, const FString& Label, double Asked, double Defaul
         Out.Lens.TanHalfV = HalfHeight / Out.FocalLength;
         return;
     }
-#endif
     if (Asked > 0.0)
     {
         OutError = FString::Printf(TEXT("'%s' is a plain camera with no lens: leave focalLength out (its field of view is used), or name a CineCameraActor."), *Label);
@@ -134,11 +130,7 @@ bool WriteShot(FFrameCamera& Camera, const FShot& Shot, double FocusDistance, co
     }
     if (!Camera.Actor)
     {
-#if MCP_HAS_CINEMATIC_CAMERA
         UClass* const Class = ACineCameraActor::StaticClass();
-#else
-        UClass* const Class = ACameraActor::StaticClass();
-#endif
         Camera.Actor = SpawnActorInActiveWorld<AActor>(Class, Shot.Location, Shot.Rotation, Camera.Label);
         Camera.Component = Camera.Actor ? Camera.Actor->FindComponentByClass<UCameraComponent>() : nullptr;
         if (!Camera.Component)
@@ -153,14 +145,12 @@ bool WriteShot(FFrameCamera& Camera, const FShot& Shot, double FocusDistance, co
         Camera.Actor->SetActorLocationAndRotation(Shot.Location, Shot.Rotation, false, nullptr, ETeleportType::TeleportPhysics);
     }
     McpFinishEditorMove(Camera.Actor);
-#if MCP_HAS_CINEMATIC_CAMERA
     if (UCineCameraComponent* Cine = Cast<UCineCameraComponent>(Camera.Component))
     {
         Cine->SetCurrentFocalLength(static_cast<float>(Camera.FocalLength));
         Cine->FocusSettings.FocusMethod = ECameraFocusMethod::Manual;
         Cine->FocusSettings.ManualFocusDistance = static_cast<float>(FocusDistance);
     }
-#endif
     Camera.Actor->MarkPackageDirty();
     Transaction.DescribeInto(Result);
     return true;

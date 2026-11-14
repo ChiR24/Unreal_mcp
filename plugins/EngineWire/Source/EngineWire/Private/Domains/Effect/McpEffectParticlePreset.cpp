@@ -86,7 +86,6 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
         !Name.IsEmpty() ? Name : FString::Printf(TEXT("Particle_%lld"), FDateTime::Now().ToUnixTimestamp()));
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("effectType"), TEXT("particle"));
     Response->SetStringField(TEXT("backend"), TEXT("cascade"));
     Response->SetStringField(TEXT("systemPath"), TemplatePath);

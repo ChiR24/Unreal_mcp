@@ -225,7 +225,6 @@ bool HandleWidgetAuthoringPropertyBindings(
             TEXT("The binding did not compile and was removed: %s"), *Error), TEXT("BINDING_INVALID"));
         return true;
     }
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetStringField(TEXT("property"), Property.ToString());

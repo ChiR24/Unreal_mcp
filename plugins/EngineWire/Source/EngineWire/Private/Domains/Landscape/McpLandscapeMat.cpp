@@ -71,7 +71,6 @@ bool UEngineWireSubsystem::HandleSetLandscapeMaterial(
   TSharedPtr<FJsonObject> Resp =
       McpHandlerUtils::CreateResultObject();
   Transaction.DescribeInto(Resp);
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("landscapePath"),
                        Landscape->GetPackage()->GetPathName());
   Resp->SetStringField(TEXT("landscapeName"),

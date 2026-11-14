@@ -1,5 +1,6 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "EngineWireLog.h"
 #include "Algo/AllOf.h"
 
@@ -239,7 +240,7 @@ TSharedPtr<FJsonObject> PlaceMaterialExpression(const FString& RequestId, UMater
 }
 
 FString FunctionInputTypeToString(EFunctionInputType InType) {
-  const FString Name = StaticEnum<EFunctionInputType>()->GetNameStringByValue(InType);
+  const FString Name = McpEnumName(InType);
   return Name.IsEmpty() ? FString(TEXT("Unknown")) : Name.RightChop(14); // "FunctionInput_"
 }
 }

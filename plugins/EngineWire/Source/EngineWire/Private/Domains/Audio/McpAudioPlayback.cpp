@@ -56,7 +56,6 @@ bool HandlePlaybackActions(
         (float)StartTime, Attenuation, Concurrency);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
     Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
     McpHandlerUtils::MarkNoAssetsChanged(Resp); // playing a sound changes no asset
@@ -104,7 +103,6 @@ bool HandlePlaybackActions(
     McpPreviewSounds().Add(Preview);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
     Resp->SetNumberField(TEXT("volume"), Volume);
     Resp->SetNumberField(TEXT("pitch"), Pitch);
@@ -153,7 +151,6 @@ bool HandlePlaybackActions(
       }
     }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("stopped"), Stopped);
     Resp->SetBoolField(TEXT("allStopped"), Devices > 0);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,

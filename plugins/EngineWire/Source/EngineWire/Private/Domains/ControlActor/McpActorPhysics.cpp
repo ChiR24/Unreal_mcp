@@ -158,7 +158,7 @@ bool UEngineWireSubsystem::HandleControlActorSetCollision(
   }
   if (!bMany) {
     if (ActorName.IsEmpty()) {
-      SendAutomationError(Socket, RequestId, TEXT("actorName (or actorNames) is required"), TEXT("MISSING_PARAM"));
+      SendAutomationError(Socket, RequestId, TEXT("actorName (or actorNames) is required"), TEXT("MISSING_PARAMETER"));
       return true;
     }
     AActor* Found = FindActorByName(ActorName);

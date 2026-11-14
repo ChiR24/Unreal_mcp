@@ -122,7 +122,6 @@ bool HandleNiagaraLifecycleAction(
         {
             NiagaraComponent->Deactivate();
             TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-            Response->SetBoolField(TEXT("success"), true);
             Response->SetStringField(TEXT("actorName"), SystemName);
             Response->SetBoolField(TEXT("active"), false);
             Context.Bridge.SendAutomationResponse(

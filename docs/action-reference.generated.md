@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `6e2cd2888db06f89`
+Catalog revision: `c0e85bec2145c8b2`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -177,7 +177,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
 | `animation_physics.list_rig_units` | `animation_physics` | `list_rig_units` | read | read | none | `animation_physics.list_rig_units` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |
-| `animation_physics.remove_skeleton_element` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_skeleton_element` `animation_physics.remove_bone` `animation_physics.remove_socket` `animation_physics.remove_physics_body` |
+| `animation_physics.remove_skeleton_element` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_skeleton_element` `animation_physics.remove_bone` `animation_physics.remove_socket` `animation_physics.remove_physics_body` `animation_physics.delete_virtual_bone` `animation_physics.delete_morph_target` |
 | `animation_physics.setup_ik` | `animation_physics` | `setup_ik` | write | write | none | `animation_physics.setup_ik` `animation_physics.create_ik_rig` `animation_physics.create_ik_retargeter` `animation_physics.set_retarget_chain_mapping` |
 | `animation_physics.setup_physics_simulation` | `animation_physics` | `setup_physics_simulation` | write | write | none | `animation_physics.setup_physics_simulation` |
 | `animation_physics.setup_ragdoll` | `animation_physics` | `setup_ragdoll` | write | write | none | `animation_physics.setup_ragdoll` `animation_physics.activate_ragdoll` |

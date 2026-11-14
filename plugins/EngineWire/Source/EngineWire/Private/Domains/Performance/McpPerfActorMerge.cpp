@@ -46,7 +46,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
-    UWorld* World = GEditor->GetEditorWorldContext().World();
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Context.Bridge.SendAutomationError(

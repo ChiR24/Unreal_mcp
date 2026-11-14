@@ -132,7 +132,6 @@ bool HandleWidgetAuthoringDuplicate(
     // edit_graph step naming one failed as "not marked as a variable".
     CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
 
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), Copy->GetName());
     ResultJson->SetStringField(TEXT("newParent"), Parent->GetName());

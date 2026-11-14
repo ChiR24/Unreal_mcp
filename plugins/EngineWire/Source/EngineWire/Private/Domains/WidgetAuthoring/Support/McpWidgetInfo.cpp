@@ -95,7 +95,6 @@ bool HandleWidgetAuthoringInfo(
         }
         WidgetInfo->SetArrayField(TEXT("animations"), AnimsArray);
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetObjectField(TEXT("widgetInfo"), WidgetInfo);
 
         McpHandlerUtils::AddVerification(ResultJson, WidgetBP);

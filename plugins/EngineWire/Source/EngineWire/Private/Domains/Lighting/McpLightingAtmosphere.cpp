@@ -81,7 +81,6 @@ bool HandleSetupVolumetricFog(
     FogActor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(FogActor));
     Resp->SetBoolField(TEXT("enabled"), FogComp->bEnableVolumetricFog);
     Resp->SetNumberField(TEXT("viewDistance"), FogComp->VolumetricFogDistance);

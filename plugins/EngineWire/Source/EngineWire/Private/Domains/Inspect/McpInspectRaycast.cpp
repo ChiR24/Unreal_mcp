@@ -109,7 +109,6 @@ bool HandleInspectRaycastMeshAction(
     }
 
     const TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("meshPath"), Mesh->GetPathName());
     Resp->SetNumberField(TEXT("hitCount"), HitCount);
     Resp->SetArrayField(TEXT("hits"), Hits);

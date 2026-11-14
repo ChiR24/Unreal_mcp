@@ -4,8 +4,8 @@
  * create_media_playlist, play_media, pause_media, seek_media.
  *
  * Grounded in MEDIA_ACTIONS and native SequenceMedia* bodies.
- * Gated by MCP_HAS_MEDIA_ASSETS (MediaAssets module) + ElectraPlayer
- * plugin for file-backed playback.
+ * MediaAssets is linked on every supported engine; file-backed playback
+ * needs the ElectraPlayer plugin.
  *
  * Media playback is immediate/transient - no long-running operation,
  * no cancellation semantics. create_* actions produce UE assets

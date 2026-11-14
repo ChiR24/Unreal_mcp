@@ -218,12 +218,12 @@ bool UEngineWireSubsystem::HandleControlActorRemoveComponent(
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
   if (ActorName.IsEmpty()) {
-    SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
+    SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAMETER"));
     return true;
   }
 
   if (ComponentName.IsEmpty()) {
-    SendAutomationError(Socket, RequestId, TEXT("componentName is required"), TEXT("MISSING_PARAM"));
+    SendAutomationError(Socket, RequestId, TEXT("componentName is required"), TEXT("MISSING_PARAMETER"));
     return true;
   }
 

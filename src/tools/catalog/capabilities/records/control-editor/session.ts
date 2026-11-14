@@ -100,7 +100,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     editorStates: ANY_EDITOR_STATE,
     summary: 'Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor\'s Possess button does (the way back from eject). Answers once the player is back in the game.',
     whenToUse: ['The player must take control of a specific pawn.', 'An ejected player must return to the game (no actorName).'],
-    whenNotToUse: ['PIE is not running (NOT_IN_PIE).', 'The actor is not a pawn (INVALID_TARGET).'],
+    whenNotToUse: ['PIE is not running (PIE_NOT_RUNNING).', 'The actor is not a pawn (INVALID_TARGET).'],
     inputProps: { actorName: { type: 'string', description: 'Pawn to possess, in the running game. Omit it to bring an ejected player back to its own pawn.' } },
     required: [],
     effect: 'write',

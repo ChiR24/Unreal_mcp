@@ -39,7 +39,7 @@ AActor* ResolveSplineActor(UEngineWireSubsystem* Self, const FString& RequestId,
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("actorName is required"), TEXT("MISSING_PARAM"));
+            TEXT("actorName is required"), TEXT("MISSING_PARAMETER"));
         return nullptr;
     }
     UWorld* World = McpHandlerUtils::GetEditorWorld();

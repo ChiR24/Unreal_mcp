@@ -235,7 +235,6 @@ bool HandleWidgetAuthoringStyleClipping(
             }
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         FString ModeStr;
         bool bIsRead = ResultJson->TryGetStringField(TEXT("mode"), ModeStr) && ModeStr == TEXT("read");
         FString Msg = bIsRead

@@ -1,5 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 #include "Domains/AI/Perception/McpAIPerceptionConfigs.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -190,7 +191,7 @@ void DescribeAIBlueprint(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& A
             AIInfo->SetStringField(TEXT("controllerClass"), PawnCDO->AIControllerClass->GetName());
         }
         Result->SetStringField(TEXT("aiControllerClass"), PawnCDO->AIControllerClass ? PawnCDO->AIControllerClass->GetPathName() : TEXT("None"));
-        Result->SetStringField(TEXT("autoPossessAI"), StaticEnum<EAutoPossessAI>()->GetNameStringByValue(static_cast<int64>(PawnCDO->AutoPossessAI)));
+        Result->SetStringField(TEXT("autoPossessAI"), McpEnumName(PawnCDO->AutoPossessAI));
         DescribePerception(Components, Result);
         DescribeTeam(GeneratedClass, CDO, Result);
         DescribeMovement(Components, Result);

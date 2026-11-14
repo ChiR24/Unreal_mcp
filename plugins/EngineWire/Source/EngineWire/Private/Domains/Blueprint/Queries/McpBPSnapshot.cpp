@@ -5,6 +5,7 @@
 #include "K2Node_Event.h"
 #include "K2Node_FunctionEntry.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Engine/Blueprint.h"
@@ -148,14 +149,8 @@ FEngineWire_BuildBlueprintSnapshot(UBlueprint *Blueprint,
           ? Blueprint->SimpleConstructionScript->GetAllNodes().Num()
           : 0);
   McpAppendBlueprintScsComponents(Blueprint, Snapshot); // components beside scsNodeCount
-  FString CompileStatus = TEXT("unknown");
-  if (const UEnum *StatusEnum = StaticEnum<EBlueprintStatus>()) {
-    const FString StatusName =
-        StatusEnum->GetNameStringByValue(static_cast<int64>(Blueprint->Status));
-    if (!StatusName.IsEmpty()) {
-      CompileStatus = StatusName;
-    }
-  }
+  const FString StatusName = McpEnumName(Blueprint->Status);
+  const FString CompileStatus = StatusName.IsEmpty() ? FString(TEXT("unknown")) : StatusName;
   Snapshot->SetStringField(TEXT("compileStatus"), CompileStatus);
   Snapshot->SetBoolField(TEXT("hasCompileErrors"),
                          Blueprint->Status == BS_Error);

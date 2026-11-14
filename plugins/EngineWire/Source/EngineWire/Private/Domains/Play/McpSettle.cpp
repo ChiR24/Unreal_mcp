@@ -179,7 +179,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     if (GEditor->IsPlaySessionInProgress() || GSettling)
     {
         return GSettling ? Refuse(TEXT("SETTLE_RUNNING"), TEXT("A settle_physics run is still simulating: wait for its reply."))
-                         : Refuse(TEXT("PLAY_RUNNING"), TEXT("settle_physics runs a Simulate session of its own: stop the running "
+                         : Refuse(TEXT("PIE_ACTIVE"), TEXT("settle_physics runs a Simulate session of its own: stop the running "
                                                              "Play or Simulate first."));
     }
     const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));

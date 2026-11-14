@@ -119,7 +119,6 @@ bool HandleSetExposure(
     PPV->MarkComponentsRenderStateDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
     Resp->SetArrayField(TEXT("appliedSettings"), McpHandlerUtils::ToJsonStringArray(Applied));
     Transaction.DescribeInto(Resp);
@@ -188,7 +187,6 @@ bool HandleSetAmbientOcclusion(
     PPV->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
     Resp->SetNumberField(TEXT("intensity"), PPV->Settings.AmbientOcclusionIntensity);
     Resp->SetNumberField(TEXT("radius"), PPV->Settings.AmbientOcclusionRadius);

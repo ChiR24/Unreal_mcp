@@ -19,9 +19,7 @@
 #include "Sections/MovieSceneCameraCutSection.h"
 #include "Tracks/MovieScene3DTransformTrack.h"
 #include "Tracks/MovieSceneCameraCutTrack.h"
-#if MCP_HAS_CINEMATIC_CAMERA
 #include "CineCameraActor.h"
-#endif
 
 namespace McpFlyThrough
 {
@@ -115,11 +113,7 @@ bool WriteFlight(ULevelSequence& Sequence, FFlyCamera& Camera, const FFlightKeys
     const bool bSpawn = Camera.Actor == nullptr;
     if (bSpawn)
     {
-#if MCP_HAS_CINEMATIC_CAMERA
         UClass* const Class = ACineCameraActor::StaticClass();
-#else
-        UClass* const Class = ACameraActor::StaticClass();
-#endif
         Camera.Actor = SpawnActorInActiveWorld<AActor>(Class, Keys.Locations[0], Keys.Rotations[0], Camera.Label);
     }
     const FGuid Had = Camera.Actor ? McpSequenceCinematics::FindExistingBinding(&Sequence, Camera.Actor, Camera.Actor->GetWorld()) : FGuid();

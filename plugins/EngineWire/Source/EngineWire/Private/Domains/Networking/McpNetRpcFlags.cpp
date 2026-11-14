@@ -104,7 +104,6 @@ bool SetRpcFlag(FNetworkingActionContext& Context, EFunctionFlags Flag, const TC
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         return SaveBlueprintAndReply(Context, Blueprint, Detail, *Message, true);
     }
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     McpHandlerUtils::MarkNoAssetsChanged(ResultJson);

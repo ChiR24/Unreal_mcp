@@ -56,7 +56,7 @@ bool UEngineWireSubsystem::HandleSequenceAddSpawnable(
   }
   SendAutomationError(Socket, RequestId,
                       TEXT("Sequence object is not a LevelSequence"),
-                      TEXT("INVALID_SEQUENCE_TYPE"));
+                      TEXT("INVALID_SEQUENCE"));
   return true;
 }
 

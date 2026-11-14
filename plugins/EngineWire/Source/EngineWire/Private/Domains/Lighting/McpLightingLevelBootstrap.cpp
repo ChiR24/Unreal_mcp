@@ -72,7 +72,6 @@ bool HandleCreateLightingEnabledLevel(
     if (bLevelExistsOnDisk || bLevelExistsInRegistry)
     {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        Resp->SetBoolField(TEXT("success"), true);
         Resp->SetStringField(TEXT("path"), Path);
         Resp->SetBoolField(TEXT("alreadyExisted"), true);
         Resp->SetBoolField(TEXT("opened"), false);
@@ -145,7 +144,6 @@ bool HandleCreateLightingEnabledLevel(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), Path);
     Resp->SetBoolField(TEXT("existsAfter"), true);
     Resp->SetBoolField(TEXT("opened"), true);

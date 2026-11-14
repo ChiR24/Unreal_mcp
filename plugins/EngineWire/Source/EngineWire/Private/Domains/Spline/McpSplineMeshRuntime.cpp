@@ -27,7 +27,7 @@ bool HandleSetSplineMeshMaterial(
     if (ActorName.IsEmpty() || MaterialPath.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("actorName and materialPath are required"), TEXT("MISSING_PARAM"));
+            TEXT("actorName and materialPath are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

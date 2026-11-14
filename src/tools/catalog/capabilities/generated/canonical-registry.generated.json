@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6e2cd2888db06f89",
+  "catalogRevision": "c0e85bec2145c8b2",
   "recordCount": 489,
   "records": [
     {
@@ -5981,7 +5981,7 @@
                 "set_bone_transform",
                 "create_virtual_bone"
               ],
-              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton, in one undo step (the VB prefix is added when newBoneName lacks it; real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName, where it keeps its place in the reference pose; the reply gives newBoneIndex (bones can be reordered) and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Add a virtual bone to a skeleton: a bone that follows sourceBoneName and points at targetBoneName (an IK or aim target that moves with the animation), named VB sourceBoneName_targetBoneName or boneName, in one undo step, saved unless save is false. A bone the skeleton lacks is BONE_NOT_FOUND, and a virtual bone from the same source to the same target already there VIRTUAL_BONE_FAILED."
+              "description": "Which edit skeleton variant to run.\nadd_bone: Add boneName to a skeleton under parentBoneName at location, rotation and scale relative to its parent (scale a number for uniform, or {x, y, z}); a skeleton with bones refuses a new root (PARENT_REQUIRED), and a taken name is BONE_EXISTS. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nrename_bone: Rename a virtual bone on a skeleton, in one undo step (the VB prefix is added when newBoneName lacks it; real skeleton bones cannot be renamed and answer OPERATION_NOT_SUPPORTED).\nset_bone_parent: Move boneName, with its children, under the existing bone parentBoneName, where it keeps its place in the reference pose; the reply gives newBoneIndex (bones can be reordered) and changed. The parent it already has answers changed false and writes nothing; the bone itself or one of its descendants as parent is INVALID_ARGUMENT, a bone not in the skeleton BONE_NOT_FOUND or PARENT_NOT_FOUND. One undo step (the reply's undo block says so), saved unless save is false.\nset_bone_transform: Set the rest transform of a bone.\ncreate_virtual_bone: Add a virtual bone to a skeleton: a bone that follows sourceBoneName and points at targetBoneName (an IK or aim target that moves with the animation), named VB sourceBoneName_targetBoneName or boneName, in one undo step, saved unless save is false. A bone the skeleton lacks is BONE_NOT_FOUND, and a virtual bone from the same source to the same target already there VIRTUAL_BONE_EXISTS."
             }
           },
           "required": [
@@ -6137,8 +6137,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8732c0c1b0e92eef8dd2233dfb0ba76608598c92f8e2f0f0909d735711734fa4",
-        "content": "a3eef36bce2db6cb360e5cc1fbff8cf5fe9a9f75880c3a30a46fc5f76c764aa8"
+        "schema": "618025785469125559bd32cbfe758e2721e51d8fb6934fd50f5f9bfdb335171d",
+        "content": "e7735c04d1fbe3fe5b9fe911ce866f23b30eac15f476c37fb6cbe0a3d60eb553"
       }
     },
     {
@@ -7651,7 +7651,9 @@
       "aliases": [
         "animation_physics.remove_bone",
         "animation_physics.remove_socket",
-        "animation_physics.remove_physics_body"
+        "animation_physics.remove_physics_body",
+        "animation_physics.delete_virtual_bone",
+        "animation_physics.delete_morph_target"
       ],
       "legacyIds": [
         {
@@ -7678,6 +7680,20 @@
           "folded": {
             "element": "physics_body"
           }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "delete_virtual_bone",
+          "folded": {
+            "element": "virtual_bone"
+          }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "delete_morph_target",
+          "folded": {
+            "element": "morph_target"
+          }
         }
       ],
       "discovery": {
@@ -7687,18 +7703,25 @@
           "remove_skeleton_element",
           "remove bone",
           "remove socket",
-          "remove physics body"
+          "remove physics body",
+          "remove virtual bone",
+          "delete morph target",
+          "remove blend shape"
         ],
-        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused; each removal is one undo step. Saved unless save is false (saved).",
+        "summary": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. virtual_bone removes virtualBoneName from the skeleton. morph_target removes morphTargetName from skeletalMeshPath: it leaves the mesh's source data and the mesh is rebuilt without it, other morphs only its render data has refused unless dropRenderOnlyMorphs. A missing bone, socket, body, virtual bone or morph is refused; each removal but the morph is one undo step. Saved unless save is false (saved).",
         "whenToUse": [
           "element=bone: A bone must be removed.",
           "element=socket: An attach point must be taken off a skeleton.",
-          "element=physics_body: A bone should no longer simulate."
+          "element=physics_body: A bone should no longer simulate.",
+          "element=virtual_bone: A virtual bone (an IK or aim target) is no longer needed.",
+          "element=morph_target: A blend shape must be taken off a mesh for good."
         ],
         "whenNotToUse": [
           "element=bone: Keep the bone.",
           "element=socket: The socket transform should change; use configure_socket.",
-          "element=physics_body: The body only needs different parameters (use configure_physics_body)."
+          "element=physics_body: The body only needs different parameters (use configure_physics_body).",
+          "element=morph_target: The shape should change, not go (use set_morph_target_deltas).",
+          "element=morph_target: A morph should only stop showing on one actor (use set_morph_target_value 0)."
         ]
       },
       "schemas": {
@@ -7734,14 +7757,28 @@
               "type": "string",
               "description": "Canonical /Game PhysicsAsset path."
             },
+            "virtualBoneName": {
+              "type": "string",
+              "description": "The virtual bone to remove, as list_virtual_bones names it (the engine starts every virtual bone name with \"VB \")."
+            },
+            "morphTargetName": {
+              "type": "string",
+              "description": "Morph target name."
+            },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in its render data, not its source data (left by tools that wrote render data alone). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "element": {
               "type": "string",
               "enum": [
                 "bone",
                 "socket",
-                "physics_body"
+                "physics_body",
+                "virtual_bone",
+                "morph_target"
               ],
-              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove the body of boneName from a Physics Asset, with every constraint that uses it, in one undo step; saved unless save is false (saved)."
+              "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (element=virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove the body of boneName from a Physics Asset, with every constraint that uses it, in one undo step; saved unless save is false (saved).\nvirtual_bone: Remove virtualBoneName from a skeleton, in one undo step; saved unless save is false (saved). A name the skeleton has no virtual bone of is VIRTUAL_BONE_NOT_FOUND.\nmorph_target: Remove morph target morphTargetName from a skeletal mesh: it leaves the source data of every LOD that holds it and the mesh is rebuilt without it, so no later rebuild brings it back; saved unless save is false (saved). A name the mesh has no morph of is MORPH_NOT_FOUND; other morph targets the mesh has only in render data would go with the rebuild, so they are refused (RENDER_ONLY_MORPHS) unless dropRenderOnlyMorphs (morphTargetsDropped)."
             }
           },
           "required": [
@@ -7789,6 +7826,37 @@
             "remainingBodies": {
               "type": "number",
               "description": "Number of physics bodies left on the asset after the call."
+            },
+            "virtualBoneName": {
+              "type": "string",
+              "description": "The virtual bone removed."
+            },
+            "remainingVirtualBones": {
+              "type": "number",
+              "description": "Number of virtual bones left on the asset after the call."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the skeleton was saved."
+            },
+            "skeletalMeshPath": {
+              "type": "string",
+              "description": "Canonical /Game SkeletalMesh asset path."
+            },
+            "morphTargetName": {
+              "type": "string",
+              "description": "Morph target name."
+            },
+            "remainingMorphTargets": {
+              "type": "number",
+              "description": "Number of morph targets left on the asset after the call."
+            },
+            "morphTargetsDropped": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Other morph targets the mesh had in its render data alone that the rebuild removed, only with dropRenderOnlyMorphs true."
             }
           },
           "required": [
@@ -7799,7 +7867,7 @@
       },
       "examples": [
         {
-          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused; each removal is one undo step. Saved unless save is false (saved).",
+          "title": "Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. virtual_bone removes virtualBoneName from the skeleton. morph_target removes morphTargetName from skeletalMeshPath: it leaves the mesh's source data and the mesh is rebuilt without it, other morphs only its render data has refused unless dropRenderOnlyMorphs. A missing bone, socket, body, virtual bone or morph is refused; each removal but the morph is one undo step. Saved unless save is false (saved).",
           "input": {
             "action": "remove_skeleton_element",
             "skeletonPath": "/Game/SK_Char",
@@ -7825,7 +7893,7 @@
       "behavior": {
         "effect": "destructive",
         "idempotency": "non-idempotent",
-        "longRunning": false,
+        "longRunning": true,
         "safeToRetry": false
       },
       "policy": {
@@ -7834,8 +7902,8 @@
         "dataAccess": "project-write"
       },
       "cost": {
-        "latency": "interactive",
-        "resources": "low"
+        "latency": "long-running",
+        "resources": "high"
       },
       "routing": {
         "parentTool": "animation_physics",
@@ -7845,12 +7913,15 @@
           "actions": {
             "bone": "remove_bone",
             "socket": "remove_socket",
-            "physics_body": "remove_physics_body"
+            "physics_body": "remove_physics_body",
+            "virtual_bone": "delete_virtual_bone",
+            "morph_target": "delete_morph_target"
           },
           "declaredBy": {
             "skeletonPath": [
               "bone",
-              "socket"
+              "socket",
+              "virtual_bone"
             ],
             "boneName": [
               "bone",
@@ -7861,16 +7932,28 @@
             ],
             "save": [
               "bone",
-              "physics_body"
+              "physics_body",
+              "virtual_bone",
+              "morph_target"
             ],
             "socketName": [
               "socket"
             ],
             "skeletalMeshPath": [
-              "socket"
+              "socket",
+              "morph_target"
             ],
             "physicsAssetPath": [
               "physics_body"
+            ],
+            "virtualBoneName": [
+              "virtual_bone"
+            ],
+            "morphTargetName": [
+              "morph_target"
+            ],
+            "dropRenderOnlyMorphs": [
+              "morph_target"
             ]
           },
           "requires": {
@@ -7894,14 +7977,26 @@
                 "physicsAssetPath",
                 "boneName"
               ]
+            },
+            "delete_virtual_bone": {
+              "required": [
+                "skeletonPath",
+                "virtualBoneName"
+              ]
+            },
+            "delete_morph_target": {
+              "required": [
+                "skeletalMeshPath",
+                "morphTargetName"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "605b447ecbc29a9c5b576cb910bfd56edf4f60c24fe001ce683a5db87fb532e6",
-        "content": "dca3d09f795b96a237835f07e15a0173917639a168446c6e9a5754c2e31d8d73"
+        "schema": "b4959bd3a2bb6f0fc82bb1535cbb629b539ddb8eb56235f7977bd4bded3bba84",
+        "content": "8ef026b3564b1a8616084c7d45d65d99b1ad3394260a4c512adafe24fb65da87"
       }
     },
     {
@@ -47182,7 +47277,7 @@
         "whenNotToUse": [
           "Only lifting a sunk actor or lowering a floating one onto the surface under it, keeping its turn: use fix_placement, which needs no simulation.",
           "Placing actors by relations (on, nextTo, facing): use arrange_by_relations.",
-          "While Play or Simulate runs or is starting: it refuses (PLAY_RUNNING), since it runs a Simulate session of its own.",
+          "While Play or Simulate runs or is starting: it refuses (PIE_ACTIVE), since it runs a Simulate session of its own.",
           "In a level whose game pauses itself in Simulate (a title screen, a pause menu): nothing falls, so it answers GAME_PAUSED and keeps nothing; give the level a plain game mode first (manage_level set_world_settings gameMode)."
         ]
       },
@@ -47362,7 +47457,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e9256bf3bde273d9932b0c5459e98e0d736c75e43495b552253fe976a9a90880",
-        "content": "8aff188fc2e139d640c33b8b145a4423c6167552ecc4c2981aa2a70338bbb6c8"
+        "content": "830e2f6a2b7f8d8225e3a5fa6cd02e2f85539eff26291db03e889acb6b30dfb2"
       }
     },
     {
@@ -50729,7 +50824,7 @@
           "control=stop: PIE should only be paused.",
           "control=eject: PIE is not running (NO_ACTIVE_SESSION).",
           "control=eject: The game must keep playing from the pawn: an ejected player no longer drives it.",
-          "control=possess: PIE is not running (NOT_IN_PIE).",
+          "control=possess: PIE is not running (PIE_NOT_RUNNING).",
           "control=possess: The actor is not a pawn (INVALID_TARGET)."
         ]
       },
@@ -50886,7 +50981,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9a2b96f68ca89f0a4536ed7d547af79bbafddc21251a63e9907e877b8e1e76dd",
-        "content": "504b8d6989d57081d40f9f8032e1fd7343c604779f8f0e1e5b5bd84fb59d5674"
+        "content": "0f415022c2ade53acd68be8cb9d1c88dd862f291fe707ffcc6ae33d9af9424e6"
       }
     },
     {
@@ -53420,7 +53515,7 @@
                 "redo",
                 "restore_point"
               ],
-              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it), or, from UE 5.7, a step the enum editor made (UNDO_WOULD_CRASH: undoing it crashes the editor); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_RUNNING).",
+              "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it), or, from UE 5.7, a step the enum editor made (UNDO_WOULD_CRASH: undoing it crashes the editor); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_ACTIVE).",
               "default": "undo"
             }
           },
@@ -53508,8 +53603,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a13c57ef5da27be8d644edf6e7c2da1dfc195bf0ba4a8f1ebe3a3cd7e5cdc7c7",
-        "content": "5a6ab24c838f743193aaf97ac5e60f1e8b49044d5ee10b4e3aaf5d5f0ddfb618"
+        "schema": "3441c306add663a11be0de8f9ad1e3c8c3d335f95cc86260bb9cf41ed7c2d092",
+        "content": "171d6183abed545600b6b4fc1020be2962fd4309dada774a6a62f76b4265eb0e"
       }
     },
     {
@@ -96026,9 +96121,9 @@
           "add_local_player",
           "add a second player"
         ],
-        "summary": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops.",
+        "summary": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (PIE_NOT_RUNNING); local players end when play stops.",
         "whenToUse": [
-          "Use it to add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops."
+          "Use it to add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (PIE_NOT_RUNNING); local players end when play stops."
         ],
         "whenNotToUse": []
       },
@@ -96084,7 +96179,7 @@
       },
       "examples": [
         {
-          "title": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (NOT_IN_PLAY); local players end when play stops.",
+          "title": "Add a local (split-screen) player to the running game for a gamepad controllerId, spawning a player controller for it; the reply gives its playerIndex. Needs Play In Editor (PIE_NOT_RUNNING); local players end when play stops.",
           "input": {
             "action": "add_local_player",
             "controllerId": 0
@@ -96127,7 +96222,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "abf0b7b8796de88e1131ba2fc58d52c18332e27af5788a701f68bf1f6c6bc3f3",
-        "content": "8498a28de7f9d53f573911b467132f0ce34bfd9273ec1add3abc2cf31d34d069"
+        "content": "05ada8bb543d1a3e0ce2e07b0e200c0a3f5dc751ffafe29151aa544632e44d5e"
       }
     },
     {
@@ -100023,9 +100118,9 @@
         "topics": [
           "remove_local_player"
         ],
-        "summary": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY).",
+        "summary": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (PIE_NOT_RUNNING).",
         "whenToUse": [
-          "Use it to remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY)."
+          "Use it to remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (PIE_NOT_RUNNING)."
         ],
         "whenNotToUse": []
       },
@@ -100076,7 +100171,7 @@
       },
       "examples": [
         {
-          "title": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (NOT_IN_PLAY).",
+          "title": "Remove a local player from the running game by playerIndex; the first player (index 0) cannot be removed (PRIMARY_PLAYER), and the players after it move down one index. Needs Play In Editor (PIE_NOT_RUNNING).",
           "input": {
             "action": "remove_local_player",
             "playerIndex": 1
@@ -100118,7 +100213,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e0d84562eba3148a26c42b7defe1dc7abb246a80d129f978d42da22d87591f87",
-        "content": "0dffa89118b24be987f35112a53e5c878911e2ab8943a72f89ea6d8c65c6e2e8"
+        "content": "c406fa1133c1a8951e070c7d33c3e47479a8f0acfe3081664560097446e83621"
       }
     },
     {
@@ -109411,7 +109506,7 @@
                 "list",
                 "open"
               ],
-              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not open EDITOR_NOT_OPEN.",
+              "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is INVALID_SEQUENCE, and an editor that does not open EDITOR_NOT_OPEN.",
               "default": "properties"
             }
           },
@@ -109803,8 +109898,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4ca913d920d2a4f3b2ee7a16a1d8e89abccdc9f1c01e9f068a48980afa7e9811",
-        "content": "fa8c5878bbc5b0254a10030df3591af3ae21fb3f28e0fb2849b72f7802a31f4a"
+        "schema": "1d36111a8a527125b93964dfcdd96352f2a41b98c04a7309e16aaf39e59a3ee3",
+        "content": "7a28ca4981843a2fb0f57da0003572f391586f04d02b4c51ca9e3fd0eda47afa"
       }
     },
     {
@@ -112302,7 +112397,7 @@
                 "pause",
                 "stop"
               ],
-              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is SEQUENCE_NOT_FOUND.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames and cameraCut, the camera actor the camera cut track shows at that moment. The level viewport keeps its own camera: to see the shot, take control_editor screenshot with camera set to cameraCut. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
+              "description": "Which play variant to run; omit for 'play'.\nplay: Open a Level Sequence (path) in Sequencer and play it as an editor preview in the level viewport. startTime jumps there first; without it play carries on from the playhead (from the start when it sits at the end). loopMode once or loop sets the Sequencer's own loop setting, which stays for later previews. The reply reads back startTime (seconds), currentFrame and playbackStart/playbackEnd in display frames. Nothing in the asset or level changes. A time past the playback range or another loopMode is INVALID_ARGUMENT; a path that is not a Level Sequence is INVALID_SEQUENCE.\npause: Pause the Sequencer preview of a Level Sequence, or hold it at one moment to inspect it: startTime (seconds) moves the playhead there and poses the animated meshes at once, so a screenshot taken next shows that moment even with the editor in the background; a sequence not open is opened first. The reply reads back currentFrame in display frames and cameraCut, the camera actor the camera cut track shows at that moment. The level viewport keeps its own camera: to see the shot, take control_editor screenshot with camera set to cameraCut. Without startTime a sequence not open in Sequencer is EDITOR_NOT_OPEN; a time past the playback range is INVALID_ARGUMENT. Nothing in the asset changes.\nstop: Stop the Sequencer preview of a Level Sequence and put the playhead back on the start of its playback range (where Jump to Start goes, not frame 0), posing the animated meshes there. The reply reads back currentFrame in display frames. A sequence not open in Sequencer is EDITOR_NOT_OPEN; nothing in the asset changes.",
               "default": "play"
             }
           },
@@ -112403,8 +112498,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7572ed686e11a2aba50dabe59b87608af7fdb0d964b961b422ab4bf9c51a7295",
-        "content": "2bb0c4071ac49a08f6808a63f68b340182db872c26a48376a6bc4cd9378414a5"
+        "schema": "bef0667d2d8d71e183300d80f0a41cd57fb6d60147d5a3da87ab5a624e96679b",
+        "content": "3102f536b8e7e2768cc19b9d0c8c3dbeca3d9b21572315bef241140497fe4172"
       }
     },
     {
@@ -112689,7 +112784,7 @@
           "killcam",
           "demo playback speed"
         ],
-        "summary": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
+        "summary": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is PIE_NOT_RUNNING. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
         "whenToUse": [
           "control=play: A recorded demo replay must be played back.",
           "control=pause: Demo playback must be paused.",
@@ -112771,7 +112866,7 @@
                 "stop_recording",
                 "start_killcam"
               ],
-              "description": "Which play demo variant to run; omit for 'play'.\nplay: Play the replay replayName (or demoName) back in the running game at the configured playback speed. Refused while recording (ALREADY_RECORDING) and outside Play (NOT_IN_PIE); PLAYBACK_FAILED when the replay does not start. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\npause: Pause the playing replay (paused true) or resume it (paused false); without paused it toggles. NOT_PLAYING when no replay plays. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\nseek: Jump the playing replay to timeSeconds, clamped to its length, and answer once playback is within 0.25 s of it (actualTimeSeconds); REPLAY_SEEK_TIMEOUT after 10 s, NOT_PLAYING when no replay plays.\nset_playback_speed: Set the playing replay's speed (speed or playbackSpeed, 1 is real time, at most 16); later playback keeps it. NOT_PLAYING when no replay plays.\nstart_recording: Start recording the running game as a replay named replayName (or demoName; else the configure_demo_settings default, else McpReplay_<unix time>), labelled friendlyName, until control=stop_recording. Refused while a replay plays (ALREADY_PLAYING) or records (ALREADY_RECORDING), and outside Play (NOT_IN_PIE). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\nstop_recording: Stop the recording control=start_recording began and answer its replayName; NOT_RECORDING when none runs, NOT_IN_PIE outside Play.\nstart_killcam: Play back the last durationSeconds (default the configure_killcam_duration value) of the playing replay, starting replayName first when none plays, and answer once playback reaches that point; NOT_AVAILABLE without a replay to play.",
+              "description": "Which play demo variant to run; omit for 'play'.\nplay: Play the replay replayName (or demoName) back in the running game at the configured playback speed. Refused while recording (ALREADY_RECORDING) and outside Play (PIE_NOT_RUNNING); PLAYBACK_FAILED when the replay does not start. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\npause: Pause the playing replay (paused true) or resume it (paused false); without paused it toggles. NOT_PLAYING when no replay plays. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\nseek: Jump the playing replay to timeSeconds, clamped to its length, and answer once playback is within 0.25 s of it (actualTimeSeconds); REPLAY_SEEK_TIMEOUT after 10 s, NOT_PLAYING when no replay plays.\nset_playback_speed: Set the playing replay's speed (speed or playbackSpeed, 1 is real time, at most 16); later playback keeps it. NOT_PLAYING when no replay plays.\nstart_recording: Start recording the running game as a replay named replayName (or demoName; else the configure_demo_settings default, else McpReplay_<unix time>), labelled friendlyName, until control=stop_recording. Refused while a replay plays (ALREADY_PLAYING) or records (ALREADY_RECORDING), and outside Play (PIE_NOT_RUNNING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).\nstop_recording: Stop the recording control=start_recording began and answer its replayName; NOT_RECORDING when none runs, PIE_NOT_RUNNING outside Play.\nstart_killcam: Play back the last durationSeconds (default the configure_killcam_duration value) of the playing replay, starting replayName first when none plays, and answer once playback reaches that point; NOT_AVAILABLE without a replay to play.",
               "default": "play"
             }
           },
@@ -112810,7 +112905,7 @@
       },
       "examples": [
         {
-          "title": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is NOT_IN_PIE. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
+          "title": "Record and play back gameplay replays in the running game, chosen by control; outside Play every control is PIE_NOT_RUNNING. start_recording records replayName (else the configured default, else McpReplay_<time>) until stop_recording, which answers the name, and is refused while a replay plays or records (ALREADY_PLAYING, ALREADY_RECORDING). play plays replayName back (refused while recording); pause pauses or resumes it (paused; without it, toggles); seek jumps to timeSeconds, clamped to the replay's length, and answers once playback gets there (REPLAY_SEEK_TIMEOUT after 10 s); set_playback_speed sets speed (at most 16); start_killcam plays the last durationSeconds of the playing replay, or of replayName. pause, seek and set_playback_speed need a replay playing (NOT_PLAYING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).",
           "input": {
             "action": "play_demo",
             "demoName": "Demo_01",
@@ -112902,8 +112997,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e48de455da51b5c40cf283a7197892ea2ab30aac14646aebbf37206c2c21a9c0",
-        "content": "2964a473519ac4b40712363a79cb2c8effb1d1692ecee3283c3dbc54705a7029"
+        "schema": "167cd0ad434b08f488c5b881e67aa6a5cbd192722bc071a7a799a46ce2379697",
+        "content": "f5ee3f9ff573153f0d4491b5a6e590ee0e4841281cb2a29d6e1b536af29e5f6f"
       }
     },
     {
@@ -121578,7 +121673,7 @@
           "project icon",
           "set project image"
         ],
-        "summary": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).",
+        "summary": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_ACTIVE).",
         "whenToUse": [
           "The project should show a picture of the game in the Epic Games Launcher or the project browser."
         ],
@@ -121691,7 +121786,7 @@
       },
       "examples": [
         {
-          "title": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).",
+          "title": "Set the project's thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport's view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor's own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_ACTIVE).",
           "input": {
             "action": "set_project_thumbnail",
             "location": {
@@ -121739,7 +121834,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6663f5ceff1d0d549372ecac550d102135691c74faa617ad0caa259dfc2bcd73",
-        "content": "0cf22161d6a8bc7c5c09677fdeb1c32fe60f30b17e77ca96e025c9313b4ac9cb"
+        "content": "550ef9d765103dd7f14813e2d1c4ce63b110135a30b77804ca5d2fc24e432047"
       }
     },
     {

@@ -150,7 +150,6 @@ bool HandleInspectStructAction(
     Result->SetNumberField(TEXT("memberCount"), Members.Num());
 
     TSharedPtr<FJsonObject> Reply = MakeShared<FJsonObject>();
-    Reply->SetBoolField(TEXT("success"), true);
     Reply->SetObjectField(TEXT("result"), Result);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Struct inspected"), Reply);
     return true;

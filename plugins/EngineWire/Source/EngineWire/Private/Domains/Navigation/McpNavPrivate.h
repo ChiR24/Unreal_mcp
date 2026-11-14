@@ -27,15 +27,6 @@
 
 namespace McpNavigationHandlers
 {
-inline bool IsValidActorName(const FString& Name)
-{
-    return !Name.IsEmpty()
-        && !Name.Contains(TEXT(".."))
-        && !Name.Contains(TEXT("/"))
-        && !Name.Contains(TEXT("\\"))
-        && !Name.Contains(TEXT(":"));
-}
-
 inline bool IsValidNavigationPath(const FString& Path)
 {
     return !Path.IsEmpty() && IsValidAssetPath(Path);

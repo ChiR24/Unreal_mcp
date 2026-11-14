@@ -232,7 +232,6 @@ bool HandleWidgetAuthoringEventBindings(
     }
     FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
     const bool bCompiled = McpSafeCompileBlueprint(WidgetBP);
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetStringField(TEXT("functionName"), Handler);
     ResultJson->SetArrayField(TEXT("bindings"), Results);

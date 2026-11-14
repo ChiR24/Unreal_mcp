@@ -24,7 +24,7 @@ bool UEngineWireSubsystem::HandleControlActorGetComponentProperty(
       PropertyName.IsEmpty()) {
     SendAutomationError(Socket, RequestId,
         TEXT("componentName, propertyName and one of actorName (live actor) or blueprintPath (component template) are required"),
-        TEXT("MISSING_PARAM"));
+        TEXT("MISSING_PARAMETER"));
     return true;
   }
 

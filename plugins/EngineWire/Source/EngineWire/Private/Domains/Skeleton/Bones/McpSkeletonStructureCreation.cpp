@@ -46,7 +46,7 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
 
         if (SkeletonPath.IsEmpty())
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("path or skeletonPath is required"), TEXT("MISSING_PARAM"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("path or skeletonPath is required"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
@@ -140,7 +140,7 @@ bool HandleAddBoneAction(UEngineWireSubsystem* Subsystem, const FString& Request
 
         if (SkeletonPath.IsEmpty() || BoneName.IsEmpty())
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath and boneName are required"), TEXT("MISSING_PARAM"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath and boneName are required"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 

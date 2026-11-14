@@ -151,7 +151,7 @@ bool UEngineWireSubsystem::HandleSequenceAddKeyframe(
   if (!MovieScene) {
     SendAutomationError(Socket, RequestId,
                         SeqObj ? TEXT("Sequence object is not a LevelSequence") : TEXT("Sequence not found"),
-                        SeqObj ? TEXT("INVALID_SEQUENCE_TYPE") : TEXT("INVALID_SEQUENCE"));
+                        TEXT("INVALID_SEQUENCE"));
     return true;
   }
   FGuid BindingGuid = McpSequenceKeyframes::ResolveBindingGuid(MovieScene, BindingIdStr, ActorName);

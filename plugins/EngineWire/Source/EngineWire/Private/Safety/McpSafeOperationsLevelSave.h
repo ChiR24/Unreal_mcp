@@ -16,6 +16,9 @@
 
 namespace McpSafeOperations
 {
+// The longest full .umap path a level save attempts; save_as refuses a longer one with a reply naming it.
+inline constexpr int32 McpMaxMapFilePathLength = 240;
+
 // A level the editor holds only in memory: an unsaved map (/Temp/Untitled_N) or a transient world. A saved
 // level's own name may contain "Untitled".
 inline bool McpIsUnsavedLevelPath(const FString& PackagePath)
@@ -84,12 +87,11 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
             FPackageName::GetMapPackageExtension()))
         {
             AbsoluteFilePath = FPaths::ConvertRelativePathToFull(AbsoluteFilePath);
-            const int32 SafePathLength = 240;
-            if (AbsoluteFilePath.Len() > SafePathLength)
+            if (AbsoluteFilePath.Len() > McpMaxMapFilePathLength)
             {
                 UE_LOG(LogMcpSafeOperations, Error,
                     TEXT("McpSafeLevelSave: Path too long (%d chars, max %d): %s"),
-                    AbsoluteFilePath.Len(), SafePathLength, *AbsoluteFilePath);
+                    AbsoluteFilePath.Len(), McpMaxMapFilePathLength, *AbsoluteFilePath);
                 UE_LOG(LogMcpSafeOperations, Error,
                     TEXT("McpSafeLevelSave: Use a shorter path or enable Windows long paths"));
                 return false;

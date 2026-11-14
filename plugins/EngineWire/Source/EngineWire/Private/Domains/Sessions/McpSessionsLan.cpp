@@ -123,7 +123,6 @@ bool HandleConfigureLanPlay(
     FURL::UrlConfig.DefaultPort = Port;
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetNumberField(TEXT("serverPort"), Port);
     ResponseJson->SetNumberField(TEXT("previousPort"), PreviousPort);
     ResponseJson->SetStringField(TEXT("configFile"), ConfigFile);
@@ -217,7 +216,6 @@ bool HandleJoinLanServer(
 
     const FString WorldName = FString::Printf(TEXT("%s (PIE instance %d)"), *JoinWorld->GetName(), JoinInstance);
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetStringField(TEXT("connectionURL"), URL);
     ResponseJson->SetStringField(TEXT("pieWorld"), WorldName);
     ResponseJson->SetBoolField(TEXT("travelStarted"), true);

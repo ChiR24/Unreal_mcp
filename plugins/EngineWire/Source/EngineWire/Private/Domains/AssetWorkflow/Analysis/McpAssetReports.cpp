@@ -150,7 +150,6 @@ bool UEngineWireSubsystem::HandleGenerateReport(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("directory"), Directory);
   Resp->SetStringField(TEXT("reportType"), ReportType);
   Resp->SetNumberField(TEXT("assetCount"), AssetList.Num());

@@ -87,7 +87,6 @@ bool HandleWidgetAuthoringHudElements(
         Names.Add(MakeShared<FJsonValueString>(Widget->GetName()));
     }
     const FString Message = FString::Printf(TEXT("Added %s '%s' (%d widgets)"), *Label, *SlotName, Created.Num());
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetArrayField(TEXT("widgets"), Names);

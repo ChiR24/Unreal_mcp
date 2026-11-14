@@ -129,7 +129,6 @@ bool HandleInspectRaycastWorldAction(
     }
 
     const TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("hitCount"), HitCount);
     Resp->SetArrayField(TEXT("hits"), Hits);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

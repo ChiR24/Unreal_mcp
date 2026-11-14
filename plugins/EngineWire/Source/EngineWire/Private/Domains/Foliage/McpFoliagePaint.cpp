@@ -145,7 +145,6 @@ bool UEngineWireSubsystem::HandlePaintFoliage(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Transaction.DescribeInto(Resp);
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), Placed.Num());
   Resp->SetNumberField(TEXT("brushRadius"), BrushRadius);

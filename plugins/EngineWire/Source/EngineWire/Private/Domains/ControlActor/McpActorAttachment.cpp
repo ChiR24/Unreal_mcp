@@ -112,7 +112,6 @@ bool UEngineWireSubsystem::HandleControlActorDetach(
   USceneComponent *RootComp = Found->GetRootComponent();
   if (!RootComp || !RootComp->GetAttachParent()) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Found));
     Resp->SetBoolField(TEXT("detached"), false);
     Resp->SetStringField(TEXT("note"), TEXT("Actor was not attached"));

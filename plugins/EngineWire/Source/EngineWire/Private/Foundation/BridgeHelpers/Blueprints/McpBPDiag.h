@@ -6,6 +6,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPSoundCheck.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPGraphChecks.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -27,7 +28,7 @@
 // silent until someone presses Play.
 
 inline FString McpBlueprintStatusName(EBlueprintStatus Status) {
-  return StaticEnum<EBlueprintStatus>()->GetNameStringByValue(Status).RightChop(3); // "BS_UpToDate" -> "UpToDate"
+  return McpEnumName(Status).RightChop(3); // "BS_UpToDate" -> "UpToDate"
 }
 
 // Compiles and fills Out with compilerStatus/compiled/errorCount/warningCount

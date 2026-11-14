@@ -38,7 +38,6 @@ static inline void SendStandardSuccessResponse(
     return;
 
   TSharedPtr<FJsonObject> Envelope = MakeShared<FJsonObject>();
-  Envelope->SetBoolField(TEXT("success"), true);
   Envelope->SetObjectField(TEXT("data"),
                            Data.IsValid() ? Data : MakeShared<FJsonObject>());
 

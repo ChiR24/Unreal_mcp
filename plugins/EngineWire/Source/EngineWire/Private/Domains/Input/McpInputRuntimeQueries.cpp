@@ -11,6 +11,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpInputHandlers
 {
@@ -140,7 +141,7 @@ bool HandleGetInputInfo(
         // valueType stays the enum index as a string for compatibility; valueTypeName is the readable form.
         Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InputAction->ValueType));
         Result->SetStringField(TEXT("valueTypeName"),
-            StaticEnum<EInputActionValueType>()->GetNameStringByValue((int64)InputAction->ValueType));
+            McpEnumName(InputAction->ValueType));
         Result->SetBoolField(TEXT("consumeInput"), InputAction->bConsumeInput);
     }
     else if (UInputMappingContext* Context = Cast<UInputMappingContext>(Asset))

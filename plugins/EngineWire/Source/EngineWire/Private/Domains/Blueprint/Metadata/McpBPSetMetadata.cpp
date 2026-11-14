@@ -81,7 +81,6 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     const bool bSaved = SaveLoadedAssetThrottled(BP);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     TArray<TSharedPtr<FJsonValue>> MetaArray = McpHandlerUtils::ToJsonStringArray(MetadataSet);
     Resp->SetArrayField(TEXT("metadataSet"), MetaArray);

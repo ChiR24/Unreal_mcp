@@ -108,8 +108,8 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'remove_skeleton_element', selector: 'element',
-    summary: 'Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. A missing bone, socket or body is refused; each removal is one undo step. Saved unless save is false (saved).',
-    topics: ['remove bone', 'remove socket', 'remove physics body'],
-    members: { bone: 'remove_bone', socket: 'remove_socket', physics_body: 'remove_physics_body' },
+    summary: 'Remove part of a skeleton or physics asset, chosen by element. bone removes boneName from the skeleton: with removeChildren its whole branch goes, otherwise its children move up to its parent and keep their place in the reference pose; the only root a skeleton has is refused. socket removes socketName from the skeleton (a socket defined on a mesh is not found here). physics_body removes the body of boneName from physicsAssetPath together with every constraint that uses it. virtual_bone removes virtualBoneName from the skeleton. morph_target removes morphTargetName from skeletalMeshPath: it leaves the mesh\'s source data and the mesh is rebuilt without it, other morphs only its render data has refused unless dropRenderOnlyMorphs. A missing bone, socket, body, virtual bone or morph is refused; each removal but the morph is one undo step. Saved unless save is false (saved).',
+    topics: ['remove bone', 'remove socket', 'remove physics body', 'remove virtual bone', 'delete morph target', 'remove blend shape'],
+    members: { bone: 'remove_bone', socket: 'remove_socket', physics_body: 'remove_physics_body', virtual_bone: 'delete_virtual_bone', morph_target: 'delete_morph_target' },
   },
 ];

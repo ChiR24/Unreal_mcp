@@ -155,7 +155,6 @@ bool UEngineWireSubsystem::HandleSculptLandscape(
 
   TSharedPtr<FJsonObject> Resp =
       McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("toolMode"), ToolMode);
   Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedVertices);
   Resp->SetNumberField(TEXT("brushVertices"), HeightData.Num());

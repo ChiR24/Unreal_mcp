@@ -177,7 +177,6 @@ bool HandleInspectActorQueryAction(
         }
         Message = TEXT("Object exported");
     }
-    Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Resp, FString());
     return true;
 }

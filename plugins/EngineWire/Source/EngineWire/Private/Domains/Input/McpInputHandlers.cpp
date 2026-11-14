@@ -12,20 +12,8 @@ bool UEngineWireSubsystem::HandleInputAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
+    // The handler table calls this only through manage_input's sub-route: a payload whose subAction an input list holds.
     const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
-    if (SubAction.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing 'action' field in payload."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
 
     UE_LOG(LogEngineWireSubsystem, Log,
         TEXT("HandleInputAction: %s"), *SubAction);

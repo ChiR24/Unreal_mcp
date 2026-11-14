@@ -89,7 +89,6 @@ bool UEngineWireSubsystem::HandleGetFoliageInstances(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   if (!bSummary) {
     Resp->SetArrayField(TEXT("instances"), InstancesArray);
     Resp->SetBoolField(TEXT("truncated"), InstancesArray.Num() < Total);

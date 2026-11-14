@@ -11,7 +11,6 @@ void SendBlueprintAddNodeResult(
     const FString &NodeName, const FString &FunctionName,
     const FString &VariableName) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  Result->SetBoolField(TEXT("success"), true);
   Result->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Result->SetStringField(TEXT("graphName"), TargetGraph->GetName());
   Result->SetStringField(TEXT("nodeClass"), NewNode->GetClass()->GetName());

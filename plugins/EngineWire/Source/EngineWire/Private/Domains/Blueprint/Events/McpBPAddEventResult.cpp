@@ -68,7 +68,6 @@ void SendBlueprintAddEventResult(
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
     bool bSaved, const FString &Overrides) {
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Resp->SetStringField(TEXT("eventName"), EventName.ToString());
   Resp->SetStringField(TEXT("eventType"), FinalType);

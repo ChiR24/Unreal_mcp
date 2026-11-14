@@ -152,7 +152,6 @@ bool UEngineWireSubsystem::HandleSourceControlEnable(
   if (SourceControlModule.IsEnabled() &&
       (!bWantsProvider || SourceControlModule.GetProvider().GetName().ToString().Equals(Provider, ESearchCase::IgnoreCase))) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("provider"), SourceControlModule.GetProvider().GetName().ToString());
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Source control already enabled"), Result, FString());

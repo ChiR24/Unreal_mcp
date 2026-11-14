@@ -79,7 +79,6 @@ void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
   // inline capture now fits McpInlineScreenshotBox (ResolveScreenshotResolutionForMcp).
   const bool bReturnBase64 = McpScreenshotReturnsImage(Payload);
 
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("saved"), bSaved);
   Resp->SetNumberField(TEXT("sizeBytes"), PngBytes);
   Resp->SetNumberField(TEXT("fileSizeBytes"), PngBytes);

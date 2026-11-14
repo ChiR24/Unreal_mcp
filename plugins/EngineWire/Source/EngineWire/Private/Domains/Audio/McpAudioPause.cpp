@@ -52,7 +52,6 @@ bool HandlePauseActions(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(bPause ? TEXT("paused") : TEXT("resumed"), Changed);
   McpHandlerUtils::MarkNoAssetsChanged(Resp); // pausing a sound changes no asset
   FString Message = FString::Printf(TEXT("%s %d sound(s)"), bPause ? TEXT("Paused") : TEXT("Resumed"), Changed);

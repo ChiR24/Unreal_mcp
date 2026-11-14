@@ -135,7 +135,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
         FEngineWire_BuildBlueprintSnapshot(Blueprint, RegistryKey);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetStringField(TEXT("variableName"), VarName);
     TArray<TSharedPtr<FJsonValue>> VarNamesJson = McpHandlerUtils::ToJsonStringArray(VarNames);

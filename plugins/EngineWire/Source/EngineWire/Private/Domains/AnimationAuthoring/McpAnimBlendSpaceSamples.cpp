@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAnimSupport.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpAnimationAuthoring {
 
@@ -192,7 +193,7 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
 
         Response->SetBoolField(TEXT("saved"), bSave && SaveAnimAsset(BlendSpace, bSave));
         Response->SetNumberField(TEXT("interpolationTime"), BlendSpace->InterpolationParam[0].InterpolationTime);
-        Response->SetStringField(TEXT("interpolationType"), StaticEnum<EFilterInterpolationType>()->GetNameStringByValue(BlendSpace->InterpolationParam[0].InterpolationType));
+        Response->SetStringField(TEXT("interpolationType"), McpEnumName(BlendSpace->InterpolationParam[0].InterpolationType));
         Response->SetNumberField(TEXT("targetWeightInterpolationSpeed"), BlendSpace->TargetWeightInterpolationSpeedPerSec);
         McpHandlerUtils::AddVerification(Response, BlendSpace);
 

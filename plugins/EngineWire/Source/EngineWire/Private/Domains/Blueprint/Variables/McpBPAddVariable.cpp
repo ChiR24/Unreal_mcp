@@ -131,7 +131,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       // each add_variable reply several KB.
       Response->SetObjectField(
           TEXT("variable"), FEngineWire_BuildVariableJson(Blueprint, *ExistingVar));
-      Response->SetBoolField(TEXT("success"), true);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Variable already exists"), Response,
                              FString());
@@ -239,7 +238,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
                 "verified=true)"),
            *VarName, *RegistryKey, bSaved ? TEXT("true") : TEXT("false"));
 
-    Response->SetBoolField(TEXT("success"), true);
     Response->SetBoolField(TEXT("saved"), bSaved);
     Response->SetObjectField(TEXT("variable"),
                              FEngineWire_BuildVariableJson(Blueprint, *AddedVar));

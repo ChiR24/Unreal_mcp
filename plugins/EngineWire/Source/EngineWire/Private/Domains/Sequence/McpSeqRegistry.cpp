@@ -65,7 +65,7 @@ ULevelSequence *McpSequence::LoadOrReply(UEngineWireSubsystem *Subsystem, const 
   ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *Path);
   if (!Sequence) {
     Subsystem->SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Level sequence not found: %s"), *Path), TEXT("SEQUENCE_NOT_FOUND"));
+        FString::Printf(TEXT("Level sequence not found: %s"), *Path), TEXT("INVALID_SEQUENCE"));
     return nullptr;
   }
   OutMovieScene = Sequence->GetMovieScene();

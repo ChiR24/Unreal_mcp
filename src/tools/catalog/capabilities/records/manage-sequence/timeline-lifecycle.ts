@@ -52,7 +52,7 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'open',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not open EDITOR_NOT_OPEN.',
+    summary: 'Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is INVALID_SEQUENCE, and an editor that does not open EDITOR_NOT_OPEN.',
     whenToUse: ['An existing sequence must be opened for editing.', 'pause or stop must act on a sequence, which they do only while it is open (play and pause with startTime open it themselves).'],
     whenNotToUse: ['A new sequence should be created instead.'],
     inputProps: { path: P.path },

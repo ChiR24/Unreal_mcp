@@ -244,6 +244,7 @@
         "verticalAxisName",
         "verticalMax",
         "verticalMin",
+        "virtualBoneName",
         "weights",
         "wheels",
         "width",
@@ -659,9 +660,11 @@
             "enum": [
               "bone",
               "socket",
-              "physics_body"
+              "physics_body",
+              "virtual_bone",
+              "morph_target"
             ],
-            "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (delete_virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove the body of boneName from a Physics Asset, with every constraint that uses it, in one undo step; saved unless save is false (saved)."
+            "description": "Which remove skeleton element variant to run.\nbone: Remove boneName from a skeleton, with its children when removeChildren is true; otherwise its children move up to its parent and keep their place in the reference pose. A virtual bone is BONE_NOT_FOUND (element=virtual_bone removes it). The only root a skeleton has is refused (CANNOT_REMOVE_ROOT); a second root is removed like any bone. One undo step (the reply's undo block says so), saved unless save is false; the reply gives boneCount.\nsocket: Remove a socket from a skeleton or skeletal mesh, in one undo step.\nphysics_body: Remove the body of boneName from a Physics Asset, with every constraint that uses it, in one undo step; saved unless save is false (saved).\nvirtual_bone: Remove virtualBoneName from a skeleton, in one undo step; saved unless save is false (saved). A name the skeleton has no virtual bone of is VIRTUAL_BONE_NOT_FOUND.\nmorph_target: Remove morph target morphTargetName from a skeletal mesh: it leaves the source data of every LOD that holds it and the mesh is rebuilt without it, so no later rebuild brings it back; saved unless save is false (saved). A name the mesh has no morph of is MORPH_NOT_FOUND; other morph targets the mesh has only in render data would go with the rebuild, so they are refused (RENDER_ONLY_MORPHS) unless dropRenderOnlyMorphs (morphTargetsDropped)."
           },
           "enableRootMotion": {
             "type": "boolean",
@@ -1545,6 +1548,10 @@
           "verticalMin": {
             "type": "number",
             "description": "Vertical axis minimum (default 0)."
+          },
+          "virtualBoneName": {
+            "type": "string",
+            "description": "The virtual bone to remove, as list_virtual_bones names it (the engine starts every virtual bone name with \"VB \")."
           },
           "weights": {
             "type": "array",
@@ -5800,7 +5807,7 @@
               "redo",
               "restore_point"
             ],
-            "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it), or, from UE 5.7, a step the enum editor made (UNDO_WOULD_CRASH: undoing it crashes the editor); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_RUNNING).",
+            "description": "Which undo variant to run; omit for 'undo'.\nundo: Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nredo: Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none. From UE 5.7 a step the enum editor made is refused (UNDO_WOULD_CRASH): it holds the enum's saved state, and applying it crashes the editor; enum edits through this server undo and redo.\nrestore_point: Mark a restore point to roll the editor back to, undoing only what calls through this server changed, chosen by op. begin opens it (one at a time; label names it); status lists the editor's transactions since it, newest first, each with byMcp, and the assets created, removed or saved since (assetsCreated, assetsRemoved, packagesSaved); rollback undoes every step since it and refuses before undoing anything when a step was not made through this server (USER_STEP_SINCE_RESTORE_POINT names it) or the editor's history was cleared since (UNDO_HISTORY_CLEARED: a Blueprint compile or a level load clears it), or, from UE 5.7, a step the enum editor made (UNDO_WOULD_CRASH: undoing it crashes the editor); end closes it. Undo deletes no created asset and restores no saved file: status and rollback list them, and cleanupCall is the manage_asset bulk_delete of the assets calls through this server created that are still there, ready to send (it asks for consent); an asset made by hand in the editor is listed but never in it. A rollback is refused while Play runs (PIE_ACTIVE).",
             "default": "undo"
           },
           "holdSeconds": {
@@ -20743,7 +20750,7 @@
               "list",
               "open"
             ],
-            "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is SEQUENCE_NOT_FOUND, and an editor that does not open EDITOR_NOT_OPEN.",
+            "description": "Which get properties variant to run; omit for 'properties'.\nproperties: Read the playback properties of a Level Sequence: frameRate (the display rate, a number), playbackStart and playbackEnd in display-rate frames, and lengthInFrames. An asset that is not a Level Sequence is INVALID_SEQUENCE.\nbindings: List all bindings (possessables and spawnables) in a Level Sequence.\ntracks: List every track of a Level Sequence: the sequence-wide tracks (the camera cut track included) and each binding's tracks. Each row gives trackName (the object name track actions take), trackType (its class), displayName (the label Sequencer shows, also accepted), isMasterTrack, for a bound track bindingName (Actor/Component for a component) and bindingGuid, sectionCount, muted (set_track_muted or solo turned it off), the animation clips a skeletal animation track plays (animations) and isCameraCut. Read only.\nkeys: Read the sections and keyframes already on a sequence track.\ntrack_types: List all available MovieScene track types registered in the engine.\nlist: List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).\nopen: Open a Level Sequence (path) in the Sequencer editor; nothing in it changes. The reply gives sequencePath. A path that is not a Level Sequence is INVALID_SEQUENCE, and an editor that does not open EDITOR_NOT_OPEN.",
             "default": "properties"
           },
           "interpolation": {

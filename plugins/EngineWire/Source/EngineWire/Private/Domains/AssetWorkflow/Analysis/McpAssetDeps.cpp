@@ -68,7 +68,6 @@ bool UEngineWireSubsystem::HandleGetDependencies(
   TArray<TSharedPtr<FJsonValue>> DepArray = McpHandlerUtils::NamesToJsonStringArray(Packages);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(bReferencers ? TEXT("referencers") : TEXT("dependencies"), DepArray);
   SendAutomationResponse(Socket, RequestId, true,
                          bReferencers ? TEXT("Referencers retrieved") : TEXT("Dependencies retrieved"),
@@ -181,7 +180,6 @@ bool UEngineWireSubsystem::HandleGetAssetGraph(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("graph"), GraphObj);
   Resp->SetNumberField(TEXT("nodeCount"), Visited.Num());
   Resp->SetNumberField(TEXT("maxDepth"), MaxDepth);
@@ -208,7 +206,6 @@ bool UEngineWireSubsystem::HandleDoesAssetExist(
       Existing += bExists ? 1 : 0;
     }
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("exists"), Existing == Paths->Num());
     Resp->SetObjectField(TEXT("existsByPath"), Each);
     SendAutomationResponse(Socket, RequestId, true,
@@ -233,7 +230,6 @@ bool UEngineWireSubsystem::HandleDoesAssetExist(
   bool bExists = McpAssetExists(AssetPath);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("exists"), bExists);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   SendAutomationResponse(Socket, RequestId, true,

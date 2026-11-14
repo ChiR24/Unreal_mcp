@@ -66,7 +66,6 @@ bool HandleInspectSearchAction(
             {
                 Resp->SetStringField(TEXT("filter"), Filter);
             }
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Objects listed"), Resp, FString());
             return true;
@@ -116,7 +115,6 @@ bool HandleInspectSearchAction(
             McpCapFindRows(Payload, ObjectsArray, Resp);
             Resp->SetArrayField(TEXT("objects"), ObjectsArray);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Objects found by class"), Resp, FString());
             return true;
@@ -155,7 +153,6 @@ bool HandleInspectSearchAction(
             Resp->SetArrayField(TEXT("actors"), ObjectsArray);
             Resp->SetStringField(TEXT("tag"), Tag);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
-            Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Objects found by tag"), Resp, FString());
             return true;
@@ -185,7 +182,6 @@ bool HandleInspectSearchAction(
                     // properties[] and the CDO defaultProperties — see
                     // McpInspectClass.cpp.
                     McpDescribeClass(TargetClass, Resp);
-                    Resp->SetBoolField(TEXT("success"), true);
                     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                            TEXT("Class inspected"), Resp, FString());
                 }

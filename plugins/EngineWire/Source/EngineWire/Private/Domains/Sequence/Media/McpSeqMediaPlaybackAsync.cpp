@@ -4,15 +4,12 @@
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "EngineWireSubsystem.h"
 
-#if MCP_HAS_MEDIA_ASSETS
 #include "Containers/Ticker.h"
 #include "MediaPlayer.h"
 #include "UObject/WeakObjectPtrTemplates.h"
-#endif
 
 namespace McpSequenceMedia {
 
-#if MCP_HAS_MEDIA_ASSETS
 namespace {
 
 constexpr float MediaOpenPollSeconds = 0.02f;
@@ -172,13 +169,11 @@ bool AdvanceMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State) {
 }
 
 }
-#endif
 
 void StartMediaPlaybackAfterOpen(
     UEngineWireSubsystem *Subsystem, FString RequestId,
     TSharedPtr<FMcpBridgeWebSocket> Socket, UObject *PlayerObject,
     TSharedPtr<FJsonObject> Result, FString ExpectedUrl) {
-#if MCP_HAS_MEDIA_ASSETS
   UMediaPlayer *Player = Cast<UMediaPlayer>(PlayerObject);
   if (!Player) {
     SendMediaError(Subsystem, Socket, RequestId,
@@ -206,16 +201,9 @@ void StartMediaPlaybackAfterOpen(
       FTickerDelegate::CreateLambda(
           [State](float) { return AdvanceMediaPlayback(State); }),
       MediaOpenPollSeconds);
-#else
-  static_cast<void>(PlayerObject);
-  SendMediaError(Subsystem, Socket, RequestId,
-                 TEXT("MEDIA_FRAMEWORK_UNAVAILABLE"),
-                 TEXT("MediaAssets module is unavailable"), Result);
-#endif
 }
 
 bool InvalidatePendingMediaPlayback(UObject *PlayerObject, bool bClosePlayer) {
-#if MCP_HAS_MEDIA_ASSETS
   if (UMediaPlayer *Player = Cast<UMediaPlayer>(PlayerObject)) {
     const bool bHadPendingPlayback =
         ActivePlaybackGenerations.Remove(Player) > 0;
@@ -223,10 +211,6 @@ bool InvalidatePendingMediaPlayback(UObject *PlayerObject, bool bClosePlayer) {
       Player->Close();
     return bHadPendingPlayback;
   }
-#else
-  static_cast<void>(PlayerObject);
-  static_cast<void>(bClosePlayer);
-#endif
   return false;
 }
 

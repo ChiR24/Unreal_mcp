@@ -77,7 +77,7 @@ bool HandleInspectCapturePassesAction(
     };
     if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)
     {
-        return Fail(TEXT("capture_passes reads the level viewport, which does not show the running game; stop Play In Editor first (Simulate is fine)."), TEXT("PIE_RUNNING"));
+        return Fail(TEXT("capture_passes reads the level viewport, which does not show the running game; stop Play In Editor first (Simulate is fine)."), TEXT("PIE_ACTIVE"));
     }
     TSet<FString> Passes;
     const TArray<TSharedPtr<FJsonValue>> *Asked = nullptr;

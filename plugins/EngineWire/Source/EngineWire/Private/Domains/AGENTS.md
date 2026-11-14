@@ -75,7 +75,7 @@ Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/
 - A refusal that carries no result object is `SendAutomationError(Socket, RequestId, Message, Code)`, never `SendAutomationResponse(..., false, Message, nullptr, Code)` written out: the same reply, and the warning line every refusal logs.
 - Domains do not include `Transport/` headers: a handler passes on the `TSharedPtr<FMcpBridgeWebSocket>` it was given, a type `EngineWireSubsystem.h` forward-declares.
 - Editor work runs on the game thread via the Core queue. Never call editor APIs from a socket thread.
-- Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `EngineWire.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, `MCP_HAS_MEDIA_ASSETS`). A missing module must never break the build.
+- Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `EngineWire.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`). A missing module must never break the build.
 - An action that promises gameplay behaviour (movement modes, ammo, inventory functions, input bindings, trigger events) writes it into the Blueprint with `McpBlueprintBehaviour::Author` and a recipe file under `Resources/Recipes/<Domain>/`. Read `BlueprintGraph/Behaviour/AGENTS.md` first; never hand-roll graph edits or report "configured" for logic that was not authored.
 
 ## ANTI-PATTERNS (forbidden -> alternative)

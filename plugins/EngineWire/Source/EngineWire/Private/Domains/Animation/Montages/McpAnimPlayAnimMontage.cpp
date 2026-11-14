@@ -83,7 +83,6 @@ bool UEngineWireSubsystem::HandlePlayAnimMontage(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("playMode"), AnimInst ? TEXT("montage") : TEXT("singleNode"));
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("montagePath"), MontagePath);

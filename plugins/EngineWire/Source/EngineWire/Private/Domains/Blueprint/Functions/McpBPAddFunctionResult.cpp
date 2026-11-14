@@ -94,7 +94,6 @@ void SendBlueprintAddFunctionResult(
     const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
     const FString &EntryNodeGuid, const FString &ResultNodeGuid, const UClass *OverrideClass) {
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Resp->SetStringField(TEXT("functionName"), FuncName);
   if (OverrideClass) {

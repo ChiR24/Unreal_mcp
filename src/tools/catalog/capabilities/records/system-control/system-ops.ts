@@ -554,7 +554,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_project_thumbnail',
     domain: 'project',
     family: 'project',
-    summary: 'Set the project\'s thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport\'s view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor\'s own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_RUNNING).',
+    summary: 'Set the project\'s thumbnail, the picture the Epic Games Launcher and the project browser show for it: the level viewport\'s view (from location, rotation and fov when given; they stay) drawn in game view (no editor icons or gizmos) as a square of size pixels and written to <ProjectDir>/<ProjectName>.png, the file the editor\'s own Capture Project Thumbnail writes. The reply shows the picture. Refused during Play In Editor (PIE_ACTIVE).',
     topics: ['project thumbnail', 'project picture', 'launcher thumbnail', 'project icon', 'set project image'],
     whenToUse: ['The project should show a picture of the game in the Epic Games Launcher or the project browser.'],
     whenNotToUse: ['A picture to look at is wanted (use control_editor screenshot).'],

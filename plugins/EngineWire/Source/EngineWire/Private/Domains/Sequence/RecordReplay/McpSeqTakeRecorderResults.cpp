@@ -1,6 +1,7 @@
 #include "Domains/Sequence/RecordReplay/McpSeqTakeRecorderInternal.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #include "Containers/Ticker.h"
 #if MCP_HAS_MOVIE_SCENE_SHOT_METADATA
 #include "MetaData/MovieSceneShotMetaData.h"
@@ -104,8 +105,7 @@ void AddRecordingAssetPaths(
 FString GetRecorderStateName(const UTakeRecorder* Recorder)
 {
     return Recorder
-        ? StaticEnum<ETakeRecorderState>()->GetNameStringByValue(
-            static_cast<int64>(Recorder->GetState()))
+        ? McpEnumName(Recorder->GetState())
         : TEXT("Unavailable");
 }
 

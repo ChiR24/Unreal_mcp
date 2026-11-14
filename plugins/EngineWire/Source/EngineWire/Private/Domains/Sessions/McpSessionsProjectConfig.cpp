@@ -85,7 +85,6 @@ bool HandleConfigureSessionInterface(
     // OnlineSubsystemSteam turns itself off in any editor process (UE_EDITOR) unless it runs as -game.
     const bool bSteam = Type == TEXT("Steam");
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetStringField(TEXT("interfaceType"), Type);
     ResponseJson->SetStringField(TEXT("previous"), Previous);
     ResponseJson->SetStringField(TEXT("configFile"), ConfigFile);
@@ -195,7 +194,6 @@ bool HandleConfigureVoiceSettings(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetArrayField(TEXT("written"), McpHandlerUtils::ToJsonStringArray(Written));
     ResponseJson->SetStringField(TEXT("configFile"), ConfigFile);
     ResponseJson->SetArrayField(TEXT("liveApplied"), McpHandlerUtils::ToJsonStringArray(LiveApplied));

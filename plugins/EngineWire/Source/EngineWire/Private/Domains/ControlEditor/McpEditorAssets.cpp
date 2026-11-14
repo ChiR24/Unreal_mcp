@@ -42,7 +42,6 @@ bool UEngineWireSubsystem::HandleControlEditorOpenAsset(
 
   if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
     Resp->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
     Resp->SetBoolField(TEXT("loaded"), true);

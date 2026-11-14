@@ -76,7 +76,7 @@ struct FMcpViewCapture {
 };
 
 // Reads the level viewport, first moved to the payload's location and rotation when it names them (and drawn a few
-// frames so occlusion catches up). False with OutError and OutCode (PIE_RUNNING, VIEWPORT_NOT_READY,
+// frames so occlusion catches up). False with OutError and OutCode (PIE_ACTIVE, VIEWPORT_NOT_READY,
 // VIEWPORT_NOT_AVAILABLE, CAPTURE_FAILED) when it cannot be read; What names the caller in the Play refusal. With
 // bGameView the frame is drawn as the game shows it (no axes, icons or gizmos) and the viewport's own setting put back.
 bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, bool bGameView, FMcpViewCapture &Out,

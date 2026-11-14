@@ -14,13 +14,13 @@ bool HandleConfigureNavAreaCost(
     double AreaCost = GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
     if (AreaClassPath.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("areaClass is required"), TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("areaClass is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     if (!IsValidNavigationPath(AreaClassPath))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid areaClass: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
+            TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
@@ -44,7 +44,7 @@ bool HandleConfigureNavAreaCost(
     const bool bHasEnteringCost = Payload->HasField(TEXT("fixedAreaEnteringCost"));
     if (!bHasCost && !bHasEnteringCost)
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("Pass areaCost, fixedAreaEnteringCost or both"), TEXT("MISSING_PARAM"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("Pass areaCost, fixedAreaEnteringCost or both"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     // FixedAreaEnteringCost is protected; it is an editable UPROPERTY, so write it by reflection.

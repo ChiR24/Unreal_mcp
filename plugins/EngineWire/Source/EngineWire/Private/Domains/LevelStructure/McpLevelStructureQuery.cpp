@@ -10,6 +10,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 #if __has_include("WorldPartition/DataLayer/DataLayerManager.h")
 #include "WorldPartition/DataLayer/DataLayerManager.h"
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
@@ -85,8 +86,8 @@ bool HandleGetLevelStructureInfo(
                 LayerJson->SetStringField(TEXT("name"), Instance->GetDataLayerShortName());
                 LayerJson->SetStringField(TEXT("fullName"), Instance->GetDataLayerFullName());
                 LayerJson->SetBoolField(TEXT("isRuntime"), Instance->IsRuntime());
-                LayerJson->SetStringField(TEXT("runtimeState"), StaticEnum<EDataLayerRuntimeState>()->GetNameStringByValue(static_cast<int64>(Instance->GetRuntimeState())));
-                LayerJson->SetStringField(TEXT("initialRuntimeState"), StaticEnum<EDataLayerRuntimeState>()->GetNameStringByValue(static_cast<int64>(Instance->GetInitialRuntimeState())));
+                LayerJson->SetStringField(TEXT("runtimeState"), McpEnumName(Instance->GetRuntimeState()));
+                LayerJson->SetStringField(TEXT("initialRuntimeState"), McpEnumName(Instance->GetInitialRuntimeState()));
                 DataLayersArray.Add(MakeShared<FJsonValueObject>(LayerJson));
                 return true;
             });
@@ -124,7 +125,7 @@ bool HandleGetLevelStructureInfo(
                 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
                 LayerJson->SetStringField(TEXT("layerType"),
-                    StaticEnum<EHLODLayerType>()->GetNameStringByValue(static_cast<int64>(Layer->GetLayerType())));
+                    McpEnumName(Layer->GetLayerType()));
 
                 TSoftObjectPtr<UHLODLayer> ParentLayerSoft = Layer->GetParentLayer();
                 if (ParentLayerSoft.IsValid())

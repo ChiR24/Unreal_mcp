@@ -58,7 +58,7 @@ const testCases = [
   { scenario: 'ACTION: create from a path that names the sequence', toolName: 'manage_sequence', arguments: { action: 'create', path: `${TEST_FOLDER}/SEQ_PathOnly_${ts}` }, expected: 'success' },
   { scenario: 'ERROR: create with a folder path and no name', toolName: 'manage_sequence', arguments: { action: 'create', path: TEST_FOLDER }, expected: 'error' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
-  { scenario: 'ERROR: open refuses an asset that is not a sequence', toolName: 'manage_sequence', arguments: { action: 'open', path: SOUND_WAVE }, expected: 'error|SEQUENCE_NOT_FOUND' },
+  { scenario: 'ERROR: open refuses an asset that is not a sequence', toolName: 'manage_sequence', arguments: { action: 'open', path: SOUND_WAVE }, expected: 'error|INVALID_SEQUENCE' },
 
   // === BINDINGS ===
   { scenario: 'ADD: add_camera', toolName: 'manage_sequence', arguments: { action: 'add_camera', path: SEQUENCE_PATH, spawnable: true }, expected: 'success|already exists' },
@@ -279,7 +279,7 @@ const testCases = [
   { scenario: 'RECORDREPLAY: configure_killcam_duration', toolName: 'manage_sequence', arguments: { action: 'configure_killcam_duration', durationSeconds: 5.0 }, expected: 'success' },
 
   // Demo replay actions below require an active PIE / game world; in an
-  // editor-only run they return controlled errors (NOT_IN_PIE / NOT_PLAYING /
+  // editor-only run they return controlled errors (PIE_NOT_RUNNING / NOT_PLAYING /
   // NOT_RECORDING). Expectation primary is `error`.
   // start_demo_recording (demoName / friendlyName / additionalOptions)
   { scenario: 'RECORDREPLAY: start_demo_recording', toolName: 'manage_sequence', arguments: { action: 'start_demo_recording', demoName: DEMO_NAME, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'] }, expected: 'error' },

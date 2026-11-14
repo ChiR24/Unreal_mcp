@@ -8,6 +8,7 @@
 #include "Domains/Perception/McpPerception.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -208,7 +209,7 @@ TSharedPtr<FJsonObject> InstancingGroups(UWorld* World)
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("mesh"), First->GetStaticMesh()->GetPathName());
-        Row->SetStringField(TEXT("mobility"), StaticEnum<EComponentMobility::Type>()->GetNameStringByValue(First->Mobility.GetValue()));
+        Row->SetStringField(TEXT("mobility"), McpEnumName(First->Mobility.GetValue()));
         Row->SetNumberField(TEXT("count"), Group.Value.Num());
         Row->SetArrayField(TEXT("actors"), Names);
         Rows.Add(MakeShared<FJsonValueObject>(Row));

@@ -65,7 +65,6 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
     LevelSeq->MarkPackageDirty();
     Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
 
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorLabel"), Spawned->GetActorLabel());
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Camera actor spawned and bound to sequence"),

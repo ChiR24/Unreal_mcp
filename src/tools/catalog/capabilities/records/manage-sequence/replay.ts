@@ -3,7 +3,7 @@
  * configure_demo_settings, play_demo, pause_demo, seek_demo,
  * set_demo_playback_speed, configure_killcam_duration, start_killcam.
  *
- * Gated by MCP_HAS_REPLAY_API (ReplaySubsystem.h / OnlineSubsystem).
+ * ReplaySubsystem.h, which these call, is on every supported engine.
  *
  * ASYNC/ARTIFACT CONTRACT:
  * - start_demo_recording writes a replay to disk via the engine replay
@@ -27,7 +27,7 @@ const REPLAY_PLUGINS = ['LevelSequenceEditor', 'OnlineSubsystem'];
 export const REPLAY_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.replay.start_demo_recording', action: 'start_demo_recording', family: F, domain: D,
-    summary: 'Start recording the running game as a replay named replayName (or demoName; else the configure_demo_settings default, else McpReplay_<unix time>), labelled friendlyName, until stop_demo_recording. Refused while a replay plays (ALREADY_PLAYING) or records (ALREADY_RECORDING), and outside Play (NOT_IN_PIE). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
+    summary: 'Start recording the running game as a replay named replayName (or demoName; else the configure_demo_settings default, else McpReplay_<unix time>), labelled friendlyName, until stop_demo_recording. Refused while a replay plays (ALREADY_PLAYING) or records (ALREADY_RECORDING), and outside Play (PIE_NOT_RUNNING). Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
     whenToUse: ['A demo replay must be recorded.'],
     whenNotToUse: ['A recording is already in progress (ALREADY_RECORDING).'],
     inputProps: { replayName: P.replayName, demoName: P.demoName, friendlyName: P.friendlyName, additionalOptions: P.additionalOptions },
@@ -39,7 +39,7 @@ export const REPLAY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.replay.stop_demo_recording', action: 'stop_demo_recording', family: F, domain: D,
-    summary: 'Stop the recording start_demo_recording began and answer its replayName; NOT_RECORDING when none runs, NOT_IN_PIE outside Play.',
+    summary: 'Stop the recording start_demo_recording began and answer its replayName; NOT_RECORDING when none runs, PIE_NOT_RUNNING outside Play.',
     whenToUse: ['An in-progress demo recording must be stopped.'],
     whenNotToUse: ['No recording is in progress (NOT_RECORDING).'],
     inputProps: {},
@@ -61,7 +61,7 @@ export const REPLAY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.replay.play_demo', action: 'play_demo', family: F, domain: D,
-    summary: 'Play the replay replayName (or demoName) back in the running game at the configured playback speed. Refused while recording (ALREADY_RECORDING) and outside Play (NOT_IN_PIE); PLAYBACK_FAILED when the replay does not start. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
+    summary: 'Play the replay replayName (or demoName) back in the running game at the configured playback speed. Refused while recording (ALREADY_RECORDING) and outside Play (PIE_NOT_RUNNING); PLAYBACK_FAILED when the replay does not start. Replies give the replay state (activeReplayName, recording, playing, currentTimeSeconds, totalTimeSeconds, paused, playbackSpeed).',
     whenToUse: ['A recorded demo replay must be played back.'],
     whenNotToUse: ['A recording is in progress (ALREADY_PLAYING).'],
     inputProps: { demoName: P.demoName, replayName: P.replayName, additionalOptions: P.additionalOptions },

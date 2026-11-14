@@ -11,6 +11,13 @@ FString McpEnumName(TEnum Value)
     return Enum ? Enum->GetNameStringByValue(static_cast<int64>(Value)) : FString();
 }
 
+// The same for a TEnumAsByte field (most UPROPERTY enums of the engine's older classes).
+template <typename TEnum>
+FString McpEnumName(TEnumAsByte<TEnum> Value)
+{
+    return McpEnumName(Value.GetValue());
+}
+
 // A caller's word for one of Enum's enumerators: a name as the engine reads one (COND_InitialOnly, HasDuration,
 // ENetRole::ROLE_Authority), the name after its prefix (InitialOnly) or the label the Details panel shows ("Initial
 // Only"); case, spaces, underscores and hyphens ignored. The MAX entry the header tool adds never matches, and a Hidden

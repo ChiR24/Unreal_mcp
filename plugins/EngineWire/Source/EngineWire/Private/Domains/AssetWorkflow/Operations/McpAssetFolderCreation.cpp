@@ -33,7 +33,6 @@ bool UEngineWireSubsystem::HandleCreateFolder(
   if (bAlreadyExisted ||
       UEditorAssetLibrary::MakeDirectory(SafePath)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("path"), SafePath);
     // A folder is a directory, not an asset object — VerifyAssetExists looks for a .uasset
     // and so always reported existsAfter:false for a freshly created folder. Report the

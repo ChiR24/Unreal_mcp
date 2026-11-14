@@ -50,8 +50,7 @@ void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Re
     Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Scene->Bounds.GetBox()));
     if (UPrimitiveComponent *Primitive = Cast<UPrimitiveComponent>(Scene))
     {
-        Resp->SetStringField(TEXT("collisionEnabled"), StaticEnum<ECollisionEnabled::Type>()->GetNameStringByValue(
-            static_cast<int64>(Primitive->GetCollisionEnabled())));
+        Resp->SetStringField(TEXT("collisionEnabled"), McpEnumName(Primitive->GetCollisionEnabled()));
         Resp->SetStringField(TEXT("collisionProfile"), Primitive->GetCollisionProfileName().ToString());
         Resp->SetBoolField(TEXT("castShadow"), Primitive->CastShadow != 0);
     }
@@ -143,7 +142,6 @@ bool HandleInspectComponentDetailsAction(
     {
         McpAppendPropertyDump(Component, PropertyNames, Resp);
     }
-    Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Component details retrieved"), Resp, FString());
     return true;

@@ -154,7 +154,7 @@ void EditMorph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSh
     const FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
     if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
     {
-        Bridge->SendAutomationError(Socket, RequestId, TEXT("skeletalMeshPath and morphTargetName are required"), TEXT("MISSING_PARAM"));
+        Bridge->SendAutomationError(Socket, RequestId, TEXT("skeletalMeshPath and morphTargetName are required"), TEXT("MISSING_PARAMETER"));
         return;
     }
     FString Error;
@@ -180,7 +180,7 @@ void EditMorph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSh
     if (!ParseMorphTargetDeltas(Payload, Deltas, Error, DeltaCode))
     {
         // A missing array keeps the historical EMPTY_MORPH_TARGET code for a create.
-        Bridge->SendAutomationError(Socket, RequestId, Error, bCreate && DeltaCode == TEXT("MISSING_PARAM") ? FString(TEXT("EMPTY_MORPH_TARGET")) : DeltaCode);
+        Bridge->SendAutomationError(Socket, RequestId, Error, bCreate && DeltaCode == TEXT("MISSING_PARAMETER") ? FString(TEXT("EMPTY_MORPH_TARGET")) : DeltaCode);
         return;
     }
     const int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 0);

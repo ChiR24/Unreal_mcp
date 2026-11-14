@@ -144,7 +144,6 @@ bool UEngineWireSubsystem::HandleListMaterialInstances(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetArrayField(TEXT("instances"), Instances);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Instances listed"),
                          Resp, FString());
@@ -173,7 +172,6 @@ bool UEngineWireSubsystem::HandleResetInstanceParameters(
   MIC->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Instance parameters reset"), Resp, FString());

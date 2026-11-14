@@ -110,7 +110,6 @@ bool UEngineWireSubsystem::HandleRenameAsset(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   FString Failure;
   if (RenameData[0].Asset.IsValid() && McpAssetRename::RenameWithSettingsFollow(RenameData, Resp, Failure)) {
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPackage);
     if (UObject* RenamedAsset = McpLoadAsset(DestinationPackage)) {
       McpHandlerUtils::AddVerification(Resp, RenamedAsset);

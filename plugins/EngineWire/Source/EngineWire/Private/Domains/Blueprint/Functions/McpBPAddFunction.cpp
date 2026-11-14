@@ -94,7 +94,6 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     }
     if (ExistingGraph) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
       Resp->SetStringField(TEXT("functionName"), ExistingGraph->GetName());
       Resp->SetStringField(TEXT("note"), TEXT("Function already exists"));

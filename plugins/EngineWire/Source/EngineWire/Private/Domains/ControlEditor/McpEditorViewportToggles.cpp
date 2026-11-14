@@ -128,7 +128,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetGameView(
   bEnabled = Client->IsInGameView();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("gameViewEnabled"), bEnabled);
   SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")),

@@ -96,7 +96,6 @@ bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
     }
 
     const bool bAppliedToActive = ActiveDriver && ActiveDriver->IsA(DriverClass);
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetBoolField(TEXT("appliedToActiveDriver"), bAppliedToActive);
     ResultJson->SetStringField(TEXT("driverClass"), DriverClass->GetPathName());
     ResultJson->SetStringField(TEXT("configFile"), DriverCDO->GetDefaultConfigFilename());
@@ -153,7 +152,6 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
     McpSafeAssetSave(Blueprint);
 
     const bool bReplicates = CDO->GetIsReplicated();
-    ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("role"), McpEnumName<ENetRole>(NetRole));
     ResultJson->SetBoolField(TEXT("replicates"), bReplicates);
     ResultJson->SetStringField(TEXT("message"), NetRole == ROLE_None

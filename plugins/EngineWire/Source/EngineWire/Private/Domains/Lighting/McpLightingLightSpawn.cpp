@@ -156,7 +156,6 @@ bool HandleSpawnLight(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     // Both identities: actorName, the label unless another actor shares it, and the object name FindObject resolves.
     Resp->SetStringField(TEXT("actorName"), McpActorRef(NewLight));
     Resp->SetStringField(TEXT("objectName"), NewLight->GetName());

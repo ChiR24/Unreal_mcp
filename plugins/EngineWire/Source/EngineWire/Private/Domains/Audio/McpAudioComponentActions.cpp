@@ -29,7 +29,6 @@ bool HandleComponentActions(
     }
     UGameplayStatics::PrimeSound(Sound);
     TSharedPtr<FJsonObject> Primed = McpHandlerUtils::CreateResultObject();
-    Primed->SetBoolField(TEXT("success"), true);
     McpHandlerUtils::MarkNoAssetsChanged(Primed); // priming loads the sound, it changes no asset
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound primed"), Primed);
@@ -103,7 +102,6 @@ bool HandleComponentActions(
         AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
       // The actor it is on, which without actorName is a new one: the reply named only the component.

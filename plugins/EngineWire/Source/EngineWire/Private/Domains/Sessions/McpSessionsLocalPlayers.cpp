@@ -128,7 +128,6 @@ bool HandleConfigureSplitScreen(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetStringField(TEXT("splitScreenType"), Layout ? FString(Layout->Name) : (bNone ? FString(TEXT("None")) : FString()));
     ResponseJson->SetStringField(TEXT("layoutsWritten"), LayoutWritten);
@@ -163,7 +162,7 @@ bool HandleAddLocalPlayer(
     if (!GameInstance)
     {
         Subsystem->SendAutomationError(Socket, RequestId,
-            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("NOT_IN_PLAY"));
+            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("PIE_NOT_RUNNING"));
         return true;
     }
 
@@ -208,7 +207,7 @@ bool HandleRemoveLocalPlayer(
     if (!GameInstance)
     {
         Subsystem->SendAutomationError(Socket, RequestId,
-            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("NOT_IN_PLAY"));
+            TEXT("No active game instance. Start Play-In-Editor first."), TEXT("PIE_NOT_RUNNING"));
         return true;
     }
 

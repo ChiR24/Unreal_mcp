@@ -2,8 +2,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/RecordReplay/McpSeqReplayInternal.h"
 
-#if MCP_HAS_REPLAY_API
-
 #include "Engine/DemoNetDriver.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -12,8 +10,6 @@
 #include "GameFramework/WorldSettings.h"
 #include "EngineWireSubsystem.h"
 #include "ReplaySubsystem.h"
-
-#endif
 
 namespace McpSequenceRecordReplay
 {
@@ -31,8 +27,6 @@ bool IsDemoReplayAction(const FString& Action)
         Action == TEXT("configure_killcam_duration") ||
         Action == TEXT("start_killcam");
 }
-
-#if MCP_HAS_REPLAY_API
 
 UWorld* GetRuntimeWorld()
 {
@@ -95,7 +89,7 @@ bool RequireRuntime(UEngineWireSubsystem* Subsystem, const FString& RequestId, T
     OutWorld = GetRuntimeWorld();
     if (!OutWorld)
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Demo replay actions require an active PIE or game world"), TEXT("NOT_IN_PIE"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Demo replay actions require an active PIE or game world"), TEXT("PIE_NOT_RUNNING"));
         return false;
     }
     OutReplay = GetReplaySubsystem(OutWorld);
@@ -156,7 +150,5 @@ bool RequirePlayback(UEngineWireSubsystem* Subsystem, const FString& RequestId, 
     }
     return true;
 }
-
-#endif
 
 }

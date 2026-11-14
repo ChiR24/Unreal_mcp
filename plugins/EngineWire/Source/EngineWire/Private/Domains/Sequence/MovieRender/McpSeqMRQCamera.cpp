@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 
@@ -76,7 +77,7 @@ bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
 
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
-  Result->SetStringField(TEXT("shutterTiming"), StaticEnum<EMoviePipelineShutterTiming>()->GetNameStringByValue(static_cast<int64>(Camera->ShutterTiming)));
+  Result->SetStringField(TEXT("shutterTiming"), McpEnumName(Camera->ShutterTiming));
   Result->SetNumberField(TEXT("overscanPercentage"), McpHandlerUtils::ReadableFloat(Camera->OverscanPercentage));
   if (AllCamerasProperty)
     Result->SetBoolField(TEXT("renderAllCameras"), AllCamerasProperty->GetPropertyValue_InContainer(Camera));

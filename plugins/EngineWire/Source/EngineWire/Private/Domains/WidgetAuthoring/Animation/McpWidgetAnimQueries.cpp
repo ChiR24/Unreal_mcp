@@ -177,7 +177,6 @@ bool HandleWidgetAuthoringAnimationQueries(
                     AnimationsArray.Add(MakeShared<FJsonValueObject>(AnimInfo));
                 }
             }
-            ResultJson->SetBoolField(TEXT("success"), true);
             ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
             ResultJson->SetArrayField(TEXT("animations"), AnimationsArray);
             ResultJson->SetNumberField(TEXT("animationCount"), WidgetBP->Animations.Num());
@@ -201,7 +200,6 @@ bool HandleWidgetAuthoringAnimationQueries(
                 return true;
             }
 
-            ResultJson->SetBoolField(TEXT("success"), true);
             ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
             ResultJson->SetStringField(TEXT("animationName"), AnimationName);
 
@@ -230,7 +228,6 @@ bool HandleWidgetAuthoringAnimationQueries(
         WidgetAuthoringHelpers::RemoveWidgetAnimation(WidgetBP, Animation);
         const bool bSaved = WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetBoolField(TEXT("saved"), bSaved);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
         ResultJson->SetStringField(TEXT("deletedAnimation"), AnimationName);

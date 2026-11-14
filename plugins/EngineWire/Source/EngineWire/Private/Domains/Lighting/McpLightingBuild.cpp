@@ -218,7 +218,6 @@ bool HandleCreateLightmassVolume(
     Volume->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Volume));
     Resp->SetStringField(TEXT("actorPath"), Volume->GetPathName());
     Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Volume->GetActorLocation()));

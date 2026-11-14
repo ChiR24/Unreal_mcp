@@ -112,7 +112,7 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
     if (SkeletalMeshPath.IsEmpty())
     {
         Outcome.Message = TEXT("skeletalMeshPath is required");
-        Outcome.ErrorCode = TEXT("MISSING_PARAM");
+        Outcome.ErrorCode = TEXT("MISSING_PARAMETER");
         return Outcome;
     }
 

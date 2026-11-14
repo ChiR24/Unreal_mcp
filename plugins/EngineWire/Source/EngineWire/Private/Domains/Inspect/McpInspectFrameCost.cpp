@@ -245,7 +245,6 @@ bool HandleInspectFrameCostAction(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("worldType"), bPie ? TEXT("PIE") : (World ? TEXT("Editor") : TEXT("None")));
     Resp->SetNumberField(TEXT("frameTimeMs"), T.Frame);
     Resp->SetStringField(TEXT("busiestThread"), Thread);

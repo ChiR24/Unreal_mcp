@@ -89,7 +89,6 @@ bool HandleWidgetAuthoringAnimationCore(
         RefreshWidgetBlueprintClass(WidgetBP);
         ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(WidgetBP));
 
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
         ResultJson->SetNumberField(TEXT("duration"), SafeDuration);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
@@ -134,7 +133,6 @@ bool HandleWidgetAuthoringAnimationCore(
         }
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(WidgetBP));
-        ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("trackType"), Track.TrackType);

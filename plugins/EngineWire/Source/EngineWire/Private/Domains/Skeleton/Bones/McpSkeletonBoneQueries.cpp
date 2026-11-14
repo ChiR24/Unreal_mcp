@@ -86,7 +86,7 @@ bool UEngineWireSubsystem::HandleGetBoneTransform(
     const FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
     if (BoneName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

@@ -19,7 +19,7 @@ bool UEngineWireSubsystem::HandleSetBoneTransform(
     if (BoneName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("boneName is required (with skeletalMeshPath or skeletonPath)"), TEXT("MISSING_PARAM"));
+            TEXT("boneName is required (with skeletalMeshPath or skeletonPath)"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

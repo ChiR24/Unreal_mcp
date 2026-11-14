@@ -70,7 +70,6 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
     }
 
     if (ConstructionGraph) {
-      Result->SetBoolField(TEXT("success"), true);
       Result->SetStringField(TEXT("blueprintPath"), Path);
       Result->SetStringField(TEXT("graphName"), ConstructionGraph->GetName());
       Result->SetStringField(

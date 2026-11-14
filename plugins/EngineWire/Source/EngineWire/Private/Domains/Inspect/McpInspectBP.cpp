@@ -12,6 +12,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpPropCdoComponents.h"
 
 #include "Domains/Blueprint/McpBPSnapshot.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpInspectHandlers {
 
@@ -195,8 +196,7 @@ bool HandleInspectBlueprintDetailsAction(
     Resp->SetStringField(TEXT("parentClass"), Parent ? Parent->GetName() : TEXT("None"));
     Resp->SetStringField(TEXT("parentClassPath"), Parent ? Parent->GetPathName() : TEXT(""));
     Resp->SetStringField(TEXT("generatedClass"), Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetPathName() : TEXT(""));
-    Resp->SetStringField(TEXT("blueprintType"), StaticEnum<EBlueprintType>()->GetNameStringByValue(
-        static_cast<int64>(Blueprint->BlueprintType.GetValue())));
+    Resp->SetStringField(TEXT("blueprintType"), McpEnumName(Blueprint->BlueprintType.GetValue()));
     if (!Resp->HasField(TEXT("variables")))
     {
         Resp->SetArrayField(TEXT("variables"), McpCollectBlueprintVariables(Blueprint));
@@ -205,7 +205,6 @@ bool HandleInspectBlueprintDetailsAction(
     Resp->SetArrayField(TEXT("components"), Components);
     Resp->SetNumberField(TEXT("componentCount"), Components.Num());
     Resp->SetBoolField(TEXT("isActor"), false);
-    Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Blueprint details retrieved"), Resp, FString());
     return true;
@@ -235,7 +234,6 @@ bool HandleInspectBlueprintComponentsAction(
     McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), Components, Resp, TEXT("missingComponents"));
     Resp->SetArrayField(TEXT("components"), Components);
     Resp->SetNumberField(TEXT("count"), Components.Num());
-    Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Blueprint components retrieved"), Resp, FString());
     return true;

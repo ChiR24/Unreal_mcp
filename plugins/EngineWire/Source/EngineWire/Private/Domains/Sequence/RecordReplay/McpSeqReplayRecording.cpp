@@ -1,7 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if MCP_HAS_REPLAY_API
-
 #include "Domains/Sequence/RecordReplay/McpSeqReplayInternal.h"
 
 #include "Engine/DemoNetDriver.h"
@@ -173,5 +171,3 @@ bool HandleReplayRecordingAction(UEngineWireSubsystem* Subsystem, const FString&
     return false;
 }
 }
-
-#endif

@@ -1,4 +1,5 @@
 #include "Domains/Sequence/RecordReplay/McpSeqTakeRecorderInternal.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Containers/Ticker.h"
 #include "Engine/Engine.h"
@@ -104,7 +105,7 @@ bool HandleCreateTakeRecorderPanel(UEngineWireSubsystem* Subsystem, const FStrin
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("panelOpen"), Panel->IsPanelOpen());
-    Result->SetStringField(TEXT("mode"), StaticEnum<ETakeRecorderPanelMode>()->GetNameStringByValue(static_cast<int64>(Panel->GetMode())));
+    Result->SetStringField(TEXT("mode"), McpEnumName(Panel->GetMode()));
     if (ULevelSequence* Sequence = Panel->GetLevelSequence())
         Result->SetStringField(TEXT("sequencePath"), Sequence->GetPathName());
     const FFrameRate FrameRate = Panel->GetFrameRate();

@@ -97,7 +97,6 @@ bool HandleAddTrack(UEngineWireSubsystem *Subsystem,
   if (NewTrack) {
     Sequence->MarkPackageDirty();
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("sequencePath"), SeqPath);
     Resp->SetStringField(TEXT("trackType"), TrackType);
     Resp->SetStringField(TEXT("trackId"), NewTrack->GetName()); // addressable id

@@ -224,7 +224,6 @@ bool McpAssetDiff::HandleDiffAsset(UEngineWireSubsystem* Bridge, const FString& 
 
 	const int32 Count = Diff.Properties.Num() + Diff.Components.Num() + Diff.Graphs.Num() + Diff.Rows.Num();
 	TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-	Resp->SetBoolField(TEXT("success"), true);
 	Resp->SetStringField(TEXT("assetPath"), Live->GetPathName());
 	Resp->SetStringField(TEXT("against"), Against);
 	Resp->SetBoolField(TEXT("identical"), Count == 0);

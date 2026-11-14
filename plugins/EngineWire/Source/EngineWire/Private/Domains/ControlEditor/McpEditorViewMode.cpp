@@ -42,7 +42,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewMode(
     GEditor->GameViewport->ViewModeIndex = ViewModeIndex;
     ApplyViewMode(ViewModeIndex, /*bPerspective=*/true, GEditor->GameViewport->EngineShowFlags);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("viewMode"), Chosen);
     Resp->SetStringField(TEXT("method"), TEXT("game_viewport"));
     SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set on the running game's view"), Resp, FString());
@@ -58,7 +57,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewMode(
   ViewportClient->SetViewMode(ViewModeIndex);
   ViewportClient->Invalidate();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("viewMode"), Chosen);
   Resp->SetStringField(TEXT("method"), TEXT("viewport_client"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set"), Resp, FString());
@@ -82,7 +80,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetCameraFov(
     if (Controller && Controller->PlayerCameraManager) {
       Controller->PlayerCameraManager->SetFOV(static_cast<float>(Fov));
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
       Resp->SetNumberField(TEXT("fov"), Fov);
       Resp->SetStringField(TEXT("method"), TEXT("player_camera_manager"));
       SendAutomationResponse(Socket, RequestId, true, TEXT("The running game's camera FOV is locked to the value"), Resp,
@@ -97,7 +94,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetCameraFov(
     ViewportClient->Invalidate();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("fov"), Fov);
     Resp->SetStringField(TEXT("method"), TEXT("viewport_client"));
     SendAutomationResponse(Socket, RequestId, true, TEXT("Camera FOV set"), Resp,
@@ -143,7 +139,6 @@ bool UEngineWireSubsystem::HandleControlEditorSetViewportRealtime(
     const bool bReached = !bBackgroundHold && ViewportClient.IsRealtime();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("realtime"), bReached);
     if (!Held.IsEmpty()) Resp->SetStringField(bBackgroundHold ? TEXT("heldBy") : TEXT("overrode"), Held);
     const TCHAR *Message = bBackgroundHold

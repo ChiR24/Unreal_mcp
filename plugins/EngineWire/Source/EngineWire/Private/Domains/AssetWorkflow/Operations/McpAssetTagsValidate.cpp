@@ -21,7 +21,6 @@ bool UEngineWireSubsystem::HandleSetTags(
   // success.
   if (Tags.Num() == 0) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Resp->SetNumberField(TEXT("appliedTags"), 0);
     SendAutomationResponse(Socket, RequestId, true,
@@ -54,7 +53,6 @@ bool UEngineWireSubsystem::HandleSetTags(
   Asset->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("markedDirty"), true);
   Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
   Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);

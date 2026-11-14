@@ -95,29 +95,15 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
 
 bool HandleConfigureCameraRigRail(const TSharedPtr<FJsonObject> &Params,
                                   TSharedPtr<FJsonObject> &OutResult) {
-#if !MCP_HAS_CINEMATIC_CAMERA
-  OutResult = MakeResult(false, TEXT("configure_camera_rig_rail"),
-                         TEXT("CinematicCamera module is unavailable"),
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#else
   return ConfigureRig(Params, TEXT("configure_camera_rig_rail"),
                       TEXT("/Script/CinematicCamera.CameraRig_Rail"), true,
                       OutResult);
-#endif
 }
 
 bool HandleConfigureCameraRigCrane(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
-#if !MCP_HAS_CINEMATIC_CAMERA
-  OutResult = MakeResult(false, TEXT("configure_camera_rig_crane"),
-                         TEXT("CinematicCamera module is unavailable"),
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#else
   return ConfigureRig(Params, TEXT("configure_camera_rig_crane"),
                       TEXT("/Script/CinematicCamera.CameraRig_Crane"), false,
                       OutResult);
-#endif
 }
 }

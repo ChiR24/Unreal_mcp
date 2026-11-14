@@ -85,7 +85,7 @@ bool ParseMorphTargetDeltas(const TSharedPtr<FJsonObject>& Payload, TArray<FMorp
     if (!Payload.IsValid() || !Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) || !DeltasArray)
     {
         OutError = FString::Printf(TEXT("deltas array is required. %s"), AcceptedDeltaShapes);
-        OutErrorCode = TEXT("MISSING_PARAM");
+        OutErrorCode = TEXT("MISSING_PARAMETER");
         return false;
     }
 

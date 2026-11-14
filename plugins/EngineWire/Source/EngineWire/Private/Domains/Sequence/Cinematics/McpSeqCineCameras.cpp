@@ -106,12 +106,6 @@ int32 ApplyCameraSettings(AActor *Actor, const TSharedPtr<FJsonObject> &Params,
 
 bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
                                  TSharedPtr<FJsonObject> &OutResult) {
-#if !MCP_HAS_CINEMATIC_CAMERA
-  OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
-                         TEXT("CinematicCamera module is unavailable"),
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#else
   ULevelSequence *Sequence = nullptr;
   const FString ExplicitSequencePath =
       GetString(Params, TEXT("sequencePath"), TEXT("path"));
@@ -163,17 +157,10 @@ bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
   }
   McpHandlerUtils::AddVerification(OutResult, Actor);
   return true;
-#endif
 }
 
 bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
-#if !MCP_HAS_CINEMATIC_CAMERA
-  OutResult = MakeResult(false, TEXT("configure_camera_settings"),
-                         TEXT("CinematicCamera module is unavailable"),
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#else
   AActor *Actor = ResolveActor(Params);
   if (!Actor) {
     OutResult = MakeResult(false, TEXT("configure_camera_settings"),
@@ -203,7 +190,6 @@ bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
   Transaction.DescribeInto(OutResult);
   McpHandlerUtils::AddVerification(OutResult, Actor);
   return true;
-#endif
 }
 
 }

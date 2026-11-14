@@ -43,7 +43,6 @@ bool UEngineWireSubsystem::HandleControlEditorFocusActor(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), McpActorRef(Target));
   Resp->SetStringField(TEXT("actorPath"), Target->GetPathName());
   Resp->SetBoolField(TEXT("boundsValid"), bBoundsValid);

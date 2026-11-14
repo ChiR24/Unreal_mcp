@@ -3,6 +3,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
@@ -156,7 +157,7 @@ bool UEngineWireSubsystem::HandleAnalyzeGraph(
       Result->SetBoolField(TEXT("isTwoSided"), Material->TwoSided);
       Result->SetBoolField(TEXT("isMasked"), Material->IsMasked());
       Result->SetStringField(TEXT("blendMode"),
-                             StaticEnum<EBlendMode>()->GetNameStringByValue((int64)Material->GetBlendMode()));
+                             McpEnumName(Material->GetBlendMode()));
       // Get shading model name from the first selected model
       FString ShadingModelName = TEXT("Unknown");
       FMaterialShadingModelField ShadingModels = Material->GetShadingModels();

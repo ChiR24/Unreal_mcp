@@ -212,7 +212,7 @@ bool UEngineWireSubsystem::HandleControlActorCallFunction(
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
   if (ActorName.IsEmpty() || FunctionName.IsEmpty()) {
-    SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAM"));
+    SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAMETER"));
     return true;
   }
 

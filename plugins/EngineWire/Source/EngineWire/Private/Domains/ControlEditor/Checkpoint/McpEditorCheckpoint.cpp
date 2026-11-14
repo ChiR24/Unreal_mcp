@@ -125,7 +125,7 @@ void Rollback(UEngineWireSubsystem* Self, TSharedPtr<FMcpBridgeWebSocket> Socket
 {
     if (GEditor->PlayWorld)
     {
-        Refuse(Self, Socket, RequestId, TEXT("PIE_RUNNING"), TEXT("Stop Play before rolling back: undo does not reach the running game."));
+        Refuse(Self, Socket, RequestId, TEXT("PIE_ACTIVE"), TEXT("Stop Play before rolling back: undo does not reach the running game."));
         return;
     }
     if (!bIntact)

@@ -199,7 +199,7 @@ bool McpCaptureView(const TSharedPtr<FJsonObject> &Payload, const TCHAR *What, b
     if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)
     {
         return Fail(FString::Printf(TEXT("%s reads the level viewport, which does not show the running game; stop Play In "
-                                         "Editor first (Simulate is fine)."), What), TEXT("PIE_RUNNING"));
+                                         "Editor first (Simulate is fine)."), What), TEXT("PIE_ACTIVE"));
     }
     // A level viewport under another major tab is not painted and reads back black.
     if (BringLevelEditorTabToFrontForMcp())

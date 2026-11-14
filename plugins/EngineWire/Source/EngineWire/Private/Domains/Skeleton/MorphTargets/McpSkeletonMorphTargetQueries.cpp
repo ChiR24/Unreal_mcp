@@ -23,7 +23,7 @@ bool UEngineWireSubsystem::HandleSetMorphTargetValue(
     if (ActorName.IsEmpty() || MorphTargetName.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("actorName and morphTargetName are required"), TEXT("MISSING_PARAM"));
+            TEXT("actorName and morphTargetName are required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -100,7 +100,7 @@ bool UEngineWireSubsystem::HandleListMorphTargets(
 
     if (SkeletalMeshPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
@@ -135,49 +135,4 @@ bool UEngineWireSubsystem::HandleListMorphTargets(
     return true;
 }
 
-bool UEngineWireSubsystem::HandleDeleteMorphTarget(
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
-
-    if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("skeletalMeshPath and morphTargetName are required"), TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    FString Error;
-    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
-    if (!Mesh)
-    {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UMorphTarget* TargetToRemove = Mesh->FindMorphTarget(FName(*MorphTargetName));
-    if (!TargetToRemove)
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Morph target '%s' not found"), *MorphTargetName), TEXT("MORPH_NOT_FOUND"));
-        return true;
-    }
-
-    Mesh->Modify();
-    Mesh->UnregisterMorphTarget(TargetToRemove);
-    Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
-    Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
-    Result->SetNumberField(TEXT("remainingMorphTargets"), Mesh->GetMorphTargets().Num());
-
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Morph target '%s' deleted"), *MorphTargetName), Result);
-    return true;
-}
 

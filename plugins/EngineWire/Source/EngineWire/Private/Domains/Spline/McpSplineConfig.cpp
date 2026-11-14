@@ -41,7 +41,7 @@ bool HandleConfigureMeshSpacing(
     if ((bHasSpacing && Spacing <= 0.0) || (bHasOffsetRange && RandomOffsetRange < 0.0))
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("spacing must be greater than 0 and randomOffsetRange must be non-negative"), TEXT("INVALID_PARAM"));
+            TEXT("spacing must be greater than 0 and randomOffsetRange must be non-negative"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -105,7 +105,7 @@ bool HandleConfigureMeshRandomization(
     if (MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
     {
         Self->SendAutomationError(Socket, RequestId,
-            TEXT("Scale values must be positive, minScale must not exceed maxScale, and rotationRange must be non-negative"), TEXT("INVALID_PARAM"));
+            TEXT("Scale values must be positive, minScale must not exceed maxScale, and rotationRange must be non-negative"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

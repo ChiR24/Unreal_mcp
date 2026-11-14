@@ -1,5 +1,6 @@
 #include "Domains/Inspect/McpInspectShared.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #include "Animation/Skeleton.h"
 #include "Engine/Blueprint.h"
@@ -168,7 +169,7 @@ void McpDescribeStaticMesh(UStaticMesh *Mesh, TSharedPtr<FJsonObject> Resp)
     const UBodySetup *BodySetup = Mesh->GetBodySetup();
     Resp->SetNumberField(TEXT("collisionPrimitiveCount"), BodySetup ? BodySetup->AggGeom.GetElementCount() : 0);
     Resp->SetStringField(TEXT("collisionComplexity"), BodySetup
-        ? StaticEnum<ECollisionTraceFlag>()->GetNameStringByValue(static_cast<int64>(BodySetup->CollisionTraceFlag.GetValue()))
+        ? McpEnumName(BodySetup->CollisionTraceFlag.GetValue())
         : FString());
     Resp->SetNumberField(TEXT("socketCount"), Mesh->Sockets.Num());
 }
@@ -214,8 +215,7 @@ void McpDescribeBlueprintAsset(UBlueprint *Blueprint, TSharedPtr<FJsonObject> Re
     Resp->SetStringField(TEXT("parentClass"), Parent ? Parent->GetName() : TEXT("None"));
     Resp->SetStringField(TEXT("parentClassPath"), Parent ? Parent->GetPathName() : TEXT(""));
     Resp->SetStringField(TEXT("generatedClass"), Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetPathName() : TEXT(""));
-    Resp->SetStringField(TEXT("blueprintType"), StaticEnum<EBlueprintType>()->GetNameStringByValue(
-        static_cast<int64>(Blueprint->BlueprintType.GetValue())));
+    Resp->SetStringField(TEXT("blueprintType"), McpEnumName(Blueprint->BlueprintType.GetValue()));
     const TArray<TSharedPtr<FJsonValue>> Variables = McpCollectBlueprintVariables(Blueprint);
     const TArray<TSharedPtr<FJsonValue>> Components = McpCollectBlueprintComponents(Blueprint);
     Resp->SetArrayField(TEXT("variables"), Variables);

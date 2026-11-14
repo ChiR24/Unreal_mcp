@@ -128,7 +128,6 @@ bool HandleSpatialActions(
 	}
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
       Resp->SetBoolField(TEXT("enabled"), bEnable);
       Resp->SetNumberField(TEXT("occlusionVolumeScale"), OcclusionVolumeScale);
       Resp->SetNumberField(TEXT("occlusionFilterScale"), OcclusionFilterScale);
@@ -228,7 +227,6 @@ bool HandleSpatialActions(
      }
 
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("path"), Atten->GetPathName());
       Resp->SetStringField(TEXT("name"), Name);
       // Read back: extent replaces the size innerRadius gives a box.

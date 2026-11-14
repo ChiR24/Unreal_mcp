@@ -94,7 +94,6 @@ bool UEngineWireSubsystem::HandleAddFoliageInstances(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Transaction.DescribeInto(Resp);
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesPlaced"), Added);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);

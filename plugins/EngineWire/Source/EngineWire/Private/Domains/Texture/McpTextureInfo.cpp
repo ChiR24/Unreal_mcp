@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpTextureShared.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpTextureHandlers
 {
@@ -27,7 +28,7 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const TSharedPtr<FJsonObject>& P
     TextureInfo->SetBoolField(TEXT("virtualTextureStreaming"), Texture->VirtualTextureStreaming);
     TextureInfo->SetBoolField(TEXT("neverStream"), Texture->NeverStream);
     TextureInfo->SetNumberField(TEXT("lodBias"), Texture->LODBias);
-    TextureInfo->SetStringField(TEXT("compression"), StaticEnum<TextureCompressionSettings>()->GetNameStringByValue(Texture->CompressionSettings));
+    TextureInfo->SetStringField(TEXT("compression"), McpEnumName(Texture->CompressionSettings));
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), TEXT("Texture info retrieved"));

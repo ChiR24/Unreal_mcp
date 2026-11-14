@@ -74,7 +74,7 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
     const auto Refuse = [&](const FString& Message, const TCHAR* Code) { Bridge.SendAutomationError(Socket, RequestId, Message, Code); return true; };
     if (GEditor->PlayWorld && !GEditor->bIsSimulatingInEditor)
     {
-        return Refuse(TEXT("contact_sheet draws the level being edited; stop Play In Editor first (Simulate is fine)."), TEXT("PIE_RUNNING"));
+        return Refuse(TEXT("contact_sheet draws the level being edited; stop Play In Editor first (Simulate is fine)."), TEXT("PIE_ACTIVE"));
     }
     const FString Name = GetJsonStringField(Payload, TEXT("actorName"));
     AActor* Subject = McpHandlerUtils::FindActorByName(Name);

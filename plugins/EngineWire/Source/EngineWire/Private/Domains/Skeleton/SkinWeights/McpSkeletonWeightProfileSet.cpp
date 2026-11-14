@@ -189,7 +189,7 @@ bool HandleSetVertexWeightsAction(UEngineWireSubsystem* Subsystem, const FString
     if (!Mesh)
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, SkeletalMeshPath.IsEmpty() ? FString(TEXT("skeletalMeshPath is required")) : Error,
-            SkeletalMeshPath.IsEmpty() ? TEXT("MISSING_PARAM") : TEXT("MESH_NOT_FOUND"));
+            SkeletalMeshPath.IsEmpty() ? TEXT("MISSING_PARAMETER") : TEXT("MESH_NOT_FOUND"));
         return true;
     }
     const int32 LOD = GetJsonIntField(Payload, TEXT("lodIndex"), 0);

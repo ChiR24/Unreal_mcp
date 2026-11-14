@@ -117,7 +117,6 @@ bool UEngineWireSubsystem::HandleBulkRenameAssets(
   }
   if (RenameData.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), true);
     Result->SetNumberField(TEXT("renamed"), 0);
     Result->SetStringField(TEXT("message"),
                            TEXT("No assets required renaming"));

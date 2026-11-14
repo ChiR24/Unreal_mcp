@@ -54,7 +54,6 @@ bool UEngineWireSubsystem::HandleControlEditorEject(
               Resp, bPlaying ? TEXT("EJECT_FAILED") : TEXT("NO_ACTIVE_SESSION"));
           return false;
         }
-        Resp->SetBoolField(TEXT("success"), true);
         Resp->SetBoolField(TEXT("ejected"), true);
         Resp->SetBoolField(TEXT("alreadyEjected"), bAlreadyEjected);
         Resp->SetStringField(TEXT("view"), TEXT("pie_ejected"));
@@ -80,7 +79,7 @@ bool UEngineWireSubsystem::HandleControlEditorPossess(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   if (!GEditor || !GEditor->PlayWorld) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("PIE_NOT_RUNNING"),
                               TEXT("Cannot possess: Play In Editor is not running (control_editor play)"), nullptr);
     return true;
   }

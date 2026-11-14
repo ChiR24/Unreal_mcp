@@ -1,4 +1,5 @@
 #include "Domains/AnimationAuthoring/ControlRig/McpControlRigGraph.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 #if MCP_HAS_CONTROLRIG_BLUEPRINT
 #include "RigVMCore/RigVMStruct.h"
@@ -28,7 +29,7 @@ void McpAddRigPin(const URigVMPin* Pin, bool bSubPins, TArray<TSharedPtr<FJsonVa
 {
     const TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
     Item->SetStringField(TEXT("pin"), Pin->GetPinPath());
-    Item->SetStringField(TEXT("direction"), StaticEnum<ERigVMPinDirection>()->GetNameStringByValue(static_cast<int64>(Pin->GetDirection())));
+    Item->SetStringField(TEXT("direction"), McpEnumName(Pin->GetDirection()));
     Item->SetStringField(TEXT("type"), Pin->GetCPPType());
     const FString Default = Pin->GetDefaultValue();
     if (!Default.IsEmpty() && Pin->GetDirection() != ERigVMPinDirection::Output)
@@ -109,7 +110,7 @@ TSharedPtr<FJsonObject> HandleGetControlRig(const TSharedPtr<FJsonObject>& Param
             break;
         }
         const TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
-        Item->SetStringField(TEXT("type"), StaticEnum<ERigElementType>()->GetNameStringByValue(static_cast<int64>(Key.Type)));
+        Item->SetStringField(TEXT("type"), McpEnumName(Key.Type));
         Item->SetStringField(TEXT("name"), Key.Name.ToString());
         const FRigElementKey Parent = Rig->Hierarchy->GetFirstParent(Key);
         if (Parent.IsValid())

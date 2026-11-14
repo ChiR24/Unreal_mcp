@@ -1,6 +1,7 @@
 #include "Domains/Texture/McpTextureShared.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
 
 namespace McpTextureHandlers
 {
@@ -141,7 +142,7 @@ UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FStrin
     {
         OutError = FString::Printf(TEXT("%s '%s' has a %s source; only 8-bit BGRA8 and G8 sources can be read"),
                                    Field, *OutPath,
-                                   *StaticEnum<ETextureSourceFormat>()->GetNameStringByValue(static_cast<int64>(Format)));
+                                   *McpEnumName(Format));
         return nullptr;
     }
     // bConvertToBGRA8 is the in-place edit (curves, levels, filters): engine content edited and saved changes the engine

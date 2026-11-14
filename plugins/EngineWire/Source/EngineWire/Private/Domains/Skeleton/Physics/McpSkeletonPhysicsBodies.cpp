@@ -26,13 +26,13 @@ bool UEngineWireSubsystem::HandleAddPhysicsBody(
 
     if (PhysicsAssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (BoneName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
     // Any other bodyType built a capsule without a word.
@@ -160,13 +160,13 @@ bool UEngineWireSubsystem::HandleConfigurePhysicsBody(
 
     if (PhysicsAssetPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("physicsAssetPath is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 
     if (BoneName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAMETER"));
         return true;
     }
 

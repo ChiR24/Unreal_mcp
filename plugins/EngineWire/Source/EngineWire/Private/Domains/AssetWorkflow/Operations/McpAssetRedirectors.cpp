@@ -61,7 +61,6 @@ bool UEngineWireSubsystem::HandleFixupRedirectors(
   int32 Fixed = 0;
   McpAssetRename::FixupRedirectorsIn(NormalizedPath, Found, Fixed, bCheckoutFiles);
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  Result->SetBoolField(TEXT("success"), true);
   Result->SetNumberField(TEXT("redirectorsFound"), Found);
   Result->SetNumberField(TEXT("redirectorsFixed"), Fixed);
   SendAutomationResponse(

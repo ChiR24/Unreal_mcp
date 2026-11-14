@@ -18,14 +18,6 @@ bool HandleDemoReplayAction(
         return false;
     }
 
-#if !MCP_HAS_REPLAY_API
-    Subsystem->SendAutomationError(
-        RequestingSocket, RequestId,
-        TEXT("Demo replay actions are unavailable because this Unreal Engine "
-             "build does not provide ReplaySubsystem."),
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#else
     FString ValidationError;
     if (!ValidateReplayRequest(Payload, ValidationError))
     {
@@ -66,6 +58,5 @@ bool HandleDemoReplayAction(
 
     return HandleReplayPlaybackAction(
         Subsystem, RequestId, Action, Payload, RequestingSocket, World, Replay);
-#endif
 }
 }

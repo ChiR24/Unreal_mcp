@@ -110,7 +110,6 @@ bool UEngineWireSubsystem::HandleSetupRagdoll(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetBoolField(TEXT("activate"), bActivate);
   Resp->SetBoolField(TEXT("ragdollActive"), SkelMeshComp->IsSimulatingPhysics());
