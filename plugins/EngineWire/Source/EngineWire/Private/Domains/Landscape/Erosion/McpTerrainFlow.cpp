@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Filling, draining and checking a heightfield (McpTerrainErosion.h).
 

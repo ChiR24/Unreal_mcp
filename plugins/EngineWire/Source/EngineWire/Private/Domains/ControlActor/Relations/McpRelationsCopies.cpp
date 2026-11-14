@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_relations' arrangements of copies of one prop (FItem::Shape). rows: 3 or more on one line along X or Y
 // (within 5 cm of it), cut where a gap passes 4 footprints so copies far apart that happen to line up are no row, with

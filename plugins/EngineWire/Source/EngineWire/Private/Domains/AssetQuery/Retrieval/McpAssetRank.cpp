@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // find_assets_like's ranking (McpAssetRank.h): each criterion asked ranks the candidates it can judge, and the rankings
 // are fused by Reciprocal Rank Fusion (Cormack, Clarke and Buettcher 2009: score = sum of 1 / (60 + place)), which needs

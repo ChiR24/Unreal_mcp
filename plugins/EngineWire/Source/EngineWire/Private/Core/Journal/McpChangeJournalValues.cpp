@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // What a changed property held, as exported text: before the first change the journal saw, and after the latest one. An
 // edit in the editor's Details panel announces the property before it changes (OnPreObjectPropertyChanged, through

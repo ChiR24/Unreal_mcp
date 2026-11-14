@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // inspect analyze_view (McpPerception.h): the level viewport read as describe_view reads it (McpCaptureView), cut into a
 // grid of cells about 240 across (each the average of its block of pixels, and the actor drawn at its centre), then

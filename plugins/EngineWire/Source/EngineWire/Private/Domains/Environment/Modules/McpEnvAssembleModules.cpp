@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // build_environment assemble_modules: a modular kit of static meshes laid out over a grid of cells so that every face
 // where two pieces meet fits, by wave function collapse (McpModuleKit). The faces are read from each piece's source

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // build_environment plan_road: a road between two points over the ground, under a grade limit, round obstacles, with no
 // turn tighter than a radius. The ground under a grid of cells is read by vertical traces (a landscape, or the actors

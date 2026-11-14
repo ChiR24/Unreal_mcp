@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The journal's reader: changes_since lists what changed after a cursor, oldest first, with the cursor to send next; and
 // a reply says once when the user changed something in the editor since the previous request through this server.

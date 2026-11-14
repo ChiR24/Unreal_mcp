@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 #pragma once
 
 // The wave of assemble_modules' solver (McpModuleSolve.cpp): a domain of variants per cell as bit sets, propagation

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Reshaping a heightfield: valleys by stream power, gullies by droplets, slumps by talus (McpTerrainErosion.h).
 

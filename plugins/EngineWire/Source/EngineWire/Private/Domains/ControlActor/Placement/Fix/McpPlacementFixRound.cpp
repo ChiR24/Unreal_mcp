@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // One round of fix_placement: each actor's placement check (the audit's own) gives the move that rests a sunk or floating
 // actor on the surface under it and the actors it intersects; the separation solve plans the pushes on top; then every

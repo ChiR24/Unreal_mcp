@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // inspect contact_sheet's image: each tile shaded as clay from its depth and normal passes, so its shape reads the same
 // in a level lit by one sun as in a studio, laid out three across with each label above its tile and its grid over it.

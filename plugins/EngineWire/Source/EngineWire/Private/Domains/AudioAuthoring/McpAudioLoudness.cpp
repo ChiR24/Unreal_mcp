@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_audio measure_loudness: each Sound Wave's programme loudness (EBU R128, McpLoudness) from its own samples and
 // the loudness it plays at through its Volume; normalize_loudness sets the Volume that brings each to targetLufs, in one

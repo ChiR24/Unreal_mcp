@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // inspect contact_sheet: one image of an actor from several sides, since one camera hides a sunk foot, a missing back
 // or a wrong scale. Front, back, left, right and top are true elevations (orthographic, measured in the actor's own

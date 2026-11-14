@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // fit_frame_budget's knobs (McpFrameBudget.h): found in the view, switched for a measure, kept as one undo step.
 

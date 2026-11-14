@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 
 // The whole add-to-project chain, run inside Fab's authenticated page.
 //

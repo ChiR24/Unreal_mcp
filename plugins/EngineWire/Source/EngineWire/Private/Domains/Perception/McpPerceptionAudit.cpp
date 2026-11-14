@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // inspect audit_materials (McpPerception.h): the level viewport read as analyze_view reads it, then the checks asked:
 // pbr (McpPerceptionPbr: base colour, metallic and roughness as the G-buffer holds them, per actor in view),

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_audio set_subtitles: a Sound Wave's subtitle cues (USoundWave::Subtitles: the words, and the time into the
 // sound each shows from), which the engine shows at the bottom of the game's screen while the sound plays.

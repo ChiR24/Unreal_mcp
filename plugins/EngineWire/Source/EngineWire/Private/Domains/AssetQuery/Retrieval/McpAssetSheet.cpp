@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_asset thumbnail_sheet: a page of a folder's assets as one numbered contact sheet of the thumbnails the editor
 // keeps for them (none is rendered: rendering loads the asset), for the calling agent to look at and caption.

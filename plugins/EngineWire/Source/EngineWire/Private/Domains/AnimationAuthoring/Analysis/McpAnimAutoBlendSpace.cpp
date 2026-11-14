@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // auto_blend_space: a locomotion blend space laid out from its clips' own motion. Each clip's ground velocity
 // (McpAnimLocomotion), turned into the character's frame, is placed by McpAnimBlendLayout on the axes asked; the axes

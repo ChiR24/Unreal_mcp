@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // A kit piece's faces (McpModuleKit.h): which squares of each side of its cell its geometry covers, read by rays cast in
 // from just outside, and whether two faces fit together.

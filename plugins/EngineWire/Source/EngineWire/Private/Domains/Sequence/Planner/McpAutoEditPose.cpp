@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // auto_edit's view of the sequence (McpAutoEditPose.h): where a bound actor stands at a time as the sequence plays it
 // (its transform track's channels evaluated there), else where it stands in the level.

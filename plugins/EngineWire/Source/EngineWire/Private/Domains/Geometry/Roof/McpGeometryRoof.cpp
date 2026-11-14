@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // create_primitive roof: a hip roof over a footprint, every face rising from its edge at one pitch. The roof's shape is
 // the footprint's straight skeleton (McpRoofSkeleton); the faces, lifted by their distance from the outline times the

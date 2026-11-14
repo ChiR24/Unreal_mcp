@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // fly_through's sequence side (McpFlyThroughKeys.h): the camera bound to the sequence, its flight keyed on a transform
 // track of its own, a camera cut to it over the flight, and the playback range grown to hold it, as one undo step.

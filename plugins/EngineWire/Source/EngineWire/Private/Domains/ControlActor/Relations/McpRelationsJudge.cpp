@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // One relation between two named actors, for an assertion (McpContracts). on is judged as describe_relations judges
 // it, among the actors around the pair (a lamp on a book on a table rests on the book, not the table), and a picture

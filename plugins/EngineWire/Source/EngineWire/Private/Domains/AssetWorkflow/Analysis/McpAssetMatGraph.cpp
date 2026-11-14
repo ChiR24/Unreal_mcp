@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 
 // get_asset_graph material branch (see Analysis/McpAssetAnalysisShared.h for the contract).
 

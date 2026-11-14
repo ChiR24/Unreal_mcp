@@ -11,7 +11,7 @@
 // - Include this file FIRST before other engine includes
 // - All version-specific APIs should use these macros
 //
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 // =============================================================================
 
 #pragma once

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Straightening a searched road and measuring it as laid (McpRoadPlan.h).
 

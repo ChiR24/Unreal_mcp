@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // arrange_by_relations' solve (McpArrange.h): Metropolis annealing over the movers' places and turns, the energy counted
 // only for what a move touched, then the closing snap that makes each contact exact. A mover carries the movers resting

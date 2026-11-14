@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Where each piece of a fix_coplanar pass goes. Moving the smaller piece of every pair moved each piece of a row of
 // equal flush pieces (pier sections, floor tiles) the same way, so neighbours stayed in one plane and a pass freed only

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // audit_materials' pbr check: the viewport drawn in the Buffer Visualization view mode once each for the G-buffer's base
 // colour, metallic and roughness, each cell read where the frame read its actor (the hit proxy at the cell's centre),

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The GameFeatures side of IMcpGameFeaturesProvider: game feature plugins listed with their subsystem state, activated
 // and deactivated, and a just-made content-only plugin given what the Game Feature template gives one. Loaded by

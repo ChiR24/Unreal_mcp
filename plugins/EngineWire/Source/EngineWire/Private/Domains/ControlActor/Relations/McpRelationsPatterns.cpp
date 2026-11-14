@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_relations' patterns among the items that are not ground. groups: DBSCAN over footprints (a neighbour within
 // 1.25 median footprints of one, gap to gap, at least 3 members, never the whole scene): a table with the chairs drawn

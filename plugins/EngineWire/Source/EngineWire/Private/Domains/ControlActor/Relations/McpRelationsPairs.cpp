@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_relations' pairwise relations. on: a bottom resting on a top (down-traces from the centre and four inset
 // corners of the footprint; the actor hit most often within 3 cm); mounted: held from the side by a neighbour (the

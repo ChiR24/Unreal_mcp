@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The journal's package events: assets the registry hears created, removed or renamed, packages saved, levels opened;
 // the journal's Start and Stop, which bind them around the object events (McpChangeJournal.cpp); and what the

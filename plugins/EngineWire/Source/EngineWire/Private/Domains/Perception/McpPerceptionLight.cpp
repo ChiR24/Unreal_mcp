@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // analyze_view's light: exposure as a photographer reads it (a lightness histogram, how much is blown out or crushed to
 // black, the spread from the darker 5 percent to the brighter 5 percent) and, on a subject, the key to fill ratio: how

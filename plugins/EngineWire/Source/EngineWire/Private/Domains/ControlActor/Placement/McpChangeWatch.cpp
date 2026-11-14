@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The checks audit_placement runs, run on whatever a request changed. Spawn and set_transform judged their own actors,
 // but an actor duplicated, scattered, snapped, re-meshed or spawned by any other capability (a light, a volume, a

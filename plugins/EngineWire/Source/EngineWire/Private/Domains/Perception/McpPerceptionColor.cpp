@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // analyze_view's colour: the palette (k-means in OKLab, a space where distances follow what the eye sees), how its hues
 // sit together (the hue templates of Cohen-Or et al. 2006: sectors of the hue wheel that harmonious images keep to;

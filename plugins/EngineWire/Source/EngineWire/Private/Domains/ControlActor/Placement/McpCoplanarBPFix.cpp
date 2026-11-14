@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // fix_coplanar for a pair inside one Blueprint actor (a brow flush with the face it sits on, a strut in its frame).
 // Moving the placed actor cannot separate two of its own parts, so the pair used to be listed for a hand edit_scs

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_asset caption_assets: captions and tags the calling agent wrote after looking at thumbnail_sheet, kept in the
 // project's caption file (Saved/EngineWire/AssetCaptions.json) for find_assets_like; the assets themselves stay untouched.

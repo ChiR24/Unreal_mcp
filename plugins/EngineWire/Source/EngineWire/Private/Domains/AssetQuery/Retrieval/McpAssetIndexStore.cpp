@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The retrieval index and captions on disk (McpAssetIndex.h): two JSON files under the project's Saved/EngineWire. A file
 // of another version, or one that does not parse, reads as empty: the index rebuilds itself, and a caption file is set

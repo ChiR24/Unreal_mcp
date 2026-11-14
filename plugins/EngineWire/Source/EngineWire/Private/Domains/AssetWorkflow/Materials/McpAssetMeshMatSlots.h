@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The material slots of a static or a skeletal mesh asset behind one interface, and the two lookups set_mesh_materials
 // makes for every entry: the slot it names and the material it assigns.

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // audit_placement's content kinds: what a level shows that was never finished. A slot left on the engine's default
 // grid, a label still reading "Text" and an actor pasted twice in the same place each read as slop in the game, and

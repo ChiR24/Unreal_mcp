@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // auto_edit's costs (McpAutoEditScore.h): a camera's shot of the subjects at one time, and a cut between two cameras.
 

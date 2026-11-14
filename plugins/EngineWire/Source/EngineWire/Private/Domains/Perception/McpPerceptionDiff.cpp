@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_view's saveAs and compareWith: frames kept under a name until the editor closes, each with the renderer's
 // own noise, measured by a second capture of the unchanged state (temporal anti-aliasing and denoisers never draw the

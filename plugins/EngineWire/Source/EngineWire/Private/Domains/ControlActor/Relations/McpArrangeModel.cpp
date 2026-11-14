@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // arrange_by_relations' model (McpArrange.h): footprints, each relation's miss, the turn facing and against give, and the
 // closing snap. Misses are in square metres, so the annealer's temperatures (0.25 down to 0.001) mean the same in a room

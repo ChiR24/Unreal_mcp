@@ -45,7 +45,7 @@ The full list is the generated [Action Reference](https://github.com/ChiR24/Unre
 
 1. Get [EngineWire on Fab](https://www.fab.com/listings/9407137f-14b3-44a8-af0e-e9c6a9c9f6fc), then open the Epic Games Launcher.
 2. In **Unreal Engine › Library › Fab Library**, find **EngineWire** and click **Install to Engine** for your engine version.
-3. Open your project, enable **EngineWire** in **Edit › Plugins**, and restart the editor. Fab installs it as an engine plugin, so there is nothing to copy into the project.
+3. Open your project: EngineWire is enabled by default (turn it off in **Edit › Plugins** for a project that should not load it, and restart the editor). Fab installs it as an engine plugin, so there is nothing to copy into the project.
 4. Fab's 0.6.0 build ships with the native server off: if the status bar reads **`MCP off`**, turn on **Enable Native MCP Server** in **Edit › Project Settings › Plugins › EngineWire › Native MCP**, and restart the editor once more.
 
 Fab updates follow Epic's review, so the Fab build can trail the newest [release](https://github.com/ChiR24/Unreal_mcp/releases).

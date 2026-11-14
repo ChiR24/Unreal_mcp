@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // control_actor describe_relations (McpRelations.h). The scene judged is every visible actor with bounds in the editor
 // world, or in the running Play world: within radius of center when given, at most maxActors of them (a named actor

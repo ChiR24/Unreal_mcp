@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // One assertion judged against the editor. not, and, or combine verdicts three-valued (an unknown part leaves the
 // whole unknown unless the rest decides it). Relations go to McpRelations::JudgePair, comparisons read the actor's

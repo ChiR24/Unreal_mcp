@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // control_actor arrange_by_relations (McpRelations.h): actors moved until the relations asked hold, overlapping
 // nothing, in one undo step. Relations are written as execute's expect writes them (Lamp on Table, Chair facing Table,

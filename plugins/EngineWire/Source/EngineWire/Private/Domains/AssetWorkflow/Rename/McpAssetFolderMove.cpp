@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // move / rename with a folder as sourcePath. The Content Browser renames folders; the MCP only moved
 // one asset per call, so relocating a game's root folder (a few hundred assets) was out of reach.

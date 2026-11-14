@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_asset find_assets_like: assets ranked by words, by likeness to an example asset, by colour and by size, from the
 // retrieval index (McpAssetIndex), brought up to date first within a time budget.

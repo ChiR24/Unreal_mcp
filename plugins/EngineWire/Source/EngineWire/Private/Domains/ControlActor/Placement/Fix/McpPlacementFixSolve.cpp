@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The separation half of fix_placement: projected Gauss-Seidel over the intersecting pairs. Each sweep measures every
 // pair at the offsets its bodies have reached (McpMeasurePush: the shortest way out, on their collision), splits the

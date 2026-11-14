@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // animation_physics add_footsteps: a Play Sound notify where each foot is set down in a walk or run cycle, found from
 // the clip's own frames (a foot is down within contactHeight of its lowest point), in one undo step.

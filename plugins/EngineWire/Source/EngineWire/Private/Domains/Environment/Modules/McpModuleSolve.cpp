@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Wave function collapse over a grid of cells (McpModuleKit.h): a domain of variants per cell as bit sets, propagation
 // until nothing changes, the undecided cell of least Shannon entropy observed by weight, a trail to undo a choice that

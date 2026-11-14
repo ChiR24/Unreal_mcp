@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // fit_frame_budget's run (McpFrameBudget.h), one step a frame on the core ticker: each setting is held for a few frames,
 // its GPU frame times read, the picture captured, then the next setting. Each knob is measured on and then off straight

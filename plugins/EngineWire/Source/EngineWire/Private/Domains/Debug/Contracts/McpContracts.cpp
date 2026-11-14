@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The assertions a call carries, held from dispatch to its reply: requirements judged when the call is admitted to its
 // handler, expectations when it answers. Judging is McpContractsJudge.cpp.

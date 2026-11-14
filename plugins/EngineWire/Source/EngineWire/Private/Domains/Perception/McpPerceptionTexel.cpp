@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // audit_materials' texel_density and instancing checks. Texel density as the texture streamer reckons it: a texture's
 // size times the material's sampling scale for it (its UV tiling) over the mesh's UV density for that material slot and

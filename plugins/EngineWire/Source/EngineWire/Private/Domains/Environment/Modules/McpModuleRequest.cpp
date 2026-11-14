@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // What an assemble_modules call asks for (McpModuleKit.h): its parameters read and checked, and every piece's faces read
 // at each turn it may take, in parallel and against a deadline.

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // process_asset process=mesh_materials. A mesh imported with every slot on the grid material shows it in every
 // placement, and a component override fixes one placement at a time. This writes the materials into the mesh asset

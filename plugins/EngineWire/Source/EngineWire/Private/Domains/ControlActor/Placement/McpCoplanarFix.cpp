@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // control_actor fix_coplanar. Fixing z-fighting pair by pair meant a geometric judgement per pair, a few hundred of
 // them in a large level; one rule covers nearly all of them. A piece lying wholly inside the other

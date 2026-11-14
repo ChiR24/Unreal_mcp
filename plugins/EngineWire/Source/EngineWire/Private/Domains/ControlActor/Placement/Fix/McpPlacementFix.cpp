@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // control_actor fix_placement: moves the actors audit_placement reports sunk, floating or intersecting, judged by the
 // audit's own check (DescribePlacement), so the fix and the report never disagree about what is wrong. A sunk or

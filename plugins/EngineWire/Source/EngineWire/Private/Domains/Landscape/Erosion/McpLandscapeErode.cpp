@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // build_environment erode_landscape: a landscape worn the way water wears ground, so that every cell drains. Its heights
 // over a region (the region's border held, so the result joins the rest) go through McpTerrainErosion: depressions

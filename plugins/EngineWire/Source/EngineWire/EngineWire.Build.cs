@@ -204,6 +204,8 @@ public class EngineWire : ModuleRules {
             string PluginsDir = Path.Combine(EngineDir, "Plugins");
             if (!Directory.Exists(PluginsDir)) return false;
 
+            // The engine's Experimental plugin folder, spelled in two parts on purpose since the distribution packaging
+            // pass; only optional, delay-loaded modules are looked for there (ChaosVehiclesPlugin).
             string OptionalEnginePluginDir = string.Concat("Exper", "imental");
             string[] pluginRoots = { "AI", "Runtime", OptionalEnginePluginDir, "Developer", "Animation", "Online" };
             foreach (string root in pluginRoots) if (Directory.Exists(Path.Combine(PluginsDir, root, SearchName))) return true;

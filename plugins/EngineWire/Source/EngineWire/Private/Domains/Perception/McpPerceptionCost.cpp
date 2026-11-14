@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // analyze_view's shader cost: the viewport drawn once in the Shader Complexity view mode, each cell's colour decoded to
 // the nearest step of the engine's own ramp (UEngine::ShaderComplexityColors, green for cheap through red to white),

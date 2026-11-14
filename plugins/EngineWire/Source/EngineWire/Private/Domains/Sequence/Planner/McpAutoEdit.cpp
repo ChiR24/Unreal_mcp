@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_sequence auto_edit (McpAutoEdit.h): the cameras and subjects read as the sequence plays them, every segment
 // scored per camera, the cheapest edit found (Cut), and the camera cut track rewritten with one cut per shot.

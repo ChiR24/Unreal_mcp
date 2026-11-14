@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_relations' scene roles. ground: the ground-like item the most others rest on, else the widest; sun: the
 // brightest directional light, as the sun's elevation above the horizon and its azimuth (degrees from +X toward +Y);

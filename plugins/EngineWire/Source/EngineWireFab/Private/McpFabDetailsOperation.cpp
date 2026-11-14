@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 
 // Listing detail: what an agent needs to choose, and what it needs to know before adding.
 //

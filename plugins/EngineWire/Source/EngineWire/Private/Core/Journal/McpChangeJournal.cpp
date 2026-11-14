@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // The journal's recorder: edits of objects and level actors, kept for actors of the editor level and real assets and
 // merged per object (the package events are in McpChangeJournalEvents.cpp). OnObjectModified fires on every Modify,

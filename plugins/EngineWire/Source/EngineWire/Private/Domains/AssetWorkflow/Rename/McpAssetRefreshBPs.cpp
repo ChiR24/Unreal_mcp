@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // maintain_content refresh_blueprints. Renaming a class leaves every node that names it as it was:
 // a cast keeps its "As BP Old Name" pin, which compiles into the bytecode under that name, and

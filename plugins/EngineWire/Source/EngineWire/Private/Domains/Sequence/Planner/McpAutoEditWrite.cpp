@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // auto_edit's reply and write (McpAutoEditWrite.h): the shots the edit holds, and the camera cut track rewritten with
 // one cut per shot over the playback range, cameras bound when they are not, as one undo step.

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_audio set_sound_looping: each Sound Wave's Looping flag (USoundWave::bLooping), which loops the wave wherever
 // it plays by itself. A Sound Cue loops through a Looping node in its graph and a MetaSound through its own graph, so

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_sequence frame_shot (McpFrameShot.h): the subjects and the camera are found, the lens read, the shot solved
 // against the editor world's sight lines, and the camera moved, or spawned, with its lens and focus as one undo step.

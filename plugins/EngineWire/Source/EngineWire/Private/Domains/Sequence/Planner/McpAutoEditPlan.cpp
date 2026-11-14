@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // auto_edit's plan (McpAutoEditWrite.h): the playback range cut into segments, and every camera's shot of the subjects
 // scored at each segment's middle as the sequence plays them.

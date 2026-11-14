@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Boolean Map Saliency (Zhang and Sclaroff, TPAMI 2016; written from the paper): each OKLab channel is thresholded at
 // evenly spaced levels into boolean maps and their complements; in each, the regions that do not touch the frame's

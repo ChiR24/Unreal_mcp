@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // build_environment place_decals: deferred decals laid onto surfaces, as a level artist drops stains, cracks, moss or
 // posters. Each point (given, or scattered over a disc) is traced along a direction to the first surface drawn there; a

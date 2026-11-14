@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // manage_sequence fly_through (McpFlyThrough.h): the points read, the flight planned and smoothed against the editor
 // world's collision, sampled into keys (facing lookAt, else the way ahead), and written by McpFlyThroughKeys.

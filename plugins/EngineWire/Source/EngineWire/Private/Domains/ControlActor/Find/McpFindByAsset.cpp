@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 
 // control_actor find, findBy=mesh and findBy=material. find answered by class and by name only, so the actors drawing
 // one mesh, or showing one material in any slot, could not be asked for.

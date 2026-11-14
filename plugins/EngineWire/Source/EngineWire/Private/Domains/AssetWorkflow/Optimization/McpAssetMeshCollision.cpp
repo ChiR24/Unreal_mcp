@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // process_asset process=mesh_collision. A mesh imported without simple collision lets pawns fall through every
 // placement of it, and configure_mesh_collision reaches only dynamic mesh actors. This replaces a static mesh ASSET's

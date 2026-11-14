@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // describe_view's change since a saved frame. Each 8 x 8 block of pixels is compared by SSIM on its luma (Wang et al.
 // 2004) and by how far its mean colour moved as shown, and counts as changed only beyond the renderer's own noise in

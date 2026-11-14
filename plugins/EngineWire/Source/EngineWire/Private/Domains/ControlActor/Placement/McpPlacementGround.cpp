@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // Where the placement check looks for the ground under an actor. One box round its colliding parts says where a compact
 // actor stands, but a spline mesh is its mesh bent along a curve: a road of 35 segments up a hill was judged by its box's

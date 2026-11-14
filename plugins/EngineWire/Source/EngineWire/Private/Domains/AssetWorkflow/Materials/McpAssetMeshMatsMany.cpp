@@ -1,4 +1,4 @@
-// Copyright (c) 2024 EngineWire Contributors
+// Copyright (c) 2025 EngineWire Contributors
 //
 // process_asset process=mesh_materials with assetPaths: the same entries on several meshes, as a whole Fab pack needs.
 // Its meshes hold different slots ("transparency" on one, only "Material_0" on the next), so a slot a mesh lacks is
