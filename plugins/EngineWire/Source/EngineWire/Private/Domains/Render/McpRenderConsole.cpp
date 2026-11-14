@@ -98,20 +98,17 @@ TArray<FString> RenderLoadedDenoisers()
 void SendConsoleResult(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,
-    const FString& SubAction,
     TArray<FString>& Applied,
     TArray<FString>& Unsupported,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     const TArray<FString>* Denoisers = nullptr)
 {
     // Nothing taking answered success ("settings not available"), so a missing variable read as configured.
-    if (Applied.Num() == 0)
+    if (RefuseWhenNoConsoleVariableTook(Subsystem, RequestId, Applied, Unsupported, Socket))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Settings not available: no console variable took: %s. "
-            "Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
         return;
     }
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     Result->SetBoolField(TEXT("supported"), true);
     AddStringArray(Result, TEXT("appliedCVars"), Applied);
     AddStringArray(Result, TEXT("unsupportedCVars"), Unsupported);
@@ -249,7 +246,7 @@ bool HandleRenderConsoleAction(
     {
         McpSetConsoleVariableNamed(TEXT("r.PathTracing.Denoiser.Name"), DenoiserName, Applied, Unsupported);
     }
-    SendConsoleResult(Subsystem, RequestId, SubAction, Applied, Unsupported, RequestingSocket, bPathTracing ? &Denoisers : nullptr);
+    SendConsoleResult(Subsystem, RequestId, Applied, Unsupported, RequestingSocket, bPathTracing ? &Denoisers : nullptr);
     return true;
 }
 }

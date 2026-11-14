@@ -163,14 +163,9 @@ bool HandleSave(UEngineWireSubsystem& Bridge, const FString& RequestId, const TS
     FString Error;
     FString Code;
     TSet<FString> Allowed;
-    for (const FString& Id : McpHandlerUtils::GetStringArrayField(Payload, TEXT("destructive")))
+    if (!McpScript::ReadAllowed(Payload, Allowed, Error))
     {
-        const FString Resolved = McpScript::ResolveCapability(Id);
-        if (Resolved.IsEmpty())
-        {
-            return Refuse(TEXT("SCRIPT_INVALID"), FString::Printf(TEXT("destructive names %s, which is no capability."), *Id));
-        }
-        Allowed.Add(Resolved);
+        return Refuse(TEXT("SCRIPT_INVALID"), Error);
     }
     if (!McpGraphCode::ParseSExpr(Bound(Params, nullptr) + Script, Forms, Error) || Forms.Num() == 0)
     {

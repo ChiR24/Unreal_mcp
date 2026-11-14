@@ -80,7 +80,7 @@ bool HandleRenderLightingAction(
             return true;
         }
         WorldSettings->MarkPackageDirty();
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
         Transaction.DescribeInto(Result);
@@ -124,7 +124,7 @@ bool HandleRenderLightingAction(
         FLightingChannels Channels = Light->LightingChannels;
         SetLightChannels(Channels, ChannelList, GetJsonBoolField(Payload, TEXT("enabled"), true));
         Light->SetLightingChannels(Channels.bChannel0, Channels.bChannel1, Channels.bChannel2);
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetNumberField(TEXT("channel"), ChannelList[0]);
         AddNumberArray(Result, TEXT("channels"), ChannelList);
         McpHandlerUtils::AddVerification(Result, Actor);
@@ -158,7 +158,7 @@ bool HandleRenderLightingAction(
             SetLightChannels(Channels, ChannelList, GetJsonBoolField(Payload, TEXT("enabled"), true));
             Component->SetLightingChannels(Channels.bChannel0, Channels.bChannel1, Channels.bChannel2);
         }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetNumberField(TEXT("componentCount"), Components.Num());
         Result->SetNumberField(TEXT("channel"), ChannelList[0]);
         AddNumberArray(Result, TEXT("channels"), ChannelList);
@@ -208,7 +208,7 @@ bool HandleRenderLightingAction(
             }
             Component->MarkRenderStateDirty();
         }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetNumberField(TEXT("componentCount"), Components.Num());
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);

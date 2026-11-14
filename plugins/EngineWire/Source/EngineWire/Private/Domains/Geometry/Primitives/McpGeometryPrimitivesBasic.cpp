@@ -68,8 +68,6 @@ bool HandleCreateBox(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("estimatedTriangles"), static_cast<double>(EstimatedTriangles));
     Result->SetBoolField(TEXT("dimensionsClamped"), bDimensionsClamped);
 
-    McpHandlerUtils::AddVerification(Result, NewActor);
-
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Box mesh created"), Result);
     return true;
 }
@@ -102,8 +100,6 @@ bool HandleCreateSphere(UEngineWireSubsystem* Self, const FString& RequestId,
     }
     Result->SetNumberField(TEXT("radius"), Radius);
 
-    McpHandlerUtils::AddVerification(Result, NewActor);
-
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Sphere mesh created"), Result);
     return true;
 }
@@ -135,8 +131,6 @@ bool HandleCreateCylinder(UEngineWireSubsystem* Self, const FString& RequestId,
     {
         return true;
     }
-
-    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cylinder mesh created"), Result);
     return true;
@@ -177,8 +171,6 @@ bool HandleCreateCone(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
 
-    McpHandlerUtils::AddVerification(Result, NewActor);
-
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Cone mesh created"), Result);
     return true;
 }
@@ -214,8 +206,6 @@ bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
     {
         return true;
     }
-
-    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Capsule mesh created"), Result);
     return true;

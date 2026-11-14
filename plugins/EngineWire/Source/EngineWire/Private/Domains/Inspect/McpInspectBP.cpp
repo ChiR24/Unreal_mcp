@@ -16,15 +16,6 @@
 namespace McpInspectHandlers {
 
 namespace {
-TArray<TSharedPtr<FJsonValue>> McpTriple(double X, double Y, double Z)
-{
-    TArray<TSharedPtr<FJsonValue>> Out;
-    Out.Add(MakeShared<FJsonValueNumber>(X));
-    Out.Add(MakeShared<FJsonValueNumber>(Y));
-    Out.Add(MakeShared<FJsonValueNumber>(Z));
-    return Out;
-}
-
 // The layout of a Blueprint used to cost one get_property call per field per
 // component (RelativeLocation, RelativeScale3D, StaticMesh, ...) before anything
 // could be placed next to it. Each entry now carries what that needed.
@@ -32,12 +23,9 @@ void McpDescribeComponentTemplate(const UActorComponent *Template, const TShared
 {
     if (const USceneComponent *Scene = Cast<USceneComponent>(Template))
     {
-        const FVector L = Scene->GetRelativeLocation();
-        const FRotator R = Scene->GetRelativeRotation();
-        const FVector S = Scene->GetRelativeScale3D();
-        Entry->SetArrayField(TEXT("location"), McpTriple(L.X, L.Y, L.Z));
-        Entry->SetArrayField(TEXT("rotation"), McpTriple(R.Pitch, R.Yaw, R.Roll));
-        Entry->SetArrayField(TEXT("scale"), McpTriple(S.X, S.Y, S.Z));
+        Entry->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Scene->GetRelativeLocation()));
+        Entry->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(Scene->GetRelativeRotation()));
+        Entry->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Scene->GetRelativeScale3D()));
         Entry->SetBoolField(TEXT("visible"), Scene->GetVisibleFlag());
     }
     McpHandlerUtils::AddMeshAssetFields(Template, Entry);
@@ -182,7 +170,7 @@ bool HandleInspectBlueprintDetailsAction(
     if (Requested.IsEmpty())
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-                                   TEXT("blueprintPath, assetPath, or objectPath required for get_blueprint_details"),
+                                   TEXT("blueprintPath or objectPath required for get_blueprint_details"),
                                    TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -246,7 +234,6 @@ bool HandleInspectBlueprintComponentsAction(
     TArray<TSharedPtr<FJsonValue>> Components = McpCollectBlueprintComponents(Blueprint);
     McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), Components, Resp, TEXT("missingComponents"));
     Resp->SetArrayField(TEXT("components"), Components);
-    Resp->SetNumberField(TEXT("componentCount"), Components.Num());
     Resp->SetNumberField(TEXT("count"), Components.Num());
     Resp->SetBoolField(TEXT("success"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

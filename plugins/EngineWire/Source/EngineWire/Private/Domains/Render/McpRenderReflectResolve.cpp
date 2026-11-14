@@ -45,6 +45,13 @@ bool HandleRenderReflectionResolutionAction(
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // The variable's help reads 'Must be power of 2'; the engine only clamps it to the cube map limit.
+    if (bSent && !FMath::IsPowerOfTwo(static_cast<int32>(Resolution)))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("resolution must be a power of two from 16 "
+            "to 4096 (16, 32, 64, 128, 256, 512, 1024, 2048 or 4096), not %d."), static_cast<int32>(Resolution)), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     TArray<FString> Applied;
     TArray<FString> Unsupported;
@@ -53,6 +60,10 @@ bool HandleRenderReflectionResolutionAction(
         FString::FromInt(static_cast<int32>(Resolution)),
         Applied,
         Unsupported);
+    if (RefuseWhenNoConsoleVariableTook(Subsystem, RequestId, Applied, Unsupported, RequestingSocket))
+    {
+        return true;
+    }
 
     int32 MarkedCaptures = 0;
     if (Actor)
@@ -77,7 +88,7 @@ bool HandleRenderReflectionResolutionAction(
         }
     }
 
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     Result->SetNumberField(TEXT("resolution"), Resolution);
     Result->SetNumberField(TEXT("markedCaptures"), MarkedCaptures);
     AddStringArray(Result, TEXT("appliedCVars"), Applied);

@@ -63,7 +63,6 @@ struct FCell
     TArray<FMove> Moves;                 // from Parent's Where, the moves that reached it
     int32 Chosen = 0;                    // times explored from
     int32 Leads = 0;                     // cells first found from it
-    bool bReturnedByTeleport = false;    // its round began with a teleport: tracked flags may not match
 };
 
 struct FFinding

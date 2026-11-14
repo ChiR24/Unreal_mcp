@@ -34,7 +34,7 @@ bool HandleCreatePlane(UEngineWireSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     double Width = ClampDimension(GetJsonNumberField(Payload, TEXT("width"), 100.0));
-    double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("depth"), GetJsonNumberField(Payload, TEXT("height"), 100.0)));
+    double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("depth"), 100.0));
     int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), 1));
     int32 HeightSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), 1));
 
@@ -57,11 +57,9 @@ bool HandleCreatePlane(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
     Result->SetNumberField(TEXT("width"), Width);
-    Result->SetNumberField(TEXT("height"), Height);
+    Result->SetNumberField(TEXT("depth"), Height);
     Result->SetNumberField(TEXT("widthSegments"), WidthSubdivisions);
     Result->SetNumberField(TEXT("heightSegments"), HeightSubdivisions);
-
-    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Plane mesh created"), Result);
     return true;
@@ -87,7 +85,6 @@ bool HandleCreateDisc(UEngineWireSubsystem* Self, const FString& RequestId,
     if (!NewActor) return true;
     Result->SetNumberField(TEXT("outerRadius"), Radius);
     Result->SetNumberField(TEXT("innerRadius"), HoleRadius);
-    McpHandlerUtils::AddVerification(Result, NewActor);
     Self->SendAutomationResponse(Socket, RequestId, true, bRing ? TEXT("Ring created") : TEXT("Disc mesh created"), Result);
     return true;
 }
@@ -124,8 +121,6 @@ bool HandleCreateStairs(UEngineWireSubsystem* Self, const FString& RequestId,
         return true;
     }
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
-
-    McpHandlerUtils::AddVerification(Result, NewActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Linear stairs created"), Result);
     return true;

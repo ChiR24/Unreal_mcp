@@ -26,8 +26,8 @@ bool GSettling = false;          // one run at a time: a second would read, and 
 // editor while the bodies fell, or physics took none of them.
 bool Fail(UEngineWireSubsystem& Bridge, const FRun& Run, const FString& RequestId, const TSharedPtr<FMcpBridgeWebSocket>& Socket)
 {
-    UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
-    if (GEditor && GEditor->IsPlaySessionRequestQueued())
+    UWorld* World = GEditor->PlayWorld.Get();
+    if (GEditor->IsPlaySessionRequestQueued())
     {
         GEditor->CancelRequestPlaySession();
     }
@@ -61,7 +61,7 @@ bool Fail(UEngineWireSubsystem& Bridge, const FRun& Run, const FString& RequestI
 // One editor frame of the run; false once it has answered.
 bool Step(UEngineWireSubsystem& Bridge, FRun& Run, const FString& RequestId, const TSharedPtr<FMcpBridgeWebSocket>& Socket)
 {
-    UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    UWorld* World = GEditor->PlayWorld.Get();
     const double Elapsed = FPlatformTime::Seconds() - Run.StartReal;
     if (Run.Phase == EPhase::Starting && World && World->HasBegunPlay())
     {
@@ -106,7 +106,7 @@ bool Step(UEngineWireSubsystem& Bridge, FRun& Run, const FString& RequestId, con
         const int32 Kept = Keep(Run, Code, Message);
         if (Kept == INDEX_NONE)
         {
-            Bridge.SendAutomationResponse(Socket, RequestId, false, TEXT("The resting poses were not kept: ") + Message, nullptr, Code);
+            Bridge.SendAutomationError(Socket, RequestId, TEXT("The resting poses were not kept: ") + Message, Code);
             return;
         }
         const TSharedPtr<FJsonObject> Result = Reply(Run, Kept, Message);
@@ -165,20 +165,27 @@ using namespace SettleParts;
 bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
             TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<AActor*(const FString&)> Find)
 {
-    const auto Refuse = [&](const TCHAR* Code, const FString& Message, const TSharedPtr<FJsonObject>& Detail) {
-        Bridge.SendAutomationResponse(Socket, RequestId, false, Message, Detail, Code);
+    const auto Refuse = [&](const TCHAR* Code, const FString& Message, const TSharedPtr<FJsonObject>& Detail = nullptr) {
+        if (Detail.IsValid())
+        {
+            Bridge.SendAutomationResponse(Socket, RequestId, false, Message, Detail, Code);
+        }
+        else
+        {
+            Bridge.SendAutomationError(Socket, RequestId, Message, Code);
+        }
         return true;
     };
-    if (!GEditor || GEditor->IsPlaySessionInProgress() || GSettling)
+    if (GEditor->IsPlaySessionInProgress() || GSettling)
     {
-        return GSettling ? Refuse(TEXT("SETTLE_RUNNING"), TEXT("A settle_physics run is still simulating: wait for its reply."), nullptr)
+        return GSettling ? Refuse(TEXT("SETTLE_RUNNING"), TEXT("A settle_physics run is still simulating: wait for its reply."))
                          : Refuse(TEXT("PLAY_RUNNING"), TEXT("settle_physics runs a Simulate session of its own: stop the running "
-                                                             "Play or Simulate first."), nullptr);
+                                                             "Play or Simulate first."));
     }
     const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));
     if (Names.Num() == 0 || Names.Num() > MaxActors)
     {
-        return Refuse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("actorNames lists 1 to %d actors to settle."), MaxActors), nullptr);
+        return Refuse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("actorNames lists 1 to %d actors to settle."), MaxActors));
     }
     const TSharedPtr<FRun> Run = MakeShared<FRun>();
     TSharedPtr<FJsonObject> Detail;
@@ -195,7 +202,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
     }
     if (!Viewport.IsValid())
     {
-        return Refuse(TEXT("NO_LEVEL_VIEWPORT"), TEXT("Simulate runs in a level viewport, and the editor has none open."), nullptr);
+        return Refuse(TEXT("NO_LEVEL_VIEWPORT"), TEXT("Simulate runs in a level viewport, and the editor has none open."));
     }
     Run->Seconds = FMath::Clamp(GetJsonNumberField(Payload, TEXT("seconds"), 3.0), 0.5, 10.0);
     Run->FallCm = FMath::Clamp(GetJsonNumberField(Payload, TEXT("fallCm"), 500.0), 10.0, 100000.0);

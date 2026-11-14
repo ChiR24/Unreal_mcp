@@ -97,7 +97,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_demo_settings', selector: 'setting',
-    summary: 'Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.',
+    summary: 'Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; when sent, also written to the engine config and the demo driver defaults, and persistedToConfig is true), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.',
     members: { demo: 'configure_demo_settings', killcam_duration: 'configure_killcam_duration' },
   },
   {

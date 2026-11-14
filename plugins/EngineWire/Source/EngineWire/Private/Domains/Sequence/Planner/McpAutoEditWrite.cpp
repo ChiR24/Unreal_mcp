@@ -6,6 +6,7 @@
 #include "Domains/Sequence/Planner/McpAutoEditWrite.h"
 
 #include "Domains/Sequence/Cinematics/McpSeqCine.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "GameFramework/Actor.h"
@@ -77,9 +78,9 @@ TSharedPtr<FJsonObject> DescribeEdit(ULevelSequence& Sequence, const TArray<AAct
     TArray<FString> Used;
     for (const FEditShot& Shot : Shots)
     {
-        Used.AddUnique(Cameras[Shot.Camera]->GetActorLabel());
+        Used.AddUnique(McpActorRef(Cameras[Shot.Camera]));
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("camera"), Cameras[Shot.Camera]->GetActorLabel());
+        Row->SetStringField(TEXT("camera"), McpActorRef(Cameras[Shot.Camera]));
         Row->SetNumberField(TEXT("startFrame"), EditDisplayFrame(Plan, Plan.SegmentStart(Shot.First)));
         Row->SetNumberField(TEXT("endFrame"), EditDisplayFrame(Plan, EditShotEnd(Plan, Edit, Shot)));
         Rows.Add(MakeShared<FJsonValueObject>(Row));

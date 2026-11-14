@@ -18,16 +18,15 @@ template <typename TActor>
 bool CreateCaptureActor(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,
-    const FString& SubAction,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, SubAction, Payload, Socket, TEXT("Scene capture actor"));
+    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, Payload, Socket, TEXT("Scene capture actor"));
     if (!Actor)
     {
         return true;
     }
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     McpHandlerUtils::AddVerification(Result, Actor);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("Scene capture actor created."), Result);
     return true;
@@ -79,11 +78,11 @@ bool HandleRenderSceneCaptureAction(
 {
     if (SubAction == TEXT("create_scene_capture_2d"))
     {
-        return CreateCaptureActor<ASceneCapture2D>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
+        return CreateCaptureActor<ASceneCapture2D>(Subsystem, RequestId, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("create_scene_capture_cube"))
     {
-        return CreateCaptureActor<ASceneCaptureCube>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
+        return CreateCaptureActor<ASceneCaptureCube>(Subsystem, RequestId, Payload, RequestingSocket);
     }
 
     const bool bCaptureSubAction =
@@ -242,7 +241,7 @@ bool HandleRenderSceneCaptureAction(
     {
         CaptureCube->MarkRenderStateDirty();
     }
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     if (SubAction == TEXT("configure_capture_resolution"))
     {
         Result->SetNumberField(TEXT("resolution"), Capture2D->TextureTarget->SizeX);

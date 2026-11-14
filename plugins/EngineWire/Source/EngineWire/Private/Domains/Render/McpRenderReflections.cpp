@@ -20,11 +20,10 @@ template <typename TActor>
 bool CreateReflectionActor(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,
-    const FString& SubAction,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, SubAction, Payload, Socket, TEXT("Reflection actor"));
+    TActor* Actor = SpawnNamedRenderActor<TActor>(Subsystem, RequestId, Payload, Socket, TEXT("Reflection actor"));
     if (!Actor)
     {
         return true;
@@ -42,7 +41,7 @@ bool CreateReflectionActor(
             return true;
         }
     }
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     McpHandlerUtils::AddVerification(Result, Actor);
@@ -81,7 +80,7 @@ bool ApplyPostProcessReflectionSettings(
         return true;
     }
     CommitPostProcessVolume(Volume, Staged, Payload, false, Applied);
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     McpHandlerUtils::AddVerification(Result, Volume);
@@ -99,15 +98,15 @@ bool HandleRenderReflectionAction(
 {
     if (SubAction == TEXT("create_sphere_reflection_capture"))
     {
-        return CreateReflectionActor<ASphereReflectionCapture>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
+        return CreateReflectionActor<ASphereReflectionCapture>(Subsystem, RequestId, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("create_box_reflection_capture"))
     {
-        return CreateReflectionActor<ABoxReflectionCapture>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
+        return CreateReflectionActor<ABoxReflectionCapture>(Subsystem, RequestId, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("create_planar_reflection"))
     {
-        return CreateReflectionActor<APlanarReflection>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
+        return CreateReflectionActor<APlanarReflection>(Subsystem, RequestId, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("configure_ssr_settings") ||
         SubAction == TEXT("configure_lumen_reflection_settings"))
@@ -184,7 +183,7 @@ bool HandleRenderReflectionAction(
             Capture->CaptureOffset = FVector(Offset[0], Offset[1], Offset[2]);
         }
         Capture->MarkDirtyForRecaptureOrUpload();
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetObjectField(TEXT("captureOffset"), McpHandlerUtils::VectorToJson(Capture->CaptureOffset));
         McpHandlerUtils::AddVerification(Result, Actor);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Capture offset configured."), Result);
@@ -204,7 +203,7 @@ bool HandleRenderReflectionAction(
         {
             UReflectionCaptureComponent::UpdateReflectionCaptureContents(World, TEXT("MCP recapture"));
         }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetBoolField(TEXT("recaptured"), true);
         McpHandlerUtils::AddVerification(Result, Actor);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reflection capture recaptured."), Result);
@@ -239,7 +238,7 @@ bool HandleRenderReflectionAction(
             return true;
         }
         Component->MarkRenderStateDirty();
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
         McpHandlerUtils::AddVerification(Result, Actor);

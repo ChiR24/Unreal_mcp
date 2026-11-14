@@ -22,7 +22,7 @@ using namespace PlaytestRunParts;
 FString Advance(FRun& Run)
 {
     UWorld* World = Run.World.Get();
-    if (!World || !GEditor || GEditor->PlayWorld.Get() != World)
+    if (!World || GEditor->PlayWorld.Get() != World)
     {
         return TEXT("world_ended");
     }

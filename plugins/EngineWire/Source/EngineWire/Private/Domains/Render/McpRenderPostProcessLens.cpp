@@ -31,14 +31,11 @@ bool HandleRenderPostProcessLensAction(
         TArray<FString> Applied;
         TArray<FString> Unsupported;
         McpSetScreenPercentage(ScreenPercentage, Applied, Unsupported);
-        // As the folder's console actions: a value that did not take was answered as configured.
-        if (Applied.Num() == 0)
+        if (RefuseWhenNoConsoleVariableTook(Subsystem, RequestId, Applied, Unsupported, RequestingSocket))
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Settings not available: no "
-                "console variable took: %s. Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
             return true;
         }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetNumberField(TEXT("screenPercentage"), ScreenPercentage);
         AddStringArray(Result, TEXT("appliedCVars"), Applied);
         AddStringArray(Result, TEXT("unsupportedCVars"), Unsupported);
@@ -187,7 +184,7 @@ bool HandleRenderPostProcessLensAction(
         return true;
     }
     CommitPostProcessVolume(Volume, Staged, Payload, false, Applied);
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     McpHandlerUtils::AddVerification(Result, Volume);

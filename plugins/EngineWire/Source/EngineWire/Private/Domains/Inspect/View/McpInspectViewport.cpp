@@ -25,10 +25,6 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
         Resp->SetNumberField(TEXT("width"), Size.X);
         Resp->SetNumberField(TEXT("height"), Size.Y);
     }
-    else
-    {
-        Resp->SetStringField(TEXT("message"), TEXT("Viewport info not available in this context"));
-    }
 
     // GCurrentLevelEditingViewportClient is the level viewport the user last
     // interacted with; fall back to the first registered level viewport so a

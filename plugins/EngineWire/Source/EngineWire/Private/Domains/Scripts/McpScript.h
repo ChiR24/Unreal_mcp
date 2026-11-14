@@ -61,6 +61,9 @@ bool IsTrue(const TSharedPtr<FJsonValue>& Value);
 // McpScriptCheck.cpp
 /** The canonical id of a capability named by id or by a unique alias; empty when none. */
 FString ResolveCapability(const FString& Name);
+// McpScriptHandler.cpp
+/** The destructive list as canonical ids; false with OutError naming an entry that is no capability. */
+bool ReadAllowed(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutAllowed, FString& OutError);
 /** Whether the capability asks for consent (its policy's consent is not none). */
 bool AsksConsent(const FString& CapabilityId);
 /** Why a script may not call the capability (itself, the undo history, or consent it did not list), with OutCode;

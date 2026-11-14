@@ -286,7 +286,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
     // Waiting for the build on the game thread stopped the editor ticking and draining its queue for the whole build.
     const build = code('Domains', 'SystemControl', 'McpSystemBuild.cpp');
     expect(build).toContain('FTSTicker::GetCoreTicker().AddTicker(');
-    expect(build).toContain('Subsystem->RunLatentReply(Run->RequestId, TEXT("system_control")');
+    expect(build).toContain('Subsystem->RunLatentReply(Run->RequestId, TEXT("system_control run_ubt")');
     expect(build).not.toContain('FPlatformProcess::Sleep(');
     expect(build).not.toMatch(/while \(FPlatformProcess::IsProcRunning/u);
   });

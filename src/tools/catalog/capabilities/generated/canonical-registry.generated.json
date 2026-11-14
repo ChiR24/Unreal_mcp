@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5651c2f8c81ac6bc",
+  "catalogRevision": "dcea6fd862547b3f",
   "recordCount": 489,
   "records": [
     {
@@ -28867,6 +28867,59 @@
               },
               "additionalProperties": false
             },
+            "area": {
+              "type": "object",
+              "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
+              "properties": {
+                "min": {
+                  "type": "object",
+                  "description": "Minimum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "max": {
+                  "type": "object",
+                  "description": "Maximum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "additionalProperties": false
+            },
+            "snapToSurface": {
+              "type": "boolean",
+              "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
+            },
             "transforms": {
               "type": "array",
               "items": {
@@ -28934,59 +28987,6 @@
                 "additionalProperties": false
               },
               "description": "Instance transforms."
-            },
-            "area": {
-              "type": "object",
-              "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
-              "properties": {
-                "min": {
-                  "type": "object",
-                  "description": "Minimum corner.",
-                  "properties": {
-                    "x": {
-                      "type": "number",
-                      "description": "X"
-                    },
-                    "y": {
-                      "type": "number",
-                      "description": "Y"
-                    },
-                    "z": {
-                      "type": "number",
-                      "description": "Z"
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "max": {
-                  "type": "object",
-                  "description": "Maximum corner.",
-                  "properties": {
-                    "x": {
-                      "type": "number",
-                      "description": "X"
-                    },
-                    "y": {
-                      "type": "number",
-                      "description": "Y"
-                    },
-                    "z": {
-                      "type": "number",
-                      "description": "Z"
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "required": [
-                "min",
-                "max"
-              ],
-              "additionalProperties": false
-            },
-            "snapToSurface": {
-              "type": "boolean",
-              "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
             },
             "foliageOp": {
               "type": "string",
@@ -29111,14 +29111,16 @@
               "scatter",
               "paint"
             ],
-            "transforms": [
-              "instances"
-            ],
             "area": [
+              "scatter",
               "paint"
             ],
             "snapToSurface": [
+              "scatter",
               "paint"
+            ],
+            "transforms": [
+              "instances"
             ]
           }
         }
@@ -29126,7 +29128,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1d69a2ec3894703cfb5473af28e37c8f764811e72feee995d7335213b3db30fa",
-        "content": "9c20367faf738a3492e0d8967fc729f7df12d3d8f10c916182deee9a298f26f7"
+        "content": "7d4b1a497d54f357444d205fd29891c82c1d234d9b763d54ae328efa84d45dd7"
       }
     },
     {
@@ -33951,7 +33953,7 @@
           "add a landscape",
           "make a landscape"
         ],
-        "summary": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents, resolutionX/resolutionY and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
+        "summary": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, resolutionX/resolutionY (vertices per side, the editor Overall Resolution) follow from the component counts, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
         "whenToUse": [
           "kind=landscape: A landscape must be created or modified in the current level.",
           "kind=grass_type: A grass type asset is needed for landscape grass rendering."
@@ -34093,7 +34095,7 @@
       },
       "examples": [
         {
-          "title": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents, resolutionX/resolutionY and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
+          "title": "Create a new landscape in the world (its current level), or a grass type for one, chosen by kind. landscape spawns a flat Landscape actor labelled name (or landscapeName; an actor already under it is refused, NAME_TAKEN), its corner at location: componentCount {x, y} components (default 8 x 8), or the fewest that cover sizeX and sizeY (vertices like the editor Overall Resolution, or quads). Each component holds sectionsPerComponent (1 or 2) squared sections of quadsPerSection quads (7, 15, 31, 63 by default, 127 or 255). materialPath goes on it (default the engine grid material; one that does not load is refused, ASSET_NOT_FOUND). builtComponents and extentX/extentY (half the built size; a quad is 100 units) are measured from what was built, resolutionX/resolutionY (vertices per side, the editor Overall Resolution) follow from the component counts, a build that makes no components fails (LANDSCAPE_BUILD_FAILED), and the level is left unsaved. grass_type saves a landscape grass type asset named name in path (default /Game/Landscape) that grows meshPath at density 1 per 10 square metres, scaled 0.8 to 1.2, randomly turned and aligned to the surface; a grass type already there is kept unchanged (alreadyExists) and another asset there is refused (ASSET_ALREADY_EXISTS).",
           "input": {
             "action": "create_landscape",
             "name": "Landscape_1",
@@ -34192,7 +34194,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b7a3061f97f0d5f2d9a713cf11ae264b6b1f9f8ab38155eb9a132b5946bbcaea",
-        "content": "11051ed9805c0df3ab280d30a603c766a6ef3ca6a2a70d86ac195ab33c4a42bb"
+        "content": "b1ed768a320c5bd47178097b1381b4618d379528bd7c9523971d015146e4d21a"
       }
     },
     {
@@ -49458,7 +49460,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them; such cells are marked."
+              "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them."
             },
             "seed": {
               "type": "number",
@@ -49617,8 +49619,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "03ee7dd47e579809de91c969fdd58893efb7138606e732ccc8f6b3ac30ee94f4",
-        "content": "469d9b2e02d2cff3d8ae64e54e4e2bb7fb7d21ba5e12301db2ce123254627867"
+        "schema": "ea258cf3f1f684def7e909c17dcc9941f7e046e174d4d12224db8d9bb615a1ba",
+        "content": "eaeb30dd2e66f0c6548ae831565ec0a6b9a26ab029a2638225bb1a2c118403b7"
       }
     },
     {
@@ -60598,7 +60600,7 @@
             },
             "filter": {
               "type": "string",
-              "description": "Runtime report filter expression."
+              "description": "Keep the actors whose label, name or class name holds this text (any case)."
             },
             "limit": {
               "type": "number",
@@ -60641,7 +60643,7 @@
                 "bounding_box",
                 "export"
               ],
-              "description": "Which query object variant to run.\nlist: List world actors (cross-parent to control_actor; dispatches action list_actors).\nby_tag: Find world actors by tag (cross-parent to control_actor).\nmetadata: Read metadata key/value pairs from a world actor (cross-parent to control_actor).\nbounding_box: Return the world-space bounding box of a world actor (cross-parent to control_actor).\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
+              "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs): each one's name, label, path and class, limit rows (default 100) from offset. filter keeps the actors whose label, name or class holds it (any case); count, matchedCount, totalCount and hasMore say how many there are, isPieWorld and worldName which world was read.\nby_tag: Find the level's actors that carry tag (the play world while a game runs): each one's label, name, path and class, the first limit (1-1000, default 200) with truncated and totalCount when more match. A missing tag is refused (INVALID_ARGUMENT).\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
             }
           },
           "required": [
@@ -60751,7 +60753,8 @@
               "list"
             ],
             "limit": [
-              "list"
+              "list",
+              "by_tag"
             ],
             "offset": [
               "list"
@@ -60780,13 +60783,20 @@
             "outputPath": [
               "export"
             ]
+          },
+          "requires": {
+            "find_by_tag": {
+              "required": [
+                "tag"
+              ]
+            }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1a794d0369e466152fdecafe846e08cb5e5a9814281312f51e49b54c27f33151",
-        "content": "7c466a2f5e768fcddbd2e117b4b0db5f5a91f8dfdcd434d4b28040c96f0d6e2b"
+        "schema": "f63b9634d429b3d064f8ec3c72a08a4e9b66ebfe5a5a47e9ea3d47d93c829123",
+        "content": "9f9aad41c9d9f7dc802341af1a824a66e7893b84adb9d7c4257a8a8d84f7f8a6"
       }
     },
     {
@@ -82906,7 +82916,7 @@
                 "roof",
                 "sdf"
               ],
-              "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nroof: Create a hip roof mesh actor over a footprint: every face rises from its outline edge at pitch (default 30 degrees) and meets the others along ridges, hips and valleys where the outline's straight skeleton puts them, for any simple outline of 3 to 64 corners in either winding: rectangles, L, T and U plans, bays and angled walls (no holes). footprint is in the actor's space at the top of the walls (z 0); overhang (cm, default 0) carries the roof planes out past the walls, the eaves dropping by overhang x tan(pitch); base (default true) closes it underneath at the eaves' height, so the mesh is watertight (with an overhang that underside lies below the wall top: set the roof that much higher, or base false to leave it open). Each face is its own polygroup, its UVs in metres along its eave and up its slope, so a tiling roof material lies in rows along every eave. The reply gives faces (one per outline edge), ridgeHeight above the walls, eaveHeight, triangles and watertight; one undo step. Refused, making nothing: INVALID_ARGUMENT (fewer than 3 corners apart, an outline that crosses itself, an overhang that folds it over itself), ROOF_FAILED (faces that do not make a clean mesh).\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
+              "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor: a box-sphere of radius (default 50) with the same number of steps along each of its three axes, numRings (default 16), else radialSegments; the two are one count, not rings and segments apart.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nroof: Create a hip roof mesh actor over a footprint: every face rises from its outline edge at pitch (default 30 degrees) and meets the others along ridges, hips and valleys where the outline's straight skeleton puts them, for any simple outline of 3 to 64 corners in either winding: rectangles, L, T and U plans, bays and angled walls (no holes). footprint is in the actor's space at the top of the walls (z 0); overhang (cm, default 0) carries the roof planes out past the walls, the eaves dropping by overhang x tan(pitch); base (default true) closes it underneath at the eaves' height, so the mesh is watertight (with an overhang that underside lies below the wall top: set the roof that much higher, or base false to leave it open). Each face is its own polygroup, its UVs in metres along its eave and up its slope, so a tiling roof material lies in rows along every eave. The reply gives faces (one per outline edge), ridgeHeight above the walls, eaveHeight, triangles and watertight; one undo step. Refused, making nothing: INVALID_ARGUMENT (fewer than 3 corners apart, an outline that crosses itself, an overhang that folds it over itself), ROOF_FAILED (faces that do not make a clean mesh).\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
             }
           },
           "required": [
@@ -83232,8 +83242,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "498e2083267afc1684dbb8c7218f3b667744c673c8a9533d4a15e445f06960c7",
-        "content": "36f5e50a1a320d07b295104a3c7fb66d040cccbc29d3aaf5ffff96015061dde4"
+        "schema": "2a84e285f9089aee86f088edf55d41075fefe85ee3cb12ddbd80afa8745f06bd",
+        "content": "977d97045ed8497d708d2aec28dd6a4f13e2395e0d9c99150711dd0e2d576057"
       }
     },
     {
@@ -96032,7 +96042,8 @@
               "description": "Action."
             },
             "controllerId": {
-              "type": "number",
+              "type": "integer",
+              "minimum": -1,
               "description": "Controller id."
             }
           },
@@ -96115,8 +96126,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4b44ad05a5f7c16c01074dd3bcda84369f732c90d8935fd2f27c98444bc7de5f",
-        "content": "6856159bb1fc56bff8dd293ca778508c4207d4c821f95829c0c31163fc4a7824"
+        "schema": "abf0b7b8796de88e1131ba2fc58d52c18332e27af5788a701f68bf1f6c6bc3f3",
+        "content": "8498a28de7f9d53f573911b467132f0ce34bfd9273ec1add3abc2cf31d34d069"
       }
     },
     {
@@ -98603,7 +98614,9 @@
               "description": "Muted."
             },
             "localPlayerNum": {
-              "type": "number",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
               "description": "Local player num."
             },
             "systemWide": {
@@ -98780,8 +98793,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "21c40201fc3c2b8b9e96438068d73ea134cda518de9c0d6e98a0fe5e12a33b86",
-        "content": "5c58e4861b100234692a4f21c42b87b175ff85e7ad17c66a3d1e4cf8fa342d19"
+        "schema": "e86d2b22e91ece09523eaa791964cf31bf9ee0fe48439f69ce9fd54e0a8cdb6e",
+        "content": "fd12666101e9f8ac9561bfe3b4e1ba329bcc6a42467ef246388697accc474249"
       }
     },
     {
@@ -99631,7 +99644,8 @@
               "description": "Map name."
             },
             "maxPlayers": {
-              "type": "number",
+              "type": "integer",
+              "minimum": 1,
               "description": "Max players."
             },
             "travelOptions": {
@@ -99791,8 +99805,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8f69e4eac171a45247c075825137c39c7fe6319765b5a0f889069a4d376c4435",
-        "content": "6ba1742d395a1429e9150e28fd91527befc9218ae8f3a75c3ea2e7fde0d6e358"
+        "schema": "cca13dd2eb638fb9c2c74f25725ac68cb2cab530d4b87a493b518a5ed4171f8d",
+        "content": "416ca5ccee6d6931033506b5bf21f06cf94437a9f8a5782f297a84332c3f7948"
       }
     },
     {
@@ -100025,7 +100039,8 @@
               "description": "Action."
             },
             "playerIndex": {
-              "type": "number",
+              "type": "integer",
+              "minimum": 0,
               "description": "Player index."
             }
           },
@@ -100102,8 +100117,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "436cbece9b527ef863aabe63691af6e57bf5f6f4c074c70a44ab9d04f0015c95",
-        "content": "9d1f69c11693d39044148ba78e18e9f721736fd2973acafb8e408d46edb2e745"
+        "schema": "e0d84562eba3148a26c42b7defe1dc7abb246a80d129f978d42da22d87591f87",
+        "content": "0dffa89118b24be987f35112a53e5c878911e2ab8943a72f89ea6d8c65c6e2e8"
       }
     },
     {
@@ -107216,7 +107231,9 @@
             },
             "positionOnRail": {
               "type": "number",
-              "description": "Position on the rail (0-1)."
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Where the camera mount sits along the rail spline: 0 at its start, 1 at its end."
             },
             "path": {
               "type": "string",
@@ -107461,8 +107478,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f04490c4fef299a0e4bffd12fa1d01bc30b79057bbaefe74503f6b38c0985829",
-        "content": "83b842184bbcd71a6382672516c7257fe004956f026efef998189a2bcfac242e"
+        "schema": "64de903b31a362ab73bd452521f8d56b9b1fb0efd3b69ad3192821c212808e12",
+        "content": "c3b18751afb6ba43ef83cfe39c41e8038c263bd29bcc69153c027b48a9718698"
       }
     },
     {
@@ -108848,11 +108865,11 @@
               "description": "Which section of the track, in the order info=keys lists them (default 0)."
             },
             "startFrame": {
-              "type": "number",
+              "type": "integer",
               "description": "New start of the section in display-rate frames."
             },
             "endFrame": {
-              "type": "number",
+              "type": "integer",
               "description": "New end of the section in display-rate frames, after its start."
             },
             "easeInFrames": {
@@ -109117,8 +109134,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "25cc0960870ac5c15d7508657a8ca1eb94f67fdb06a95395765675c2e819399e",
-        "content": "a31e0c786728d29d848414ba3a0aca2ab0870397c383e1c114957053ccf34c83"
+        "schema": "b04ced27acefe20d22927285b811529ce7e65cce060ed2aeb3e0c39bd2873479",
+        "content": "c07bf5b3ce5417a0deb0f2361ccf28a1051d581b48ddbe939134a933badd7cd3"
       }
     },
     {
@@ -112418,7 +112435,7 @@
         "topics": [
           "configure_demo_settings"
         ],
-        "summary": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
+        "summary": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; when sent, also written to the engine config and the demo driver defaults, and persistedToConfig is true), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
         "whenToUse": [
           "setting=demo: Replay recording settings must be configured before recording.",
           "setting=killcam_duration: Killcam duration must be set for replay-based kill cameras."
@@ -112518,7 +112535,7 @@
       },
       "examples": [
         {
-          "title": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; also written to the engine config and the demo driver defaults), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
+          "title": "Set how this editor session records and plays demo replays, chosen by setting. demo stores the default replayName and friendlyName, extra additionalOptions, maxRecordTimeSeconds (up to 86400), checkpointSaveMaxMSPerFrame (up to 1000 ms; when sent, also written to the engine config and the demo driver defaults, and persistedToConfig is true), playbackSpeed, prioritizeActors and loadDefaultMapOnStop; a recording or playback running now takes them at once (appliedToRuntime), and the reply lists everything stored. killcam_duration sets how many seconds start_killcam replays (up to 600). All but the checkpoint budget last until the editor closes.",
           "input": {
             "action": "configure_demo_settings",
             "maxRecordTimeSeconds": 300,
@@ -112604,7 +112621,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ff514807fbf19a190a04c3bd13d773dd8d0b41aff143da767f28214c98d3079d",
-        "content": "b6dcdc48d817f75effb6d380d824ca6d8420c209ba458df691e2a9b5ee1505a4"
+        "content": "46295e18b853be205c305789c0db8fa059ec13a1491bb115eace5e49d153e5e8"
       }
     },
     {
@@ -121832,7 +121849,7 @@
             },
             "channels": {
               "type": "string",
-              "description": "Trace channels (validated: letters, digits, underscore, comma, space, hyphen)."
+              "description": "Trace channels: names separated by commas (spaces only round a comma), each 1 to 64 letters, digits, underscores, hyphens or dots."
             },
             "connectionType": {
               "type": "string",
@@ -122004,8 +122021,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5ecf5d2a33f8fa60d5a1b913fc65911601dc5334db684ebc33d00d0e23c50108",
-        "content": "564e622dc6e4dfd5616071588c28357e28240a366c7374305317db4909835ce7"
+        "schema": "89f4b6905df5dd34f3ecae7fd36ac4f7a2437732997fb6eb583f1a5a60355a56",
+        "content": "41af515fb052f312ff12873035227d485434596da0c2b7b6de140c59e8915fe2"
       }
     },
     {

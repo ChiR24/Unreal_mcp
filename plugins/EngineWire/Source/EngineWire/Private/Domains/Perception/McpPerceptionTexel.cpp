@@ -6,6 +6,7 @@
 // Instancing: static mesh actors of the level that draw one mesh with one set of materials, the groups worth instancing.
 
 #include "Domains/Perception/McpPerception.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Components/StaticMeshComponent.h"
@@ -146,7 +147,7 @@ TSharedPtr<FJsonObject> TexelDensity(const FFrame& Frame)
             continue;
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actorName"), Slot.Actor->GetActorLabel());
+        Row->SetStringField(TEXT("actorName"), McpActorRef(Slot.Actor));
         Row->SetNumberField(TEXT("slot"), Slot.Slot);
         Row->SetStringField(TEXT("material"), Slot.Material->GetPathName());
         Row->SetStringField(TEXT("texture"), Slot.Texture->GetPathName());
@@ -203,7 +204,7 @@ TSharedPtr<FJsonObject> InstancingGroups(UWorld* World)
         TArray<TSharedPtr<FJsonValue>> Names;
         for (int32 At = 0; At < Group.Value.Num() && At < InstancingNamesShown; ++At)
         {
-            Names.Add(MakeShared<FJsonValueString>(Group.Value[At]->GetActorLabel()));
+            Names.Add(MakeShared<FJsonValueString>(McpActorRef(Group.Value[At])));
         }
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("mesh"), First->GetStaticMesh()->GetPathName());

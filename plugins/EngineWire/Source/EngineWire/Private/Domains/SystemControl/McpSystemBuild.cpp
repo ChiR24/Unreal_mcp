@@ -184,7 +184,7 @@ bool HandleRunUbt(UEngineWireSubsystem* Self, const FString& RequestId,
     if (!Subsystem) {
       return false;
     }
-    Subsystem->RunLatentReply(Run->RequestId, TEXT("system_control"), [&]() {
+    Subsystem->RunLatentReply(Run->RequestId, TEXT("system_control run_ubt"), [&]() {
       TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
       Result->SetStringField(TEXT("output"), Run->StdOut);
       if (bTimedOut) {

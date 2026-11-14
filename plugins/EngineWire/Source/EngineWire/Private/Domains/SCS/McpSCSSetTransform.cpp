@@ -101,13 +101,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
         ComponentName, /*bCreateInheritedOverride=*/false));
     if (!VerifiedSceneComp ||
         !VerifiedSceneComp->GetRelativeTransform().Equals(NewTransform)) {
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(
-          TEXT("error"),
-          FString::Printf(TEXT("Verification failed: Transform did not stick for component '%s'"),
-                          *ComponentName));
-      Result->SetStringField(TEXT("errorCode"),
-                             TEXT("SCS_TRANSFORM_VERIFICATION_FAILED"));
+      SCSFail(Result,
+              FString::Printf(TEXT("Verification failed: Transform did not stick for component '%s'"), *ComponentName),
+              TEXT("SCS_TRANSFORM_VERIFICATION_FAILED"));
       Result->SetBoolField(TEXT("compiled"), bCompiled);
       Result->SetBoolField(TEXT("saved"), bSaved);
       if (VerifiedNode) {

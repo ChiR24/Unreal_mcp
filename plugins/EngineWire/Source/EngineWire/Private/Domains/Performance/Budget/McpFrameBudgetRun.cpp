@@ -40,7 +40,7 @@ void Answer(FRun& Run, const TFunctionRef<void(UEngineWireSubsystem&)> Send)
 {
     if (UEngineWireSubsystem* Self = Run.Self.Get())
     {
-        Self->RunLatentReply(Run.RequestId, TEXT("system_control"), [&]() { Send(*Self); });
+        Self->RunLatentReply(Run.RequestId, TEXT("system_control fit_frame_budget"), [&]() { Send(*Self); });
     }
 }
 

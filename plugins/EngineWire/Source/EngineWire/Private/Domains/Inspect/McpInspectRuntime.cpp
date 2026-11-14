@@ -23,44 +23,13 @@ bool HandleInspectRuntimeReportAction(
             Payload->TryGetStringField(TEXT("filter"), Filter);
             const FString ActorName = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
 
-            TArray<FString> ComponentNames;
-            FString ComponentName;
-            if (Payload->TryGetStringField(TEXT("componentName"), ComponentName) && !ComponentName.IsEmpty())
+            // Each list with its single-value form; the single property also goes by propertyPath.
+            const TArray<FString> ComponentNames = McpReadStringListField(Payload, TEXT("componentNames"), TEXT("componentName"));
+            TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), nullptr);
+            const FString PropertyName = McpGetFirstStringField(Payload, {TEXT("propertyName"), TEXT("propertyPath")});
+            if (!PropertyName.IsEmpty())
             {
-                ComponentNames.Add(ComponentName);
-            }
-            const TArray<TSharedPtr<FJsonValue>> *ComponentNamesArray = nullptr;
-            if (Payload->TryGetArrayField(TEXT("componentNames"), ComponentNamesArray) && ComponentNamesArray)
-            {
-                for (const TSharedPtr<FJsonValue> &Value : *ComponentNamesArray)
-                {
-                    if (Value.IsValid() && Value->Type == EJson::String)
-                    {
-                        ComponentNames.Add(Value->AsString());
-                    }
-                }
-            }
-
-            TArray<FString> PropertyNames;
-            FString PropertyName;
-            if (Payload->TryGetStringField(TEXT("propertyName"), PropertyName) && !PropertyName.IsEmpty())
-            {
-                PropertyNames.Add(PropertyName);
-            }
-            else if (Payload->TryGetStringField(TEXT("propertyPath"), PropertyName) && !PropertyName.IsEmpty())
-            {
-                PropertyNames.Add(PropertyName);
-            }
-            const TArray<TSharedPtr<FJsonValue>> *PropertyNamesArray = nullptr;
-            if (Payload->TryGetArrayField(TEXT("propertyNames"), PropertyNamesArray) && PropertyNamesArray)
-            {
-                for (const TSharedPtr<FJsonValue> &Value : *PropertyNamesArray)
-                {
-                    if (Value.IsValid() && Value->Type == EJson::String)
-                    {
-                        PropertyNames.Add(Value->AsString());
-                    }
-                }
+                PropertyNames.AddUnique(PropertyName);
             }
 
             TSharedPtr<FJsonObject> Report = McpHandlerUtils::CreateResultObject();

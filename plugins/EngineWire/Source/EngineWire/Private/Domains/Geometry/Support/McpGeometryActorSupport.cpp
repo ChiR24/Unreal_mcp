@@ -35,6 +35,8 @@ AActor* SpawnPrimitiveOrReply(UEngineWireSubsystem* Self, const FString& Request
             TEXT("Another actor is already labelled '%s'; name this one '%s' in later calls."), *Name, *Ref))});
     }
     OutResult->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+    // actorName, actorPath and actorClass for every creator, so its receipt lists the actor it made.
+    McpHandlerUtils::AddVerification(OutResult, NewActor);
     return NewActor;
 }
 

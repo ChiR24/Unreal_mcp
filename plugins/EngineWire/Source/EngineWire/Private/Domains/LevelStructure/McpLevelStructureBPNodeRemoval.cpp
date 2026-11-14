@@ -15,6 +15,31 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
 
+namespace LevelStructureHelpers
+{
+TArray<UEdGraphNode*> FindLevelBlueprintNodes(ULevelScriptBlueprint* LevelBP, TFunctionRef<bool(UEdGraphNode*)> Match)
+{
+    TArray<UEdGraph*> Graphs;
+    LevelBP->GetAllGraphs(Graphs);
+    TArray<UEdGraphNode*> Found;
+    for (UEdGraph* Graph : Graphs)
+    {
+        if (!Graph)
+        {
+            continue;
+        }
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            if (Node && Match(Node))
+            {
+                Found.Add(Node);
+            }
+        }
+    }
+    return Found;
+}
+}
+
 namespace McpLevelStructure
 {
 bool HandleRemoveLevelBlueprintNode(
@@ -44,29 +69,16 @@ bool HandleRemoveLevelBlueprintNode(
     {
         return true;
     }
-    TArray<UEdGraph*> Graphs;
-    LevelBP->GetAllGraphs(Graphs);
-    TArray<UEdGraphNode*> ToRemove;
-    for (UEdGraph* Graph : Graphs)
+    TArray<UEdGraphNode*> ToRemove = FindLevelBlueprintNodes(LevelBP, [&](UEdGraphNode* Node)
     {
-        if (!Graph) { continue; }
-        for (UEdGraphNode* Node : Graph->Nodes)
+        if (bUnboundOnly)
         {
-            if (!Node) { continue; }
-            bool bMatch = false;
-            if (bUnboundOnly)
-            {
-                UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
-                bMatch = Call && Call->GetTargetFunction() == nullptr;
-            }
-            else
-            {
-                // nodeId and nodeName each take the guid, the node's name or its title (the pin edit's nodeId too).
-                bMatch = IsLevelBlueprintNodeNamed(Node, NodeId) || IsLevelBlueprintNodeNamed(Node, NodeName);
-            }
-            if (bMatch) { ToRemove.Add(Node); }
+            UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
+            return Call && Call->GetTargetFunction() == nullptr;
         }
-    }
+        // nodeId and nodeName each take the guid, the node's name or its title (the pin edit's nodeId too).
+        return IsLevelBlueprintNodeNamed(Node, NodeId) || IsLevelBlueprintNodeNamed(Node, NodeName);
+    });
     // A name or title several nodes share ("Sequence", "Print String") names no one node: removing them all was not
     // asked for, and the removal cannot be undone from here.
     if (!bUnboundOnly && ToRemove.Num() > 1)

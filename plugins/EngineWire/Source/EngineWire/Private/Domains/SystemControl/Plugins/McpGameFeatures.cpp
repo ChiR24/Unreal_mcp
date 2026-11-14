@@ -113,7 +113,7 @@ bool HandleGameFeatures(UEngineWireSubsystem* Self, const FString& RequestId, co
 		*bReplied = true;
 		FMcpGameFeatureRow After;
 		Live->Find(Name, After);
-		Bridge->RunLatentReply(RequestId, TEXT("system_control"), [&]()
+		Bridge->RunLatentReply(RequestId, TEXT("system_control set_game_feature_active"), [&]()
 		{
 			TSharedPtr<FJsonObject> Result = GameFeatureRowJson(After);
 			Result->SetBoolField(TEXT("changed"), true);

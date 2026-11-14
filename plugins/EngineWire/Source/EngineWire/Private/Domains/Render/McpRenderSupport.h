@@ -43,13 +43,10 @@ inline bool ApplyPostProcessField(FPostProcessSettings& Target, const FString& F
     return ApplyPostProcessSettings(Target, Settings, Applied, Unsupported, Error);
 }
 
-inline TSharedPtr<FJsonObject> MakeRenderResult(const FString& SubAction)
+inline TSharedPtr<FJsonObject> MakeRenderResult()
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("action"), TEXT("manage_render"));
-    Result->SetStringField(TEXT("subAction"), SubAction);
     Result->SetBoolField(TEXT("success"), true);
-    Result->SetBoolField(TEXT("applied"), true);
     return Result;
 }
 
@@ -133,7 +130,7 @@ inline bool ApplyDeclaredExposureFields(FPostProcessSettings& Target, const TSha
 // location/rotation and returned for the caller to configure and answer. Null after a reply. Noun names the kind in
 // those replies ("Reflection actor", "Scene capture actor").
 template <typename TActor>
-TActor* SpawnNamedRenderActor(UEngineWireSubsystem* Subsystem, const FString& RequestId, const FString& SubAction,
+TActor* SpawnNamedRenderActor(UEngineWireSubsystem* Subsystem, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Noun)
 {
     const FString Name = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
@@ -153,7 +150,7 @@ TActor* SpawnNamedRenderActor(UEngineWireSubsystem* Subsystem, const FString& Re
                 TEXT("NAME_TAKEN"));
             return nullptr;
         }
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+        TSharedPtr<FJsonObject> Result = MakeRenderResult();
         Result->SetBoolField(TEXT("alreadyExists"), true);
         McpHandlerUtils::AddVerification(Result, Existing);
         Subsystem->SendAutomationResponse(Socket, RequestId, true, Noun + TEXT(" already exists."), Result);
@@ -186,6 +183,20 @@ inline APostProcessVolume* RequirePostProcessVolume(
     }
     // Callers apply the blend fields through CommitPostProcessVolume, inside its undo step and into their reply.
     return Volume;
+}
+
+// The refusal when no console variable took a value (CVAR_UNAVAILABLE, naming the ones that did not): a value that did
+// not take was answered as configured. True after sending it, false when Applied holds one.
+inline bool RefuseWhenNoConsoleVariableTook(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TArray<FString>& Applied,
+                                            const TArray<FString>& Unsupported, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    if (Applied.Num() > 0)
+    {
+        return false;
+    }
+    Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Settings not available: no console variable took: %s. "
+        "Nothing was changed."), *FString::Join(Unsupported, TEXT("; "))), TEXT("CVAR_UNAVAILABLE"));
+    return true;
 }
 
 // For a request that names no actor: the level's one actor IsWanted accepts and the request may touch. Several answer

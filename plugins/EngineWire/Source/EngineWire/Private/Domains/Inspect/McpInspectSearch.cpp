@@ -125,10 +125,16 @@ bool HandleInspectSearchAction(
         {
             FString Tag;
             Payload->TryGetStringField(TEXT("tag"), Tag);
+            // No tag used to skip the search and answer success with 0 actors.
+            if (Tag.IsEmpty())
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("tag is required"), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
             UWorld* World = McpHandlerUtils::GetPlayOrEditorWorld();
-            if (World && !Tag.IsEmpty())
+            if (World)
             {
                 for (TActorIterator<AActor> It(World); It; ++It)
                 {
@@ -144,7 +150,8 @@ bool HandleInspectSearchAction(
                     }
                 }
             }
-            // [{label, name, path, class}], as the `actors` the find_by_tag contract declares.
+            // [{label, name, path, class}], as the `actors` the find_by_tag contract declares; the first limit, as find_by_class.
+            McpCapFindRows(Payload, ObjectsArray, Resp);
             Resp->SetArrayField(TEXT("actors"), ObjectsArray);
             Resp->SetStringField(TEXT("tag"), Tag);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
@@ -163,41 +170,14 @@ bool HandleInspectSearchAction(
             }
             if (!ClassName.IsEmpty())
             {
-                UClass* TargetClass = FindObject<UClass>(nullptr, *ClassName);
-                if (!TargetClass && !ClassName.Contains(TEXT(".")))
+                // A native class by name or path, a loaded class by its short name (any case), a Blueprint asset path
+                // or its _C class.
+                UClass* TargetClass = ResolveClassByName(ClassName);
+                // The conventional A/U code prefix: a reflected class object carries none (ATDMCharacter's is TDMCharacter).
+                if (!TargetClass && ClassName.Len() >= 2 && (ClassName[0] == TEXT('A') || ClassName[0] == TEXT('U')) &&
+                    FChar::IsUpper(ClassName[1]))
                 {
-                    // Try with /Script/Engine prefix for common classes
-                    TargetClass = FindObject<UClass>(nullptr, *FString::Printf(TEXT("/Script/Engine.%s"), *ClassName));
-                }
-                if (!TargetClass && !ClassName.Contains(TEXT(".")) && !ClassName.Contains(TEXT("/")))
-                {
-                    // Bare short name: UE5 removed the ANY_PACKAGE lookup, so FindObject with a null outer
-                    // resolves only full /Script/ paths, and the /Script/Engine fallback above only covers
-                    // engine classes — every game-module class (e.g. "TDMCharacter") came back
-                    // CLASS_NOT_FOUND. Scan all loaded classes by object name instead, and tolerate the
-                    // conventional A/U code prefix (reflected class object names carry no prefix:
-                    // ATDMCharacter's UClass is named "TDMCharacter"). If two loaded classes share the
-                    // short name, first-found wins (best-effort read-only fallback; the full
-                    // /Script/<Module>.<Class> path stays the deterministic route).
-                    // FindFirstObject is UE 5.1+; pre-5.1 falls back to ResolveClassByName
-                    // (ANY_PACKAGE-era lookup) — same guard as MontageNotifyBlend.cpp.
-#if ENGINE_MINOR_VERSION >= 1
-                    TargetClass = FindFirstObject<UClass>(*ClassName, EFindFirstObjectOptions::None);
-#else
-                    TargetClass = ResolveClassByName(ClassName);
-#endif
-                    if (!TargetClass && ClassName.Len() >= 2)
-                    {
-                        const TCHAR Prefix = ClassName[0];
-                        if ((Prefix == TEXT('A') || Prefix == TEXT('U')) && FChar::IsUpper(ClassName[1]))
-                        {
-#if ENGINE_MINOR_VERSION >= 1
-                            TargetClass = FindFirstObject<UClass>(*ClassName.Mid(1), EFindFirstObjectOptions::None);
-#else
-                            TargetClass = ResolveClassByName(ClassName.Mid(1));
-#endif
-                        }
-                    }
+                    TargetClass = ResolveClassByName(ClassName.Mid(1));
                 }
                 if (TargetClass)
                 {

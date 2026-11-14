@@ -78,7 +78,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_sphere', plugins: PLUGIN,
-    family: F, summary: 'Create a sphere dynamic mesh actor.', whenToUse: ['A sphere primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
+    family: F, summary: 'Create a sphere dynamic mesh actor: a box-sphere of radius (default 50) with the same number of steps along each of its three axes, numRings (default 16), else radialSegments; the two are one count, not rings and segments apart.', whenToUse: ['A sphere primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
     inputProps: { ...IDENT, ...XFORM, radius: RADIUS, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_sphere', radius: 50 },
   }),

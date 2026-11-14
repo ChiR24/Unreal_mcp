@@ -193,7 +193,7 @@ const testCases = [
   { scenario: 'CINEMATICS: add_camera_shake_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakePath: SHAKE_PATH }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_camera_shake_track bound to a camera', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakeClass: SHAKE_PATH, cameraName: CINE_CAM, startFrame: 0, durationFrames: 30, endFrame: 30, rowIndex: 0, save: true }, expected: 'success|already exists' },
   // configure_camera_rig_rail
-  { scenario: 'CINEMATICS: configure_camera_rig_rail', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', positionOnRail: 50 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_rail', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', positionOnRail: 1 }, expected: 'success' },
   { scenario: 'CINEMATICS: configure_camera_rig_rail optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', actorName: RIG_NAME, label: 'RailRig', positionOnRail: 0.5 }, expected: 'success' },
   // configure_camera_rig_crane
   { scenario: 'CINEMATICS: configure_camera_rig_crane', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', craneArmLength: 300 }, expected: 'success' },

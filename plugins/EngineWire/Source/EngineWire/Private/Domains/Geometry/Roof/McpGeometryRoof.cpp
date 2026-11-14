@@ -161,7 +161,6 @@ bool HandleCreateRoof(UEngineWireSubsystem* Self, const FString& RequestId, cons
     Result->SetNumberField(TEXT("ridgeHeight"), McpRoundTo(Ridge, 10.0));
     Result->SetNumberField(TEXT("eaveHeight"), McpRoundTo(-Overhang * Rise, 10.0));
     Result->SetBoolField(TEXT("watertight"), bClosed);
-    McpHandlerUtils::AddVerification(Result, NewActor);
     Self->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Roof of %d faces at %g degrees, its ridge %.1f cm above the walls%s."), Roof.Faces.Num(), Pitch, Ridge,
                         bClosed ? TEXT(", closed underneath") : TEXT("")), Result);

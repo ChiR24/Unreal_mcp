@@ -134,15 +134,15 @@ FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor) {
   if (!Sequence || !Actor || !Sequence->GetMovieScene()) {
     return FGuid();
   }
-  const FGuid ExistingBinding =
-      FindExistingBinding(Sequence, Actor, Actor->GetWorld());
+  const FGuid ExistingBinding = FindExistingBinding(Sequence, Actor, Actor->GetWorld());
   if (ExistingBinding.IsValid()) {
     return ExistingBinding;
   }
   UMovieScene *MovieScene = Sequence->GetMovieScene();
-  const FGuid BindingGuid =
-      MovieScene->AddPossessable(Actor->GetActorLabel(), Actor->GetClass());
+  const FGuid BindingGuid = MovieScene->AddPossessable(Actor->GetActorLabel(), Actor->GetClass());
   if (BindingGuid.IsValid()) {
+    // The binding references live on the sequence; recorded for undo before the bind, as the Sequencer does.
+    Sequence->Modify();
     Sequence->BindPossessableObject(BindingGuid, *Actor, Actor->GetWorld());
     MovieScene->Modify();
   }
@@ -160,6 +160,7 @@ FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid,
     Possessable->SetParent(ParentGuid);
 #endif
   }
+  Sequence->Modify();
   Sequence->BindPossessableObject(Guid, *Component, Context);
   return Guid;
 }

@@ -200,7 +200,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set positionOnRail (0 to 1, where the camera mount sits along the rail spline) on a CameraRig_Rail named actorName, placing one at the world origin when actorName names none (spawned true). One undo step; a call with no setting is refused, and an actor of another class is RIG_CLASS_MISMATCH.',
     whenToUse: ['A camera must move along a rail for dolly shots.'],
     whenNotToUse: ['No rail-based camera movement is needed.'],
-    inputProps: { positionOnRail: { type: 'number', description: 'Position on the rail (0-1).' }, actorName: P.actorName, label: A.label },
+    inputProps: { positionOnRail: { type: 'number', minimum: 0, maximum: 1, description: 'Where the camera mount sits along the rail spline: 0 at its start, 1 at its end.' }, actorName: P.actorName, label: A.label },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'configure_camera_rig_rail', positionOnRail: 0.5 },
   }),

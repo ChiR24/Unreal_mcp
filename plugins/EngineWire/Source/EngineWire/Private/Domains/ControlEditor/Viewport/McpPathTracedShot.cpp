@@ -104,7 +104,7 @@ void Reply(FShot& Shot, const TFunctionRef<void(UEngineWireSubsystem&)> Send)
 {
     if (UEngineWireSubsystem* Self = Shot.Self.Get())
     {
-        Self->RunLatentReply(Shot.RequestId, TEXT("control_editor"), [&]() { Send(*Self); });
+        Self->RunLatentReply(Shot.RequestId, TEXT("control_editor screenshot"), [&]() { Send(*Self); });
     }
 }
 

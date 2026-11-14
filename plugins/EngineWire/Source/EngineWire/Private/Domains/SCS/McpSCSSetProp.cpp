@@ -50,30 +50,26 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
       &bFoundComponent);
 
   if (!ComponentTemplate) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("errorCode"),
-                           TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
     if (bFoundComponent) {
       // Exists, but this Blueprint may not legally override it.
-      Result->SetStringField(
-          TEXT("error"),
+      return SCSFail(Result,
           FString::Printf(
               TEXT("Component '%s' is inherited and cannot be overridden on "
                    "this Blueprint. Set the property on the owning parent "
                    "Blueprint instead."),
-              *ComponentName));
-      return Result;
+              *ComponentName),
+          TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
     }
     const TArray<FString> Available =
         McpPropertyCdoComponents::CollectResolvableComponentNames(Blueprint, CDO);
-    Result->SetArrayField(TEXT("availableComponents"), McpHandlerUtils::ToJsonStringArray(Available));
-    Result->SetStringField(
-        TEXT("error"),
+    SCSFail(Result,
         FString::Printf(
             TEXT("Component or template not found: %s. Available components: %s"),
             *ComponentName,
             Available.Num() > 0 ? *FString::Join(Available, TEXT(", "))
-                                : TEXT("<none>")));
+                                : TEXT("<none>")),
+        TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
+    Result->SetArrayField(TEXT("availableComponents"), McpHandlerUtils::ToJsonStringArray(Available));
     return Result;
   }
 
@@ -101,13 +97,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
         ComponentTemplate, PropertyName, ContainerPtr, ResolvedPath, ResolveError);
 
     if (!TargetProp || !ContainerPtr) {
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(
-          TEXT("error"),
-          ResolveError.IsEmpty()
-              ? FString::Printf(TEXT("Property not found: %s"), *PropertyName)
-              : ResolveError);
-      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_NOT_FOUND"));
+      SCSFail(Result,
+              ResolveError.IsEmpty() ? FString::Printf(TEXT("Property not found: %s"), *PropertyName) : ResolveError,
+              TEXT("SCS_PROPERTY_NOT_FOUND"));
       CreatedOverride.Rollback();
       return Result;
     }
@@ -141,13 +133,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
                                 : nullptr,
       ComponentName, /*bCreateInheritedOverride=*/false);
   if (!VerifiedTemplate) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Verification failed: Component '%s' missing after property set"),
-                        *ComponentName));
-    Result->SetStringField(TEXT("errorCode"),
-                           TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
+    SCSFail(Result,
+            FString::Printf(TEXT("Verification failed: Component '%s' missing after property set"), *ComponentName),
+            TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
     return Result;
@@ -160,15 +148,11 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
       VerifiedTemplate, PropertyName, VerifiedContainerPtr, VerifiedPath,
       VerifiedResolveError);
   if (!VerifiedProp || !VerifiedContainerPtr) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        VerifiedResolveError.IsEmpty()
-            ? FString::Printf(TEXT("Verification failed: Property not found after set: %s"),
-                              *PropertyName)
-            : VerifiedResolveError);
-    Result->SetStringField(TEXT("errorCode"),
-                           TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
+    SCSFail(Result,
+            VerifiedResolveError.IsEmpty()
+                ? FString::Printf(TEXT("Verification failed: Property not found after set: %s"), *PropertyName)
+                : VerifiedResolveError,
+            TEXT("SCS_PROPERTY_VERIFICATION_FAILED"));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
     AddSCSNodeVerification(Result, SCS, VerifiedNode);

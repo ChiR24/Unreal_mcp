@@ -54,6 +54,8 @@ TArray<FString> StepRows(const TArray<FStep>& Steps)
     return Rows;
 }
 
+} // namespace ScriptHandlerParts
+
 // destructive names capabilities by id or alias; the check and the gate compare canonical ids.
 bool ReadAllowed(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutAllowed, FString& OutError)
 {
@@ -69,7 +71,6 @@ bool ReadAllowed(const TSharedPtr<FJsonObject>& Payload, TSet<FString>& OutAllow
     }
     return true;
 }
-} // namespace ScriptHandlerParts
 
 using namespace ScriptHandlerParts;
 
@@ -113,7 +114,7 @@ bool HandleRunScript(UEngineWireSubsystem& Subsystem, const FString& RequestId, 
     Payload->TryGetNumberField(TEXT("maxSteps"), Steps);
     Payload->TryGetNumberField(TEXT("deadlineMs"), DeadlineMs);
     FRunLimits Limits;
-    Limits.MaxSteps = FMath::Clamp(static_cast<int32>(Steps), 1, MaxSteps);
+    Limits.MaxSteps = static_cast<int32>(FMath::Clamp(Steps, 1.0, static_cast<double>(MaxSteps)));
     // From the start: waiting on a step that answers later is inside it too.
     Limits.DeadlineSeconds = FPlatformTime::Seconds() + FMath::Clamp(DeadlineMs, 100.0, MaxMs) / 1000.0;
     const FMcpCapturedResponse Opened = RestorePoint(Subsystem, RequestId, TEXT("begin"));

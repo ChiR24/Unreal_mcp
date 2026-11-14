@@ -44,8 +44,7 @@ bool ValidateSequenceIntegerFields(
       TEXT("rowIndex"),
       TEXT("sectionIndex"),
       TEXT("materialIndex"),
-      TEXT("playlistIndex"),
-      TEXT("index")};
+      TEXT("playlistIndex")};
   static const TArray<FString> SettingsFields = {
       TEXT("handleFrameCount"),
       TEXT("zeroPadFrameNumbers"),

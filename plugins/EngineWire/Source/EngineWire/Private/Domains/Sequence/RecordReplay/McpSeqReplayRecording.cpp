@@ -66,7 +66,8 @@ bool ConfigureDemoSettings(UEngineWireSubsystem* Subsystem, const FString& Reque
     if (Options.Num() > 0) Updated.AdditionalOptions = MoveTemp(Options);
 
     double Number = 0.0;
-    if (Payload->TryGetNumberField(TEXT("checkpointSaveMaxMSPerFrame"), Number))
+    const bool bCheckpointBudgetSent = Payload->TryGetNumberField(TEXT("checkpointSaveMaxMSPerFrame"), Number);
+    if (bCheckpointBudgetSent)
     {
         Updated.CheckpointSaveMaxMSPerFrame = static_cast<float>(Number);
     }
@@ -86,7 +87,8 @@ bool ConfigureDemoSettings(UEngineWireSubsystem* Subsystem, const FString& Reque
     {
         ApplyDriverSettings(World, Replay);
     }
-    const bool bPersisted = PersistDemoDriverDefaults();
+    // Only the checkpoint budget reaches the engine ini: a call that does not set it leaves the ini as it was.
+    const bool bPersisted = bCheckpointBudgetSent && PersistDemoDriverDefaults();
 
     TSharedPtr<FJsonObject> Result = bRuntimeAvailable
         ? MakeReplayState(World, Replay)

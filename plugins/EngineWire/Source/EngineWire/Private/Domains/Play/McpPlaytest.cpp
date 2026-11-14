@@ -44,7 +44,7 @@ bool Handle(UEngineWireSubsystem& Bridge, const FString& RequestId, const TShare
         Bridge.SendAutomationError(Socket, RequestId, Message, Code);
         return true;
     };
-    UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    UWorld* World = GEditor->PlayWorld.Get();
     if (!World)
     {
         return Refuse(TEXT("PIE_NOT_RUNNING"), TEXT("No game is running: start one with control_editor play, then run the leg."));

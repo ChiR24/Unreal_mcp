@@ -159,7 +159,7 @@ bool HandleRenderPostProcessColorAction(
     }
 
     CommitPostProcessVolume(Volume, Staged, Payload, bBlend, Applied);
-    TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
+    TSharedPtr<FJsonObject> Result = MakeRenderResult();
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     Result->SetNumberField(TEXT("blendWeight"), Volume->BlendWeight);

@@ -28,27 +28,16 @@ bool HandleSetLevelBlueprintPinDefault(
     // that only contains the text, nor on one of several that share it. Every graph is searched (a level Blueprint's
     // functions too, as removal does); the graph door then finds the node by its guid in its own graph.
     const FString Wanted = GetJsonStringField(Payload, TEXT("nodeId"), TEXT(""));
-    UEdGraphNode* Node = nullptr;
-    TArray<FString> Matches;
-    TArray<UEdGraph*> Graphs;
-    LevelBP->GetAllGraphs(Graphs);
-    for (UEdGraph* Graph : Graphs)
+    const TArray<UEdGraphNode*> Found =
+        FindLevelBlueprintNodes(LevelBP, [&Wanted](UEdGraphNode* Each) { return IsLevelBlueprintNodeNamed(Each, Wanted); });
+    UEdGraphNode* Node = Found.Num() > 0 ? Found.Last() : nullptr;
+    if (Found.Num() > 1)
     {
-        if (!Graph)
+        TArray<FString> Matches;
+        for (UEdGraphNode* Each : Found)
         {
-            continue;
+            Matches.Add(Each->GetName());
         }
-        for (UEdGraphNode* Each : Graph->Nodes)
-        {
-            if (IsLevelBlueprintNodeNamed(Each, Wanted))
-            {
-                Node = Each;
-                Matches.Add(Each->GetName());
-            }
-        }
-    }
-    if (Matches.Num() > 1)
-    {
         Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); pass one node's nodeId (guid) or node name."),
                 *Wanted, Matches.Num(), *FString::Join(Matches, TEXT(", "))),

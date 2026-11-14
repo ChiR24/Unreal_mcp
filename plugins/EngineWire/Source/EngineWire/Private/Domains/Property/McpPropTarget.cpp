@@ -3,6 +3,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPActorBinding.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
@@ -194,15 +195,7 @@ UActorComponent* PathComponent(UObject* Root, const FString& Path, FString& OutR
   if (!Actor || !Path.Split(TEXT("."), &Head, &OutRest)) {
     return nullptr;
   }
-  if (const FObjectProperty* Held = FindFProperty<FObjectProperty>(Actor->GetClass(), FName(*Head))) {
-    return Cast<UActorComponent>(Held->GetObjectPropertyValue_InContainer(Actor));
-  }
-  TArray<UActorComponent*> Components;
-  Actor->GetComponents(Components);
-  UActorComponent* const* Named = Components.FindByPredicate([&Head](const UActorComponent* Each) {
-    return Each && Each->GetName().Equals(Head, ESearchCase::IgnoreCase);
-  });
-  return Named ? *Named : nullptr;
+  return McpFindActorComponent(Actor, Head, UActorComponent::StaticClass());
 }
 }
 

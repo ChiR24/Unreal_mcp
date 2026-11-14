@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorMove.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorSpawnHelpers.h"
+#include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -63,7 +64,7 @@ double HiddenShare(const UWorld& World, const FCollisionQueryParams& Params, con
 void ReadCamera(AActor* Actor, const FString& Label, double Asked, double Default, FFrameCamera& Out, FString& OutError)
 {
     Out.Actor = Actor;
-    Out.Label = Actor ? Actor->GetActorLabel() : Label;
+    Out.Label = Actor ? McpActorRef(Actor) : Label;
     Out.Component = Actor ? Actor->FindComponentByClass<UCameraComponent>() : nullptr;
     if (Actor && !Out.Component)
     {
@@ -184,7 +185,7 @@ TSharedPtr<FJsonObject> DescribeShot(const FProblem& Problem, const FShot& Shot,
         const FVector2D& Target = Problem.Targets[Index];
         const FVector2D& Screen = Shot.Screen[Index];
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
-        Row->SetStringField(TEXT("actorName"), Subjects[Index]->GetActorLabel());
+        Row->SetStringField(TEXT("actorName"), McpActorRef(Subjects[Index]));
         Row->SetArrayField(TEXT("target"), ScreenPoint(Target));
         Row->SetArrayField(TEXT("screen"), ScreenPoint(Screen));
         Row->SetNumberField(TEXT("error"), McpRoundTo(FVector2D::Distance(Screen, Target), 1000.0));
@@ -207,7 +208,7 @@ FString ShotMessage(const FProblem& Problem, const FShot& Shot, const FFrameCame
     FVector Middle = FVector::ZeroVector;
     for (int32 Index = 0; Index < Subjects.Num(); ++Index)
     {
-        Names.Add(Subjects[Index]->GetActorLabel());
+        Names.Add(McpActorRef(Subjects[Index]));
         Worst = FMath::Max(Worst, FVector2D::Distance(Shot.Screen[Index], Problem.Targets[Index]));
         Middle += Problem.Subjects[Index].Center / Subjects.Num();
         if (Shot.Occluded[Index] > 0.0)

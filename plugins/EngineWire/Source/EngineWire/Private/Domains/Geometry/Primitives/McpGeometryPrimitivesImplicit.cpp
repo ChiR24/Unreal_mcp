@@ -251,7 +251,6 @@ bool HandleCreateSdf(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("cellSize"), Cubes.CubeSize);
     Result->SetNumberField(TEXT("vertexCount"), VertexCount);
     Result->SetNumberField(TEXT("triangleCount"), TriangleCount);
-    McpHandlerUtils::AddVerification(Result, NewActor);
     Self->SendAutomationResponse(Socket, RequestId, true, Authored == Shapes.Num()
         ? FString::Printf(TEXT("SDF mesh created from %d shapes"), Authored)
         : FString::Printf(TEXT("SDF mesh created from %d shapes (%d with repeat and mirror copies)"), Authored, Shapes.Num()), Result);

@@ -33,11 +33,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   USCS_Node *ComponentNode = FindScsNodeByName(SCS, ComponentName);
 
   if (!ComponentNode) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Component not found: %s"), *ComponentName));
-    return Result;
+    return SCSFail(Result, FString::Printf(TEXT("Component not found: %s"), *ComponentName), TEXT("SCS_COMPONENT_NOT_FOUND"));
   }
 
   USCS_Node *NewParentNode = nullptr;
@@ -77,9 +73,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
         AddSCSNodeVerification(Result, SCS, ComponentNode);
         return Result;
       }
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(TEXT("error"), AttachError);
-      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PARENT_NOT_FOUND"));
+      SCSFail(Result, AttachError, TEXT("SCS_PARENT_NOT_FOUND"));
       AddSCSNodeVerification(Result, SCS, ComponentNode);
       return Result;
     }
@@ -113,11 +107,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   }
 
   if (NewParentNode && NewParentNode->IsChildOf(ComponentNode)) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        TEXT("Cannot create circular parent-child relationship"));
-    return Result;
+    return SCSFail(Result, TEXT("Cannot create circular parent-child relationship"), TEXT("CYCLIC_PARENT"));
   }
 
   if (OldParent) {
@@ -141,13 +131,10 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   USCS_Node *VerifiedNode = FindScsNodeByName(SCS, ComponentName);
   if (!VerifiedNode ||
       !SCSParentMatches(SCS, VerifiedNode, ExpectedParentName)) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Verification failed: Component '%s' was not reparented to '%s'"),
-                        *ComponentName, *ParentDisplayName));
-    Result->SetStringField(TEXT("errorCode"),
-                           TEXT("SCS_REPARENT_VERIFICATION_FAILED"));
+    SCSFail(Result,
+            FString::Printf(TEXT("Verification failed: Component '%s' was not reparented to '%s'"),
+                            *ComponentName, *ParentDisplayName),
+            TEXT("SCS_REPARENT_VERIFICATION_FAILED"));
     if (VerifiedNode) {
       AddSCSNodeVerification(Result, SCS, VerifiedNode);
     }

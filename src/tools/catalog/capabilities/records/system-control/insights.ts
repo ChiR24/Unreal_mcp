@@ -9,6 +9,8 @@ import { buildCoreRecord } from '../core/builder.js';
 const PT = 'system_control';
 const DOM = 'insights';
 const FAM = 'insights';
+// McpInsightsRequests.cpp checks each name; the whole value is trimmed, and each name between commas too.
+const CHANNELS = { type: 'string', description: 'Trace channels: names separated by commas (spaces only round a comma), each 1 to 64 letters, digits, underscores, hyphens or dots.' };
 
 export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -20,7 +22,7 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A new trace session must be started.'],
     whenNotToUse: ['A session is already running (use pause/resume/stop).'],
     inputProps: {
-      channels: { type: 'string', description: 'Trace channels (validated: letters, digits, underscore, comma, space, hyphen).' },
+      channels: CHANNELS,
       connectionType: { type: 'string', enum: ['file', 'network'], description: 'Trace connection type; network is restricted to loopback.' },
       host: { type: 'string', description: 'Trace host (loopback for network).' },
       port: { type: 'number', description: 'Trace port.' },
@@ -43,7 +45,7 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The Insights GUI must be launched for trace analysis.'],
     whenNotToUse: ['Only a trace session is needed (use start_session).'],
     inputProps: {
-      channels: { type: 'string', description: 'Trace channels (validated: letters, digits, underscore, comma, space, hyphen).' },
+      channels: CHANNELS,
       connectionType: { type: 'string', enum: ['file', 'network'], description: 'Trace connection type; network is restricted to loopback.' },
       traceFile: { type: 'string', description: 'File mode: .utrace file name, resolved inside Saved/Profiling (default a generated name).' },
       host: { type: 'string', description: 'Trace host (loopback for network).' },
@@ -67,7 +69,7 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A live session without capture is sufficient (use start_session).'],
     inputProps: {
       traceFile: { type: 'string', description: '.utrace file name, resolved inside Saved/Profiling (default a generated name).' },
-      channels: { type: 'string', description: 'Trace channels (validated).' },
+      channels: CHANNELS,
       overwrite: { type: 'boolean', description: 'Overwrite existing trace files.' },
       launchViewer: { type: 'boolean', description: 'Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants.' },
     },

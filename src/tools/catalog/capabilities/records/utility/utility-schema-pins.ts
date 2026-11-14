@@ -42,11 +42,11 @@ export const NUMBER_FIELDS = new Set([
   'velocityScale', 'occlusionVolumeScale', 'occlusionFilterScale',
   'occlusionInterpolationTime', 'netUpdateFrequency', 'minNetUpdateFrequency',
   'netPriority', 'netCullDistanceSquared', 'correctionThreshold', 'smoothingRate',
-  'priority', 'playerIndex', 'controllerId', 'serverPort', 'attenuationRadius',
+  'priority', 'serverPort', 'attenuationRadius',
   'attenuationFalloff', 'numRounds', 'roundTime', 'intermissionTime', 'numTeams',
   'teamSize', 'scorePerKill', 'scorePerAssist', 'scorePerObjective', 'winScore',
   'respawnDelay', 'teamIndex', 'scale',
-  'lowPassFilterFrequency', 'maxRespawns', 'localPlayerNum', 'maxPlayers',
+  'lowPassFilterFrequency', 'maxRespawns',
   'loopCount', 'delay', 'childIndex', 'pitchAdjuster', 'eqPriority', 'lowFrequency', 'lowGain',
   'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain',
   'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'lfeBleed',
@@ -55,6 +55,14 @@ export const NUMBER_FIELDS = new Set([
 ]);
 
 /** Field names whose value is an arbitrary reflection-boundary object. */
+/** Field names that are whole numbers on the wire, with the bounds their handler holds (each is cast to int32). */
+export const INTEGER_FIELDS: Readonly<Record<string, { minimum: number; maximum?: number }>> = {
+  maxPlayers: { minimum: 1 },
+  controllerId: { minimum: -1 },
+  playerIndex: { minimum: 0 },
+  localPlayerNum: { minimum: 0, maximum: 255 },
+};
+
 export const OBJECT_FIELDS = new Set(['properties', 'settings', 'voiceSettings', 'eqSettings']);
 
 /**
@@ -334,6 +342,8 @@ export function property(name: string): JsonObject {
   const description = FIELD_DESCRIPTIONS[name];
   if (description === undefined) throw new TypeError(`utility field has no pinned description: ${name}`);
   if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description };
+  const whole = INTEGER_FIELDS[name];
+  if (whole !== undefined) return { type: 'integer', ...whole, description };
   if (NUMBER_FIELDS.has(name)) return { type: 'number', description };
   if (VECTOR_FIELDS.has(name)) return { type: 'array', description, items: { type: 'number' }, minItems: 3, maxItems: 3 };
   if (OBJECT_FIELDS.has(name)) {

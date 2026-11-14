@@ -28,7 +28,7 @@ export const EXPLORE_RECORDS: readonly CapabilityRecordSource[] = [
       actorName: { type: 'string', description: 'start: the pawn to drive (one with a controller, such as a placed Character an AI controller possesses at Play); default the player\'s.' },
       cellCm: { type: 'number', description: 'start: the cell size on the floor plan, in cm (50-2000, default 200).' },
       heightCm: { type: 'number', description: 'start: the height band, in cm (25-1000, default 100): a ledge above another floor is another cell.' },
-      track: { type: 'array', items: { type: 'string' }, description: 'start: assertions in execute\'s expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them; such cells are marked.' },
+      track: { type: 'array', items: { type: 'string' }, description: 'start: assertions in execute\'s expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them.' },
       seed: { type: 'number', description: 'start: the seed of the random moves (default 1): the same seed repeats the same moves.' },
       seconds: { type: 'number', description: 'start and continue: real seconds to explore before answering (1-22, default 10).' },
       cell: { type: 'number', description: 'continue: the archive index of the cell the next round starts from (read with detail lists them).' },

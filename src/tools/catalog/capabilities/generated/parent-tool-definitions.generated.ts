@@ -7739,7 +7739,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them; such cells are marked."
+          "description": "start: assertions in execute's expect language whose truth joins the cell (Door_1 hidden, BP_Key exists), at most 16: the same place with a door open is a new cell to explore from. A teleport cannot restore them."
         },
         "type": {
           "type": "string",
@@ -8748,7 +8748,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Runtime report filter expression."
+          "description": "Keep the actors whose label, name or class name holds this text (any case)."
         },
         "format": {
           "type": "string",
@@ -8862,7 +8862,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bounding_box",
             "export"
           ],
-          "description": "Which query object variant to run.\nlist: List world actors (cross-parent to control_actor; dispatches action list_actors).\nby_tag: Find world actors by tag (cross-parent to control_actor).\nmetadata: Read metadata key/value pairs from a world actor (cross-parent to control_actor).\nbounding_box: Return the world-space bounding box of a world actor (cross-parent to control_actor).\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
+          "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs): each one's name, label, path and class, limit rows (default 100) from offset. filter keeps the actors whose label, name or class holds it (any case); count, matchedCount, totalCount and hasMore say how many there are, isPieWorld and worldName which world was read.\nby_tag: Find the level's actors that carry tag (the play world while a game runs): each one's label, name, path and class, the first limit (1-1000, default 200) with truncated and totalCount when more match. A missing tag is refused (INVALID_ARGUMENT).\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
         },
         "markDirty": {
           "type": "boolean",
@@ -24124,7 +24124,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "roof",
             "sdf"
           ],
-          "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nroof: Create a hip roof mesh actor over a footprint: every face rises from its outline edge at pitch (default 30 degrees) and meets the others along ridges, hips and valleys where the outline's straight skeleton puts them, for any simple outline of 3 to 64 corners in either winding: rectangles, L, T and U plans, bays and angled walls (no holes). footprint is in the actor's space at the top of the walls (z 0); overhang (cm, default 0) carries the roof planes out past the walls, the eaves dropping by overhang x tan(pitch); base (default true) closes it underneath at the eaves' height, so the mesh is watertight (with an overhang that underside lies below the wall top: set the roof that much higher, or base false to leave it open). Each face is its own polygroup, its UVs in metres along its eave and up its slope, so a tiling roof material lies in rows along every eave. The reply gives faces (one per outline edge), ridgeHeight above the walls, eaveHeight, triangles and watertight; one undo step. Refused, making nothing: INVALID_ARGUMENT (fewer than 3 corners apart, an outline that crosses itself, an overhang that folds it over itself), ROOF_FAILED (faces that do not make a clean mesh).\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
+          "description": "Which create primitive variant to run.\nbox: Create a box dynamic mesh actor.\nsphere: Create a sphere dynamic mesh actor: a box-sphere of radius (default 50) with the same number of steps along each of its three axes, numRings (default 16), else radialSegments; the two are one count, not rings and segments apart.\ncylinder: Create a cylinder dynamic mesh actor.\ncone: Create a cone dynamic mesh actor.\ncapsule: Create a capsule dynamic mesh actor.\nplane: Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.\ndisc: Create a disc dynamic mesh actor.\nring: Create a ring dynamic mesh actor.\ntorus: Create a torus dynamic mesh actor.\npipe: Create a pipe dynamic mesh actor.\narch: Create an arch dynamic mesh actor.\nramp: Create a ramp dynamic mesh actor.\nstairs: Create a stairs dynamic mesh actor.\nspiral_stairs: Create a spiral stairs dynamic mesh actor.\nroof: Create a hip roof mesh actor over a footprint: every face rises from its outline edge at pitch (default 30 degrees) and meets the others along ridges, hips and valleys where the outline's straight skeleton puts them, for any simple outline of 3 to 64 corners in either winding: rectangles, L, T and U plans, bays and angled walls (no holes). footprint is in the actor's space at the top of the walls (z 0); overhang (cm, default 0) carries the roof planes out past the walls, the eaves dropping by overhang x tan(pitch); base (default true) closes it underneath at the eaves' height, so the mesh is watertight (with an overhang that underside lies below the wall top: set the roof that much higher, or base false to leave it open). Each face is its own polygroup, its UVs in metres along its eave and up its slope, so a tiling roof material lies in rows along every eave. The reply gives faces (one per outline edge), ridgeHeight above the walls, eaveHeight, triangles and watertight; one undo step. Refused, making nothing: INVALID_ARGUMENT (fewer than 3 corners apart, an outline that crosses itself, an overhang that folds it over itself), ROOF_FAILED (faces that do not make a clean mesh).\nsdf: Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot."
         },
         "profile": {
           "type": "array",
@@ -27606,7 +27606,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Context path (canonical /Game asset path)."
         },
         "controllerId": {
-          "type": "number",
+          "type": "integer",
+          "minimum": -1,
           "description": "Controller id."
         },
         "ctrl": {
@@ -27688,7 +27689,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which create framework class variant to run.\ngame_mode: Create a GameMode Blueprint (name, in path) whose parent is GameModeBase or the parentClass given (a child of GameModeBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). defaultPawnClass, playerControllerClass, gameStateClass, playerStateClass and hudClass set its classes; each must load and be the kind its slot holds (a Pawn for the pawn), checked before anything is created. Saved unless save is false (saved); the reply gives assetPath.\ngame_state: Create a GameState Blueprint (name, in path) whose parent is GameStateBase or the parentClass given (a child of GameStateBase; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\ngame_instance: Create a GameInstance Blueprint (name, in path) whose parent is GameInstance or the parentClass given (a child of GameInstance; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nplayer_controller: Create a PlayerController Blueprint (name, in path) whose parent is PlayerController or the parentClass given (a child of PlayerController; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nplayer_state: Create a PlayerState Blueprint (name, in path) whose parent is PlayerState or the parentClass given (a child of PlayerState; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath.\nhud: Create a HUD Blueprint (name, in path) whose parent is HUD or the parentClass given (a child of HUD; an unloadable one, or one that is not, is refused). An asset already at the path is refused (CREATION_FAILED). Saved unless save is false (saved); the reply gives assetPath."
         },
         "localPlayerNum": {
-          "type": "number",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
           "description": "Local player num."
         },
         "makeDefault": {
@@ -27716,7 +27719,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Game net driver MaxInternetClientRate (bytes per second per internet client)."
         },
         "maxPlayers": {
-          "type": "number",
+          "type": "integer",
+          "minimum": 1,
           "description": "Max players."
         },
         "micInputGain": {
@@ -27800,7 +27804,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Player controller class."
         },
         "playerIndex": {
-          "type": "number",
+          "type": "integer",
+          "minimum": 0,
           "description": "Player index."
         },
         "playerName": {
@@ -28861,6 +28866,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "integer",
+              "description": "New end of the section in display-rate frames, after its start."
+            },
+            {
+              "type": "integer",
               "description": "Playback range end frame (exclusive); used when durationFrames is absent."
             },
             {
@@ -28871,10 +28880,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "integer",
               "minimum": 1,
               "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
-            },
-            {
-              "type": "number",
-              "description": "New end of the section in display-rate frames, after its start."
             }
           ],
           "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
@@ -29328,7 +29333,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "positionOnRail": {
           "type": "number",
-          "description": "Position on the rail (0-1)."
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Where the camera mount sits along the rail spline: 0 at its start, 1 at its end."
         },
         "precacheFile": {
           "type": "boolean",
@@ -29694,10 +29701,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Section start in display-rate frames (default 0)."
         },
         "startFrame": {
-          "type": [
-            "integer",
-            "number"
-          ],
+          "type": "integer",
           "description": "Custom playback range start frame (paired with endFrame)."
         },
         "startTime": {
@@ -30897,7 +30901,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "channels": {
           "type": "string",
-          "description": "Trace channels (validated: letters, digits, underscore, comma, space, hyphen)."
+          "description": "Trace channels: names separated by commas (spaces only round a comma), each 1 to 64 letters, digits, underscores, hyphens or dots."
         },
         "childClass": {
           "type": "string",
