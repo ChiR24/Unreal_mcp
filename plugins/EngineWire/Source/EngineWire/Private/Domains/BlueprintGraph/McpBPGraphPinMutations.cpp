@@ -215,14 +215,8 @@ static bool BreakPinLinks(FActionContext& Context)
         return false;
     }
 
-    const FString NodeId = McpGetFirstStringField(
-        Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("fromNodeId"),
-                          TEXT("fromNode"), TEXT("sourceNodeGuid"),
-                          TEXT("sourceNodeId"), TEXT("sourceNode")});
-    const FString PinName = McpGetFirstStringField(
-        Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("fromPinName"),
-                          TEXT("fromPin"), TEXT("sourcePinName"),
-                          TEXT("sourcePin"), TEXT("sourceOutputPin")});
+    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
+    const FString PinName = GetJsonStringField(Context.Payload, TEXT("pinName"));
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {

@@ -41,19 +41,8 @@ bool UEngineWireSubsystem::HandleBehaviorTreeAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
+  // manage_ai's dispatcher calls this only for a sub-action of McpConsolidatedActions::BehaviorTree() it read here.
   const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
-  if (SubAction.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Missing 'subAction' for manage_behavior_tree"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
 
   const McpBehaviorTreeHandlers::FRequestContext Context{
       RequestId, Payload, RequestingSocket};

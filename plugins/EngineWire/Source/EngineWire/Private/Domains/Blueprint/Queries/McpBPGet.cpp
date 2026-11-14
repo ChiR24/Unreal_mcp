@@ -13,34 +13,23 @@
 namespace McpBlueprintHandlers {
 bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if ((ActionMatchesPattern(TEXT("blueprint_get")) ||
-       ActionMatchesPattern(TEXT("get_blueprint")) ||
-       ActionMatchesPattern(TEXT("get"))) &&
-      !Lower.Contains(TEXT("scs"))) {
+  if (ActionMatchesPattern(TEXT("get_blueprint")) || ActionMatchesPattern(TEXT("get"))) {
     FString Path = RequireBlueprintPath(Context, TEXT("blueprint_get"));
     if (Path.IsEmpty()) {
       return true;
     }
 
-    bool bExists = false;
-    TSharedPtr<FJsonObject> Entry = nullptr;
-
     FString Normalized;
     FString Err;
     UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, Err);
-    bExists = (BP != nullptr);
-    if (bExists) {
-      const FString Key =
-          !Normalized.TrimStartAndEnd().IsEmpty() ? Normalized : Path;
-      Entry = FEngineWire_BuildBlueprintSnapshot(BP, Key);
-    }
-
-    if (!bExists) {
+    if (!BP) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
                              TEXT("Blueprint not found"),
                              TEXT("NOT_FOUND"));
       return true;
     }
+    const TSharedPtr<FJsonObject> Entry = FEngineWire_BuildBlueprintSnapshot(
+        BP, !Normalized.TrimStartAndEnd().IsEmpty() ? Normalized : Path);
 
     // The published `get` contract is {blueprintPath, propertyName} ->
     // {propertyValue}. Resolve the requested property from the snapshot's

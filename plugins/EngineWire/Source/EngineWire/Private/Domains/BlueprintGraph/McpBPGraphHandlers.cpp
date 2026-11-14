@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/BlueprintGraph/Code/McpGraphCode.h"
 #include "Domains/BlueprintGraph/Lint/McpBPLint.h"
 
@@ -151,18 +152,13 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
     }
 
     // connect_nodes (edit_graph's folded name for connect_pins, the word callers bring from the material graph) runs as it.
-    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
     McpBlueprintGraphHandlers::FActionContext Context{
         this,
         RequestId,
         Payload,
         RequestingSocket,
         SubAction == TEXT("connect_nodes") ? FString(TEXT("connect_pins")) : SubAction};
-
-    if (!McpBlueprintGraphHandlers::ValidateProvidedPaths(Context))
-    {
-        return true;
-    }
 
     if (McpBlueprintGraphHandlers::HandleListNodeTypes(Context) ||
         McpBlueprintGraphHandlers::HandleFindFunctions(Context))

@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpBPCreateHandlers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -93,12 +94,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
     const bool bExists = McpAssetExists(CheckPath, &AssetData);
     FString AssetClass;
     if (bExists) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
-#else
-      // UE 5.0: AssetClass is FName
-      AssetClass = AssetData.AssetClass.ToString();
-#endif
+      AssetClass = FPackageName::ObjectPathToObjectName(MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

@@ -160,8 +160,7 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
     {
         PlaceOnGrid(State, Payload);
     }
-    // The handlers read `x`/`y` before `posX`/`posY`; move them over so a move below
-    // (which writes posX/posY) takes effect.
+    // A step may place its node with `x`/`y`; the handlers read `posX`/`posY`, which a move below writes too.
     double Coord = 0.0;
     if (Payload->TryGetNumberField(TEXT("x"), Coord))
     {

@@ -36,41 +36,21 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
 
     FString FunctionName;
     LocalPayload->TryGetStringField(TEXT("functionName"), FunctionName);
-    FString VariableName;
-    LocalPayload->TryGetStringField(TEXT("variableName"), VariableName);
     FString NodeName;
     LocalPayload->TryGetStringField(TEXT("nodeName"), NodeName);
-    // The published add_node schema declares memberName, not functionName/
-    // variableName, so the only spelling a caller can legally send was the one
-    // never read: {nodeType:"GetVariable", memberName:"X"} produced a
-    // K2Node_VariableGet with an unset VariableReference and therefore zero
-    // pins, reported as success. Backfill from the declared field.
+    // memberName names the variable of a variable node, and stands in for functionName and nodeName when they are not
+    // sent: {nodeType:"GetVariable", memberName:"X"} is the call the record describes.
     FString MemberName;
     LocalPayload->TryGetStringField(TEXT("memberName"), MemberName);
-    if (VariableName.IsEmpty()) VariableName = MemberName;
+    FString VariableName = MemberName;
     if (FunctionName.IsEmpty()) FunctionName = MemberName;
-    if (NodeName.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("customEventName"), NodeName);
-    }
     if (NodeName.IsEmpty()) {
       LocalPayload->TryGetStringField(TEXT("eventName"), NodeName);
     }
     if (NodeName.IsEmpty()) NodeName = MemberName;
     FString TargetClass;
     LocalPayload->TryGetStringField(TEXT("targetClass"), TargetClass);
-    // Backfill from legacy/alternate payload fields so cast and CreateWidget
-    // nodes created by existing callers (which send memberClass/nodeClass/
-    // widgetType, or encode the class in a "CastTo<Class>" nodeType) still
-    // resolve a target. Mirrors ReadTargetClassPayload on the create_node path.
-    if (TargetClass.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("memberClass"), TargetClass);
-    }
-    if (TargetClass.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("nodeClass"), TargetClass);
-    }
-    if (TargetClass.IsEmpty()) {
-      LocalPayload->TryGetStringField(TEXT("widgetType"), TargetClass);
-    }
+    // A cast nodeType may carry its class: "CastTo<Class>".
     if (TargetClass.IsEmpty() &&
         NodeType.StartsWith(TEXT("CastTo"), ESearchCase::IgnoreCase)) {
       TargetClass = NodeType.Mid(6);

@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Safety/McpSafeOperations.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
@@ -76,7 +77,9 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
         return true;
     }
 
-    UBlueprint *BP = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    FString LoadedBlueprintPath;
+    FString BlueprintLoadError;
+    UBlueprint *BP = LoadBlueprintAsset(BlueprintPath, LoadedBlueprintPath, BlueprintLoadError);
     if (!BP)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,

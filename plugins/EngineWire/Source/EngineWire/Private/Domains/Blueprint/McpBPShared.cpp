@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Core/Routing/McpConsolidatedActionRouting.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -8,20 +9,6 @@
 
 namespace McpBlueprintHandlers {
 namespace {
-FString CleanBlueprintAction(const FString &Action) {
-  FString CleanAction;
-  CleanAction.Reserve(Action.Len());
-  for (int32 Idx = 0; Idx < Action.Len(); ++Idx) {
-    const TCHAR C = Action[Idx];
-    if (C < 32 || C == 0x200B || C == 0xFEFF || C == 0x200C || C == 0x200D) {
-      continue;
-    }
-    CleanAction.AppendChar(C);
-  }
-  CleanAction.TrimStartAndEndInline();
-  return CleanAction;
-}
-
 FString CompactActionKey(const FString &Action) {
   FString AlphaNumLower;
   AlphaNumLower.Reserve(Action.Len());
@@ -34,31 +21,17 @@ FString CompactActionKey(const FString &Action) {
   return AlphaNumLower;
 }
 
-void ExtractNestedManageAction(FBlueprintActionContext &Context,
-                               FString &LowerNormalized) {
-  if (!(LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||
-        LowerNormalized.StartsWith(TEXT("manageblueprint"))) ||
-      !Context.LocalPayload.IsValid()) {
+// manage_blueprint carries the action to run as its sub-action, read as every dispatcher reads it.
+void ExtractNestedManageAction(FBlueprintActionContext &Context) {
+  if (Context.Lower != TEXT("manage_blueprint")) {
     return;
   }
-  // subAction first, then `action` as the fallback - the same priority the
-  // pre-queue gate's NormalizeAction uses, so the nested route cannot diverge
-  // from what the gate authorized.
-  FString Nested;
-  if ((!Context.LocalPayload->TryGetStringField(TEXT("subAction"), Nested) ||
-       Nested.TrimStartAndEnd().IsEmpty()) &&
-      (!Context.LocalPayload->TryGetStringField(TEXT("action"), Nested) ||
-       Nested.TrimStartAndEnd().IsEmpty())) {
+  const FString Nested = McpConsolidatedActions::GetPayloadSubAction(Context.LocalPayload);
+  if (Nested.IsEmpty()) {
     return;
   }
-  Context.CleanAction = CleanBlueprintAction(Nested);
-  if (Context.CleanAction.IsEmpty()) {
-    return;
-  }
-  Context.Lower = Context.CleanAction.ToLower();
-  LowerNormalized = Context.Lower;
-  LowerNormalized.ReplaceInline(TEXT("-"), TEXT("_"));
-  LowerNormalized.ReplaceInline(TEXT(" "), TEXT("_"));
+  Context.CleanAction = Nested;
+  Context.Lower = Nested;
   UE_LOG(LogEngineWireSubsystem, Verbose,
          TEXT("manage_blueprint nested action detected: %s -> %s"),
          *Context.Action, *Context.CleanAction);
@@ -72,12 +45,9 @@ FBlueprintActionContext BuildBlueprintActionContext(
   FBlueprintActionContext Context{Bridge, RequestId, Action};
   Context.RequestingSocket = RequestingSocket;
   Context.LocalPayload = Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
-  Context.CleanAction = CleanBlueprintAction(Action);
-  Context.Lower = Context.CleanAction.ToLower();
-  FString LowerNormalized = Context.Lower;
-  LowerNormalized.ReplaceInline(TEXT("-"), TEXT("_"));
-  LowerNormalized.ReplaceInline(TEXT(" "), TEXT("_"));
-  ExtractNestedManageAction(Context, LowerNormalized);
+  Context.CleanAction = Action;
+  Context.Lower = Action.ToLower();
+  ExtractNestedManageAction(Context);
   Context.AlphaNumLower = CompactActionKey(Context.CleanAction);
   return Context;
 }

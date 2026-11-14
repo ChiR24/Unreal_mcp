@@ -1,4 +1,3 @@
-#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/Blueprint/McpBlueprintUtils.h"
 // Supplies MCP_BLUEPRINT_ACTION_LOCALS, which declares RequestId /
 // RequestingSocket / LocalPayload / Bridge for every handler in this file. Every
@@ -13,7 +12,6 @@
 #include "Foundation/BridgeHelpers/Responses/McpJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
-#include "Misc/ScopeExit.h"
 
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -44,13 +42,8 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
         LocalPayload->TryGetField(TEXT("defaultValue"));
     FString Category;
     LocalPayload->TryGetStringField(TEXT("category"), Category);
-    const bool bReplicated =
-        LocalPayload->HasField(TEXT("isReplicated"))
-            ? GetJsonBoolField(LocalPayload, TEXT("isReplicated"))
-            : false;
-    const bool bPublic = LocalPayload->HasField(TEXT("isPublic"))
-                             ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
-                             : false;
+    const bool bReplicated = GetJsonBoolField(LocalPayload, TEXT("isReplicated"));
+    const bool bPublic = GetJsonBoolField(LocalPayload, TEXT("isPublic"));
 
     // Validate variableType BEFORE checking existence to ensure parameter
     // validation occurs even if variable already exists. Route through the
@@ -69,29 +62,21 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     }
     const FEdGraphPinType PinType = VarTypeResolved.PinType;
 
-    const FString RequestedPath = Path;
-    FString RegKey = Path;
-    FString NormPath;
-    if (FindBlueprintNormalizedPath(Path, NormPath) &&
-        !NormPath.TrimStartAndEnd().IsEmpty()) {
-      RegKey = NormPath;
-    }
-
     UE_LOG(LogEngineWireSubsystem, Log,
            TEXT("HandleBlueprintAction: blueprint_add_variable start "
                 "RequestId=%s Path=%s VarName=%s"),
-           *RequestId, *RequestedPath, *VarName);
+           *RequestId, *Path, *VarName);
 
 
     FString LocalNormalized;
     FString LocalLoadError;
     UBlueprint *Blueprint =
-        LoadBlueprintAsset(RequestedPath, LocalNormalized, LocalLoadError);
+        LoadBlueprintAsset(Path, LocalNormalized, LocalLoadError);
     if (!Blueprint) {
       UE_LOG(LogEngineWireSubsystem, Warning,
              TEXT("HandleBlueprintAction: failed to load "
                   "blueprint_add_variable target %s (%s)"),
-             *RegKey, *LocalLoadError);
+             *Path, *LocalLoadError);
       Bridge.SendAutomationError(RequestingSocket, RequestId,
                           LocalLoadError.IsEmpty()
                               ? TEXT("Failed to load blueprint")
@@ -101,7 +86,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     }
 
     const FString RegistryKey =
-        !LocalNormalized.IsEmpty() ? LocalNormalized : RequestedPath;
+        !LocalNormalized.IsEmpty() ? LocalNormalized : Path;
 
     // PinType was already validated before loading the blueprint
 
@@ -118,6 +103,25 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     // holds it, so the request is not echoed beside it.
     Response->SetStringField(TEXT("variableName"), VarName);
 
+    // The same type for a caller: a Blueprint float and double are one real type.
+    const auto SameVariableType = [](FEdGraphPinType A, FEdGraphPinType B) {
+      for (FEdGraphPinType *Type : {&A, &B}) {
+        if (Type->PinCategory == UEdGraphSchema_K2::PC_Real) {
+          Type->PinSubCategory = UEdGraphSchema_K2::PC_Double;
+        }
+      }
+      return A == B;
+    };
+    if (ExistingVar && !SameVariableType(ExistingVar->VarType, PinType)) {
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("'%s' already exists as %s, not %s: remove or rename it first (remove_variable, "
+                               "rename_variable), or pick another variableName."),
+                          *VarName, *McpBlueprintUtils::DescribePinType(ExistingVar->VarType),
+                          *McpBlueprintUtils::DescribePinType(PinType)),
+          TEXT("VARIABLE_NAME_CONFLICT"));
+      return true;
+    }
     if (ExistingVar) {
       UE_LOG(
           LogEngineWireSubsystem, Log,
@@ -158,11 +162,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     NewVar.VarName = FName(*VarName);
     NewVar.VarGuid = FGuid::NewGuid();
     NewVar.FriendlyName = VarName;
-    if (!Category.IsEmpty()) {
-      NewVar.Category = FText::FromString(Category);
-    } else {
-      NewVar.Category = FText::GetEmpty();
-    }
+    NewVar.Category = FText::FromString(Category);
     NewVar.VarType = PinType;
     NewVar.PropertyFlags |= CPF_Edit;
     NewVar.PropertyFlags |= CPF_BlueprintVisible;

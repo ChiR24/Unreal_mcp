@@ -217,7 +217,7 @@ bool PrepareBlueprintAndGraph(FActionContext& Context, bool bRequireGraph)
     if (AssetPath.IsEmpty())
     {
         Context.SendError(
-            McpPathRefusalMessage(TEXT("asset path"), AssetPathAsGiven),
+            McpPathRefusalMessage(TEXT("blueprintPath"), AssetPathAsGiven),
             TEXT("INVALID_PATH"));
         return false;
     }

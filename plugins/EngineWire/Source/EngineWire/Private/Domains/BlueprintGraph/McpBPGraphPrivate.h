@@ -89,11 +89,11 @@ struct FActionContext
     }
 
     // The node is in the graph at (X, Y): refuse it on an overlap (pulled back out, with coordinates), else mark the
-    // Blueprint changed, save and reply with nodeGuid and where it landed.
-    void FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y) const;
+    // Blueprint changed, save and reply with nodeGuid and where it landed; ExtraFields (a node's own, such as
+    // nodeClass) follow nodeName.
+    void FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y, const TSharedPtr<FJsonObject>& ExtraFields = nullptr) const;
 };
 
-bool ValidateProvidedPaths(const FActionContext& Context);
 // Loads the Blueprint and the graph the payload names; bRequireGraph false lets a read of every graph go on without one.
 bool PrepareBlueprintAndGraph(FActionContext& Context, bool bRequireGraph = true);
 bool HandleListNodeTypes(FActionContext& Context);

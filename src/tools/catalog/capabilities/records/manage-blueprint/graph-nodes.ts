@@ -284,7 +284,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'List the Blueprint node types create_node can make, animation graph nodes included: all of them, or those whose class or display name contains filter.',
     whenToUse: ['The set of creatable node types must be enumerated before node creation.', 'An animation graph node class must be found by part of its name (filter IK, Blend, Bone) before create_node places it in an AnimGraph.'],
     whenNotToUse: ['A specific node type is already known.'],
-    inputProps: { blueprintPath: P.blueprintPath, filter: { type: 'string', description: 'Only node types whose class or display name contains this text (case-insensitive, spaces ignored), e.g. IK or TwoBoneIK.' } },
+    inputProps: { filter: { type: 'string', description: 'Only node types whose class or display name contains this text (case-insensitive, spaces ignored), e.g. IK or TwoBoneIK.' } },
     outputProps: {
       nodeTypes: {
         type: 'array',

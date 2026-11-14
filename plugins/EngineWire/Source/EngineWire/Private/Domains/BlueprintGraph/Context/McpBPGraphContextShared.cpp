@@ -113,23 +113,7 @@ void FActionContext::SendResponse(
         Result);
 }
 
-bool ValidateProvidedPaths(const FActionContext& Context)
-{
-    FString BlueprintPath;
-    if (Context.Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
-        !BlueprintPath.IsEmpty())
-    {
-        if (SanitizeProjectRelativePath(BlueprintPath).IsEmpty())
-        {
-            Context.SendError(McpPathRefusalMessage(TEXT("blueprintPath"), BlueprintPath), TEXT("INVALID_PATH"));
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void FActionContext::FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y) const
+void FActionContext::FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y, const TSharedPtr<FJsonObject>& ExtraFields) const
 {
     // Refuse stacked placements: the node is already in the graph, so pull it back out on overlap and fail with
     // coordinates instead of silently stacking.
@@ -151,6 +135,13 @@ void FActionContext::FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y) 
     Result->SetStringField(TEXT("nodeGuid"), NodeGuidText);
     Result->SetStringField(TEXT("nodeId"), NodeGuidText);
     Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
+    if (ExtraFields.IsValid())
+    {
+        for (const auto& Entry : ExtraFields->Values)
+        {
+            Result->SetField(FString(*Entry.Key), Entry.Value); // 5.8 keys are not FString
+        }
+    }
     // Where the node landed and how big it is, so consecutive creates do not stack.
     const FString PlacementWarning = McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
     McpHandlerUtils::AddVerification(Result, Blueprint);

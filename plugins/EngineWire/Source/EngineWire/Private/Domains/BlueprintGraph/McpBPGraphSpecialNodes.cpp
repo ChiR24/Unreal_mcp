@@ -243,39 +243,16 @@ bool TryCreateEnhancedInputNode(
     }
     NewNode->NodePosX = X;
     NewNode->NodePosY = Y;
-    // Refuse stacked placements: estimate from the rebuilt pins and pull the
-    // node back out on overlap, failing with coordinates + free slots.
-    {
-        FString OverlapMessage;
-        TSharedPtr<FJsonObject> OverlapDetails;
-        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
-                                                  McpGraphLayout::NamesNoPosition(Context.Payload)))
-        {
-            Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
-            return true;
-        }
-    }
     if (const UEdGraphSchema* Schema =
             Context.TargetGraph->GetSchema())
     {
         Schema->ForceVisualizationCacheClear();
     }
     Context.TargetGraph->NotifyGraphChanged();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
-    SaveLoadedAssetThrottled(Context.Blueprint);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    // `nodeGuid` is the required output field on the create_node family; see
-    // the note in McpBPGraphPrivate.h.
-    Result->SetStringField(TEXT("nodeGuid"), NewNode->NodeGuid.ToString());
-    Result->SetStringField(TEXT("nodeId"), NewNode->NodeGuid.ToString());
-    Result->SetStringField(TEXT("nodeName"), NewNode->GetName());
-    Result->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
-    Result->SetStringField(TEXT("inputActionPath"), CleanActionPath);
-    // Where the node landed and how big it is, as every other create gives, so consecutive creates do not stack.
-    McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
-    McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Enhanced Input node created."), Result);
+    TSharedPtr<FJsonObject> Fields = McpHandlerUtils::CreateResultObject();
+    Fields->SetStringField(TEXT("nodeClass"), NodeClass->GetName());
+    Fields->SetStringField(TEXT("inputActionPath"), CleanActionPath);
+    Context.FinishCreatedNode(NewNode, X, Y, Fields);
     return true;
 }
 }

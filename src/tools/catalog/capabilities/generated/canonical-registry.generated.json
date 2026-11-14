@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8719fa768efb846f",
+  "catalogRevision": "5c514df1b8ab0266",
   "recordCount": 489,
   "records": [
     {
@@ -23035,7 +23035,7 @@
                 "set_metadata",
                 "set_default"
               ],
-              "description": "Which edit variable variant to run.\nadd_variable: Add a member variable named variableName of variableType (basic types, object and class references, structs, enums, arrays, sets and maps, as variableType lists) with defaultValue, category, and the isPublic (instance editable), isReplicated, exposeOnSpawn and exposeToCinematics flags, as one undo step, then compile and save the Blueprint (saved); variable reads the flags back. A name the Blueprint or a parent class already uses is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, and a default its type refuses DEFAULT_NOT_APPLIED; nothing is added then.\nrename_variable: Rename a member variable or a component in a Blueprint; its graph nodes follow.\nset_variable_metadata: Set metadata (tooltip, category, replication) on a Blueprint member variable.\nset_metadata: Set arbitrary metadata key-value pairs on a Blueprint class, or on one member variable.\nset_default: Set a default property value on the Blueprint CDO (Class Default Object)."
+              "description": "Which edit variable variant to run.\nadd_variable: Add a member variable named variableName of variableType (basic types, object and class references, structs, enums, arrays, sets and maps, as variableType lists) with defaultValue, category, and the isPublic (instance editable), isReplicated, exposeOnSpawn and exposeToCinematics flags, as one undo step, then compile and save the Blueprint (saved); variable reads the flags back. A variable the Blueprint already has with that name and type is answered as there already; one of another type, or a name a parent class uses, is VARIABLE_NAME_CONFLICT, a type that resolves to nothing TYPE_RESOLUTION_FAILED, and a default its type refuses DEFAULT_NOT_APPLIED; nothing is added then.\nrename_variable: Rename a member variable or a component in a Blueprint; its graph nodes follow.\nset_variable_metadata: Set metadata (tooltip, category, replication) on a Blueprint member variable.\nset_metadata: Set arbitrary metadata key-value pairs on a Blueprint class, or on one member variable.\nset_default: Set a default property value on the Blueprint CDO (Class Default Object)."
             }
           },
           "required": [
@@ -23229,8 +23229,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0748858fa511dd91c818da3b903750ff528db6247a3c003c545c06e0a869adf2",
-        "content": "15d29d640e5aa5984d9dea3c3d0f021d85058067d80bccd4492f8168d95ffeae"
+        "schema": "0f9a3d97e3001111638bc1c55460084e8ce9b95b942744d3261f5abd6e089ce8",
+        "content": "6a74e2d26ac089fb4fa64194d493d2bc14682c20b305ea5b6a4fd0d64391f845"
       }
     },
     {
@@ -25449,8 +25449,7 @@
             "blueprintPath": [
               "graph",
               "node",
-              "pins",
-              "node_types"
+              "pins"
             ],
             "graphName": [
               "graph",
@@ -25529,7 +25528,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6d5de3fac41eaec597a392d90bee945ec6c4d8494e7c8d67423cbafb97ac9af0",
-        "content": "6338896425575de0c9dcc8dbdf6062cf8cfa9b9405a21c2bde9b49d49f7a44d7"
+        "content": "2f6154df34a8f001ddef0c42749668628ab975cd9aa9fabf354774f44fe9db93"
       }
     },
     {

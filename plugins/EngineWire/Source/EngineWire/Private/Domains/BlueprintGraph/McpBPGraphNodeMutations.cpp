@@ -25,17 +25,9 @@ static bool CreateRerouteNode(FActionContext& Context)
 
     float X = 0.0f;
     float Y = 0.0f;
-    // Match create_node: accept the tool-facing posX/posY names, which reach
-    // this handler as sent.
-    // posX/posY are the declared names, so they win over the legacy x/y.
-    if (!Context.Payload->TryGetNumberField(TEXT("posX"), X))
-    {
-        Context.Payload->TryGetNumberField(TEXT("x"), X);
-    }
-    if (!Context.Payload->TryGetNumberField(TEXT("posY"), Y))
-    {
-        Context.Payload->TryGetNumberField(TEXT("y"), Y);
-    }
+    // As create_node: a batch step's x and y reach here as posX and posY.
+    Context.Payload->TryGetNumberField(TEXT("posX"), X);
+    Context.Payload->TryGetNumberField(TEXT("posY"), Y);
 
     FGraphNodeCreator<UK2Node_Knot> NodeCreator(*Context.TargetGraph);
     UK2Node_Knot* RerouteNode = NodeCreator.CreateNode(false);

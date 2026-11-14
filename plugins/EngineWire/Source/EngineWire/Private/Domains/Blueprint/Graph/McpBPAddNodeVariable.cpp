@@ -13,7 +13,7 @@ namespace McpBlueprintHandlers {
 // "No target pin matched ... ToNode 'K2Node_VariableGet_1' pins: ." from a
 // connect_pins that looked like the real problem.
 //
-// memberClass now does what a caller reading another object's property
+// targetClass does what a caller reading another object's property
 // expects: the node becomes an EXTERNAL member of that class, which gives it
 // a target pin to wire a cast result into (a class this Blueprint is itself
 // keeps a self member, as create_node does). Without it, only the Blueprint's
@@ -52,7 +52,7 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
         FString::Printf(
             TEXT("'%s' is not a variable of '%s', so the node would have no "
                  "pins. Add it with add_variable, or name the class that "
-                 "owns it in memberClass and wire a cast result into the "
+                 "owns it in targetClass and wire a cast result into the "
                  "node's target pin."),
             *VariableName, *BP->GetName()));
     OutErrorMessage = TEXT("Unresolved variable name");

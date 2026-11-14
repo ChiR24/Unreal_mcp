@@ -131,16 +131,9 @@ bool HandleNodeCreationAction(FActionContext& Context)
     Context.Payload->TryGetStringField(TEXT("nodeType"), NodeType);
     float X = 0.0f;
     float Y = 0.0f;
-    // posX/posY are the declared names, so they win over the legacy x/y (a
-    // node read only from x/y landed every declared placement at (0,0)).
-    if (!Context.Payload->TryGetNumberField(TEXT("posX"), X))
-    {
-        Context.Payload->TryGetNumberField(TEXT("x"), X);
-    }
-    if (!Context.Payload->TryGetNumberField(TEXT("posY"), Y))
-    {
-        Context.Payload->TryGetNumberField(TEXT("y"), Y);
-    }
+    // A batch step's x and y reach here as posX and posY (RunPlacedStep moves them).
+    Context.Payload->TryGetNumberField(TEXT("posX"), X);
+    Context.Payload->TryGetNumberField(TEXT("posY"), Y);
 
     if (!(McpGraphCode::TryCreateMenuNode(Context, X, Y) ||
           TryCreateCommonFunctionNode(Context, NodeType, X, Y) ||

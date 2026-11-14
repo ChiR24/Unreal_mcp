@@ -59,12 +59,10 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 
     // The engine deletes the variable's get and set nodes with it, as the editor does once you confirm; the
     // reply named none of them, so logic they fed went unwired without a word. removedNodes lists them.
-    TArray<TSharedPtr<FJsonValue>> Removed;
     TArray<FString> RemovedNodes;
     for (const FString &Name : VarNames) {
       RemovedNodes.Append(McpBlueprintVariableUsers(Blueprint, FName(*Name)));
       FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, FName(*Name));
-      Removed.Add(MakeShared<FJsonValueString>(Name));
     }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
@@ -76,7 +74,7 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("variableName"), VarNames[0]);
-    Result->SetArrayField(TEXT("variableNames"), Removed);
+    Result->SetArrayField(TEXT("variableNames"), McpHandlerUtils::ToJsonStringArray(VarNames));
     Result->SetArrayField(TEXT("removedNodes"), McpHandlerUtils::ToJsonStringArray(RemovedNodes));
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
     // Add verification data for the blueprint asset
