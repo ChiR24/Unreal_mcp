@@ -1,10 +1,8 @@
 #include "Domains/Level/McpLevelActions.h"
 #include "Domains/Level/Lifecycle/McpLevelPathSafety.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Engine/World.h"
-#include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
 
 #include "Safety/McpSafeOperationsLevelSave.h"
@@ -89,18 +87,14 @@ bool HandleSaveLevelAsAction(UEngineWireSubsystem& Subsystem, const FString& Req
       bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath);
     }
     if (bSaved) {
-      // Refresh Asset Registry so the saved level is immediately visible for rename/duplicate operations
-      IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+      // The registry hears of the saved level at once, so rename and duplicate find it.
       FString SavedFilename;
       if (FPackageName::TryConvertLongPackageNameToFilename(SavePath, SavedFilename, FPackageName::GetMapPackageExtension())) {
-        TArray<FString> FilesToScan;
-        FilesToScan.Add(SavedFilename);
-        AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+        ScanLevelPackagePath(SavePath, SavedFilename);
       }
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetStringField(TEXT("levelPath"), SavePath);
-      // levelPath is not a field the receipt reads; savedAssetPath gives it the new level's handle and change.
+      // savedAssetPath gives the receipt the new level's handle and change, as save answers it.
       Resp->SetStringField(TEXT("savedAssetPath"), SavePath);
       Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, true,

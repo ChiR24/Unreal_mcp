@@ -86,10 +86,6 @@ bool ResolveLevelBlueprintGraph(
 // list title), any case.
 bool IsLevelBlueprintNodeNamed(UEdGraphNode* Node, const FString& Wanted);
 
-// The node of Graph that Wanted names (above), else the last one whose name or title contains it (connect_nodes takes
-// a part of a title); an exact match always wins.
-UEdGraphNode* FindLevelBlueprintNode(UEdGraph* Graph, const FString& Wanted);
-
 // The nodes of every graph of LevelBP (its functions too) that Match accepts, in graph order.
 TArray<UEdGraphNode*> FindLevelBlueprintNodes(ULevelScriptBlueprint* LevelBP, TFunctionRef<bool(UEdGraphNode*)> Match);
 }

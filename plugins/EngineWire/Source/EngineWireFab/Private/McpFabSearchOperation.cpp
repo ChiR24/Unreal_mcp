@@ -229,10 +229,7 @@ void Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSear
 		{
 			Result.ErrorCode = PageError.IsEmpty() ? TEXT("SEARCH_FAILED") : PageError;
 			// The dispatcher words its own failures (page not ready, page busy, timed out).
-			Result.Error = !PageMessage.IsEmpty() ? PageMessage
-				: PageError == TEXT("PAGE_NAVIGATING")
-					? FString(TEXT("The Fab tab had not finished loading fab.com. It has been sent there; retry in a few seconds."))
-					: FString(TEXT("The Fab page did not return a usable result."));
+			Result.Error = !PageMessage.IsEmpty() ? PageMessage : FString(TEXT("The Fab page did not return a usable result."));
 			OnComplete(Result);
 			return;
 		}

@@ -5,6 +5,17 @@
 namespace McpSequenceRecordReplay
 {
 #if MCP_SEQUENCE_HAS_TAKE_RECORDER_API
+UTakeRecorderSources* GetOrStartTakeSources(UTakeRecorderPanel* Panel)
+{
+    UTakeRecorderSources* Sources = Panel ? Panel->GetSources() : nullptr;
+    if (!Sources && Panel)
+    {
+        Panel->SetupForRecording_TakePreset(nullptr);
+        Sources = Panel->GetSources();
+    }
+    return Sources;
+}
+
 bool ConfigureSources(
     UTakeRecorderPanel* Panel,
     const TSharedPtr<FJsonObject>& Payload,
@@ -15,14 +26,7 @@ bool ConfigureSources(
 {
     OutAdded = 0;
     OutRequested = 0;
-    UTakeRecorderSources* Sources = Panel ? Panel->GetSources() : nullptr;
-    if (!Sources && Panel)
-    {
-        // A freshly opened panel has no take yet, so it has no sources either;
-        // start a new take before giving up.
-        Panel->SetupForRecording_TakePreset(nullptr);
-        Sources = Panel->GetSources();
-    }
+    UTakeRecorderSources* Sources = GetOrStartTakeSources(Panel);
     if (!Sources)
     {
         OutErrorCode = TEXT("NOT_AVAILABLE");

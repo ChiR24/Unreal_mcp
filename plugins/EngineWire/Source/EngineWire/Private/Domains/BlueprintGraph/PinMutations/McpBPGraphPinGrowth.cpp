@@ -1,6 +1,8 @@
 #include "Domains/BlueprintGraph/PinMutations/McpBPGraphPinGrowth.h"
 
 #include "K2Node_AddPinInterface.h"
+#include "K2Node_ExecutionSequence.h"
+#include "K2Node_Select.h"
 #include "K2Node_SwitchInteger.h"
 
 namespace McpBlueprintGraphHandlers
@@ -20,9 +22,18 @@ UEdGraphPin* FindOrGrowPin(FActionContext& Context, UEdGraphNode* Node, const FS
             Growable->AddInputPin();
             Pin = Context.FindPin(Node, PinName);
         }
-        for (UEdGraphPin* Extra : TArray<UEdGraphPin*>(Node->Pins))
+        // Pins added in vain come off again, last first. A Sequence and a Select leave the interface's RemoveInputPin
+        // empty, so their own removers take theirs: a misspelt pin on a Sequence left 25 outputs behind.
+        TArray<UEdGraphPin*> Added;
+        for (UEdGraphPin* Each : Node->Pins)
         {
-            if (!Pin && !Before.Contains(Extra)) Growable->RemoveInputPin(Extra);
+            if (!Pin && !Before.Contains(Each)) Added.Add(Each);
+        }
+        for (int32 Index = Added.Num() - 1; Index >= 0; --Index)
+        {
+            if (UK2Node_ExecutionSequence* Sequence = Cast<UK2Node_ExecutionSequence>(Node)) Sequence->RemovePinFromExecutionNode(Added[Index]);
+            else if (UK2Node_Select* Select = Cast<UK2Node_Select>(Node)) Select->RemoveOptionPinToNode();
+            else Growable->RemoveInputPin(Added[Index]);
         }
         return Pin;
     }

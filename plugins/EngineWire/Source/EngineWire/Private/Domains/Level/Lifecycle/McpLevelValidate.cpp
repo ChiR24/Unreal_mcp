@@ -36,7 +36,6 @@ bool HandleValidateLevelAction(UEngineWireSubsystem& Subsystem, const FString& R
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("exists"), bExists);
-    Result->SetBoolField(TEXT("isValid"), bExists);
     Result->SetStringField(TEXT("levelPath"), LevelPath);
     if (!MapFilename.IsEmpty()) {
       Result->SetStringField(TEXT("mapFilename"), MapFilename);

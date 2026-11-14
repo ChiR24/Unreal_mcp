@@ -99,7 +99,8 @@ FString WrapWithOriginGuard(const FString& RequestId, const FString& Inner)
   // Net effect: the entire Fab bridge was unusable while looking signed in.
   var __origin = String(location.origin);
   if (__origin !== "https://www.fab.com" && __origin !== "https://fab.com") {
-    try { window.ue.mcpfab.onerror(__id, JSON.stringify({ error: "PAGE_NAVIGATING", origin: __origin })); } catch (e) {}
+    try { window.ue.mcpfab.onerror(__id, JSON.stringify({ error: "PAGE_NAVIGATING", origin: __origin,
+      message: "The Fab tab had not finished loading fab.com. It has been sent there; retry in a few seconds." })); } catch (e) {}
     setTimeout(function () {
       // geturl is Fab's own binding and is the preferred target because it
       // carries whatever entry point Fab wants. It is also the thing that may

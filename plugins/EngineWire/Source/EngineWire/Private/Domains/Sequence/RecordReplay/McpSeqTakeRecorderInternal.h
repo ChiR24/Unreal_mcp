@@ -102,6 +102,8 @@ struct FTakeRecorderStartRollbackState
     bool bRollbackAttempted = false;
     bool bRollbackSucceeded = false;
 };
+// The panel's sources; a freshly opened panel has no take yet, and so no sources: a new take is started first.
+UTakeRecorderSources* GetOrStartTakeSources(UTakeRecorderPanel* Panel);
 bool ConfigureSources(UTakeRecorderPanel* Panel, const TSharedPtr<FJsonObject>& Payload, int32& OutAdded, int32& OutRequested, FString& OutErrorCode, FString& OutError);
 // ConfigureSources' apply half: clears when asked, adds the prepared actors (each configured from Payload's options)
 // and classes, and puts the sources back as they were on a failure.

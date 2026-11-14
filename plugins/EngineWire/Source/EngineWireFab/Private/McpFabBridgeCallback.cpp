@@ -1,6 +1,7 @@
 // Copyright (c) 2024 EngineWire Contributors
 
 #include "McpFabBridgeCallback.h"
+#include "McpFabBridgeDispatch.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpFabState, Log, All);
 
@@ -61,5 +62,7 @@ void UMcpFabBridgeCallback::OnResult(const FString& RequestId, const FString& Pa
 
 void UMcpFabBridgeCallback::OnError(const FString& RequestId, const FString& Message)
 {
-	Settle(RequestId, false, Message);
+	// A page exception arrives as its plain text, which no parser reads: a failure payload with no code, so each
+	// operation answers its own code with the page's words as the message.
+	Settle(RequestId, false, Message.TrimStart().StartsWith(TEXT("{")) ? Message : McpFabBridgeDispatch::FailurePayload(TEXT(""), Message));
 }

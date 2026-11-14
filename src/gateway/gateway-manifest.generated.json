@@ -18719,7 +18719,7 @@
               "remove_node",
               "set_pin_default_value"
             ],
-            "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint through the graph schema: incompatible types or directions are refused with the schema's reason (CONNECTION_REFUSED), a cast gets its conversion node, and a pin that takes one link drops its old one. A pin a node lacks is PIN_NOT_FOUND, naming the pins on both nodes. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
+            "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
           },
           "eventName": {
             "type": "string",
@@ -18885,7 +18885,7 @@
           },
           "nodeName": {
             "type": "string",
-            "description": "Level blueprint node name."
+            "description": "Name for the new node: used as given when the level Blueprint graph holds nothing of that name, else a free name beside it (the reply's nodeName). The other level Blueprint edits find the node by that name exactly."
           },
           "nodePosition": {
             "type": "object",
@@ -18984,7 +18984,7 @@
           },
           "sourceNodeName": {
             "type": "string",
-            "description": "Source node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
+            "description": "Source node: the nodeName or nodeId add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE)."
           },
           "sourcePinName": {
             "type": "string",
@@ -19031,7 +19031,7 @@
           },
           "targetNodeName": {
             "type": "string",
-            "description": "Target node: the nodeName or nodeId add_level_blueprint_node returned, or its title. An exact match wins; otherwise the last node whose name or title contains it."
+            "description": "Target node: the nodeName or nodeId add_level_blueprint_node returned, or its title, matched exactly (a node that only contains it is not taken). A name or title several nodes share is refused with their names (AMBIGUOUS_NODE)."
           },
           "targetPinName": {
             "type": "string",

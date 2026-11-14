@@ -177,8 +177,19 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId, c
       });
   }
   fetch(base, { credentials: "include" })
-    .then(function (r) { out.status = r.status; return r.json(); })
+    .then(function (r) {
+      out.status = r.status;
+      // A listing Fab does not serve is the add's LISTING_UNAVAILABLE, not a description of Fab's error body.
+      if (r.status !== 200) {
+        send({ error: "LISTING_UNAVAILABLE", message: "Fab answered HTTP " + r.status + " for this listing, so it was not read: " +
+          (r.status === 404 ? "Fab has no listing with this id (asset.query_marketplace lookup=fab_search finds listing ids)."
+                            : "the Fab tab may be signed out, or the site did not answer.") });
+        return null;
+      }
+      return r.json();
+    })
     .then(function (j) {
+      if (!j) { return null; }
       out.title = String(j.title || "");
       out.listingType = String(j.listingType || "");
       // Fab has used more than one key for prose; take the first that is a

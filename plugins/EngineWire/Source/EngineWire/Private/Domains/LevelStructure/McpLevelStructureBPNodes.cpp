@@ -129,8 +129,12 @@ bool HandleAddLevelBlueprintNode(
         for (const TCHAR* Bad : { TEXT(" "), TEXT("/"), TEXT("\\"), TEXT(":"), TEXT("."), TEXT("'"), TEXT("\"") }) { SafeNodeName.ReplaceInline(Bad, TEXT("_")); }
         if (!SafeNodeName.IsEmpty())
         {
-            FName UniqueNodeName = MakeUniqueObjectName(EventGraph, NodeClassObj, FName(*SafeNodeName));
-            NewNode->Rename(*UniqueNodeName.ToString(), EventGraph, REN_DontCreateRedirectors | REN_NonTransactional);
+            // The name asked for when nothing in the graph holds it (MakeUniqueObjectName numbers even a free name), so the
+            // caller's own name finds the node in the edits that follow; a taken name gets a free one beside it.
+            const FName WantedName(*SafeNodeName);
+            const FName NodeObjectName = FindObject<UObject>(EventGraph, *SafeNodeName)
+                ? MakeUniqueObjectName(EventGraph, NodeClassObj, WantedName) : WantedName;
+            NewNode->Rename(*NodeObjectName.ToString(), EventGraph, REN_DontCreateRedirectors | REN_NonTransactional);
         }
     }
     NewNode->CreateNewGuid();

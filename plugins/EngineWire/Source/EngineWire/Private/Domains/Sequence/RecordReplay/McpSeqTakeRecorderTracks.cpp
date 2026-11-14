@@ -55,7 +55,7 @@ AActor* GetSourceActor(UTakeRecorderSource* Source) {
 
 void CollectMapStates(UObject* Map, const TSet<FString>& Names,
     bool bEnabled, bool bDisableOthers, TArray<FMapState>& OutStates,
-    int32& OutMatched) {
+    int32& OutMatched, TSet<FString>& OutMatchedNames) {
     if (!Map) return;
     FArrayProperty* Array =
         FindFProperty<FArrayProperty>(Map->GetClass(), TEXT("Properties"));
@@ -72,9 +72,9 @@ void CollectMapStates(UObject* Map, const TSet<FString>& Names,
             Array, Array->ContainerPtrToValuePtr<void>(Map));
         for (int32 Index = 0; Index < Helper.Num(); ++Index) {
             void* Entry = Helper.GetRawPtr(Index);
-            const bool bMatch = Names.Contains(
-                Name->GetPropertyValue_InContainer(Entry).ToString().ToLower());
-            if (bMatch) ++OutMatched;
+            const FString EntryName = Name->GetPropertyValue_InContainer(Entry).ToString().ToLower();
+            const bool bMatch = Names.Contains(EntryName);
+            if (bMatch) { ++OutMatched; OutMatchedNames.Add(EntryName); }
             if (bMatch || bDisableOthers)
                 OutStates.Add({Map, Enabled, Entry,
                     Enabled->GetPropertyValue_InContainer(Entry),
@@ -91,7 +91,7 @@ void CollectMapStates(UObject* Map, const TSet<FString>& Names,
     for (int32 Index = 0; Index < Helper.Num(); ++Index)
         CollectMapStates(
             ChildType->GetObjectPropertyValue(Helper.GetRawPtr(Index)),
-            Names, bEnabled, bDisableOthers, OutStates, OutMatched); }
+            Names, bEnabled, bDisableOthers, OutStates, OutMatched, OutMatchedNames); }
 
 void RollBackAdded(UTakeRecorderSources* Sources,
     const TSet<UTakeRecorderSource*>& Before) {
@@ -110,7 +110,7 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
     if (UTakeRecorderBlueprintLibrary::GetActiveRecorder()) return Fail(
         TEXT("Recorded tracks cannot change during an active recording"),
         TEXT("RECORDING_ACTIVE"));
-    UTakeRecorderSources* Sources = Panel ? Panel->GetSources() : nullptr;
+    UTakeRecorderSources* Sources = GetOrStartTakeSources(Panel);
     if (!Sources) return Fail(
         TEXT("Take Recorder sources are unavailable"), TEXT("NOT_AVAILABLE"));
 
@@ -183,11 +183,11 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
         return Fail(TEXT("No matching actor Take Recorder sources are configured"),
             TEXT("NO_ACTOR_SOURCES")); }
 
-    TArray<FMapState> MapStates; TArray<UObject*> RootMaps; int32 Matched = 0;
+    TArray<FMapState> MapStates; TArray<UObject*> RootMaps; int32 Matched = 0; TSet<FString> MatchedNames;
     for (UTakeRecorderSource* Source : Targets) {
         UObject* Root = GetRecordedMap(Source); RootMaps.Add(Root);
         CollectMapStates(
-            Root, Names, bEnabled, bDisableOthers, MapStates, Matched); }
+            Root, Names, bEnabled, bDisableOthers, MapStates, Matched, MatchedNames); }
     if (Names.Num() > 0 && Matched == 0) {
         RollBackAdded(Sources, Before);
         return Fail(TEXT("None of the requested recorded properties were found"),
@@ -218,6 +218,18 @@ bool HandleConfigureRecordedTracks(UEngineWireSubsystem* Subsystem,
     Result->SetNumberField(TEXT("matchedProperties"), Matched);
     Result->SetNumberField(TEXT("changedProperties"), Changed);
     Result->SetNumberField(TEXT("appliedSourceOptions"), AppliedOptions);
+    // A name no source holds, beside one that matched, passed without a word: listed in the caller's spelling.
+    TArray<FString> MissingNames;
+    for (const TCHAR* Field : {TEXT("properties"), TEXT("trackNames"), TEXT("tracks")}) {
+        const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+        if (!Payload->TryGetArrayField(Field, Values) || !Values) continue;
+        for (const TSharedPtr<FJsonValue>& Value : *Values) {
+            FString Requested;
+            McpHandlerUtils::TryGetJsonValueString(Value, Requested);
+            Requested.TrimStartAndEndInline();
+            if (!MatchedNames.Contains(Requested.ToLower())) MissingNames.AddUnique(Requested); } }
+    if (MissingNames.Num() > 0)
+        Result->SetArrayField(TEXT("missingProperties"), McpHandlerUtils::ToJsonStringArray(MissingNames));
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         TEXT("Recorded track settings configured"), Result);
     OutSucceeded = true;

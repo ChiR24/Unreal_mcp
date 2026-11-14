@@ -1,17 +1,9 @@
+// connect_level_blueprint_nodes: the Blueprint graph door's connect_pins, run on the level Blueprint.
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
-#include "EdGraph/EdGraph.h"
-#include "EdGraph/EdGraphNode.h"
-#include "EdGraph/EdGraphPin.h"
-#include "EdGraph/EdGraphSchema.h"
-#include "Engine/Level.h"
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Engine/LevelScriptBlueprint.h"
-#include "Engine/World.h"
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Foundation/BridgeHelpers/McpHelpers.h"
-#include "EngineWireSubsystem.h"
-#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpLevelStructure
 {
@@ -24,11 +16,8 @@ bool HandleConnectLevelBlueprintNodes(
 {
     using namespace LevelStructureHelpers;
 
-    FString SourceNodeName = GetJsonStringField(Payload, TEXT("sourceNodeName"), TEXT(""));
-    FString SourcePinName = GetJsonStringField(Payload, TEXT("sourcePinName"), TEXT(""));
-    FString TargetNodeName = GetJsonStringField(Payload, TEXT("targetNodeName"), TEXT(""));
-    FString TargetPinName = GetJsonStringField(Payload, TEXT("targetPinName"), TEXT(""));
-
+    const FString SourceNodeName = GetJsonStringField(Payload, TEXT("sourceNodeName"), TEXT(""));
+    const FString TargetNodeName = GetJsonStringField(Payload, TEXT("targetNodeName"), TEXT(""));
     if (SourceNodeName.IsEmpty() || TargetNodeName.IsEmpty())
     {
         Subsystem->SendAutomationError(Socket, RequestId,
@@ -36,94 +25,57 @@ bool HandleConnectLevelBlueprintNodes(
         return true;
     }
 
-    // Same levelPath honoring as add_node: connect must act on the named level,
-    // never on whatever level happens to be open.
-    ULevel* CurrentLevel = nullptr;
+    // Same levelPath honoring as add_node: connect must act on the named level, never on whatever level is open.
+    ULevel* Level = nullptr;
     ULevelScriptBlueprint* LevelBP = nullptr;
     UEdGraph* EventGraph = nullptr;
-    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/false, CurrentLevel, LevelBP, EventGraph))
+    if (!ResolveLevelBlueprintGraph(Subsystem, RequestId, Socket, Payload, /*bCreate=*/false, Level, LevelBP, EventGraph))
     {
         return true;
     }
 
-    UEdGraphNode* SourceNode = FindLevelBlueprintNode(EventGraph, SourceNodeName);
-    UEdGraphNode* TargetNode = FindLevelBlueprintNode(EventGraph, TargetNodeName);
-
-    if (!SourceNode || !TargetNode)
+    // Each node by its guid, name or title, exactly, across the level Blueprint's graphs, as the pin edit finds its
+    // node: a part of a title names no node, and a name several nodes share names none of them.
+    const TArray<UEdGraphNode*> Sources =
+        FindLevelBlueprintNodes(LevelBP, [&SourceNodeName](UEdGraphNode* Each) { return IsLevelBlueprintNodeNamed(Each, SourceNodeName); });
+    const TArray<UEdGraphNode*> Targets =
+        FindLevelBlueprintNodes(LevelBP, [&TargetNodeName](UEdGraphNode* Each) { return IsLevelBlueprintNodeNamed(Each, TargetNodeName); });
+    if (Sources.Num() > 1 || Targets.Num() > 1)
     {
-        Subsystem->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Could not find nodes: source='%s' target='%s'"),
-                *SourceNodeName, *TargetNodeName), TEXT("NODE_NOT_FOUND"));
-        return true;
-    }
-
-    // A pin by its name or the name the editor shows.
-    const auto FindPin = [](const UEdGraphNode* Node, const FString& Name) -> UEdGraphPin*
-    {
-        for (UEdGraphPin* Pin : Node->Pins)
+        const bool bSource = Sources.Num() > 1;
+        TArray<FString> Matches;
+        for (UEdGraphNode* Each : bSource ? Sources : Targets)
         {
-            if (Pin->PinName.ToString() == Name || Pin->GetDisplayName().ToString() == Name)
-            {
-                return Pin;
-            }
+            Matches.Add(Each->GetName());
         }
-        return nullptr;
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("'%s' names %d level blueprint nodes (%s); pass one node's nodeId (guid) or node name."),
+                bSource ? *SourceNodeName : *TargetNodeName, Matches.Num(), *FString::Join(Matches, TEXT(", "))),
+            TEXT("AMBIGUOUS_NODE"));
+        return true;
+    }
+    if (Sources.Num() == 0 || Targets.Num() == 0)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Could not find nodes: source='%s' target='%s'"), *SourceNodeName, *TargetNodeName),
+            TEXT("NODE_NOT_FOUND"));
+        return true;
+    }
+
+    // The graph door links the two pins: through the schema, growing a pin a node can add, reporting a conversion node,
+    // in one undo step, and reading the link back. Its success answers through the level-save rule.
+    const TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>(*Payload);
+    Request->SetStringField(TEXT("fromNodeId"), Sources[0]->NodeGuid.ToString());
+    Request->SetStringField(TEXT("fromPinName"), GetJsonStringField(Payload, TEXT("sourcePinName"), TEXT("")));
+    Request->SetStringField(TEXT("toNodeId"), Targets[0]->NodeGuid.ToString());
+    Request->SetStringField(TEXT("toPinName"), GetJsonStringField(Payload, TEXT("targetPinName"), TEXT("")));
+    McpBlueprintGraphHandlers::FActionContext Context{
+        Subsystem, RequestId, Request, Socket, TEXT("connect_pins"), LevelBP, Sources[0]->GetGraph(), /*bDeferCompile=*/true};
+    Context.OnSuccess = [&](const FString& Message, const TSharedPtr<FJsonObject>& Result)
+    {
+        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Level, Message, Result);
     };
-    UEdGraphPin* SourcePin = FindPin(SourceNode, SourcePinName);
-    UEdGraphPin* TargetPin = FindPin(TargetNode, TargetPinName);
-
-    // A missing pin, or a link the schema refused (wrong direction, incompatible
-    // types), used to come back as success:true with "Nodes prepared for
-    // connection (manual pin connection may be required)" -- the wiring the
-    // caller asked for did not exist and nothing said so. Name the pins that
-    // are actually on each node so the retry can be right.
-    if (!SourcePin || !TargetPin)
-    {
-        auto PinNames = [](const UEdGraphNode* Node)
-        {
-            TArray<FString> Names;
-            for (const UEdGraphPin* Pin : Node->Pins) { Names.Add(Pin->PinName.ToString()); }
-            return FString::Join(Names, TEXT(", "));
-        };
-        Subsystem->SendAutomationError(Socket, RequestId,
-            FString::Printf(
-                TEXT("Pin not found: %s has no pin '%s'. Pins on %s: [%s]. Pins on %s: [%s]."),
-                SourcePin ? *TargetNodeName : *SourceNodeName,
-                SourcePin ? *TargetPinName : *SourcePinName,
-                *SourceNodeName, *PinNames(SourceNode),
-                *TargetNodeName, *PinNames(TargetNode)),
-            TEXT("PIN_NOT_FOUND"));
-        return true;
-    }
-
-    // MakeLinkTo skipped the schema, so any two pins linked (exec into data, a float into an object) and the level
-    // Blueprint stopped compiling; the schema checks types and puts in the conversion node a cast needs.
-    const UEdGraphSchema* Schema = EventGraph->GetSchema();
-    const FPinConnectionResponse Response = Schema ? Schema->CanCreateConnection(SourcePin, TargetPin) : FPinConnectionResponse();
-    const bool bConnected = Schema && Response.Response != CONNECT_RESPONSE_DISALLOW && Schema->TryCreateConnection(SourcePin, TargetPin);
-    if (!bConnected)
-    {
-        Subsystem->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Connection refused by the graph schema: %s.%s -> %s.%s (%s). Nothing was linked."),
-                *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName,
-                Response.Message.IsEmpty() ? TEXT("incompatible pin types or directions") : *Response.Message.ToString()),
-            TEXT("CONNECTION_REFUSED"));
-        return true;
-    }
-
-    FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
-    ResponseJson->SetStringField(TEXT("sourceNode"), SourceNodeName);
-    ResponseJson->SetStringField(TEXT("sourcePin"), SourcePinName);
-    ResponseJson->SetStringField(TEXT("targetNode"), TargetNodeName);
-    ResponseJson->SetStringField(TEXT("targetPin"), TargetPinName);
-
-    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel,
-        FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),
-        ResponseJson);
-    return true;
+    return McpBlueprintGraphHandlers::HandlePinMutationAction(Context);
 }
 
 }
