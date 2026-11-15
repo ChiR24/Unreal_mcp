@@ -21,6 +21,11 @@
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
 #include "UDynamicMesh.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
+#else
+using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
+#endif
 #else
 #define MCP_HAS_GEOMETRY_SCRIPT 0
 #endif
@@ -93,7 +98,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   }
 
   UDynamicMesh *Mesh = NewObject<UDynamicMesh>();
-  EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+  FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
   if (Donor != nullptr) {
     UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromSkeletalMesh(
         Donor, Mesh, FGeometryScriptCopyMeshFromAssetOptions(),
@@ -116,7 +121,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
           : LoadObject<USkeletalMesh>(nullptr, *SourceSkeletalMeshPath);
   if (Dressed != nullptr) {
     UDynamicMesh *Body = NewObject<UDynamicMesh>();
-    EGeometryScriptOutcomePins BodyOutcome = EGeometryScriptOutcomePins::Failure;
+    FMcpGeometryScriptOutcome BodyOutcome = EGeometryScriptOutcomePins::Failure;
     UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromSkeletalMesh(
         Dressed, Body, FGeometryScriptCopyMeshFromAssetOptions(),
         FGeometryScriptMeshReadLOD(), BodyOutcome);
@@ -149,7 +154,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   Skinned->SetSkeleton(Skeleton);
   Skinned->SetRefSkeleton(Skeleton->GetReferenceSkeleton());
   Skinned->CalculateInvRefMatrices();
-  EGeometryScriptOutcomePins WriteOutcome = EGeometryScriptOutcomePins::Failure;
+  FMcpGeometryScriptOutcome WriteOutcome = EGeometryScriptOutcomePins::Failure;
   FGeometryScriptCopyMeshToAssetOptions WriteOptions;
   // Recomputing normals and tangents throws away the basis the source
   // already had, and reordering vertices breaks the correspondence the UVs

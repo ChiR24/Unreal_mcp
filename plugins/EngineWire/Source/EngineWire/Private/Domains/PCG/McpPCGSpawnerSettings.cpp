@@ -64,12 +64,27 @@ bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshP
     }
 
     SpawnerSettings->Modify();
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
+    SpawnerSettings->SetMeshSelectorType(UPCGMeshSelectorWeighted::StaticClass());
+    UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(SpawnerSettings->MeshSelectorInstance);
+    if (!WeightedSelector)
+    {
+        WeightedSelector = NewObject<UPCGMeshSelectorWeighted>(SpawnerSettings);
+        SpawnerSettings->MeshSelectorInstance = WeightedSelector;
+    }
+#else
     if (!SpawnerSettings->MeshSelectorParameters || !SpawnerSettings->MeshSelectorParameters->IsA<UPCGMeshSelectorWeighted>())
     {
         SpawnerSettings->SetMeshSelectorType(UPCGMeshSelectorWeighted::StaticClass());
     }
 
     UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(SpawnerSettings->MeshSelectorParameters);
+    if (!WeightedSelector)
+    {
+        WeightedSelector = NewObject<UPCGMeshSelectorWeighted>(SpawnerSettings);
+        SpawnerSettings->MeshSelectorParameters = WeightedSelector;
+    }
+#endif
     if (!WeightedSelector)
     {
         OutError = TEXT("Could not create weighted mesh selector for PCG static mesh spawner.");

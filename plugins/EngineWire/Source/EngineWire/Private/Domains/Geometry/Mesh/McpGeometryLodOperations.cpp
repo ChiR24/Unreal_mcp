@@ -8,6 +8,12 @@
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
+#else
+using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
+#endif
+
 namespace
 {
 // LOD settings target a static mesh asset; the caller names the level actor that
@@ -68,7 +74,7 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
     AssetOptions.bEnableRecomputeNormals = true;
     AssetOptions.bEnableRecomputeTangents = true;
     AssetOptions.bEnableNanite = false;
-    EGeometryScriptOutcomePins Outcome;
+    FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     UStaticMesh* StaticMesh = UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
         Target->Mesh, TargetPath, AssetOptions, Outcome, nullptr);
     if (Outcome != EGeometryScriptOutcomePins::Success || !StaticMesh)

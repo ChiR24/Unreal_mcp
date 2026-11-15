@@ -70,7 +70,12 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     }
 
     const bool bForceGenerate = GetJsonBoolField(Payload, TEXT("force"), true);
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+    Component->GenerateLocal(bForceGenerate);
+    const FPCGTaskId TaskId = Component->GetGenerationTaskId();
+#else
     const FPCGTaskId TaskId = Component->GenerateLocalGetTaskId(bForceGenerate);
+#endif
     if (TaskId == InvalidPCGTaskId)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("PCG generation was not scheduled. The component may already be generating, be up to date with force=false, have no graph, or have invalid bounds."), TEXT("GENERATION_NOT_SCHEDULED"));
@@ -119,10 +124,16 @@ bool HandleSetComponentGridSize(UEngineWireSubsystem* Bridge, const FString& Req
         return true;
     }
 
-    const uint32 PreviousGridSize = Component->GetGenerationGridSize();
+    uint32 PreviousGridSize = 0;
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("PCG component generation grid size is not supported by UE 5.2+; set the PCG world actor's partition grid size instead."), TEXT("UNSUPPORTED"));
+    return true;
+#else
+    PreviousGridSize = Component->GetGenerationGridSize();
     Component->Modify();
     Component->SetGenerationGridSize(static_cast<uint32>(GridSize));
     Component->PostEditChange();
+#endif
 
     FString Error;
     bool bLevelSaved = false;

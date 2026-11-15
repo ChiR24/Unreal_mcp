@@ -4,6 +4,12 @@
 
 #include "Foundation/McpScopedEditorTransaction.h"
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
+#else
+using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
+#endif
+
 namespace McpGeometryHandlers
 {
 bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& RequestId,
@@ -23,7 +29,7 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     if (!MeshPath.IsEmpty())
     {
         UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
-        EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+        FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
         if (Source)
         {
             UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh, FGeometryScriptCopyMeshFromAssetOptions(),
