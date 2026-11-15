@@ -59,11 +59,12 @@ FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, cons
 }
 
 void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
-                          bool bOwnVariable, FName VariableName)
+                          bool bOwnVariable, FName VariableName, bool bExternalMember)
 {
     const UClass* Generated = Blueprint->GeneratedClass;
     const UClass* Skeleton = Blueprint->SkeletonGeneratedClass;
-    if (bOwnVariable || (Generated && Generated->IsChildOf(Owner)) || (Skeleton && Skeleton->IsChildOf(Owner)))
+    if (!(bExternalMember && Property) &&
+        (bOwnVariable || (Generated && Generated->IsChildOf(Owner)) || (Skeleton && Skeleton->IsChildOf(Owner))))
     {
         Node.VariableReference.SetSelfMember(VariableName);
     }
@@ -211,7 +212,7 @@ bool TryCreateVariableNode(
             *Context.TargetGraph);
         UK2Node_VariableSet* Node = NodeCreator.CreateNode(false);
         SetVariableReference(*Node, Context.Blueprint, FoundProperty, ResolvedOwnerClass,
-                             bFoundAsBlueprintVariable, VariableFName);
+                             bFoundAsBlueprintVariable, VariableFName, Context.bExternalVariableMember && !MemberClassName.IsEmpty());
         Context.FinalizeNode(NodeCreator, Node, X, Y);
         return true;
     }
@@ -220,7 +221,7 @@ bool TryCreateVariableNode(
         *Context.TargetGraph);
     UK2Node_VariableGet* Node = NodeCreator.CreateNode(false);
     SetVariableReference(*Node, Context.Blueprint, FoundProperty, ResolvedOwnerClass,
-                         bFoundAsBlueprintVariable, VariableFName);
+                         bFoundAsBlueprintVariable, VariableFName, Context.bExternalVariableMember && !MemberClassName.IsEmpty());
     Context.FinalizeNode(NodeCreator, Node, X, Y);
     return true;
 }

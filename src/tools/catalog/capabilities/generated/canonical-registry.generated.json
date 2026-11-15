@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9da69d6125ba8f13",
+  "catalogRevision": "15c7d6e688d3dfd9",
   "recordCount": 489,
   "records": [
     {
@@ -95234,12 +95234,12 @@
           "level blueprint pin value",
           "level blueprint literal"
         ],
-        "summary": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and lists its pins; connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
+        "summary": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and answers its nodeName and nodeId (blueprint.get_node_details lists its pins); connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
         "whenToUse": [
           "edit=open: The level blueprint graph must be edited.",
           "edit=add_node: A new node must be added to level scripting.",
           "edit=add_node: Level logic must react to a placed actor (K2Node_ActorBoundEvent with actorName and eventName) or use one (K2Node_Literal with actorName).",
-          "edit=add_node: A function of a class outside the common Blueprint libraries must be called (K2Node_CallFunction with functionName and memberClass).",
+          "edit=add_node: A function of a class that is not the level Blueprint itself or in the common Blueprint libraries (Kismet System, Gameplay Statics, Math, String, Text) must be called (K2Node_CallFunction with functionName and memberClass).",
           "edit=add_node: A placed actor's component must be used, such as the light component whose SetLightColor changes a light (K2Node_VariableGet with memberClass and memberName, its self pin fed from the actor's K2Node_Literal).",
           "edit=connect_nodes: Two level blueprint nodes must be wired together.",
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired.",
@@ -95267,11 +95267,11 @@
             },
             "nodeClass": {
               "type": "string",
-              "description": "Level blueprint graph node class."
+              "description": "The node: a friendly name (EventBeginPlay, EventTick, EventEndPlay, PrintString, Branch, Sequence, ForEachLoop, ...), a K2Node class (K2Node_CallFunction, K2Node_ActorBoundEvent, K2Node_Literal, K2Node_VariableGet, K2Node_VariableSet), or any node type blueprint.create_node takes."
             },
             "nodeName": {
               "type": "string",
-              "description": "Name for the new node: used as given when the level Blueprint graph holds nothing of that name, else a free name beside it (the reply's nodeName). The other level Blueprint edits find the node by that name exactly."
+              "description": "Name for the new node: used as given when the level Blueprint graph holds nothing of that name, else a free name beside it (the reply's nodeName). The other level Blueprint edits find the node by that name exactly. An event the graph already holds (BeginPlay, Tick) is returned as it is, under its own name."
             },
             "nodePosition": {
               "type": "object",
@@ -95298,11 +95298,11 @@
             },
             "memberClass": {
               "type": "string",
-              "description": "Class that declares functionName when it is not in the common Blueprint libraries, or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor. One that names no class is refused with INVALID_ARGUMENT."
+              "description": "Class that declares functionName when it is not the level Blueprint itself or in the Kismet System, Gameplay Statics, Math, String and Text libraries (a Pawn or Niagara function: NiagaraFunctionLibrary), or memberName: a native class name or a Blueprint asset path. The node's Target (self pin) takes an object of that class, so an actor's function or component getter is fed from its K2Node_Literal, while a component's function (a light's SetLightColor is LightComponent's) takes the component that getter returns, not the actor. One that names no class is refused (FUNCTION_NOT_FOUND for a function, VARIABLE_NOT_FOUND for a variable)."
             },
             "memberName": {
               "type": "string",
-              "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable (its own or inherited, such as Tags), or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor); with memberClass the node always has the self pin the actor's K2Node_Literal feeds, even for Actor. A wrong name is refused with that class's components listed (VARIABLE_NOT_FOUND), and one Blueprints cannot read, or for a VariableSet write (not Blueprint-visible, read-only), with VARIABLE_NOT_ACCESSIBLE."
+              "description": "Variable a K2Node_VariableGet or K2Node_VariableSet reads or writes, required by both and refused for other nodes: a level Blueprint variable (its own or inherited, such as Tags), or with memberClass a property of that class, such as a placed actor's component (PointLightComponent on PointLight, StaticMeshComponent on StaticMeshActor); with memberClass the node always has the self pin the actor's K2Node_Literal feeds, even for Actor. A wrong name is refused (VARIABLE_NOT_FOUND), and one Blueprints cannot read, or for a VariableSet write (not Blueprint-visible, read-only), with VARIABLE_NOT_ACCESSIBLE."
             },
             "actorName": {
               "type": "string",
@@ -95352,7 +95352,7 @@
                 "remove_node",
                 "set_pin_default_value"
               ],
-              "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused, AMBIGUOUS_NODE) as blueprint.delete_node removes one: its wires are cut, a function's entry and result nodes are refused (PROTECTED_NODE), it is one undo step, and the reply names it (removed, its id). unboundOnly instead purges every call node with no bound function.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
+              "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, as blueprint.create_node does on the level Blueprint, by class or friendly name (EventBeginPlay, PrintString, Branch): including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component. The reply names the node (nodeName, nodeId); blueprint.get_node_details lists its pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused, AMBIGUOUS_NODE) as blueprint.delete_node removes one: its wires are cut, a function's entry and result nodes are refused (PROTECTED_NODE), it is one undo step, and the reply names it (removed, its id). unboundOnly instead purges every call node with no bound function.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
             }
           },
           "required": [
@@ -95407,7 +95407,7 @@
       },
       "examples": [
         {
-          "title": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and lists its pins; connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
+          "title": "Edit the level Blueprint of the open level (levelPath names another loaded level; by default the persistent level), chosen by edit. open opens its editor; add_node adds a node by class or alias (an event bound to a placed actor with actorName and eventName, a reference to one, a component getter with memberClass and memberName) and answers its nodeName and nodeId (blueprint.get_node_details lists its pins); connect_nodes links two pins through the graph schema, which refuses incompatible ones (CONNECTION_REFUSED, with its reason) and adds the conversion node a cast needs; remove_node removes a node by id, name or title; set_pin_default_value sets an input pin. The level stays unsaved unless save is true (saved), and a transient /Temp level is refused.",
           "input": {
             "action": "edit_level_blueprint",
             "levelPath": "/Game/Maps/Demo",
@@ -95533,8 +95533,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "64a9720d16a374e7b75e843014c6726557a3fdd625aafc7a42e1290f2cf632bc",
-        "content": "7b4067fffc1a6f07280f761e3ef7bec6996badc81a0c8e1c02f17c53dc5f2fab"
+        "schema": "3d94f0e321edee996d137474be1ce83da2547c4e7a34ca881970f0fdaebaa83d",
+        "content": "8daeef2f8dc7f1f448dee0635c0cb12f5714b8a79b43c72a7b62eeadd383219c"
       }
     },
     {

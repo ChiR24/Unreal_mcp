@@ -113,7 +113,8 @@ bool RemoveNiagaraGraphNodeSafely(
         ModuleOutputPin->LinkedTo.Num() != 1)
     {
         OutError =
-            TEXT("Cannot safely remove a Niagara stack boundary or branched module.");
+            TEXT("Cannot safely remove a Niagara stack boundary or branched module. A dynamic input, data interface or ")
+            TEXT("expression goes with the module that uses it: remove that module.");
         return false;
     }
 

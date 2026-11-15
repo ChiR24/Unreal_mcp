@@ -50,6 +50,10 @@ struct FActionContext
     // When set, a success reply goes here instead of to the socket: the level Blueprint door runs a graph edit on
     // its level Blueprint and answers through its own level-save rule.
     TFunction<void(const FString&, const TSharedPtr<FJsonObject>&)> OnSuccess;
+    // A variable node whose memberClass names a class takes that class's member, read from the object wired into its Target
+    // pin, even when the Blueprint's own class derives from it: a level Blueprint is an Actor, and the level door's reference
+    // to a placed actor feeds that pin.
+    bool bExternalVariableMember = false;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
     void SendErrorWithDetails(
@@ -166,9 +170,11 @@ UClass* ResolveMemberClass(const FString& MemberClassName);
 FProperty* ResolveVariableMember(UBlueprint* Blueprint, FName VariableName, const FString& MemberClassName,
                                  UClass*& OutOwner, bool& bOutOwnVariable);
 // Points Node at it, before its pins exist: a self member when Blueprint's class has it, else a member of Owner,
-// read from the object wired into the node's Target pin. Shared by create_node, add_node and the level Blueprint.
+// read from the object wired into the node's Target pin; bExternalMember takes the Owner member even when Blueprint's class
+// derives from Owner (create_node on a level Blueprint for the level door, FActionContext::bExternalVariableMember).
+// Shared by create_node and add_node.
 void SetVariableReference(UK2Node_Variable& Node, UBlueprint* Blueprint, FProperty* Property, UClass* Owner,
-                          bool bOwnVariable, FName VariableName);
+                          bool bOwnVariable, FName VariableName, bool bExternalMember = false);
 // Why Blueprint cannot read (or, bWrite, write) Property, as its compile would refuse it: not Blueprint-visible,
 // private to another Blueprint, or read-only. Empty when it can, and for a null Property (an uncompiled own variable).
 FString DescribeVariableAccess(const UBlueprint* Blueprint, const FProperty* Property, bool bWrite);

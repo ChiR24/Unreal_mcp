@@ -49,7 +49,7 @@ bool TryCreateConstructObjectNode(
     }
 
     UEdGraphNode* NewNode =
-        NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass);
+        NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass, NAME_None, RF_Transactional);
     if (!NewNode)
     {
         Context.SendError(

@@ -17,7 +17,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | `Optimize/` | 12 files | minimizers of a caller's cost, each with a known-answer test: `McpNelderMead` (the downhill simplex, for a cost of a few variables with no gradient: a camera judged by traces), `McpMinSnap` (the minimum-snap path through points, Richter et al.'s closed form), `McpAnneal` (Metropolis annealing over a caller's state), `McpChoiceKnapsack` (at most one option per group: the cheapest pick whose gains reach what is needed) |
 | `Render/` | 5 files | post-process volume resolution, console variable writes, stat overlay state |
 | `Viewport/` | 6 files | the level viewport and the editor windows: the active viewport client, frame reads and settling, the window list and restore, screenshot receipts |
-| `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
+| `BridgeHelpers/` | umbrella, the editor include set + 7 groups | asset/actor/BP/property/response/security facade |
 | root | 25 files (at cap) | `McpSecureTokenCompare.h` (constant-time token equality), capability authorization predicates and the path scan, the request principal and its quota, the idempotency ledger, compensation receipts, live-state revisions, readiness, the scoped editor transaction, screenshot resampling, the telemetry registry |
 
 `Foundation` is split finely (<=25 files/folder, 250 pure-line ceiling) so
@@ -47,6 +47,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Spawn an actor; the level's actor of a class by label or name, or spawned when missing | `BridgeHelpers/Actors/McpActorSpawnHelpers.h` (`SpawnActorInActiveWorld`, `McpFindActorByNameOrClass`, `McpFindOrSpawnActor`) |
 | An actor's component by its object name or the property that holds it; the event a Blueprint can override under a name | `BridgeHelpers/Blueprints/McpBPActorBinding.h` (`McpFindActorComponent`, `McpFindComponentProperty`, `McpFindOverridableEvent`) |
 | Find an actor by name or label | `HandlerUtils/McpHandlerUtilsActionsPaths.h` `McpHandlerUtils::FindActorByName` |
+| The editor and engine headers the Environment and Inspect domains build on, as one include set | `BridgeHelpers/McpEditorIncludeSet.h` |
 | Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{McpBPAssetLoad,McpBPCompileHelpers,McpScsLookup,McpBPPaths}.h` |
 | A Blueprint's component template by name (its SCS, inherited or native), a node's effective template | `BridgeHelpers/Blueprints/McpPropCdoComponents.h` (`McpPropertyCdoComponents::FindCdoComponent`) |
 | Make a new Blueprint asset (the factory step) | `BridgeHelpers/Blueprints/McpNewBlueprint.h` `McpNewBlueprint` (the caller makes the package and refuses an existing asset first; registering, compiling and saving stay with it) |

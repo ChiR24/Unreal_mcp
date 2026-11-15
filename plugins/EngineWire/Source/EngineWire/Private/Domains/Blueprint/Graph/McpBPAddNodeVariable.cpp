@@ -72,9 +72,9 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
   UK2Node_Variable *VarNode =
       bIsSetter
           ? static_cast<UK2Node_Variable *>(
-                NewObject<UK2Node_VariableSet>(TargetGraph))
+                NewObject<UK2Node_VariableSet>(TargetGraph, NAME_None, RF_Transactional))
           : static_cast<UK2Node_Variable *>(
-                NewObject<UK2Node_VariableGet>(TargetGraph));
+                NewObject<UK2Node_VariableGet>(TargetGraph, NAME_None, RF_Transactional));
   if (VarNode) {
     McpBlueprintGraphHandlers::SetVariableReference(
         *VarNode, BP, Property, Owner, bOwnVariable, VarFName);

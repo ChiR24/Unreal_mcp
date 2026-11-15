@@ -1,8 +1,7 @@
 #pragma once
 
-// The inspect tool (Domains/Inspect): its handlers and the helpers its files share. They build on the Environment
-// domain's editor include set, which this header brings in.
-#include "Domains/Environment/McpEnvShared.h"
+// The inspect tool (Domains/Inspect): its handlers and the helpers its files share. They build on the editor include set.
+#include "Foundation/BridgeHelpers/McpEditorIncludeSet.h"
 
 namespace McpInspectHandlers {
 bool HandleInspectGlobalAction(

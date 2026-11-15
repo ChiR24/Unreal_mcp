@@ -96,7 +96,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
       NodeTypeLower.Contains(TEXT("castto")) ||
       (NodeTypeLower.Contains(TEXT("cast")) && !TargetClass.IsEmpty())) {
     UK2Node_DynamicCast *CastNode =
-        NewObject<UK2Node_DynamicCast>(TargetGraph);
+        NewObject<UK2Node_DynamicCast>(TargetGraph, NAME_None, RF_Transactional);
     if (!CastNode) {
       OutErrorResult = McpHandlerUtils::CreateResultObject();
       OutErrorMessage = TEXT("Failed to instantiate cast node");
@@ -180,7 +180,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
       return nullptr;
     }
     UEdGraphNode *WidgetNode =
-        NewObject<UEdGraphNode>(TargetGraph, WidgetNodeClass);
+        NewObject<UEdGraphNode>(TargetGraph, WidgetNodeClass, NAME_None, RF_Transactional);
     if (!WidgetNode) {
       OutErrorResult = McpHandlerUtils::CreateResultObject();
       OutErrorMessage = TEXT("Failed to instantiate CreateWidget node");
@@ -220,7 +220,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
       OutErrorCode = TEXT("INVALID_ARGUMENT");
       return nullptr;
     }
-    UK2Node_CallFunction *FuncNode = NewObject<UK2Node_CallFunction>(TargetGraph);
+    UK2Node_CallFunction *FuncNode = NewObject<UK2Node_CallFunction>(TargetGraph, NAME_None, RF_Transactional);
     if (FuncNode) {
       UFunction *FoundFunc = FEngineWire_ResolveFunction(BP, FunctionName);
       // An unresolved name used to fall through and leave a bound-to-nothing
@@ -256,7 +256,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
   }
 
   if (NodeTypeLower.Contains(TEXT("customevent"))) {
-    UK2Node_CustomEvent *CustomEvent = NewObject<UK2Node_CustomEvent>(TargetGraph);
+    UK2Node_CustomEvent *CustomEvent = NewObject<UK2Node_CustomEvent>(TargetGraph, NAME_None, RF_Transactional);
     if (CustomEvent) {
       // Without a name it was left None, which does not compile: named as the editor names a new one.
       CustomEvent->CustomFunctionName =
@@ -284,7 +284,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
           McpBlueprintGraphHandlers::StandardMacroGraphName(NodeType)) {
     if (UEdGraph *Graph = McpFindStandardMacro(*MacroName)) {
       UK2Node_MacroInstance *MacroNode =
-          NewObject<UK2Node_MacroInstance>(TargetGraph);
+          NewObject<UK2Node_MacroInstance>(TargetGraph, NAME_None, RF_Transactional);
       MacroNode->SetMacroGraph(Graph);
       return MacroNode;
     }
@@ -304,7 +304,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
   }
   const FString Mismatch = McpBlueprintGraphHandlers::DescribeGraphMismatch(NodeClass, TargetGraph);
   if (NodeClass && Mismatch.IsEmpty()) {
-    return NewObject<UEdGraphNode>(TargetGraph, NodeClass);
+    return NewObject<UEdGraphNode>(TargetGraph, NodeClass, NAME_None, RF_Transactional);
   }
   if (!Mismatch.IsEmpty()) {
     OutErrorResult = McpHandlerUtils::CreateResultObject();

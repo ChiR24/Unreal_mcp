@@ -1,5 +1,5 @@
-// McpBPActorBinding.h — graph nodes that are about one placed actor, shared by the level Blueprint door
-// (manage_level_structure add_level_blueprint_node) and the Blueprint graph door (create_node).
+// McpBPActorBinding.h — graph nodes that are about one placed actor: the Blueprint graph door (create_node) binds them on a
+// level Blueprint, which manage_level_structure add_level_blueprint_node forwards to.
 #pragma once
 
 #include "CoreMinimal.h"

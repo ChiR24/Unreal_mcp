@@ -36,20 +36,9 @@ bool HandleCreateMinimapVolume(UEngineWireSubsystem* Subsystem, const FString& R
 bool HandleOpenLevelBlueprint(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleRemoveLevelBlueprintNode(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-// Friendly node names (EventBeginPlay, PrintString, ...) -> node class + member to bind.
-bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventName, FString& OutFunctionName);
-// MemberClass, when given, is the class FunctionName is looked up on instead of the common libraries. OutCode is
-// INVALID_ARGUMENT for a MemberClass that names no class, else NOT_SUPPORTED.
-bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName,
-                                  const FString& MemberClass, FString& OutError, FString& OutCode);
-// The refusal for a memberClass that names no class, whether a function or a variable was to be bound.
-FString DescribeUnknownMemberClass(const FString& MemberClass);
-// A K2Node_VariableGet/Set reads MemberName: on MemberClass, always with a self pin (a placed actor's component,
-// PointLightComponent on PointLight, fed from the actor's K2Node_Literal), or the level Blueprint's own or inherited
-// variable. False with OutError and OutCode when nothing matches, when Blueprints cannot read (or write) it, or for
-// any other node given a MemberName it would ignore.
-bool BindLevelBlueprintVariableNode(UK2Node* Node, UBlueprint* LevelBP, const FString& MemberName,
-                                    const FString& MemberClass, FString& OutError, FString& OutCode);
+// Friendly node names (EventBeginPlay, PrintString, ...): InOutNodeType becomes the node type blueprint's create_node takes,
+// with the event, the function and the class that owns it (empty for the common libraries) to bind; false for any other word.
+bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeType, FString& OutEventName, FString& OutFunctionName, FString& OutMemberClass);
 bool HandleConnectLevelBlueprintNodes(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetLevelBlueprintPinDefault(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetLevelStructureInfo(UEngineWireSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
