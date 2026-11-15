@@ -166,6 +166,9 @@ bool UEngineWireSubsystem::HandleResetInstanceParameters(
                         TEXT("INVALID_ASSET_TYPE"));
     return true;
   }
+  if (McpRefuseEngineMaterialEdit(this, RequestId, Socket, MIC)) {
+    return true;
+  }
 
   MIC->ClearParameterValuesEditorOnly();
   MIC->PostEditChange();

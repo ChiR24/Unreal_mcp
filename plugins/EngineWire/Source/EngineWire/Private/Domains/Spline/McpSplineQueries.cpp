@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Spline/McpSplinePrivate.h"
 
@@ -68,6 +69,10 @@ bool HandleGetSplinesInfo(
         for (TActorIterator<AActor> It(World); It; ++It)
         {
             AActor* Actor = *It;
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
+            {
+                continue;
+            }
             TArray<USplineComponent*> SplineComponents;
             Actor->GetComponents<USplineComponent>(SplineComponents);
 

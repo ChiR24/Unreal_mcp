@@ -5,7 +5,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleAddTextureSample(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_texture_sample")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString TexturePath, ParameterName;
     Payload->TryGetStringField(TEXT("texturePath"), TexturePath);

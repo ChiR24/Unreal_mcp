@@ -18,6 +18,24 @@
 using McpSafeOperations::McpSafeLoadMap;
 
 namespace McpLevelHandlers {
+FString ResolveLoadLevelPath(const FString& Requested, bool bLogRefusal) {
+  // Candidates are probed quietly: a refused candidate is no error of the caller's, and a logged one reached the reply.
+  const auto Probe = [](const FString& Candidate) { return McpClassifyProjectPath(Candidate, nullptr, nullptr, nullptr, false); };
+  FString Path = Requested;
+  if (!Path.StartsWith(TEXT("/")) && Probe(Path).IsEmpty()) {
+    const FString UnderMaps = Probe(TEXT("/Game/Maps/") + Path);
+    const McpSafeOperations::FMcpLevelFile MapsFile = UnderMaps.IsEmpty()
+        ? McpSafeOperations::FMcpLevelFile()
+        : McpSafeOperations::McpFindLevelFile(FPackageName::ObjectPathToPackageName(UnderMaps));
+    const FString UnderGame = Probe(TEXT("/Game/") + Path);
+    // Rewritten only to a candidate that passes, so a refusal still names the path as sent.
+    Path = MapsFile.bFolder || MapsFile.bFlat ? UnderMaps : UnderGame.IsEmpty() ? Path : UnderGame;
+  }
+  const FString Safe = McpClassifyProjectPath(Path, nullptr, nullptr, nullptr, bLogRefusal);
+  // An object path or a .umap name reads as its package; it answered FILE_NOT_FOUND.
+  return Safe.IsEmpty() ? FString() : FPackageName::ObjectPathToPackageName(Safe);
+}
+
 bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
       // streaming=true streams the level into the open world as a sub-level
       // instead of replacing it: exactly what add_sublevel does with levelPath.
@@ -37,24 +55,15 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
                             TEXT("INVALID_ARGUMENT"));
         return true;
       }
-
-      // SECURITY: Sanitize LevelPath to prevent path traversal attacks
-      FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
-      if (SanitizedLevelPath.IsEmpty()) {
+      // SECURITY: the shared canonicalizer, through ResolveLoadLevelPath; a refusal names the path as sent.
+      const FString ResolvedLevelPath = ResolveLoadLevelPath(LevelPath);
+      if (ResolvedLevelPath.IsEmpty()) {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
                             McpPathRefusalMessage(TEXT("levelPath"), LevelPath),
                             TEXT("SECURITY_VIOLATION"));
         return true;
       }
-      // An object path (/Game/Maps/Demo.Demo) or a .umap name reads as its package; it answered FILE_NOT_FOUND.
-      LevelPath = FPackageName::ObjectPathToPackageName(SanitizedLevelPath);
-
-      if (!LevelPath.StartsWith(TEXT("/")) && !FPaths::FileExists(LevelPath)) {
-        FString TryPath = FString::Printf(TEXT("/Game/Maps/%s"), *LevelPath);
-        if (FPackageName::DoesPackageExist(TryPath)) {
-          LevelPath = TryPath;
-        }
-      }
+      LevelPath = ResolvedLevelPath;
 
       // The folder form is loaded when it exists, else the flat one; a package with neither file is loaded by name
       // when the engine still knows it.

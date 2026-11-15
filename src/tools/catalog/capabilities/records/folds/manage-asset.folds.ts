@@ -37,7 +37,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     // Material or Material Function; a material instance has no graph and is refused.
     // reset_parameters and reparent take an instance. The old summary promised instance
     // parameter overrides from both, which is what set_material_parameter does.
-    summary: 'Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.',
+    summary: 'Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.',
     topics: ['material parameter expression', 'reset instance parameters', 'material instance parent', 'reparent material instance', 'change parent material'],
     members: { add_parameter: 'add_material_parameter', reset_parameters: 'reset_instance_parameters', reparent: 'reparent_instance' },
   },
@@ -139,7 +139,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // material authoring
   {
     primary: 'add_material_node', selector: 'nodeKind',
-    summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.',
+    summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.',
     topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph', 'create custom shader', 'make a material scroll or pan'],
     members: {
       node: 'add_material_node', custom_expression: 'add_custom_expression', fresnel: 'add_fresnel', if: 'add_if', math: 'add_math_node',
@@ -153,7 +153,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_function_io', selector: 'io',
-    summary: 'Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.',
+    summary: 'Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.',
     topics: ['material function input', 'material function output'],
     members: { input: 'add_function_input', output: 'add_function_output' },
   },
@@ -163,9 +163,9 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     topics: ['create material', 'material with a base color', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection', 'emissive glow', 'glowing material', 'shiny metal material', 'make something look like glass', 'make a hologram material'],
     members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function', parameter_collection: 'create_parameter_collection' },
   },
-  { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.', members: ['connect_material_pins'] },
-  { primary: 'disconnect_nodes', summary: 'Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).', members: ['break_material_connections'] },
-  { primary: 'delete_node', summary: 'Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).', members: ['remove_material_node'] },
+  { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.', members: ['connect_material_pins'] },
+  { primary: 'disconnect_nodes', summary: 'Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.', members: ['break_material_connections'] },
+  { primary: 'delete_node', summary: 'Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.', members: ['remove_material_node'] },
   {
     primary: 'compile_material', selector: 'compileOp',
     summary: 'Recompile a material or material function from its graph (compileOp compile, the default; rebuild runs the same recompile) and wait for every shader. A material that does not compile answers compiled false with compileErrors, since it renders as the default material until fixed; saved says whether it was written (save, default true). A material function is updated without the shader check.',
@@ -179,18 +179,20 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_material_parameter', selector: 'parameterKind',
-    summary: 'Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node\'s default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).',
+    summary: 'Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node\'s default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.',
     topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch', 'change material color', 'set material color', 'set roughness', 'set metallic', 'set base color', 'override material parameter', 'set parameter on material instance'],
     members: { parameter: 'set_material_parameter', scalar: 'set_scalar_parameter_value', vector: 'set_vector_parameter_value', texture: 'set_texture_parameter_value', static_switch: 'set_static_switch_parameter_value' },
   },
   {
     primary: 'get_material_info', selector: 'info',
-    summary: 'Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.',
+    summary: 'Inspect a material or material function: summary with its parameters and overrides, node lookup, node properties and connections, node chains and connected subgraphs.',
     topics: ['material info', 'get material parameters', 'material parameters', 'material node', 'node connections', 'find node', 'material function info', 'inspect material graph', 'read material graph', 'material graph nodes', 'material node details', 'list material nodes', 'nodes in a material'],
     members: {
-      material: 'get_material_info', function: 'get_material_function_info', find_node: 'find_node', node_details: 'get_material_node_details',
+      material: 'get_material_info', function: 'get_material_function_info', find_node: 'find_node',
       node_properties: 'get_node_properties', node_connections: 'get_node_connections', node_chain: 'get_node_chain', subgraph: 'get_connected_subgraph',
     },
+    // get_material_node_details read a subset of get_node_properties under other keys; it is that read now.
+    aliasMembers: { node_properties: 'get_material_node_details' },
   },
   // struct
   {

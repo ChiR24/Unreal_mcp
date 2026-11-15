@@ -91,7 +91,8 @@ describe('Fab bridge: arbitrary script cannot be requested', () => {
     // A listing id is interpolated into an API path, so an allowlist has to gate
     // it. Rejecting is what keeps /i/account and /i/auth unreachable.
     expect(code).toMatch(/IsSafeListingId/u);
-    expect(code).toMatch(/FChar::IsAlnum/u);
+    expect(code).toMatch(/IsListingIdChar/u);
+    expect(code).not.toMatch(/FChar::IsAlnum/u);
     expect(code).toMatch(/encodeURIComponent/u);
   });
 });

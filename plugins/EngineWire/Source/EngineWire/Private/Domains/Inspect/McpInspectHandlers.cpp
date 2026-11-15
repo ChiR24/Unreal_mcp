@@ -33,9 +33,6 @@ bool UEngineWireSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("get_scene_stats")) ||
         LowerSubAction.Equals(TEXT("get_performance_stats")) ||
         LowerSubAction.Equals(TEXT("get_memory_stats")) ||
-        LowerSubAction.Equals(TEXT("list_objects")) ||
-        LowerSubAction.Equals(TEXT("find_by_class")) ||
-        LowerSubAction.Equals(TEXT("find_by_tag")) ||
         LowerSubAction.Equals(TEXT("inspect_class")) ||
         LowerSubAction.Equals(TEXT("runtime_report")) ||
         LowerSubAction.Equals(TEXT("pie_report"));
@@ -122,6 +119,13 @@ bool UEngineWireSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("capture_passes")))
     {
         return HandleInspectCapturePassesAction(*this, RequestId, Payload, RequestingSocket);
+    }
+    // control_actor's list (which takes list_objects as a name), find_by_class and find_by_tag: one implementation, and
+    // its replies. inspect answered its own, with other rows and without list's filters.
+    if (LowerSubAction.Equals(TEXT("list_objects")) || LowerSubAction.Equals(TEXT("find_by_class")) ||
+        LowerSubAction.Equals(TEXT("find_by_tag")))
+    {
+        return HandleControlActorAction(RequestId, TEXT("control_actor"), Payload, RequestingSocket);
     }
     if (LowerSubAction.Equals(TEXT("get_bounding_box")) ||
         LowerSubAction.Equals(TEXT("get_metadata")) ||

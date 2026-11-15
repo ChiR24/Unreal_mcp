@@ -2,6 +2,8 @@
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 
 #include "HAL/FileManager.h"
+#include "MediaPlaylist.h"
+#include "MediaSource.h"
 #include "EngineWireSubsystem.h"
 #include "UObject/Package.h"
 
@@ -100,14 +102,16 @@ bool ResolvePlaylistItems(const TSharedPtr<FJsonObject> &Payload,
 
 bool ApplyPlaylistItems(UObject *Playlist, const FPlaylistItems &Items,
                         FString &OutError) {
+  UMediaPlaylist *MediaPlaylist = Cast<UMediaPlaylist>(Playlist);
   for (UObject *Source : Items.Sources) {
-    if (!CallBoolObjectFunction(Playlist, TEXT("Add"), Source)) {
+    UMediaSource *MediaSource = Cast<UMediaSource>(Source);
+    if (!MediaPlaylist || !MediaSource || !MediaPlaylist->Add(MediaSource)) {
       OutError = TEXT("The playlist rejected a media source");
       return false;
     }
   }
   for (const FString &Url : Items.Urls) {
-    if (!CallBoolStringFunction(Playlist, TEXT("AddUrl"), Url)) {
+    if (!MediaPlaylist || !MediaPlaylist->AddUrl(Url)) {
       OutError = TEXT("The playlist rejected a media URL");
       return false;
     }
@@ -117,7 +121,7 @@ bool ApplyPlaylistItems(UObject *Playlist, const FPlaylistItems &Items,
             File, McpSequencePathSecurity::ELocalPathUse::MediaInput,
             OutError))
       return false;
-    if (!CallBoolStringFunction(Playlist, TEXT("AddFile"), File)) {
+    if (!MediaPlaylist || !MediaPlaylist->AddFile(File)) {
       OutError = TEXT("The playlist rejected a media file");
       return false;
     }

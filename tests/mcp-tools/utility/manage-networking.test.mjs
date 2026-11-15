@@ -434,14 +434,10 @@ const testCases = [
 
     // === VOICE CHAT CONFIGURATION ===
     {
-      scenario: 'TOGGLE: enable_voice_chat disabled state',
+      scenario: 'ERROR: enable_voice_chat answers NOT_SUPPORTED',
       toolName: 'manage_networking',
       arguments: { action: 'enable_voice_chat', voiceEnabled: false },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.voiceEnabled', equals: false, label: 'voice chat disabled flag applied' },
-        { path: 'structuredContent.result.success', equals: true, label: 'voice chat disable path completed' }
-      ]
+      expected: 'error|NOT_SUPPORTED'
     },
     {
       scenario: 'ACTION: mute_player',

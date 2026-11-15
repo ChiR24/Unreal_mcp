@@ -5,6 +5,7 @@
 #include "Domains/ControlEditor/Selection/McpEditorSelection.h"
 #include "Domains/ControlEditor/Toolsets/McpEditorToolsets.h"
 #include "Domains/ControlEditor/Viewport/McpEditorShowFlags.h"
+#include "Domains/Level/McpLevelActions.h"
 #include "Domains/Play/McpExplore.h"
 #include "Domains/Play/McpFuzz.h"
 #include "Domains/Play/McpPlaytest.h"
@@ -124,8 +125,21 @@ bool UEngineWireSubsystem::HandleControlEditorAction(
     return HandleControlEditorStepFrame(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_fixed_delta_time"))
     return HandleControlEditorSetFixedDeltaTime(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("open_level"))
-    return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
+  // manage_level load under the editor's name, one implementation and its replies, for a level under /Game or /Engine
+  // only, as open_level always opened (a /Script path or a plugin's level is SECURITY_VIOLATION); never streamed in.
+  if (LowerSub == TEXT("open_level")) {
+    const FString Requested = GetJsonStringField(Payload, TEXT("levelPath"));
+    const FString Resolved = McpLevelHandlers::ResolveLoadLevelPath(Requested, false);
+    if (!Resolved.IsEmpty() && !Resolved.StartsWith(TEXT("/Game/")) && !Resolved.StartsWith(TEXT("/Engine/"))) {
+      SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("SECURITY_VIOLATION"),
+                                FString::Printf(TEXT("Invalid levelPath '%s': only a level under /Game or /Engine can be used here."), *Requested),
+                                nullptr);
+      return true;
+    }
+    const TSharedPtr<FJsonObject> Load = MakeShared<FJsonObject>(*Payload);
+    Load->RemoveField(TEXT("streaming"));
+    return McpLevelHandlers::HandleLoadLevelAction(*this, RequestId, Load, RequestingSocket);
+  }
   if (LowerSub == TEXT("set_viewport_resolution")) {
     // The action arrives here as set_viewport_resolution, and this builds the
     // console_command call with r.SetRes that the record's routing names.

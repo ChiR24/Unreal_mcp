@@ -3,6 +3,7 @@
 #include "Domains/Sequence/Media/McpSeqMediaPlaybackInternal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
+#include "MediaPlayer.h"
 
 namespace McpSequenceMedia {
 namespace {
@@ -97,7 +98,9 @@ bool HandlePlayMedia(UEngineWireSubsystem *Subsystem,
     return true;
   }
   if (!bOpenRequested) {
-    ExpectedUrl = GetMediaUrl(Player);
+    if (const UMediaPlayer *MediaPlayer = Cast<UMediaPlayer>(Player)) {
+      ExpectedUrl = MediaPlayer->GetUrl();
+    }
   }
   StartMediaPlaybackAfterOpen(Subsystem, RequestId, Socket, Player, Result,
                               ExpectedUrl);

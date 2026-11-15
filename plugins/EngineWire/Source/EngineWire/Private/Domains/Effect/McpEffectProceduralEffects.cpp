@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -41,7 +42,7 @@ bool HandleCleanup(const FEffectActionContext& Context)
     TArray<UObject*> Matches;
     for (AActor* Actor : ActorSubsystem->GetAllLevelActors())
     {
-        if (Actor && !Actor->GetActorLabel().IsEmpty() && Actor->GetActorLabel().StartsWith(Filter, ESearchCase::IgnoreCase))
+        if (Actor && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor) && !Actor->GetActorLabel().IsEmpty() && Actor->GetActorLabel().StartsWith(Filter, ESearchCase::IgnoreCase))
         {
             Matches.Add(Actor);
         }

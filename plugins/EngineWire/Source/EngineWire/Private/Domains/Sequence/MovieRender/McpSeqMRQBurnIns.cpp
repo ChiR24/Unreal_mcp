@@ -64,23 +64,27 @@ bool HandleConfigureBurnIns(UEngineWireSubsystem *Subsystem,
                        TEXT("INVALID_BURN_IN_CLASS")),
              true;
   }
+  // One undo step for the edit: Modify ran with no transaction open, so undo reverted the edit before this one.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Burn-ins")), EMcpMutationDurability::EditorStateOnly,
+                                          {Job, Config});
   UMoviePipelineBurnInSetting *BurnIn =
       Cast<UMoviePipelineBurnInSetting>(Config->FindOrAddSettingByClass(
           UMoviePipelineBurnInSetting::StaticClass(), true));
   if (!BurnIn)
-    return SendError(Subsystem, RequestId, Socket,
+    return Transaction.Cancel(), SendError(Subsystem, RequestId, Socket,
                      TEXT("MRQ burn-in setting is unavailable."),
                      TEXT("MRQ_BURN_IN_UNAVAILABLE")),
            true;
+  BurnIn->Modify();
   BurnIn->SetIsEnabled(bEnabled);
   BurnIn->bCompositeOntoFinalImage = bComposite;
   if (bHasClass)
     BurnIn->BurnInClass = FSoftClassPath(ClassPath);
-  Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                                    TEXT("MRQ burn-ins configured."),
-                                    BuildJobResult(Job, Queue));
+                                    TEXT("MRQ burn-ins configured."), Result);
   return true;
 }
 

@@ -2,6 +2,7 @@
 
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 #include "HAL/FileManager.h"
+#include "MediaSource.h"
 #include "UObject/UnrealType.h"
 
 namespace McpSequenceMedia {
@@ -51,13 +52,14 @@ bool ValidateNestedSources(UObject *Source, UClass *MediaSourceClass,
     return false;
   }
   Visited.Add(Source);
-  if (!CallBoolFunction(Source, TEXT("Validate"))) {
+  const UMediaSource *Media = Cast<UMediaSource>(Source);
+  if (!Media || !Media->Validate()) {
     OutCode = TEXT("INVALID_MEDIA_SOURCE");
     OutError = FString::Printf(TEXT("Media source is invalid: %s"),
                                *Source->GetPathName());
     return false;
   }
-  const FString Url = GetMediaUrl(Source);
+  const FString Url = Media->GetUrl();
   if (!Url.IsEmpty() && !ValidateMediaUrl(Url, OutCode, OutError)) {
     return false;
   }

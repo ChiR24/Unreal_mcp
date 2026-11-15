@@ -31,6 +31,8 @@ bool UEngineWireSubsystem::HandleManageMaterialAuthoringAction(
     SubAction = TEXT("delete_node");
   } else if (SubAction == TEXT("get_material_function_info")) {
     SubAction = TEXT("get_material_info");
+  } else if (SubAction == TEXT("get_material_node_details")) {
+    SubAction = TEXT("get_node_properties");
   }
 
   // create_landscape/decal/post_process_material: create_material with a domain + blend preset.
@@ -88,7 +90,6 @@ bool UEngineWireSubsystem::HandleManageMaterialAuthoringAction(
     if (McpMaterialAuthoringHandlers::HandleAddMaterialNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetNodePosition(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetMaterialParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleGetMaterialNodeDetails(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetTwoSided(this, RequestId, SubAction, Payload, Socket)) { return true; }
 
   SendAutomationError(

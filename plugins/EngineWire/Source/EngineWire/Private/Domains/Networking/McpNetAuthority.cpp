@@ -127,7 +127,6 @@ bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
         return true;
     }
 
-    Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetBoolField(TEXT("hasAuthority"), Actor->HasAuthority());
     Context.ResultJson->SetStringField(TEXT("role"), McpEnumName<ENetRole>(Actor->GetLocalRole()));
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Authority checked"), Context.ResultJson);
@@ -151,7 +150,6 @@ bool HandleCheckIsLocallyControlled(FNetworkingActionContext& Context)
         bIsLocalController = PC ? PC->IsLocalController() : false;
     }
 
-    Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetBoolField(TEXT("isLocallyControlled"), bIsLocallyControlled);
     Context.ResultJson->SetBoolField(TEXT("isLocalController"), bIsLocalController);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Local control checked"), Context.ResultJson);

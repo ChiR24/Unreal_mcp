@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Domains/Effect/McpEffectPrivate.h"
 
@@ -32,7 +33,10 @@ static UNiagaraComponent* FindLifecycleComponent(AActor* Actor, const FString& A
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {
-            Candidates.Add(*It);
+            if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+            {
+                Candidates.Add(*It);
+            }
         }
     }
     for (AActor* Candidate : Candidates)

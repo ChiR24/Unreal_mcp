@@ -49,7 +49,7 @@ bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& Reque
              "to name a created node for later steps as \"$id\"."), MaxMaterialBatchSteps), TEXT("INVALID_OPERATIONS"));
     return true;
   }
-  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+  LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
   Payload->SetStringField(TEXT("assetPath"), AssetPath);
   // Every edit and "$id" is checked before a step runs: a misspelled id at step 10 left steps 0-9 applied.
   const TArray<TSharedPtr<FJsonValue>> Problems = CheckMaterialBatch(Payload, *Steps);

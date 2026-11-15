@@ -7,6 +7,7 @@
 // navigation mesh is built in.
 
 #include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Camera/CameraActor.h"
 #include "Components/LightComponent.h"
@@ -84,7 +85,7 @@ TSharedPtr<FJsonObject> FindRoles(UWorld* World, const TArray<FItem>& Items, con
     for (TActorIterator<ADirectionalLight> It(World); It; ++It)
     {
         const ULightComponent* Light = It->GetLightComponent();
-        if (Light && (!Sun || Light->Intensity > Sun->GetLightComponent()->Intensity))
+        if (Light && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It) && (!Sun || Light->Intensity > Sun->GetLightComponent()->Intensity))
         {
             Sun = *It;
         }
@@ -106,6 +107,10 @@ TSharedPtr<FJsonObject> FindRoles(UWorld* World, const TArray<FItem>& Items, con
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
+        if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
+        {
+            continue;
+        }
         const FString Class = Actor->GetClass()->GetName();
         if (IsSky(Class))
         {

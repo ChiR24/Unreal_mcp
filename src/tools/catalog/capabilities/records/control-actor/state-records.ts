@@ -32,6 +32,27 @@ const COUNT_ROW = {
   additionalProperties: false,
 };
 
+// list's inputs and answer, which inspect.list_objects (the same handler) declares too.
+export const LIST_INPUTS = {
+  limit: P.limit, filter: P.filter, offset: { type: 'number', description: 'Skip this many matching actors; the next page starts at nextOffset from the previous reply.' },
+  tag: { type: 'string', description: 'Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it.' },
+  className: { type: 'string', description: 'Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C.' },
+  folder: { type: 'string', description: 'Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); "(none)" for the actors at the root.' },
+  propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component\'s as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor.' },
+  near: { ...P.location, description: 'A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder.' },
+  radius: { type: 'number', minimum: 0, description: 'World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near.' },
+  summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },
+  bounds: { type: 'boolean', description: 'Give every row its world bounding box (bounds {min, max}): the extents of a level\'s floors, walls and props in one call, where scale alone says nothing of a mesh\'s own size.' },
+};
+export const LIST_OUTPUT = {
+  actors: LISTED_ACTORS, count: P.count, totalCount: P.totalCount, excludedCount: P.excludedCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter,
+  hasMore: { type: 'boolean', description: 'More matching actors exist past this page.' },
+  nextOffset: { type: 'number', description: 'The offset of the next page; present only when hasMore.' },
+  byClass: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per class, as {name, count} rows sorted by name.' },
+  byTag: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per actor tag, as {name, count} rows sorted by name.' },
+  byFolder: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per outliner folder, as {name, count} rows sorted by name ("(none)" for the root).' },
+};
+
 export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -117,26 +138,9 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.',
     whenToUse: ['The actors present in the level must be enumerated.', 'Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.', 'Something seen in a screenshot or at a coordinate must be identified: list the actors near that point, nearest first.'],
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],
-    inputProps: {
-      limit: P.limit, filter: P.filter, offset: { type: 'number', description: 'Skip this many matching actors; the next page starts at nextOffset from the previous reply.' },
-      tag: { type: 'string', description: 'Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it.' },
-      className: { type: 'string', description: 'Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C.' },
-      folder: { type: 'string', description: 'Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); "(none)" for the actors at the root.' },
-      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component\'s as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor.' },
-      near: { ...P.location, description: 'A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder.' },
-      radius: { type: 'number', minimum: 0, description: 'World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near.' },
-      summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },
-      bounds: { type: 'boolean', description: 'Give every row its world bounding box (bounds {min, max}): the extents of a level\'s floors, walls and props in one call, where scale alone says nothing of a mesh\'s own size.' },
-    },
+    inputProps: LIST_INPUTS,
     required: [],
-    outputProps: {
-      actors: LISTED_ACTORS, count: P.count, totalCount: P.totalCount, excludedCount: P.excludedCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter,
-      hasMore: { type: 'boolean', description: 'More matching actors exist past this page.' },
-      nextOffset: { type: 'number', description: 'The offset of the next page; present only when hasMore.' },
-      byClass: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per class, as {name, count} rows sorted by name.' },
-      byTag: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per actor tag, as {name, count} rows sorted by name.' },
-      byFolder: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per outliner folder, as {name, count} rows sorted by name ("(none)" for the root).' },
-    },
+    outputProps: LIST_OUTPUT,
     outputRequired: [],
     effect: 'read',
     exampleInput: { action: 'list', limit: 50, filter: 'Cube' },

@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Log/McpLogHistory.h"
 #include "Domains/Log/McpScriptErrors.h"
@@ -112,7 +113,7 @@ bool HandleInspectEditorFocusAction(UEngineWireSubsystem &Bridge, const FString 
         GEditor->GetSelectedActors()->GetSelectedObjects(Selected);
         for (const AActor *Actor : Selected)
         {
-            if (Actor && Actors.Num() < 50)
+            if (Actor && Actors.Num() < 50 && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
             {
                 Actors.Add(MakeShared<FJsonValueString>(Actor->GetActorLabel()));
             }

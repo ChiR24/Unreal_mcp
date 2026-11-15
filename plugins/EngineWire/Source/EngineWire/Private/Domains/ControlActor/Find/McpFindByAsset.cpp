@@ -4,6 +4,7 @@
 // one mesh, or showing one material in any slot, could not be asked for.
 
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 
@@ -49,7 +50,7 @@ bool Scan(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedP
         {
             AActor* Actor = *It;
             TArray<UPrimitiveComponent*> Components;
-            if (Actor)
+            if (Actor && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
             {
                 Actor->GetComponents(Components);
             }

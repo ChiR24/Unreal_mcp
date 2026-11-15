@@ -5,6 +5,7 @@
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
+import { LOAD_LEVEL_INPUTS, LOAD_LEVEL_OUT } from '../manage-level/lifecycle.data.js';
 
 const F = 'asset';
 const D = 'editor';
@@ -91,13 +92,12 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
     topics: ['open map', 'open level asset', 'open the menu level or another map'],
-    summary: 'Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).',
+    summary: 'Open a level from disk in place of the open one: manage_level load under the editor\'s name, answered as load answers. levelPath is a /Game or /Engine package or object path (/Game/Maps/Demo, /Game/Maps/Demo.Demo), or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game. A level anywhere else (/Script, a plugin) is refused (SECURITY_VIOLATION). Play In Editor is stopped and asset editors close. Open levels with unsaved changes refuse the open (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state). The reply waits for the level to settle (settledSeconds).',
     whenToUse: ['A different level must be loaded into the editor.'],
-    whenNotToUse: ['The level is already loaded.',
-      'Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved.'],
-    inputProps: { levelPath: P.levelPath },
+    whenNotToUse: ['The level must be streamed into the open one as a sublevel (manage_level load with streaming true).'],
+    inputProps: { levelPath: P.levelPath, ...LOAD_LEVEL_INPUTS },
     required: ['levelPath'],
-    outputProps: { settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' }, },
+    outputProps: LOAD_LEVEL_OUT,
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',

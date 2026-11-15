@@ -1,6 +1,7 @@
 // find_by_class: the actors of the level being edited whose class matches the one the call names.
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 bool UEngineWireSubsystem::HandleControlActorFindByClass(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -57,7 +58,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByClass(
 
     if (ClassToFind) {
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
-        if (AActor* Actor = *It) {
+        if (AActor* Actor = *It; Actor && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor)) {
           TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
           ActorObj->SetStringField(TEXT("name"), McpActorRef(Actor));
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());

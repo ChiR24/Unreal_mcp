@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/McpScreenshotResample.h"
 
 // inspect get_editor_state: each of its five reads below (project, editor and world settings, viewport,
@@ -115,7 +116,7 @@ bool HandleInspectSettingsAction(
             GEditor->GetSelectedActors()->GetSelectedObjects(SelectedActors);
             for (AActor* Actor : SelectedActors)
             {
-                if (Actor)
+                if (Actor && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
                 {
                     TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                     ActorObj->SetStringField(TEXT("name"), Actor->GetName());

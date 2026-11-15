@@ -5,6 +5,7 @@
 // every actor and component of the open level (TextRender text, strings set on a placed instance)
 // when that level lies under packagePaths, or as includeLevel says.
 #include "Domains/AssetQuery/McpAssetQueryPrivate.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
@@ -214,6 +215,7 @@ struct FMcpFindTextScan
         const FString Asset = World->GetPackage()->GetName();
         for (TActorIterator<AActor> It(World); It; ++It)
         {
+            if (!McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) continue;
             const FString Label = It->GetActorLabel();
             Object(*It, Asset, Label);
             for (const UActorComponent* Component : It->GetComponents())

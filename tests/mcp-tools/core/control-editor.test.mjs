@@ -202,6 +202,9 @@ const testCases = [
   // open_level refuses to drop unsaved level changes (DIRTY_PACKAGES), and the delete above made some.
   { scenario: 'Setup: save the cleanup before leaving the level', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
   { scenario: 'ACTION: open_level', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: '/Game/MCPTest/MainLevel' }, expected: 'success' },
+  // A path without its slash that no mounted root takes is read under /Game; the level open already is not loaded again.
+  { scenario: 'ACTION: open_level of the open level by a path without its slash', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: 'MCPTest/MainLevel', saveDirtyPackages: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyLoaded', equals: true, label: 'MCPTest/MainLevel read as /Game/MCPTest/MainLevel, already open' }] },
+  { scenario: 'ERROR: open_level refuses a level outside /Game and /Engine', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: '/Script/Engine.World' }, expected: 'error|SECURITY_VIOLATION' },
 ];
 
 runToolTests('control-editor', testCases, { folder: TEST_FOLDER });

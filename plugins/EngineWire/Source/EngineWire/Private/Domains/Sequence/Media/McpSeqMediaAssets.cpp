@@ -2,6 +2,9 @@
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
+#include "MediaPlayer.h"
+#include "MediaSource.h"
+#include "MediaTexture.h"
 
 namespace McpSequenceMedia {
 namespace {
@@ -75,7 +78,8 @@ bool HandleCreateMediaPlayer(UEngineWireSubsystem *Subsystem,
       SendMediaError(Subsystem, Socket, RequestId, PolicyCode, PolicyError);
       return true;
     }
-    if (!CallBoolFunction(Source, TEXT("Validate"))) {
+    const UMediaSource *MediaSource = Cast<UMediaSource>(Source);
+    if (!MediaSource || !MediaSource->Validate()) {
       SendMediaError(Subsystem, Socket, RequestId, TEXT("MEDIA_OPEN_FAILED"),
                      TEXT("The media source did not validate"));
       return true;
@@ -91,8 +95,10 @@ bool HandleCreateMediaPlayer(UEngineWireSubsystem *Subsystem,
   UObject *Player = Created.Object;
   SetBoolProperty(Player, TEXT("Loop"), bLoop);
   SetBoolProperty(Player, TEXT("PlayOnOpen"), bAutoPlay);
-  if (Source && (!CallBoolObjectFunction(Player, TEXT("CanPlaySource"), Source) ||
-                 !CallBoolObjectFunction(Player, TEXT("OpenSource"), Source))) {
+  UMediaPlayer *MediaPlayer = Cast<UMediaPlayer>(Player);
+  UMediaSource *SourceToOpen = Cast<UMediaSource>(Source);
+  if (Source && (!MediaPlayer || !SourceToOpen || !MediaPlayer->CanPlaySource(SourceToOpen) ||
+                 !MediaPlayer->OpenSource(SourceToOpen))) {
     TSharedPtr<FJsonObject> Result = BuildAssetResponse(Created, TEXT("MediaPlayer"));
     Result->SetStringField(TEXT("mediaSourcePath"), ResolvedSourcePath);
     Result->SetBoolField(TEXT("openRequested"), false);
@@ -165,9 +171,13 @@ bool HandleCreateMediaTexture(UEngineWireSubsystem *Subsystem,
                      Result);
       return true;
     }
-    CallVoidObjectFunction(Texture, TEXT("SetMediaPlayer"), Player);
   }
-  CallVoidFunction(Texture, TEXT("UpdateResource"));
+  if (UMediaTexture *MediaTexture = Cast<UMediaTexture>(Texture)) {
+    if (Player) {
+      MediaTexture->SetMediaPlayer(Cast<UMediaPlayer>(Player));
+    }
+    MediaTexture->UpdateResource();
+  }
 
   TSharedPtr<FJsonObject> Result;
   if (!SaveCreatedAsset(Subsystem, RequestId, Socket, Created,

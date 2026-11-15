@@ -10,7 +10,7 @@ bool HandleAddMaterialNode(UEngineWireSubsystem* Bridge, const FString& RequestI
 {
   if (SubAction == TEXT("add_material_node")) {
     // materialPath or assetPath, sanitized; Material or Function; HostOuter; X/Y.
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
     const FString NodeType = McpGetFirstStringField(Payload, {TEXT("nodeType"), TEXT("type")});
     if (NodeType.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeType'."), TEXT("INVALID_ARGUMENT"));

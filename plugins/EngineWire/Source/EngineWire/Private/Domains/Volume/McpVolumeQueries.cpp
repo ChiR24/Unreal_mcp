@@ -1,4 +1,5 @@
 #include "Domains/Volume/McpVolumeActionDecls.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -21,7 +22,7 @@ static void AppendVolumeInfo(UWorld* World, const FString& Filter, const FString
     for (TActorIterator<TActorClass> It(World); It; ++It)
     {
         TActorClass* Actor = *It;
-        if (!Actor)
+        if (!Actor || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
         {
             continue;
         }

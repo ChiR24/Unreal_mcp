@@ -160,6 +160,9 @@ const testCases = [
   { scenario: 'ERROR: set_property refuses text that is not a number for a float', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'InitialLifeSpan', value: 'soon' }, expected: 'error|requires a number' },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
   { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
+  // control_actor list under inspect's name: its filters.
+  { scenario: 'INFO: list_objects near a point, with bounds', toolName: 'inspect', arguments: { action: 'list_objects', near: [0, 0, 0], radius: 100000, bounds: true, limit: 5 }, expected: 'success' },
+  { scenario: 'INFO: list_objects summary of the root folder', toolName: 'inspect', arguments: { action: 'list_objects', summary: true, folder: '(none)' }, expected: 'success' },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },
 
   // === TAGS / SNAPSHOTS / SEARCH ===
@@ -171,6 +174,7 @@ const testCases = [
   { scenario: 'ACTION: export', toolName: 'inspect', arguments: inspectActor('export', { format: 'T3D' }), expected: 'success' },
   { scenario: 'ACTION: export to a project file', toolName: 'inspect', arguments: inspectActor('export', { outputPath: 'Saved/MCPTest/InspectExport.t3d' }), expected: 'success' },
   { scenario: 'INFO: find_by_class', toolName: 'inspect', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success' },
+  { scenario: 'INFO: find_by_class by class', toolName: 'inspect', arguments: { action: 'find_by_class', class: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'INFO: get_bounding_box', toolName: 'inspect', arguments: inspectActor('get_bounding_box'), expected: 'success' },
 
   // === GLOBAL INSPECTION ===

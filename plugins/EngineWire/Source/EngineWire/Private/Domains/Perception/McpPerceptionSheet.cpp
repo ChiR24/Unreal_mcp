@@ -9,6 +9,7 @@
 // shaded as clay by McpPerceptionSheetDraw: the level viewport is not moved.
 
 #include "Domains/Perception/McpPerceptionSheet.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 
 #include "Algo/Find.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
@@ -117,7 +118,7 @@ bool HandleContactSheet(UEngineWireSubsystem& Bridge, const FString& RequestId, 
     for (TActorIterator<AActor> It(Subject->GetWorld()); It && Shown.Num() < ShownLimit; ++It)
     {
         // As describe_relations: no lights, volumes or subsystem debug-draw actors, whose boxes can span the level.
-        const bool bSkip = *It == Subject || It->IsHidden() || McpPlacement::IsBoundsOnlyActor(*It);
+        const bool bSkip = *It == Subject || It->IsHidden() || McpPlacement::IsBoundsOnlyActor(*It) || !McpCapabilityPrincipal::ActiveRequestPermitsObject(*It);
         const FBox Box = bSkip ? FBox(ForceInit) : McpPlacement::DrawnBounds(**It);
         if (Box.IsValid && Box.Intersect(Reach))
         {

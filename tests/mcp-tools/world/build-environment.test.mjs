@@ -66,6 +66,8 @@ const testCases = [
   { scenario: 'ADD: add_foliage_instances with a non-uniform scale', toolName: 'build_environment', arguments: { action: 'add_foliage_instances', foliageTypePath: FOLIAGE_TYPE_PATH_ALIAS, transforms: [{ location: { x: 140, y: 0, z: 100 }, scale: { x: 2, y: 1, z: 0.5 } }] }, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_foliage_instances', toolName: 'build_environment', arguments: {"action": "get_foliage_instances"}, expected: 'success' },
+  // A bare foliage type name is read under /Game/Foliage, as the actions say (it was refused as a content root).
+  { scenario: 'ERROR: get_foliage_instances of a bare name that no type holds', toolName: 'build_environment', arguments: { action: 'get_foliage_instances', foliageType: 'FT_NoSuchType' }, expected: 'error|FOLIAGE_TYPE_NOT_FOUND' },
   { scenario: 'INFO: get_foliage_instances counts per type only', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "summary": true}, expected: 'success' },
   { scenario: 'INFO: get_foliage_instances capped list', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "limit": 5}, expected: 'success' },
   { scenario: 'INFO: get_foliage_instances of one type reports the whole scale', toolName: 'build_environment', arguments: { action: 'get_foliage_instances', foliageTypePath: FOLIAGE_TYPE_PATH_ALIAS }, expected: 'success', assertions: [{ path: 'structuredContent.result.instances', includesObject: { scale: { x: 2, y: 1, z: 0.5 } }, label: 'a non-uniform scale shows per axis, not as its X alone' }] },

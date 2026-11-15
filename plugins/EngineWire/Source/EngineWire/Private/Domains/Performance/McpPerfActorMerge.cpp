@@ -4,6 +4,7 @@
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
@@ -109,6 +110,15 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
             TEXT("/Game/MergedActors/SM_Merged_%s"),
             *FGuid::NewGuid().ToString(EGuidFormats::Digits));
     }
+    // Through the shared canonicalizer, as every other asset path goes (the /Content alias, mounts, traversal).
+    const FString SafePackageName = SanitizeProjectRelativePath(RequestedPackageName);
+    if (SafePackageName.IsEmpty())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            McpPathRefusalMessage(TEXT("packageName"), RequestedPackageName), TEXT("SECURITY_VIOLATION"));
+        return true;
+    }
+    RequestedPackageName = SafePackageName;
     if (!FPackageName::IsValidLongPackageName(RequestedPackageName))
     {
         Context.Bridge.SendAutomationError(
@@ -141,6 +151,14 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
 
     // The merge names its mesh SM_<name> and builds it over a static mesh already there.
     const FString FinalPackageName = FPackageName::GetLongPackagePath(MergeBasePackageName) / (TEXT("SM_") + FPackageName::GetShortName(MergeBasePackageName));
+    // Asked before the merge makes the mesh: refused at the save, a path-restricted caller left it behind unsaved.
+    if (!McpCapabilityPrincipal::ActiveRequestPermitsPath(FinalPackageName))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(
+            TEXT("%s is outside the caller's allowed paths; pick a packageName inside them. Nothing was merged."), *FinalPackageName),
+            TEXT("PATH_NOT_PERMITTED"));
+        return true;
+    }
     if (FPackageName::DoesPackageExist(FinalPackageName) || FindObject<UPackage>(nullptr, *FinalPackageName))
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,

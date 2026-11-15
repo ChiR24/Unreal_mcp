@@ -2,8 +2,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 
-FString GCurrentSequencePath;
-
 FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
   FString Path;
   if (Payload.IsValid()) {
@@ -23,8 +21,6 @@ FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
     }
     return Path;
   }
-  if (!GCurrentSequencePath.IsEmpty())
-    return GCurrentSequencePath;
   return FString();
 }
 

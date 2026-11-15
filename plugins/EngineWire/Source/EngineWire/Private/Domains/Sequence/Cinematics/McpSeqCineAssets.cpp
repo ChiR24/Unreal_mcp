@@ -17,129 +17,6 @@
 #include "Tracks/MovieSceneSubTrack.h"
 
 namespace McpSequenceCinematics {
-namespace {
-bool ResolveAssetTarget(const TSharedPtr<FJsonObject> &Params, FString &OutName,
-                        FString &OutFolder, FString &OutPath) {
-  OutPath = GetString(Params, TEXT("sequencePath"), TEXT("assetPath"));
-  OutName = GetString(Params, TEXT("name"));
-  OutFolder = GetString(Params, TEXT("path"));
-  if (!OutPath.IsEmpty()) {
-    // sequencePath + name means "create <name> inside this folder"; only a
-    // sequencePath without a name is a full asset path. Splitting always used
-    // to turn the folder into the asset name.
-    if (!OutName.IsEmpty() &&
-        !OutPath.EndsWith(TEXT("/") + OutName, ESearchCase::IgnoreCase)) {
-      OutFolder = OutPath;
-      OutFolder.RemoveFromEnd(TEXT("/"));
-    } else {
-      int32 Slash = INDEX_NONE;
-      if (OutPath.FindLastChar(TEXT('/'), Slash) && Slash > 0) {
-        OutFolder = OutPath.Left(Slash);
-        OutName = OutPath.Mid(Slash + 1);
-      }
-    }
-  }
-  if (OutName.IsEmpty())
-    return false;
-  if (OutFolder.IsEmpty())
-    OutFolder = TEXT("/Game/Cinematics");
-  OutPath = FString::Printf(TEXT("%s/%s"), *OutFolder, *OutName);
-  return true;
-}
-
-}
-
-bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
-                                TSharedPtr<FJsonObject> &OutResult) {
-  FString Name, Folder, FullPath;
-  if (!ResolveAssetTarget(Params, Name, Folder, FullPath)) {
-    OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                           TEXT("name or sequencePath is required"),
-                           TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-  FString WritablePath;
-  FString PathError;
-  if (!McpSequencePathSecurity::ValidateWritableAssetPath(
-          FullPath, WritablePath, PathError)) {
-    OutResult = MakeResult(false, TEXT("create_master_sequence"), PathError,
-                           TEXT("SEQUENCE_PATH_NOT_WRITABLE"));
-    return true;
-  }
-  FullPath = WritablePath;
-  Folder = FPackageName::GetLongPackagePath(FullPath);
-  if (McpAssetExists(FullPath)) {
-    UObject *Existing = McpLoadAsset(FullPath);
-    ULevelSequence *ExistingSequence = Cast<ULevelSequence>(Existing);
-    if (!ExistingSequence || !ExistingSequence->GetMovieScene()) {
-      OutResult = MakeResult(
-          false, TEXT("create_master_sequence"),
-          TEXT("An asset of another type already exists at sequencePath"),
-          TEXT("ASSET_TYPE_MISMATCH"));
-      OutResult->SetStringField(TEXT("sequencePath"), FullPath);
-      McpHandlerUtils::AddVerification(OutResult, Existing);
-      return true;
-    }
-    OutResult = MakeResult(true, TEXT("create_master_sequence"),
-                           TEXT("Master sequence already exists"));
-    OutResult->SetStringField(TEXT("sequencePath"), FullPath);
-    OutResult->SetBoolField(TEXT("alreadyExists"), true);
-    McpHandlerUtils::AddVerification(OutResult, ExistingSequence);
-    McpHandlerUtils::MarkNoAssetsChanged(OutResult);
-    return true;
-  }
-  // The frame rate is read before anything is made, so a bad one leaves no asset to clean up.
-  FFrameRate FrameRate(24, 1);
-  if (Params->HasField(TEXT("frameRate"))) {
-    FString FrameRateError;
-    if (!McpSequenceFrameRate::TryParse(
-            Params, TEXT("frameRate"), FrameRate, FrameRateError)) {
-      OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                             FrameRateError, TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-  }
-  FString NameError;
-  ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder, NameError);
-  if (!NameError.IsEmpty()) {
-    OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                           FString::Printf(TEXT("Invalid sequence name '%s': %s"), *Name, *NameError), TEXT("INVALID_NAME"));
-    return true;
-  }
-  if (!Sequence || !Sequence->GetMovieScene()) {
-    OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                           TEXT("Failed to create LevelSequence asset"),
-                           TEXT("CREATE_ASSET_FAILED"));
-    return true;
-  }
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  MovieScene->SetDisplayRate(FrameRate);
-  FString FrameError;
-  if (!McpSequenceFrameMath::ValidateCinematicFrameRequest(
-          Params, MovieScene, FrameError)) {
-    McpSafeOperations::McpDeleteAssetAndFile(FullPath);
-    OutResult = MakeResult(false, TEXT("create_master_sequence"), FrameError,
-                           TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-  MovieScene->SetPlaybackRange(GetFrame(Params, MovieScene, TEXT("startFrame")),
-                               GetDuration(Params, MovieScene, 240));
-  if (!McpSafeAssetSave(Sequence)) {
-    McpSafeOperations::McpDeleteAssetAndFile(FullPath);
-    OutResult = MakeResult(
-        false, TEXT("create_master_sequence"),
-        TEXT("The master sequence could not be saved"),
-        TEXT("ASSET_SAVE_FAILED"));
-    OutResult->SetStringField(TEXT("sequencePath"), FullPath);
-    return true;
-  }
-  OutResult = MakeResult(true, TEXT("create_master_sequence"),
-                         TEXT("Master sequence created"));
-  OutResult->SetStringField(TEXT("sequencePath"), FullPath);
-  McpHandlerUtils::AddVerification(OutResult, Sequence);
-  return true;
-}
-
 // Whether playing Inner inside Outer would make Outer play itself: Inner is Outer, or its own sub track or shot track
 // already holds Outer. The engine compiles each sub section into its sequence with no test for one it is already
 // inside, so such a sequence recurses until the stack is gone when it is next compiled; Sequencer refuses both before
@@ -185,7 +62,7 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
   UMovieSceneSubSection *Section =
       Track ? Track->AddSequenceOnRow(
                   Sub, GetFrame(Params, MovieScene, TEXT("startFrame")),
-                                      GetDuration(Params, MovieScene, 100),
+                                      GetDuration(Params, MovieScene, InnerSequenceDisplayFrames(Sub, MovieScene, 100)),
                                       static_cast<int32>(FMath::RoundToInt(Row)))
             : nullptr;
   if (!Section) {
@@ -237,7 +114,7 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
                   Track->AddSequenceOnRow(
                       ShotSeq,
                       GetFrame(Params, MovieScene, TEXT("startFrame")),
-                      GetDuration(Params, MovieScene, 100),
+                      GetDuration(Params, MovieScene, InnerSequenceDisplayFrames(ShotSeq, MovieScene, 100)),
                       static_cast<int32>(FMath::RoundToInt(Row))))
             : nullptr;
   if (!Shot) {

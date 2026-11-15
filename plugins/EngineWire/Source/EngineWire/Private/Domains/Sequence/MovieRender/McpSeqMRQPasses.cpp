@@ -233,16 +233,20 @@ bool HandleAddRenderPass(UEngineWireSubsystem *Subsystem,
     if (!ValidateSinglePass(Payload, Pass, Message, Code))
       return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   }
+  // One undo step for the edit: Modify ran with no transaction open, so undo reverted the edit before this one.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Render Pass")), EMcpMutationDurability::EditorStateOnly,
+                                          {Job, Config});
   for (const FString &Pass : Passes) {
     if (!ApplySinglePass(Config, Payload, Pass, Message, Code))
       return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   }
-  Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     FString::Printf(TEXT("Render pass %s added to %s."),
                                                     *FString::Join(Passes, TEXT(", ")), *Job->JobName),
-                                    BuildJobResult(Job, Queue));
+                                    Result);
   return true;
 }
 }

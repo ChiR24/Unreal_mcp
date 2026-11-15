@@ -224,7 +224,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   travelOptions: 'Extra URL options appended to the travel URL, such as Name=Player1 or ?Team=2.',
   executeTravel: 'Execute travel.',
   serverAddress: 'Host name or IP of the server to join, such as 127.0.0.1 (no port, which goes in serverPort).',
-  voiceEnabled: 'Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled.',
+  voiceEnabled: 'Whether voice chat is on. settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled; enable answers NOT_SUPPORTED.',
   voiceSettings: 'Voice settings.',
   channelName: 'Channel name.',
   channelType: 'Channel type.',

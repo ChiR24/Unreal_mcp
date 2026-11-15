@@ -55,7 +55,7 @@ AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const 
     }
 
     const FString Label = ActorName.IsEmpty() ? ActorClass->GetName() : ActorName;
-    AActor *Spawned = SpawnActorInActiveWorld<AActor>(ActorClass, Location, Rotation, Label);
+    AActor *Spawned = SpawnActorInEditorWorld<AActor>(ActorClass, Location, Rotation, Label);
     if (bOutSpawned)
     {
         *bOutSpawned = Spawned != nullptr;

@@ -5,31 +5,17 @@
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 namespace McpFoliageHandlers {
-namespace {
-
-UFoliageType *McpLoadFoliageTypeFromPayload(const TSharedPtr<FJsonObject> &Payload, FString &OutPath)
-{
-    OutPath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType"), TEXT("path")});
-    if (OutPath.IsEmpty())
-    {
-        return nullptr;
-    }
-    FString SafePath = SanitizeProjectRelativePath(OutPath);
-    if (SafePath.IsEmpty())
-    {
-        return nullptr;
-    }
-    OutPath = SafePath;
-    return LoadObject<UFoliageType>(nullptr, *OutPath);
-}
-
-} // namespace
 
 bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                     FString &OutMessage, FString &OutErrorCode)
 {
-    FString FoliagePath;
-    UFoliageType *FoliageType = McpLoadFoliageTypeFromPayload(Payload, FoliagePath);
+    // Read as add, paint, get and remove read it: a bare name lives in /Game/Foliage, an unsafe path is refused.
+    FString FoliagePath, Requested;
+    if (!ResolveFoliageTypePath(Payload, FoliagePath, Requested))
+    {
+        return McpRefuse(OutMessage, OutErrorCode, McpPathRefusalMessage(TEXT("foliage type path"), Requested), TEXT("SECURITY_VIOLATION"));
+    }
+    UFoliageType *FoliageType = FoliagePath.IsEmpty() ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliagePath);
     if (!FoliageType)
     {
         return McpRefuse(OutMessage, OutErrorCode, TEXT("Foliage type asset not found"), TEXT("ASSET_NOT_FOUND"));

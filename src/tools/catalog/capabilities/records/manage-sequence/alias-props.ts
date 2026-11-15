@@ -56,7 +56,7 @@ export const A = {
   /** LoadSequence Cinematics.cpp:77 and MaybeSaveSequence Cinematics.cpp:194. */
   save: bool('Whether to save the sequence asset after the mutation.'),
   /** ValidateCinematicFrameRequest FrameMath.cpp:170 and GetDuration. */
-  durationFrames: int('Section duration in display-rate frames.'),
+  durationFrames: int('Section duration in display-rate frames. Left out with endFrame, a subsequence or shot section takes its sequence\'s own length, a master sequence\'s playback range 240 frames and any other section 100.'),
   /** SetSectionRange Cinematics.cpp:105-107. */
   rowIndex: int('Sequencer row index for the created section.'),
   /** GetFrame(startFrame) in SetSectionRange and the track handlers. */

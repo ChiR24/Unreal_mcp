@@ -12,7 +12,7 @@ bool AddParameterExpression(UEngineWireSubsystem* Bridge, const FString& Request
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                             const TCHAR* Label, TSetDefault&& SetDefault)
 {
-  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+  LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
   // The add_material_node family documents `name` as "Parameter name, when the node type is a
   // parameter", so a build_material_graph step {edit: add_scalar_parameter, name: ...} failed with

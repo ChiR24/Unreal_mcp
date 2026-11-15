@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
 bool UEngineWireSubsystem::HandleControlActorFindByTag(
@@ -29,7 +30,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
   }
   for (TActorIterator<AActor> It(QueryWorld); It; ++It) {
     AActor *Actor = *It;
-    const bool bMatches = Actor && Actor->ActorHasTag(TagName);
+    const bool bMatches = Actor && Actor->ActorHasTag(TagName) && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor);
     if (bMatches) {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("name"), McpActorRef(Actor));

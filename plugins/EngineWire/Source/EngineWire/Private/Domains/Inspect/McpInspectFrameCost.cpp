@@ -3,6 +3,7 @@
 // The thread times are the same process-wide timers get_performance_stats reads (McpInspectStats.cpp).
 
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
 
@@ -217,7 +218,7 @@ bool HandleInspectFrameCostAction(
     {
         for (TActorIterator<AActor> It(World); It; ++It)
         {
-            if (IsValid(*It)) Scan.AddActor(*It);
+            if (IsValid(*It) && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) Scan.AddActor(*It);
         }
     }
     FFrameCostRows MeshRows;

@@ -3,6 +3,9 @@
 #include "Domains/Sequence/Media/McpSeqMedia.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 #include "HAL/FileManager.h"
+#include "MediaPlayer.h"
+#include "MediaPlaylist.h"
+#include "MediaSource.h"
 
 namespace McpSequenceMedia {
 
@@ -25,10 +28,13 @@ bool OpenRequestedMedia(UObject *Player,
   OutOpenRequested = false;
   OutExpectedUrl.Reset();
   FString Error;
+  UMediaPlayer *MediaPlayer = Cast<UMediaPlayer>(Player);
   // Just before an open, once its target passed every check: closed first, a refused call stopped what was playing.
-  const auto CloseForOpen = [Player]() {
+  const auto CloseForOpen = [Player, MediaPlayer]() {
     InvalidatePendingMediaPlayback(Player, true);
-    CallVoidFunction(Player, TEXT("Close"));
+    if (MediaPlayer) {
+      MediaPlayer->Close();
+    }
   };
   const FString SourcePath =
       GetStringAny(Payload, {TEXT("mediaSourcePath"), TEXT("sourcePath")});
@@ -50,18 +56,19 @@ bool OpenRequestedMedia(UObject *Player,
               : OutErrorMessage;
       return false;
     }
-    const bool bCanPlay = CallBoolObjectFunction(Player, TEXT("CanPlaySource"), Source);
+    UMediaSource *MediaSource = Cast<UMediaSource>(Source);
+    const bool bCanPlay = MediaPlayer && MediaSource && MediaPlayer->CanPlaySource(MediaSource);
     if (bCanPlay) {
       CloseForOpen();
     }
-    if (!bCanPlay || !CallBoolObjectFunction(Player, TEXT("OpenSource"), Source)) {
+    if (!bCanPlay || !MediaPlayer->OpenSource(MediaSource)) {
       OutErrorCode = TEXT("MEDIA_OPEN_FAILED");
       OutErrorMessage = TEXT("The media player rejected the supplied source");
       return false;
     }
     Result->SetStringField(TEXT("mediaSourcePath"), ResolvedPath);
     OutOpenRequested = true;
-    OutExpectedUrl = GetMediaUrl(Source);
+    OutExpectedUrl = MediaSource->GetUrl();
   }
 
   const FString PlaylistPath = GetStringAny(Payload, {TEXT("playlistPath")});
@@ -75,15 +82,14 @@ bool OpenRequestedMedia(UObject *Player,
     const double IndexValue =
         GetNumberAny(Payload, {TEXT("playlistIndex")});
     const int32 Index = FMath::Max(0, FMath::TruncToInt32(IndexValue));
-    UObject *PlaylistSource =
-        Playlist ? CallObjectIntFunction(Playlist, TEXT("Get"), Index) : nullptr;
+    UMediaPlaylist *MediaPlaylist = Cast<UMediaPlaylist>(Playlist);
+    UMediaSource *PlaylistSource = MediaPlaylist ? MediaPlaylist->Get(Index) : nullptr;
     const bool bPlaylistValid = PlaylistSource && ValidateMediaSourcePolicy(PlaylistSource, OutErrorCode, OutErrorMessage);
     if (bPlaylistValid) {
       CloseForOpen();
     }
     if (!bPlaylistValid ||
-        !CallBoolObjectIntFunction(Player, TEXT("OpenPlaylistIndex"), Playlist,
-                                   Index)) {
+        !MediaPlayer || !MediaPlayer->OpenPlaylistIndex(MediaPlaylist, Index)) {
       if (OutErrorCode.IsEmpty())
         OutErrorCode = TEXT("MEDIA_OPEN_FAILED");
       OutErrorMessage =
@@ -96,7 +102,7 @@ bool OpenRequestedMedia(UObject *Player,
     Result->SetStringField(TEXT("playlistPath"), ResolvedPath);
     Result->SetNumberField(TEXT("playlistIndex"), Index);
     OutOpenRequested = true;
-    OutExpectedUrl = GetMediaUrl(PlaylistSource);
+    OutExpectedUrl = PlaylistSource->GetUrl();
   }
 
   const FString Url = GetStringAny(Payload, {TEXT("url"), TEXT("streamUrl")});
@@ -140,7 +146,7 @@ bool OpenRequestedMedia(UObject *Player,
       return false;
     }
     CloseForOpen();
-    if (!CallBoolStringFunction(Player, TEXT("OpenFile"), ResolvedFilePath)) {
+    if (!MediaPlayer || !MediaPlayer->OpenFile(ResolvedFilePath)) {
       OutErrorCode = TEXT("MEDIA_OPEN_FAILED");
       OutErrorMessage = TEXT("The media file could not be opened");
       return false;

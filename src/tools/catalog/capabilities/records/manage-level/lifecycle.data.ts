@@ -9,6 +9,24 @@ import { ADD_SUBLEVEL_OUT } from './operations.data.js';
 const F = 'lifecycle';
 const D = 'level';
 
+// load's switches for unsaved levels and its own answer (streaming:true is add_sublevel's); control_editor open_level is
+// load under the editor's name and declares them too.
+export const LOAD_LEVEL_INPUTS = {
+  saveDirtyPackages: { ...P.saveDirtyPackages, description: 'Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded.' },
+  discardUnsaved: { type: 'boolean', description: 'Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word).' },
+};
+export const LOAD_LEVEL_OUT = {
+  alreadyLoaded: { type: 'boolean', description: 'True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone.' },
+  reloaded: { type: 'boolean', description: 'Whether this call loaded the level from disk (false when alreadyLoaded).' },
+  dirtyWorldPackagesBeforeLoad: { type: 'number', description: 'Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor).' },
+  dirtyContentPackagesBeforeLoad: { type: 'number', description: 'Asset packages with unsaved changes when the call began.' },
+  savedDirtyPackagesBeforeLoad: { type: 'boolean', description: 'Whether saveDirtyPackages saved every dirty package before the load.' },
+  unsaved: { type: 'boolean', description: 'alreadyLoaded only: whether the open level (or one of its external actor packages) still has unsaved changes after any save the call made.' },
+  unsavedPackages: { type: 'array', items: { type: 'string' }, description: 'alreadyLoaded only: the packages with unsaved changes (the first 100).' },
+  unsavedPackageCount: { type: 'number', description: 'alreadyLoaded only: how many packages have unsaved changes.' },
+  settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' },
+};
+
 export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'load', dispatchAction: 'load', domain: D, family: F,
@@ -19,21 +37,11 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The level is already the open one: the call reloads nothing and keeps its unsaved changes (the reply says alreadyLoaded and reports the unsaved state); to drop them, open another level with discardUnsaved true, to keep them use save.',
       'Open levels have unsaved changes that opening another level would drop: the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages, until saveDirtyPackages or discardUnsaved says what to do with them.'],
     inputProps: {
-      levelPath: P.levelPath, streaming: P.streaming,
-      saveDirtyPackages: { ...P.saveDirtyPackages, description: 'Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded.' },
-      discardUnsaved: { type: 'boolean', description: 'Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word).' },
+      levelPath: P.levelPath, streaming: P.streaming, ...LOAD_LEVEL_INPUTS,
     },
     required: ['levelPath'],
     outputProps: {
-      alreadyLoaded: { type: 'boolean', description: 'True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone.' },
-      reloaded: { type: 'boolean', description: 'Whether this call loaded the level from disk (false when alreadyLoaded).' },
-      dirtyWorldPackagesBeforeLoad: { type: 'number', description: 'Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor).' },
-      dirtyContentPackagesBeforeLoad: { type: 'number', description: 'Asset packages with unsaved changes when the call began.' },
-      savedDirtyPackagesBeforeLoad: { type: 'boolean', description: 'Whether saveDirtyPackages saved every dirty package before the load.' },
-      unsaved: { type: 'boolean', description: 'alreadyLoaded only: whether the open level (or one of its external actor packages) still has unsaved changes after any save the call made.' },
-      unsavedPackages: { type: 'array', items: { type: 'string' }, description: 'alreadyLoaded only: the packages with unsaved changes (the first 100).' },
-      unsavedPackageCount: { type: 'number', description: 'alreadyLoaded only: how many packages have unsaved changes.' },
-      settledSeconds: { type: 'number', description: 'How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks.' }, texturesStillStreaming: { type: 'number', description: 'Textures still streaming in when the wait ended at its cap; absent when streaming had gone quiet.' },
+      ...LOAD_LEVEL_OUT,
       // streaming:true is add_sublevel, which answers.
       ...ADD_SUBLEVEL_OUT,
     },

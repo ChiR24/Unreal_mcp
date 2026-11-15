@@ -7357,7 +7357,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "discardUnsaved": {
           "type": "boolean",
-          "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
+          "description": "Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word)."
         },
         "durationSeconds": {
           "type": "number",
@@ -7701,6 +7701,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maximum": 4096,
           "description": "With pathTraced: samples per pixel to accumulate before the capture, 1-4096 (default 64). More is cleaner and slower; the viewport is drawn at its full size whatever resolution returns."
         },
+        "saveDirtyPackages": {
+          "type": "boolean",
+          "description": "Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded."
+        },
         "seconds": {
           "type": "number",
           "description": "start and continue: real seconds to explore before answering (1-22, default 10)."
@@ -7868,6 +7872,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "alreadyEjected": {
           "type": "boolean",
           "description": "True when the player was already ejected, so nothing changed."
+        },
+        "alreadyLoaded": {
+          "type": "boolean",
+          "description": "True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone."
         },
         "archive": {
           "type": "array",
@@ -8102,6 +8110,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
+        },
+        "dirtyContentPackagesBeforeLoad": {
+          "type": "number",
+          "description": "Asset packages with unsaved changes when the call began."
+        },
+        "dirtyWorldPackagesBeforeLoad": {
+          "type": "number",
+          "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
         },
         "discardedPackageCount": {
           "type": "integer",
@@ -8345,6 +8361,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Project the editor relaunches with."
         },
+        "reloaded": {
+          "type": "boolean",
+          "description": "Whether this call loaded the level from disk (false when alreadyLoaded)."
+        },
         "renderRunning": {
           "type": "boolean",
           "description": "Under validateOnly, whether a Movie Render Queue render is running (a restart is refused until it ends)."
@@ -8376,6 +8396,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "routedToPIE": {
           "type": "boolean",
           "description": "The event was routed to the PIE viewport rather than the editor."
+        },
+        "savedDirtyPackagesBeforeLoad": {
+          "type": "boolean",
+          "description": "Whether saveDirtyPackages saved every dirty package before the load."
         },
         "screenshotPath": {
           "type": "string",
@@ -8512,16 +8536,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "What editor undo takes back: the change is one step. Absent when the selection was already what was asked."
         },
+        "unsaved": {
+          "type": "boolean",
+          "description": "alreadyLoaded only: whether the open level (or one of its external actor packages) still has unsaved changes after any save the call made."
+        },
         "unsavedCount": {
           "type": "integer",
           "description": "How many packages have unsaved changes."
         },
+        "unsavedPackageCount": {
+          "type": "number",
+          "description": "alreadyLoaded only: how many packages have unsaved changes."
+        },
         "unsavedPackages": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Package path."
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Package path."
+              },
+              "description": "Packages with unsaved changes a restart would discard."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "alreadyLoaded only: the packages with unsaved changes (the first 100)."
+            }
+          ],
           "description": "Packages with unsaved changes a restart would discard."
         },
         "unsetParameters": {
@@ -8684,6 +8728,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
         },
+        "bounds": {
+          "type": "boolean",
+          "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
+        },
         "camera": {
           "type": "string",
           "description": "Look through this camera actor (label or name: a cine camera, a camera or any actor with a camera component) as it is now, a moment held with manage_sequence pause startTime included (its reply's cameraCut names the shot's camera): the view takes the camera's place, turn and field of view, stays there, and is read in game view. The frame keeps the viewport's own shape, so a shot narrower than the viewport is seen cropped at its top and bottom. Not with location, rotation or fov (INVALID_ARGUMENT); ACTOR_NOT_FOUND when no actor has that name; INVALID_ARGUMENT when it has no perspective camera."
@@ -8703,6 +8751,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ]
           },
           "description": "What to check (default all three). Any other name refuses with INVALID_ARGUMENT."
+        },
+        "class": {
+          "type": "string",
+          "description": "Unreal class name or path (alias of className)."
         },
         "className": {
           "type": "string",
@@ -8773,7 +8825,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Keep the actors whose label, name or class name holds this text (any case)."
+          "description": "Optional name substring filter for list."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."
         },
         "format": {
           "type": "string",
@@ -8828,8 +8884,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "How many of each node's newest runs to list (1-500, default 20)."
         },
         "limit": {
-          "type": "number",
-          "description": "Maximum objects to return (default 100)."
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Maximum number of actors to return in a list."
+            },
+            {
+              "type": "number",
+              "description": "Most actors to list, largest share first (default 20, at most 100); visibleActors counts them all."
+            },
+            {
+              "type": "number",
+              "description": "Most changes to list, oldest first (1-200, default 50). When more are left, truncated is true and the cursor returned continues from the last one listed."
+            },
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
+            }
+          ],
+          "description": "Maximum number of actors to return in a list."
         },
         "location": {
           "oneOf": [
@@ -8887,7 +8962,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bounding_box",
             "export"
           ],
-          "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs): each one's name, label, path and class, limit rows (default 100) from offset. filter keeps the actors whose label, name or class holds it (any case); count, matchedCount, totalCount and hasMore say how many there are, isPieWorld and worldName which world was read.\nby_tag: Find the level's actors that carry tag (the play world while a game runs): each one's label, name, path and class, the first limit (1-1000, default 200) with truncated and totalCount when more match. A missing tag is refused (INVALID_ARGUMENT).\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
+          "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs) with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius lists what is near a point, nearest first; summary counts the level by class, tag and folder instead. control_actor list under inspect's name, answered as it answers.\nby_tag: Find the actors in the level whose Tags list holds tag (the whole tag, case-insensitive), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. control_actor lookup=by_tag under inspect's name, answered as it answers; the Play-In-Editor world is searched while a session runs.\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
         },
         "markDirty": {
           "type": "boolean",
@@ -8914,6 +8989,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 1,
           "maxItems": 50,
           "description": "Console variable names to read, exactly as the console takes them (r.ScreenPercentage), 1 to 50."
+        },
+        "near": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder."
         },
         "nodeIds": {
           "type": "array",
@@ -8966,7 +9050,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "offset": {
           "type": "number",
-          "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
+          "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
         },
         "otherActor": {
           "type": "string",
@@ -9049,6 +9133,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Property values to add to the reply, by name (Intensity, bIsActive), as text under properties; a name the class lacks is listed under missingProperties. CollisionResponses reads every channel's response on a primitive component ({\"Pawn\": \"Ignore\", ...}). Without propertyNames or detailed no property values come back."
             },
             {
@@ -9073,6 +9164,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyPath": {
           "type": "string",
           "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
         },
         "rays": {
           "oneOf": [
@@ -9198,6 +9294,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "subject": {
           "type": "string",
           "description": "The actor the shot is about (label, name or path): its saliency share and rank, and its key to fill ratio against the sun. A name that matches no actor refuses with ACTOR_NOT_FOUND."
+        },
+        "summary": {
+          "type": "boolean",
+          "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
         },
         "tag": {
           "type": "string",
@@ -9343,11 +9443,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "Actor info objects.",
+              "description": "Matched actors; with near, nearest first, each with its distance.",
               "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
+                "x-unreal-reflection-boundary": true,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  }
+                }
               }
             },
             {
@@ -9376,9 +9509,52 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "description": "Selected actor info objects."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  }
+                },
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Matched actors, each with where it is."
             }
           ],
-          "description": "Actor info objects."
+          "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds); with actors, coveredBy [{name, share}] lists the nearer actors drawn over at least 5% of its box. Editor icons and shapes hidden in game are left out."
         },
         "affectedActors": {
           "type": "array",
@@ -9474,6 +9650,72 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "busiestThreadMs": {
           "type": "number",
           "description": "Slowest of the game, render, RHI and GPU thread times, in milliseconds."
+        },
+        "byClass": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          "description": "summary: matching actors per class, as {name, count} rows sorted by name."
+        },
+        "byFolder": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          "description": "summary: matching actors per outliner folder, as {name, count} rows sorted by name (\"(none)\" for the root)."
+        },
+        "byTag": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
         },
         "cameraLocation": {
           "oneOf": [
@@ -9681,6 +9923,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Estimated frames per second from delta time."
         },
+        "excludedCount": {
+          "type": "number",
+          "description": "Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world."
+        },
         "file": {
           "type": "string",
           "description": "Absolute path of the PNG written; absent with keepFile false."
@@ -9700,6 +9946,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false,
           "description": "Absolute path of each pass written."
+        },
+        "filter": {
+          "type": "string",
+          "description": "Optional name substring filter for list."
         },
         "flags": {
           "type": "object",
@@ -9782,6 +10032,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hasBegunPlay": {
           "type": "boolean",
           "description": "Whether the world has begun play."
+        },
+        "hasMore": {
+          "type": "boolean",
+          "description": "More matching actors exist past this page."
         },
         "heaviestMeshes": {
           "type": "array",
@@ -9964,7 +10218,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isPieWorld": {
           "type": "boolean",
-          "description": "Whether the world is a PIE world."
+          "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
         },
         "isPlayInEditor": {
           "type": "boolean",
@@ -10122,6 +10376,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Of meshesInView, those whose mesh has Nanite data (drawn as Nanite while Nanite is on)."
         },
+        "nextOffset": {
+          "type": "number",
+          "description": "The offset of the next page; present only when hasMore."
+        },
         "nonManifoldEdges": {
           "type": "number",
           "description": "Edges shared by three or more faces (fins, faces stacked on one edge); they break booleans, remeshing and collision generation."
@@ -10177,15 +10435,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "objectPath": {
           "type": "string",
           "description": "Full object path of the inspected object."
-        },
-        "objects": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "Matching object info."
         },
         "openEdges": {
           "type": "number",
@@ -10569,7 +10818,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "totalCount": {
           "type": "number",
-          "description": "Total actor count in the world."
+          "description": "Listable actors matching the filter, before the limit is applied."
         },
         "totalPhysicalBytes": {
           "type": "number",
@@ -11558,7 +11807,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "team",
             "controller"
           ],
-          "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set project navigation agent properties.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED)."
+          "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set the navigation agent the level's nav mesh serves. agentRadius and agentHeight are written to the agent in Project Settings > Navigation System > Supported Agents (saved to the project's DefaultEngine.ini; supportedAgent names the agent, projectConfigSaved says whether the file was written), to this world's navigation system and to the nav mesh, so the nav mesh still matches its agent when the level loads again; agentStepHeight and agentMaxSlope are the nav mesh's own. The nav mesh rebuilds when navigation auto-update is on. Only the fields sent change.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED)."
         },
         "sightConfig": {
           "type": "object",
@@ -13084,7 +13333,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "material",
             "function",
             "find_node",
-            "node_details",
             "node_properties",
             "node_connections",
             "node_chain",
@@ -13101,7 +13349,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "export",
             "instanced_property"
           ],
-          "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node."
+          "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_properties: Retrieve properties of a node in a material graph, named by nodeId or by expressionIndex (its position in the expression list): its class (type), description, position and the settings of its kind, such as a parameter's name, defaultValue and group or a function input's pin.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node."
         },
         "inputName": {
           "type": "string",
@@ -15145,14 +15393,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false,
           "description": "Pixel box the drawn letters cover."
         },
-        "inputName": {
-          "type": "string",
-          "description": "Pin name, for a function input."
-        },
-        "inputType": {
-          "type": "string",
-          "description": "Pin type, for a function input."
-        },
         "inputs": {
           "type": "array",
           "items": {
@@ -15414,10 +15654,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Step id -> node id for every node the batch created."
         },
-        "nodeType": {
-          "type": "string",
-          "description": "Expression class name."
-        },
         "notFound": {
           "type": "array",
           "items": {
@@ -15444,10 +15680,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Files the export wrote beside it, each {name, bytes}: a gltf's .bin buffers and textures, obj's UV and collision variants."
-        },
-        "outputName": {
-          "type": "string",
-          "description": "Pin name, for a function output."
         },
         "outputPath": {
           "type": "string",
@@ -15486,10 +15718,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parameterCount": {
           "type": "number",
           "description": "Material parameter expressions in the graph."
-        },
-        "parameterName": {
-          "type": "string",
-          "description": "Parameter name, for parameter expressions."
         },
         "parameterOverrides": {
           "type": "array",
@@ -15741,10 +15969,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Folder: how many copies were saved."
         },
-        "scalarDefault": {
-          "type": "number",
-          "description": "DefaultValue, for scalar parameter expressions."
-        },
         "scalars": {
           "type": "array",
           "items": {
@@ -15807,10 +16031,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skippedCount": {
           "type": "number",
           "description": "Files already present at the destination and left alone because overwrite was false."
-        },
-        "sortPriority": {
-          "type": "number",
-          "description": "Pin sort priority, for function input/output expressions."
         },
         "sourceCount": {
           "type": "number",
@@ -15981,15 +16201,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Packages that could not be saved, by name; control_editor save_all writes them once whatever blocked the save is fixed."
-        },
-        "usePreviewValueAsDefault": {
-          "type": "boolean",
-          "description": "Whether a function input previews its default."
-        },
-        "vectorDefault": {
-          "type": "object",
-          "x-unreal-reflection-boundary": true,
-          "description": "DefaultValue as rgba, for vector parameter expressions."
         },
         "vectors": {
           "type": "array",
@@ -21990,7 +22201,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "autoConnect": {
           "type": "boolean",
-          "description": "Whether inserted pins are auto-connected."
+          "description": "Without fromPin and toPin: wire the first free output of fromNode into the first free input of toNode it links to directly; a wire already between them answers alreadyConnected."
         },
         "boxSize": {
           "type": "array",
@@ -22118,7 +22329,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_gpu_simulation",
             "connect_pins"
           ],
-          "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
+          "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect an output pin of fromNode to an input pin of toNode (fromPin, toPin; nodes by GUID, name or title, such as the nodeId add_niagara_module answers). With autoConnect and no pins, the first free output of fromNode is wired into the first free input of toNode it links to directly (no wire is replaced and no conversion node added), and a wire already between them answers alreadyConnected; no such pair is PIN_NOT_FOUND."
         },
         "emitter": {
           "type": "string",
@@ -27022,7 +27233,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "remove_node",
             "set_pin_default_value"
           ],
-          "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
+          "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused, AMBIGUOUS_NODE) as blueprint.delete_node removes one: its wires are cut, a function's entry and result nodes are refused (PROTECTED_NODE), it is one undo step, and the reply names it (removed, its id). unboundOnly instead purges every call node with no bound function.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
         },
         "eventName": {
           "type": "string",
@@ -28025,7 +28236,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "voiceEnabled": {
           "type": "boolean",
-          "description": "Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled."
+          "description": "Whether voice chat is on. settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled; enable answers NOT_SUPPORTED."
         },
         "withValidation": {
           "type": "boolean",
@@ -28821,7 +29032,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "durationFrames": {
           "type": "integer",
-          "description": "Section duration in display-rate frames."
+          "description": "Length of the playback range in display frames; left out with endFrame, the new sequence keeps its default length."
         },
         "durationSeconds": {
           "type": "number",
@@ -28983,7 +29194,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "number",
             "string"
           ],
-          "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+          "description": "Display rate of the new sequence, as fps or a rate string such as 24fps or 24000/1001; left out, the project default."
         },
         "frames": {
           "type": "array",
@@ -29121,7 +29332,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "texture",
             "sound_component"
           ],
-          "description": "Which create cinematic asset variant to run.\ncine_camera_actor: Create a CineCameraActor in the level and bind it to the sequence.\nmaster_sequence: Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards."
+          "description": "Which create cinematic asset variant to run.\ncine_camera_actor: Create a CineCameraActor in the level and bind it to the sequence.\nmaster_sequence: Create the master level sequence of a cinematic: create with a master sequence's defaults (a name alone goes in /Game/Cinematics, 24 fps for 240 frames), answered as create answers; shots and sub-sequences are added to it afterwards."
         },
         "label": {
           "type": "string",
@@ -29546,7 +29757,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "duplicate",
             "rename"
           ],
-          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
+          "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at frameRate (default the project's display rate, 30 fps out of the box) and 24000 ticks per second, playing from startFrame for durationFrames or to endFrame when they are sent; a bad rate or range is INVALID_ARGUMENT and leaves no asset.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
           "default": "create"
         },
         "sequencePath": {
@@ -29667,7 +29878,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "solo": {
           "type": "boolean",
-          "description": "Whether to solo."
+          "description": "True (the default) mutes every other track; false unmutes every track of the sequence, those muted before included."
         },
         "soundPath": {
           "type": "string",
@@ -29932,6 +30143,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorPath": {
           "type": "string",
           "description": "Path to the created camera actor."
+        },
+        "alreadyExists": {
+          "type": "boolean",
+          "description": "True when a Level Sequence was already at the path: it was kept as it was and nothing was made."
         },
         "appliedProperties": {
           "type": "array",

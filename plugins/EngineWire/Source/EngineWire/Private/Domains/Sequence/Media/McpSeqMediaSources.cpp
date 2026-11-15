@@ -2,7 +2,9 @@
 #include "Domains/Sequence/McpSeqPathSecurity.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "FileMediaSource.h"
 #include "HAL/FileManager.h"
+#include "MediaSource.h"
 #include "EngineWireSubsystem.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
@@ -117,9 +119,11 @@ bool ApplySourceConfig(UObject *Source, const FMediaSourceConfig &Config,
             Config.FilePath,
             McpSequencePathSecurity::ELocalPathUse::MediaInput, OutError))
       return false;
-    return CallVoidStringFunction(Source, TEXT("SetFilePath"),
-                                  Config.FilePath) &&
-           SetBoolProperty(Source, TEXT("PrecacheFile"), Config.bPrecacheFile);
+    UFileMediaSource *File = Cast<UFileMediaSource>(Source);
+    if (!File)
+      return false;
+    File->SetFilePath(Config.FilePath);
+    return SetBoolProperty(Source, TEXT("PrecacheFile"), Config.bPrecacheFile);
   }
   if (Config.SourceType == TEXT("stream"))
     return SetStringProperty(Source, TEXT("StreamUrl"), Config.StreamUrl);
@@ -160,8 +164,9 @@ bool HandleCreateMediaSource(UEngineWireSubsystem *Subsystem,
                    Error.IsEmpty() ? TEXT("Failed to create media source") : Error);
     return true;
   }
+  const UMediaSource *CreatedSource = Cast<UMediaSource>(Created.Object);
   if (!ApplySourceConfig(Created.Object, Config, Error) ||
-      !CallBoolFunction(Created.Object, TEXT("Validate"))) {
+      !CreatedSource || !CreatedSource->Validate()) {
     DiscardCreatedMediaAsset(Created);
     SendMediaError(Subsystem, Socket, RequestId, TEXT("INVALID_MEDIA_SOURCE"),
                    Error.IsEmpty()
@@ -174,7 +179,7 @@ bool HandleCreateMediaSource(UEngineWireSubsystem *Subsystem,
   Created.bSaved = SaveMediaAsset(Created.Object);
   TSharedPtr<FJsonObject> Result = BuildAssetResponse(Created, ClassName);
   Result->SetStringField(TEXT("sourceType"), Config.SourceType);
-  Result->SetStringField(TEXT("url"), GetMediaUrl(Created.Object));
+  Result->SetStringField(TEXT("url"), CreatedSource->GetUrl());
   if (!Created.bSaved) {
     DiscardCreatedMediaAsset(Created);
     SendMediaError(Subsystem, Socket, RequestId, TEXT("ASSET_SAVE_FAILED"),

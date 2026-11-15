@@ -51,11 +51,11 @@
 #include "ScopedTransaction.h"
 #include "Camera/CameraActor.h"
 
-// The sequence the last create made: what ResolvePath answers when a call names no path.
-extern FString GCurrentSequencePath;
-
 namespace McpSequence {
 FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);
+// create_master_sequence's payload as create reads it: sequencePath (or assetPath) is path, a name alone goes in
+// /Game/Cinematics, and the sequence plays at 24 fps for 240 frames unless the call says otherwise.
+TSharedPtr<FJsonObject> MasterSequenceAsCreate(const TSharedPtr<FJsonObject> &Payload);
 // ResolvePath; empty after the INVALID_SEQUENCE "<Action> requires a sequence path" reply.
 FString ResolvePathOrReply(UEngineWireSubsystem *Subsystem, const FString &RequestId,
                            TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,

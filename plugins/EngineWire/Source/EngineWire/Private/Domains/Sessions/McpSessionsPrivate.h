@@ -3,14 +3,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if __has_include("VoiceChat.h")
-#include "Features/IModularFeatures.h"
-#include "VoiceChat.h"
-#define MCP_HAS_VOICECHAT 1
-#else
-#define MCP_HAS_VOICECHAT 0
-#endif
-
 #if __has_include("OnlineSubsystem.h")
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/VoiceInterface.h"

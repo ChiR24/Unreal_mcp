@@ -4,7 +4,7 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'load', members: ['load_level'],
-    summary: 'Open a level in the editor in place of the open one (levelPath: a /Game package or object path, or a bare name tried under /Game/Maps), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.',
+    summary: 'Open a level in the editor in place of the open one (levelPath: a package or object path such as /Game/Maps/Demo, or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game; control_editor open_level is the same call, for a level under /Game or /Engine), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.',
   },
   {
     primary: 'save', selector: 'saveMode',

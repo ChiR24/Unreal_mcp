@@ -57,10 +57,14 @@ bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
     return SendError(Subsystem, RequestId, Socket, TEXT("renderAllCameras is not in this engine's Movie Render Queue camera setting."),
                      TEXT("NOT_SUPPORTED_ON_ENGINE")),
            true;
+  // One undo step for the edit: Modify ran with no transaction open, so undo reverted the edit before this one.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Render Camera")), EMcpMutationDurability::EditorStateOnly,
+                                          {Job, Config});
   UMoviePipelineCameraSetting *Camera = Cast<UMoviePipelineCameraSetting>(
       Config->FindOrAddSettingByClass(UMoviePipelineCameraSetting::StaticClass(), true));
   if (!Camera)
-    return SendError(Subsystem, RequestId, Socket, TEXT("The MRQ camera setting is unavailable."), TEXT("MRQ_CAMERA_UNAVAILABLE")),
+    return Transaction.Cancel(),
+           SendError(Subsystem, RequestId, Socket, TEXT("The MRQ camera setting is unavailable."), TEXT("MRQ_CAMERA_UNAVAILABLE")),
            true;
 
   Camera->Modify();
@@ -73,7 +77,6 @@ bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
   }
   if (bHasAllCameras)
     AllCamerasProperty->SetPropertyValue_InContainer(Camera, bAllCameras);
-  Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
 
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
@@ -81,6 +84,7 @@ bool HandleConfigureRenderCamera(UEngineWireSubsystem *Subsystem,
   Result->SetNumberField(TEXT("overscanPercentage"), McpHandlerUtils::ReadableFloat(Camera->OverscanPercentage));
   if (AllCamerasProperty)
     Result->SetBoolField(TEXT("renderAllCameras"), AllCamerasProperty->GetPropertyValue_InContainer(Camera));
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("MRQ camera setting configured."), Result);
   return true;
 }

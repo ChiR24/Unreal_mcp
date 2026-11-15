@@ -29,6 +29,7 @@
 // query-string values.
 
 #include "McpFabProvider.h"
+#include "McpFabAddScript.h"
 #include "McpFabBridgeDispatch.h"
 #include "McpFabListingScript.h"
 
@@ -73,9 +74,7 @@ bool IsSafeListingType(const FString& Value)
 	}
 	for (const TCHAR C : Value)
 	{
-		const bool bAllowed = (C >= TEXT('a') && C <= TEXT('z')) || (C >= TEXT('A') && C <= TEXT('Z')) ||
-			(C >= TEXT('0') && C <= TEXT('9')) || C == TEXT('-') || C == TEXT('_');
-		if (!bAllowed)
+		if (!McpFabAddOperation::IsListingIdChar(C))
 		{
 			return false;
 		}

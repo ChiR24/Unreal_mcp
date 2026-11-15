@@ -39,7 +39,6 @@ bool TryHandleCinematics(const FString &Action,
                          TSharedPtr<FJsonObject> &OutResult) {
   using FHandler = bool (*)(const TSharedPtr<FJsonObject> &, TSharedPtr<FJsonObject> &);
   static const TMap<FString, FHandler> Handlers = {
-      {TEXT("create_master_sequence"), &HandleCreateMasterSequence},
       {TEXT("add_subsequence"), &HandleAddSubsequence},
       {TEXT("add_shot_track"), &HandleAddShotTrack},
       {TEXT("configure_shot_settings"), &HandleConfigureShotSettings},
@@ -63,11 +62,8 @@ bool TryHandleCinematics(const FString &Action,
     return false;
   }
   // One undo step for an edit of an existing sequence: the handlers Modify it, which with no transaction open recorded
-  // nothing. Creating the master sequence is asset creation, which stays outside as everywhere in the plugin.
-  TOptional<FScopedTransaction> Step;
-  if (Action != TEXT("create_master_sequence")) {
-    Step.Emplace(FText::FromString(FString::Printf(TEXT("Sequencer %s"), *Action)));
-  }
+  // nothing.
+  FScopedTransaction Step(FText::FromString(FString::Printf(TEXT("Sequencer %s"), *Action)));
   return (*Handler)(Params, OutResult);
 }
 }

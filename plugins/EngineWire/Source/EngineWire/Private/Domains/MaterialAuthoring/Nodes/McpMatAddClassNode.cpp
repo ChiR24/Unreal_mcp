@@ -12,7 +12,7 @@ bool AddPlacedExpression(UEngineWireSubsystem* Bridge, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                          UClass* Class, const FString& NodeName, TConfigure&& Configure)
 {
-  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+  LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
   if (!Class) {
     Bridge->SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("Failed to create the %s node: its class is not available in this engine."), *NodeName),

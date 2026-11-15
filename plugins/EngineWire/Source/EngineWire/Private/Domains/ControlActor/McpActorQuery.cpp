@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 bool UEngineWireSubsystem::HandleControlActorFindByName(
@@ -63,7 +64,8 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
   TArray<AActor *> AllActors;
   if (QueryWorld) {
     for (TActorIterator<AActor> It(QueryWorld); It; ++It) {
-      AllActors.Add(*It);
+      if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+        AllActors.Add(*It);
     }
   }
   TArray<TSharedPtr<FJsonValue>> Matches;

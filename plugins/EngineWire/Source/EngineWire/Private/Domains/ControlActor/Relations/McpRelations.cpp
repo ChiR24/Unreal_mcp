@@ -7,6 +7,7 @@
 // a table nobody named. What rests on the ground is reported only for an actor asked about; roles.ground counts it.
 
 #include "Domains/ControlActor/Relations/McpRelations.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
@@ -48,7 +49,8 @@ TArray<FItem> CollectItems(UWorld* World, const TSet<AActor*>& Named, bool bArea
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         AActor* Actor = *It;
-        const FBox Box = Actor->IsHidden() || McpPlacement::IsBoundsOnlyActor(Actor) ? FBox(ForceInit) : McpPlacement::DrawnBounds(*Actor);
+        const FBox Box = Actor->IsHidden() || McpPlacement::IsBoundsOnlyActor(Actor) || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor)
+            ? FBox(ForceInit) : McpPlacement::DrawnBounds(*Actor);
         if (!Box.IsValid || Box.GetExtent().GetMax() < 1.0 ||
             (bArea && !Named.Contains(Actor) && Box.ComputeSquaredDistanceToPoint(Center) > Radius * Radius))
         {

@@ -61,15 +61,12 @@ function trackRecord(id: string, action: string, summary: string, extraProps: Re
 export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.cinematic.create_master_sequence', action: 'create_master_sequence', family: F, domain: D,
-    summary: 'Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards.',
+    summary: 'Create the master level sequence of a cinematic: create with a master sequence\'s defaults (a name alone goes in /Game/Cinematics, 24 fps for 240 frames), answered as create answers; shots and sub-sequences are added to it afterwards.',
     whenToUse: ['A new cinematic with shots must be scaffolded.'],
     whenNotToUse: ['A flat sequence without shots is sufficient.'],
-    // Native HandleCreateMasterSequence (Cinematics/Assets.cpp:45-141) resolves
-    // the target from sequencePath/assetPath (ResolveAssetTarget :22-40) plus
-    // name/path(folder); reads frameRate (:101), startFrame/durationFrames
-    // (:120-121), and endFrame through GetDuration when durationFrames is
-    // absent. masterSequencePath and mapPath are never read; the sequence
-    // is saved unconditionally (McpSafeAssetSave :122), so save is dead too.
+    // Native: create (HandleSequenceCreate) on McpSequence::MasterSequenceAsCreate's payload: sequencePath or assetPath
+    // is create's path (a sequencePath ending in /name names the sequence), and frameRate 24 and durationFrames 240
+    // fill in when the call leaves them out.
     inputProps: {
       name: { ...P.name, description: 'Name of the new sequence; alone, it is created in path (default /Game/Cinematics).' },
       sequencePath: { ...P.sequencePath, description: 'Full asset path of the new sequence (/Game/Cinematics/SEQ_Master), or, sent with name, the folder it goes in.' },
@@ -78,7 +75,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
       frameRate: P.frameRate, startFrame: P.startFrame, durationFrames: A.durationFrames, endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.'),
     },
     required: [], requiredOneOf: ['name', 'sequencePath', 'assetPath'],
-    outputProps: { sequencePath: P.sequencePath },
+    outputProps: { sequencePath: P.sequencePath, saved: { type: 'boolean', description: 'Whether the new sequence was saved; false when the save failed, which leaves it in memory only.' }, alreadyExists: { type: 'boolean', description: 'True when a Level Sequence was already at the path: it was kept as it was and nothing was made.' } },
     outputRequired: ['sequencePath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'create_master_sequence', name: 'SEQ_Master', sequencePath: '/Game/Cinematics/SEQ_Master' },

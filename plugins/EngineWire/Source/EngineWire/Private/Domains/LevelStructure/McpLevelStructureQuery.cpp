@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
 
 #include "Engine/LODActor.h"
@@ -99,8 +100,10 @@ bool HandleGetLevelStructureInfo(
     TArray<TSharedPtr<FJsonValue>> LevelInstancesArray;
     for (TActorIterator<ALevelInstance> It(World); It; ++It)
     {
-        FString ActorLabel = It->GetActorLabel();
-        LevelInstancesArray.Add(MakeShared<FJsonValueString>(ActorLabel));
+        if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+        {
+            LevelInstancesArray.Add(MakeShared<FJsonValueString>(It->GetActorLabel()));
+        }
     }
     InfoJson->SetArrayField(TEXT("levelInstances"), LevelInstancesArray);
 
@@ -144,7 +147,7 @@ bool HandleGetLevelStructureInfo(
         for (TActorIterator<AWorldPartitionHLOD> It(World); It; ++It)
         {
             AWorldPartitionHLOD* HLODActor = *It;
-            if (HLODActor)
+            if (HLODActor && McpCapabilityPrincipal::ActiveRequestPermitsObject(HLODActor))
             {
                 FString LayerName = FString::Printf(TEXT("HLOD_Level_%d"), HLODActor->GetLODLevel());
                 if (!FoundLayers.Contains(LayerName))
@@ -167,7 +170,7 @@ bool HandleGetLevelStructureInfo(
         for (TActorIterator<ALODActor> It(World); It; ++It)
         {
             ALODActor* LODActor = *It;
-            if (LODActor)
+            if (LODActor && McpCapabilityPrincipal::ActiveRequestPermitsObject(LODActor))
             {
                 int32 Level = LODActor->LODLevel;
                 LodLevelCounts.FindOrAdd(Level)++;

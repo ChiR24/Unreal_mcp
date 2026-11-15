@@ -35,8 +35,7 @@ bool IsSafeListingId(const FString& Value)
 	}
 	for (const TCHAR C : Value)
 	{
-		const bool bAllowed = FChar::IsAlnum(C) || C == TEXT('-') || C == TEXT('_');
-		if (!bAllowed)
+		if (!IsListingIdChar(C))
 		{
 			return false;
 		}

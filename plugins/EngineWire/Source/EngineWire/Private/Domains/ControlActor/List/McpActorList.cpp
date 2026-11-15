@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
@@ -101,7 +102,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
     SourceWorld = GEditor->PlayWorld.Get();
     bUsingPieWorld = true;
     for (TActorIterator<AActor> It(SourceWorld); It; ++It) {
-      AllActors.Add(*It);
+      if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) AllActors.Add(*It);
     }
   } else {
     SourceWorld = GEditor->GetEditorWorldContext().World();
@@ -113,7 +114,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
       return true;
     }
 
-    AllActors = ActorSS->GetAllLevelActors();
+    AllActors = ActorSS->GetAllLevelActors().FilterByPredicate([](const AActor *A) { return McpCapabilityPrincipal::ActiveRequestPermitsObject(A); });
   }
 
   // GetAllLevelActors deliberately hides templates, transient actors, the
@@ -123,7 +124,7 @@ bool UEngineWireSubsystem::HandleControlActorList(
   int32 WorldActorCount = 0;
   if (SourceWorld)
   {
-    for (TActorIterator<AActor> It(SourceWorld); It; ++It) { ++WorldActorCount; }
+    for (TActorIterator<AActor> It(SourceWorld); It; ++It) { WorldActorCount += McpCapabilityPrincipal::ActiveRequestPermitsObject(*It) ? 1 : 0; }
   }
 
   // First pass: the actors that pass every filter and the radius.

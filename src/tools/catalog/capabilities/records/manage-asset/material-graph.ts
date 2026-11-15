@@ -3,7 +3,7 @@
 // transport aliases (C++ rewrites them to connect_nodes/disconnect_nodes/compile_material).
 
 import type { RecordSpec } from './builder.js';
-import { arr, arrObj, bool, codeStr, ex, LOW, MATERIAL_PARAMETER_ASSETS, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, codeStr, ex, LOW, MATERIAL_PARAMETER_ASSETS, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
 import { OUTPUT_HEADER, schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
@@ -51,21 +51,8 @@ const CONNECTIONS_OUT = schema({
   connections: arrObj('Edges found, each with sourceNodeId, sourceOutputIndex, targetNodeId, targetInput, hop and direction. A targetNodeId of "Main" is the material output node.'),
 }, ['success']);
 
-const NODE_DETAILS_OUT = schema({
-  success: bool('Operation succeeded.'),
-  nodeId: str('Resolved node ID.'),
-  nodeType: str('Expression class name.'),
-  assetType: str('Material or MaterialFunction.'),
-  parameterName: str('Parameter name, for parameter expressions.'),
-  scalarDefault: num('DefaultValue, for scalar parameter expressions.'),
-  vectorDefault: refObj('DefaultValue as rgba, for vector parameter expressions.'),
-  inputName: str('Pin name, for a function input.'),
-  inputType: str('Pin type, for a function input.'),
-  outputName: str('Pin name, for a function output.'),
-  sortPriority: num('Pin sort priority, for function input/output expressions.'),
-  usePreviewValueAsDefault: bool('Whether a function input previews its default.'),
-}, ['success']);
-
+// One node's read, get_node_properties and its alias get_material_node_details: by nodeId, or by expressionIndex.
+const NODE_PROPS_IN = schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Node ID; or name the node by expressionIndex.'), expressionIndex: num('Zero-based position in the expression list; picks the node when nodeId is omitted.') }, [], ['materialPath', 'assetPath']);
 // build_material_graph: a whole node graph under one consent. Each step is an
 // ordinary node adder, connect_nodes, set_node_position, update_custom_expression
 // or material property setter, run in-process by the same single-step handler.
@@ -137,7 +124,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['The wiring of a node must be traced across the graph, for example to see where its result ends up at the material output.'],
       whenNotToUse: ['A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).'],
       examples: [ex('List what feeds a multiply node', { materialPath: M, nodeId: MULTIPLY, direction: 'inputs', downstream: false }, DONE)] }),
-  r('get_node_properties', 'material', 'Retrieve properties of a node in a material graph.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Node ID.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
+  r('get_node_properties', 'material', 'Retrieve properties of a node in a material graph, named by nodeId or by expressionIndex (its position in the expression list): its class (type), description, position and the settings of its kind, such as a parameter\'s name, defaultValue and group or a function input\'s pin.', NODE_PROPS_IN, OK, READ, READ_POLICY, LOW,
     { whenToUse: ['The settings of one node must be read back, such as a scalar or vector parameter default or a function input or output pin.'],
       whenNotToUse: ['A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).', 'Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath "<material path>.<material name>:<nodeId>").'],
       examples: [ex('Read a texture sample node\'s properties', { materialPath: M, nodeId: SAMPLE }, DONE)] }),
@@ -182,7 +169,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
   // capability uncallable by any input: the schema-correct call died in the handler, the
   // handler-correct call failed schema validation, and sending both was rejected as
   // undeclared. Accept either, exactly as connect_nodes does.
-  r('get_material_node_details', 'material', 'Retrieve details of a material node.', schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), nodeId: str('Node ID.'), expressionIndex: num('Zero-based position in the expression list; picks the node when nodeId is omitted.') }, [], ['materialPath', 'assetPath']), NODE_DETAILS_OUT, READ, READ_POLICY, LOW,
+  r('get_material_node_details', 'material', 'Retrieve properties of a node in a material graph: another name for get_node_properties, which answers it.', NODE_PROPS_IN, OK, READ, READ_POLICY, LOW,
     { whenToUse: ['The settings of one node must be read back, such as a scalar or vector parameter default or a function input or output pin.'],
       whenNotToUse: ['A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).', 'Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath "<material path>.<material name>:<nodeId>").'],
       examples: [ex('Inspect one node in detail', { materialPath: M, nodeId: SAMPLE, expressionIndex: 0 }, DONE)] }),

@@ -255,16 +255,26 @@ bool HandleConfigureOutputSettings(UEngineWireSubsystem *Subsystem,
   if (!Job)
     return true;
   Message.Reset();
+  // One undo step: the job, its configuration and its output setting recorded before ApplyOutputSettings writes them
+  // (its Modify calls come after the writes, and no transaction was open).
+  MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = Job->GetConfiguration();
+  TArray<UObject *> Recorded = {Job, Config};
+  if (UMoviePipelineSetting *Existing = Config ? Config->FindSettingByClass(UMoviePipelineOutputSetting::StaticClass(), true) : nullptr)
+    Recorded.Add(Existing);
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Movie Render Queue Output")),
+                                          EMcpMutationDurability::EditorStateOnly, Recorded);
   if (!ApplyOutputSettings(Job, Payload, Message, Code))
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return Transaction.Cancel(), SendError(Subsystem, RequestId, Socket, Message, Code), true;
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
   // ApplyOutputSettings leaves a note in Message when it had to move the
   // start frame; otherwise it is empty and the plain receipt is used.
+  TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(
       Socket, RequestId, true,
       Message.IsEmpty() ? FString(TEXT("Movie Render Queue output settings configured."))
                         : TEXT("Movie Render Queue output settings configured; ") + Message,
-      BuildJobResult(Job, Queue));
+      Result);
   return true;
 }
 }

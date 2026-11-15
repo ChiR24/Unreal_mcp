@@ -22,28 +22,23 @@ inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction(const FS
                                                   EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
 }
 
-// Spawn directly into the active PIE/editor world to avoid viewport placement
-// paths that are unsafe under null-renderer automation.
+// Spawn directly into TargetWorld to avoid viewport placement paths that are unsafe under null-renderer automation; in
+// the editor world the actor goes into its current level, which records the add for undo.
 template <typename T = AActor>
 static inline T *
-SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
-                        const FRotator &Rotation,
-                        const FString &OptionalLabel = FString()) {
+McpSpawnActorInWorld(UWorld *TargetWorld, UClass *ActorClass, const FVector &Location,
+                     const FRotator &Rotation, const FString &OptionalLabel) {
   static_assert(std::is_base_of<AActor, T>::value,
                 "T must be derived from AActor");
 
-  if (!GEditor || !ActorClass)
-    return nullptr;
-
-  UWorld *TargetWorld = McpHandlerUtils::GetPlayOrEditorWorld();
-  if (!TargetWorld)
+  if (!GEditor || !ActorClass || !TargetWorld)
     return nullptr;
 
   FActorSpawnParameters SpawnParams;
   SpawnParams.SpawnCollisionHandlingOverride =
       ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
   SpawnParams.ObjectFlags |= RF_Transactional;
-  if (!GEditor->PlayWorld) {
+  if (TargetWorld != GEditor->PlayWorld) {
     SpawnParams.OverrideLevel = TargetWorld->GetCurrentLevel();
     TargetWorld->Modify();
   }
@@ -63,11 +58,25 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
   return Cast<T>(Spawned);
 }
 
+// The running game while Play runs, else the editor level.
+template <typename T = AActor>
+static inline T *SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location, const FRotator &Rotation,
+                                          const FString &OptionalLabel = FString()) {
+  return McpSpawnActorInWorld<T>(McpHandlerUtils::GetPlayOrEditorWorld(), ActorClass, Location, Rotation, OptionalLabel);
+}
+
+// The editor level, while Play runs too: an actor a configure call authors belongs to the level, not the running game.
+template <typename T = AActor>
+static inline T *SpawnActorInEditorWorld(UClass *ActorClass, const FVector &Location, const FRotator &Rotation,
+                                          const FString &OptionalLabel = FString()) {
+  return McpSpawnActorInWorld<T>(McpHandlerUtils::GetEditorWorld(), ActorClass, Location, Rotation, OptionalLabel);
+}
+
 // The editor level's actor of ActorClass (any class when null) labelled or named ActorName (any case), or with no
 // ActorName the first one of the class; only actors in a level the request may touch. Null when there is none.
 AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName);
 
-// McpFindActorByNameOrClass, else an actor of ActorClass spawned at Location and labelled ActorName (the class name
-// when empty); bOutSpawned says which. Null with no class, or when the spawn failed.
+// McpFindActorByNameOrClass, else an actor of ActorClass spawned in the editor level at Location and labelled ActorName
+// (the class name when empty); bOutSpawned says which. Null with no class, or when the spawn failed.
 AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const FVector &Location,
                             const FRotator &Rotation, bool *bOutSpawned = nullptr);

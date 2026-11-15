@@ -94,7 +94,7 @@ bool UEngineWireSubsystem::HandleSequenceSetTrackSolo(
   SendAutomationResponse(
       Socket, RequestId, true,
       bSolo ? TEXT("Track solo enabled by disabling evaluation on other tracks")
-            : TEXT("Solo disabled; all tracks evaluation-enabled"),
+            : TEXT("Solo off: every track of the sequence evaluates, those muted before included"),
       Resp);
   return true;
 }

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c0e85bec2145c8b2`
+Catalog revision: `8e422b887c57ed6e`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -565,7 +565,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `material.create_material_instance` | `manage_asset` | `create_material_instance` | write | write | explicit | `manage_asset.create_material_instance` |
 | `material.delete_node` | `manage_asset` | `delete_node` | write | write | explicit | `manage_asset.delete_node` `manage_asset.remove_material_node` |
 | `material.disconnect_nodes` | `manage_asset` | `disconnect_nodes` | write | write | explicit | `manage_asset.disconnect_nodes` `manage_asset.break_material_connections` |
-| `material.get_material_info` | `manage_asset` | `get_material_info` | read | read | none | `manage_asset.get_material_info` `manage_asset.get_material_function_info` `manage_asset.find_node` `manage_asset.get_material_node_details` `manage_asset.get_node_properties` `manage_asset.get_node_connections` `manage_asset.get_node_chain` `manage_asset.get_connected_subgraph` |
+| `material.get_material_info` | `manage_asset` | `get_material_info` | read | read | none | `manage_asset.get_material_info` `manage_asset.get_material_function_info` `manage_asset.find_node` `manage_asset.get_node_properties` `manage_asset.get_node_connections` `manage_asset.get_node_chain` `manage_asset.get_connected_subgraph` `manage_asset.get_material_node_details` |
 | `material.set_material_parameter` | `manage_asset` | `set_material_parameter` | write | write | explicit | `manage_asset.set_material_parameter` `manage_asset.set_scalar_parameter_value` `manage_asset.set_vector_parameter_value` `manage_asset.set_texture_parameter_value` `manage_asset.set_static_switch_parameter_value` |
 | `material.set_material_property` | `manage_asset` | `set_blend_mode` | write | write | explicit | `manage_asset.set_material_property` `manage_asset.set_blend_mode` `manage_asset.set_material_domain` `manage_asset.set_shading_model` `manage_asset.set_two_sided` |
 | `material.set_node_position` | `manage_asset` | `set_node_position` | write | write | explicit | `manage_asset.set_node_position` |

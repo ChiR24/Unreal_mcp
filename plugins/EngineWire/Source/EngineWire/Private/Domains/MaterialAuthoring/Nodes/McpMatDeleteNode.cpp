@@ -8,7 +8,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleDeleteNode(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("delete_node")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     const TArray<FString> NodeIds = McpGetStringListField(Payload, TEXT("nodeIds"), TEXT("nodeId"));
     if (NodeIds.Num() == 0) {

@@ -18,7 +18,7 @@ const TSet<FString>& MaterialNodeAdders()
   static const TSet<FString> Adders = {
       TEXT("add_material_node"), TEXT("add_texture_sample"), TEXT("add_texture_coordinate"), TEXT("add_scalar_parameter"),
       TEXT("add_vector_parameter"), TEXT("add_static_switch_parameter"), TEXT("add_math_node"),
-      TEXT("add_custom_expression"), TEXT("add_landscape_layer"), TEXT("add_function_input"), TEXT("add_function_output"),
+      TEXT("add_custom_expression"), TEXT("add_function_input"), TEXT("add_function_output"),
       TEXT("add_world_position"), TEXT("add_vertex_normal"), TEXT("add_pixel_depth"), TEXT("add_fresnel"),
       TEXT("add_reflection_vector"), TEXT("add_panner"), TEXT("add_rotator"), TEXT("add_noise"), TEXT("add_voronoi"),
       TEXT("add_if"), TEXT("add_switch")};
@@ -33,7 +33,9 @@ bool IsBatchableMaterialEdit(const FString& Edit)
   static const TSet<FString> Others = {
       TEXT("connect_nodes"), TEXT("connect_material_pins"), TEXT("use_material_function"),
       TEXT("set_node_position"), TEXT("update_custom_expression"), TEXT("set_blend_mode"),
-      TEXT("set_shading_model"), TEXT("set_material_domain"), TEXT("set_two_sided")};
+      TEXT("set_shading_model"), TEXT("set_material_domain"), TEXT("set_two_sided"),
+      // Makes a landscape layer info asset beside the material, not a node: no layout slot, no "$id".
+      TEXT("add_landscape_layer")};
   return MaterialNodeAdders().Contains(Edit) || Others.Contains(Edit);
 }
 

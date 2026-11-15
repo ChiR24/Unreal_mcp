@@ -4,105 +4,74 @@ namespace McpNiagaraGraphHandlers
 {
 namespace
 {
+// autoConnect, between the two nodes the call names: an output of FromNode already wired into ToNode answers
+// alreadyConnected, else the first output of FromNode and free input of ToNode the schema connects. It scanned the whole
+// graph and answered alreadyConnected for the first wire anywhere, so in a real graph it connected nothing.
 bool TryAutoConnectPins(
     UEngineWireSubsystem* Bridge,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     UNiagaraSystem* System,
-    UNiagaraGraph* TargetGraph)
+    UEdGraphNode* FromNode,
+    UEdGraphNode* ToNode)
 {
-    TargetGraph->Modify();
-    for (UEdGraphNode* FromCandidate : TargetGraph->Nodes)
+    auto Reply = [&](UEdGraphPin* FromPin, UEdGraphPin* ToPin, bool bAlreadyConnected)
     {
-        if (!FromCandidate)
+        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        if (!bAlreadyConnected)
         {
-            continue;
+            SaveNiagaraGraphEdit(System, Payload, Result);
         }
-
-        for (UEdGraphPin* FromCandidatePin : FromCandidate->Pins)
+        McpHandlerUtils::AddVerification(Result, System);
+        Result->SetStringField(TEXT("fromNode"), FromNode->NodeGuid.ToString());
+        Result->SetStringField(TEXT("fromPin"), FromPin->PinName.ToString());
+        Result->SetStringField(TEXT("toNode"), ToNode->NodeGuid.ToString());
+        Result->SetStringField(TEXT("toPin"), ToPin->PinName.ToString());
+        Result->SetBoolField(TEXT("connected"), true);
+        Result->SetBoolField(TEXT("autoConnected"), true);
+        if (bAlreadyConnected)
         {
-            if (!FromCandidatePin || FromCandidatePin->Direction != EGPD_Output)
-            {
-                continue;
-            }
-
-            if (!FromCandidatePin->LinkedTo.IsEmpty())
-            {
-                UEdGraphPin* ExistingToPin = FromCandidatePin->LinkedTo[0];
-                TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-                McpHandlerUtils::AddVerification(Result, System);
-                Result->SetStringField(
-                    TEXT("fromNode"), FromCandidate->NodeGuid.ToString());
-                Result->SetStringField(
-                    TEXT("fromPin"), FromCandidatePin->PinName.ToString());
-                Result->SetStringField(
-                    TEXT("toNode"),
-                    ExistingToPin->GetOwningNode()->NodeGuid.ToString());
-                Result->SetStringField(
-                    TEXT("toPin"), ExistingToPin->PinName.ToString());
-                Result->SetBoolField(TEXT("connected"), true);
-                Result->SetBoolField(TEXT("autoConnected"), true);
-                Result->SetBoolField(TEXT("alreadyConnected"), true);
-
-                Bridge->SendAutomationResponse(Socket, RequestId, true,
-                    TEXT("Pins were already connected."), Result);
-                return true;
-            }
+            Result->SetBoolField(TEXT("alreadyConnected"), true);
         }
-    }
-
-    for (UEdGraphNode* FromCandidate : TargetGraph->Nodes)
+        Bridge->SendAutomationResponse(Socket, RequestId, true,
+            bAlreadyConnected ? TEXT("Pins were already connected.") : TEXT("Pins connected successfully."), Result);
+        return true;
+    };
+    for (UEdGraphPin* FromPin : FromNode->Pins)
     {
-        if (!FromCandidate)
+        if (FromPin && FromPin->Direction == EGPD_Output)
         {
-            continue;
-        }
-
-        for (UEdGraphPin* FromCandidatePin : FromCandidate->Pins)
-        {
-            if (!FromCandidatePin || FromCandidatePin->Direction != EGPD_Output)
+            for (UEdGraphPin* Linked : FromPin->LinkedTo)
             {
-                continue;
-            }
-            for (UEdGraphNode* ToCandidate : TargetGraph->Nodes)
-            {
-                if (!ToCandidate || ToCandidate == FromCandidate)
+                if (Linked && Linked->GetOwningNode() == ToNode)
                 {
-                    continue;
-                }
-
-                for (UEdGraphPin* ToCandidatePin : ToCandidate->Pins)
-                {
-                    if (!ToCandidatePin || ToCandidatePin->Direction != EGPD_Input)
-                    {
-                        continue;
-                    }
-
-                    if (TargetGraph->GetSchema()->TryCreateConnection(FromCandidatePin, ToCandidatePin))
-                    {
-                        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-                        SaveNiagaraGraphEdit(System, Payload, Result);
-                        McpHandlerUtils::AddVerification(Result, System);
-                        Result->SetStringField(TEXT("fromNode"), FromCandidate->NodeGuid.ToString());
-                        Result->SetStringField(TEXT("fromPin"), FromCandidatePin->PinName.ToString());
-                        Result->SetStringField(TEXT("toNode"), ToCandidate->NodeGuid.ToString());
-                        Result->SetStringField(TEXT("toPin"), ToCandidatePin->PinName.ToString());
-                        Result->SetBoolField(TEXT("connected"), true);
-                        Result->SetBoolField(TEXT("autoConnected"), true);
-
-                        Bridge->SendAutomationResponse(Socket, RequestId, true,
-                            TEXT("Pins connected successfully."), Result);
-                        return true;
-                    }
+                    return Reply(FromPin, Linked, true);
                 }
             }
         }
     }
-
+    // Free pins, linked plainly: a wired output would branch the parameter map, a wired input lose its wire (the schema
+    // breaks it), and a conversion node is a node the call did not ask for.
+    const UEdGraphSchema* Schema = FromNode->GetSchema();
+    for (UEdGraphPin* FromPin : FromNode->Pins)
+    {
+        if (!FromPin || FromPin->Direction != EGPD_Output || FromPin->bHidden || !FromPin->LinkedTo.IsEmpty())
+        {
+            continue;
+        }
+        for (UEdGraphPin* ToPin : ToNode->Pins)
+        {
+            if (ToPin && ToPin->Direction == EGPD_Input && !ToPin->bHidden && ToPin->LinkedTo.IsEmpty() &&
+                Schema->CanCreateConnection(FromPin, ToPin).Response == CONNECT_RESPONSE_MAKE &&
+                Schema->TryCreateConnection(FromPin, ToPin))
+            {
+                return Reply(FromPin, ToPin, false);
+            }
+        }
+    }
     Bridge->SendAutomationError(Socket, RequestId,
-        TEXT("Could not find a compatible Niagara graph pin pair to auto-connect."),
-        TEXT("PIN_NOT_FOUND"));
+        TEXT("No free output of fromNode links directly to a free input of toNode; name fromPin and toPin."), TEXT("PIN_NOT_FOUND"));
     return true;
 }
 } // namespace
@@ -155,19 +124,14 @@ bool HandleConnectPins(
     FString FromNodeId, FromPinName;
     FString ToNodeId, ToPinName;
     const bool bAutoConnect = GetJsonBoolField(Payload, TEXT("autoConnect"), false);
-
-    if (!Payload->TryGetStringField(TEXT("fromNode"), FromNodeId) ||
-        !Payload->TryGetStringField(TEXT("fromPin"), FromPinName) ||
-        !Payload->TryGetStringField(TEXT("toNode"), ToNodeId) ||
-        !Payload->TryGetStringField(TEXT("toPin"), ToPinName))
+    const bool bHasNodes = Payload->TryGetStringField(TEXT("fromNode"), FromNodeId) &&
+        Payload->TryGetStringField(TEXT("toNode"), ToNodeId);
+    const bool bHasPins = Payload->TryGetStringField(TEXT("fromPin"), FromPinName) &&
+        Payload->TryGetStringField(TEXT("toPin"), ToPinName);
+    if (!bHasNodes || (!bHasPins && !bAutoConnect))
     {
-        if (bAutoConnect)
-        {
-            return TryAutoConnectPins(Bridge, RequestId, Payload, Socket, System, TargetGraph);
-        }
-
         Bridge->SendAutomationError(Socket, RequestId,
-            TEXT("connect_pins requires fromNode, fromPin, toNode, toPin"),
+            TEXT("connect_pins requires fromNode, fromPin, toNode, toPin (with autoConnect, fromNode and toNode)"),
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -179,6 +143,10 @@ bool HandleConnectPins(
         Bridge->SendAutomationError(Socket, RequestId,
             TEXT("Could not find source or destination node."), TEXT("NODE_NOT_FOUND"));
         return true;
+    }
+    if (!bHasPins)
+    {
+        return TryAutoConnectPins(Bridge, RequestId, Payload, Socket, System, FromNode, ToNode);
     }
 
     UEdGraphPin* FromPin = FindPinByNameOrDisplayName(FromNode, FromPinName);

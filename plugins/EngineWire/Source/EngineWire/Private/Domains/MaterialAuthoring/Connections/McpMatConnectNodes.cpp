@@ -36,7 +36,7 @@ bool ParseChannelMask(const FString& Pin, bool (&OutChannels)[4])
 bool HandleConnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("connect_nodes")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString SourceNodeId, TargetNodeId, InputName, SourcePin;
     Payload->TryGetStringField(TEXT("sourceNodeId"), SourceNodeId);

@@ -29,6 +29,11 @@ struct FMcpLevelHandlerAccess {
 };
 
 namespace McpLevelHandlers {
+// levelPath as load opens it: through the shared canonicalizer, an object path (/Game/Maps/Demo.Demo) read as its
+// package. A path without its leading slash in a mounted root (Engine/Maps/Entry) is that root's; one the canonicalizer
+// refuses there (Demo, Maps/Demo) is a level under /Game/Maps when one is there, else under /Game. Empty when refused,
+// the refusal logged only when bLogRefusal.
+FString ResolveLoadLevelPath(const FString& Requested, bool bLogRefusal = true);
 bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleGetCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleSaveCurrentLevelAction(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

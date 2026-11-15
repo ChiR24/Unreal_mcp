@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "ObjectTools.h"
@@ -226,7 +227,7 @@ bool UEngineWireSubsystem::HandleControlActorDeleteByTag(
   }
   TArray<UObject *> Tagged;
   for (AActor *Actor : PlayWorld ? Candidates : ActorSS->GetAllLevelActors()) {
-    if (Actor && TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); }))
+    if (Actor && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor) && TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); }))
       Tagged.Add(Actor);
   }
   // One undo takes the whole call back (a 244-actor clear used to need 244).

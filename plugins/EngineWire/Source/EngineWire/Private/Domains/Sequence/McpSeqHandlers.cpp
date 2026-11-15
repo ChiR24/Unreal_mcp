@@ -47,6 +47,9 @@ bool UEngineWireSubsystem::HandleSequenceAction(
 
   if (EffectiveAction == TEXT("sequence_create"))
     return HandleSequenceCreate(RequestId, LocalPayload, RequestingSocket);
+  // A master sequence is create with its own defaults; its replies are create's.
+  if (EffectiveAction == TEXT("sequence_create_master_sequence"))
+    return HandleSequenceCreate(RequestId, McpSequence::MasterSequenceAsCreate(LocalPayload), RequestingSocket);
   if (EffectiveAction == TEXT("sequence_set_display_rate"))
     return HandleSequenceSetDisplayRate(RequestId, LocalPayload,
                                         RequestingSocket);

@@ -1,5 +1,4 @@
 #include "Domains/MaterialAuthoring/McpMatPrivate.h"
-#include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Materials/MaterialInstanceConstant.h"
 
 namespace McpMaterialAuthoringHandlers
@@ -93,9 +92,7 @@ UMaterialInterface* LoadPropertyTarget(UEngineWireSubsystem* Bridge, const FStri
         Loaded ? TEXT("UNSUPPORTED_ASSET_TYPE") : TEXT("ASSET_NOT_FOUND"));
     return nullptr;
   }
-  if (McpSafeOperations::IsEngineContentPackage(Target->GetOutermost()->GetName())) {
-    Bridge->SendAutomationError(Socket, RequestId,
-        TEXT("Engine content is not changed: duplicate the material into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
+  if (McpRefuseEngineMaterialEdit(Bridge, RequestId, Socket, Target)) {
     return nullptr;
   }
   return Target;

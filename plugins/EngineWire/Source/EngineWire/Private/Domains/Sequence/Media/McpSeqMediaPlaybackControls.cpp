@@ -3,6 +3,7 @@
 #include "Domains/Sequence/Media/McpSeqMediaPlaybackInternal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
+#include "MediaPlayer.h"
 
 namespace McpSequenceMedia {
 
@@ -36,15 +37,16 @@ bool HandlePauseMedia(UEngineWireSubsystem *Subsystem,
     return true;
   }
   Result->SetBoolField(TEXT("pendingOpenCancelled"), false);
-  if (!CallBoolFunction(Player, TEXT("Pause"))) {
+  UMediaPlayer *MediaPlayer = Cast<UMediaPlayer>(Player);
+  if (!MediaPlayer || !MediaPlayer->Pause()) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("MEDIA_PAUSE_FAILED"),
                    TEXT("The media player could not pause playback"), Result);
     return true;
   }
   Result->SetBoolField(TEXT("isPlaying"),
-                       CallBoolFunction(Player, TEXT("IsPlaying")));
+                       MediaPlayer->IsPlaying());
   Result->SetBoolField(TEXT("isPaused"),
-                       CallBoolFunction(Player, TEXT("IsPaused")));
+                       MediaPlayer->IsPaused());
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Media playback paused"), Result);
   return true;
@@ -77,20 +79,20 @@ bool HandleSeekMedia(UEngineWireSubsystem *Subsystem,
   Result->SetStringField(TEXT("mediaPlayerPath"), ResolvedPlayerPath);
   Result->SetNumberField(TEXT("timeSeconds"), Seconds);
   // Seeking a player with nothing open fails inside the engine with no explanation.
-  if (!CallBoolFunction(Player, TEXT("IsReady"))) {
+  UMediaPlayer *MediaPlayer = Cast<UMediaPlayer>(Player);
+  if (!MediaPlayer || !MediaPlayer->IsReady()) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("NO_MEDIA_OPEN"),
                    TEXT("The media player has no media open; open one with play_media (mediaSourcePath, playlistPath or filePath) before seek_media"),
                    Result);
     return true;
   }
-  if (!CallBoolTimespanFunction(Player, TEXT("Seek"),
-                                FTimespan::FromSeconds(Seconds))) {
+  if (!MediaPlayer->Seek(FTimespan::FromSeconds(Seconds))) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("MEDIA_SEEK_FAILED"),
                    TEXT("The media player could not seek to the requested time"),
                    Result);
     return true;
   }
-  Result->SetStringField(TEXT("currentUrl"), GetMediaUrl(Player));
+  Result->SetStringField(TEXT("currentUrl"), MediaPlayer->GetUrl());
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Media playback seek requested"),
                                     Result);

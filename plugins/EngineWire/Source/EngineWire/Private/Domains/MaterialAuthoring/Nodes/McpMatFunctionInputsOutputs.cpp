@@ -37,6 +37,9 @@ bool HandleFunctionInputsOutputs(UEngineWireSubsystem* Bridge, const FString& Re
                           TEXT("ASSET_NOT_FOUND"));
       return true;
     }
+    if (McpRefuseEngineMaterialEdit(Bridge, RequestId, Socket, Func)) {
+      return true;
+    }
 
     const bool bInput = SubAction == TEXT("add_function_input");
     // A name the function already has fails its compile ("used more than once"), so it is refused here.

@@ -5,7 +5,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleAddTextureCoordinate(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_texture_coordinate")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     int32 CoordIndex = 0;
     double UTiling = 1.0, VTiling = 1.0;

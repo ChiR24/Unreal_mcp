@@ -6,7 +6,8 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
-import { str } from '../shared/schema-props.js';
+import { int, str } from '../shared/schema-props.js';
+import { A } from './alias-props.js';
 
 const FAMILY = 'timeline';
 const DOMAIN = 'sequence';
@@ -19,25 +20,30 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['level sequence', 'new sequence', 'cinematic', 'sequencer', 'create cinematic', 'cutscene', 'make a cutscene', 'level sequence asset', 'create level sequence', 'add a cutscene at the start of the level', 'make a cutscene of the castle, the level or a place', 'make a trailer or a cinematic'],
     aliases: ['sequence.create_level_sequence', 'sequence.create_cinematic'],
-    summary: 'Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project\'s default display rate (30 fps out of the box) and 24000 ticks per second.',
+    summary: 'Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at frameRate (default the project\'s display rate, 30 fps out of the box) and 24000 ticks per second, playing from startFrame for durationFrames or to endFrame when they are sent; a bad rate or range is INVALID_ARGUMENT and leaves no asset.',
     whenToUse: ['A new cinematic or animation sequence asset is needed.'],
     whenNotToUse: ['An existing sequence should be opened instead.'],
     inputProps: {
       name: str('Name of the new sequence, made in the folder path names (default /Game). Leave it out when path names the sequence itself.'),
       path: str('Sequence asset path, such as /Game/Cinematics/SEQ_Shot; with name, create reads it as the folder instead.'),
+      frameRate: { ...P.frameRate, description: 'Display rate of the new sequence, as fps or a rate string such as 24fps or 24000/1001; left out, the project default.' },
+      startFrame: int('First frame of the playback range, in display frames (default 0).'),
+      durationFrames: { ...A.durationFrames, description: 'Length of the playback range in display frames; left out with endFrame, the new sequence keeps its default length.' },
+      endFrame: int('Playback range end frame (exclusive); used when durationFrames is absent.'),
     },
     required: [],
     requiredOneOf: ['name', 'path'],
-    // Native HandleSequenceCreate (SequenceHandlersAssetCreation.cpp:5-109)
-    // never emits sequencePath: it verifies with assetPath/assetName/assetClass/
-    // existsAfter (AddAssetVerification) on create, or verifiedPath/existsAfter
-    // (VerifyAssetExists) when the asset already exists. Declared exactly.
+    // Native HandleSequenceCreate (McpSeqAssetCreation.cpp) answers sequencePath and saved, verified with assetPath,
+    // assetName, assetClass and existsAfter (AddVerification); a sequence already there answers alreadyExists with
+    // verifiedPath and existsAfter (VerifyAssetExists). Declared exactly.
     outputProps: {
       assetPath: { type: 'string', description: 'Created sequence asset path (verification).' },
       assetName: { type: 'string', description: 'Created sequence asset name (verification).' },
       assetClass: { type: 'string', description: 'Created sequence asset class (verification).' },
       verifiedPath: { type: 'string', description: 'Verified existing asset path.' },
       existsAfter: { type: 'boolean', description: 'Whether the asset existed after the call.' },
+      saved: { type: 'boolean', description: 'Whether the new sequence was saved; false when the save failed, which leaves it in memory only.' },
+      alreadyExists: { type: 'boolean', description: 'True when a Level Sequence was already at the path: it was kept as it was and nothing was made.' },
     },
     outputRequired: [],
     effect: 'write',

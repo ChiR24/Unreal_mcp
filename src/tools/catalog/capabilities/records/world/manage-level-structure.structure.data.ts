@@ -183,7 +183,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'remove_level_blueprint_node', dispatchAction: 'remove_level_blueprint_node',
-    family: F, summary: 'Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.',
+    family: F, summary: 'Remove a level blueprint node by id, name or title (one several nodes share is refused, AMBIGUOUS_NODE) as blueprint.delete_node removes one: its wires are cut, a function\'s entry and result nodes are refused (PROTECTED_NODE), it is one undo step, and the reply names it (removed, its id). unboundOnly instead purges every call node with no bound function.',
     whenToUse: ['A level blueprint node must be deleted, or an unbound K2Node_CallFunction ("Could not find a function named None") must be repaired.'], whenNotToUse: ['The node only needs re-wiring; use connect_level_blueprint_nodes.'],
     inputProps: { nodeId: LBP_NODE_ID, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',

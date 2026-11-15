@@ -5,7 +5,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleUseMaterialFunction(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("use_material_function")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString FunctionPath;
     if (!Payload->TryGetStringField(TEXT("functionPath"), FunctionPath) ||

@@ -8,6 +8,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/MaterialAuthoring/McpMatMainInputs.h"
+#include "Safety/McpSafeOperationsAssetClassification.h"
 
 // JSON & Serialization
 #include "Dom/JsonObject.h"
@@ -202,7 +203,6 @@ bool ApplyMaterialParameterList(UEngineWireSubsystem* Bridge, const FString& Req
 // build_material_graph: runs each additive step through RunStep (the subsystem's
 // own manage_material_authoring entry) with its reply captured, then compiles and saves once.
 bool HandleBuildMaterialGraph(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<void(const FString&, const TSharedPtr<FJsonObject>&)> RunStep);
-bool HandleGetMaterialNodeDetails(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetTwoSided(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 }
 
@@ -217,6 +217,20 @@ inline bool SanitizeMaterialPathOrReply(UEngineWireSubsystem* Bridge, const FStr
     return false;
   }
   InOutPath = Safe;
+  return true;
+}
+
+// Engine content is shared by every project on this engine and its save is refused, so a material edit refuses an engine
+// material, function or instance before it changes anything (ENGINE_CONTENT): it changed the asset in memory for the
+// rest of the session and answered saved false. True after replying; false for a null Asset.
+inline bool McpRefuseEngineMaterialEdit(UEngineWireSubsystem* Bridge, const FString& RequestId,
+                                        const TSharedPtr<FMcpBridgeWebSocket>& Socket, const UObject* Asset)
+{
+  if (!Asset || !McpSafeOperations::IsEngineContentPackage(Asset->GetOutermost()->GetName())) {
+    return false;
+  }
+  Bridge->SendAutomationError(Socket, RequestId,
+      TEXT("Engine content is not changed: duplicate the material into /Game and edit the copy."), TEXT("ENGINE_CONTENT"));
   return true;
 }
 
@@ -248,6 +262,12 @@ inline bool SanitizeMaterialPathOrReply(UEngineWireSubsystem* Bridge, const FStr
     Payload->TryGetNumberField(TEXT("posX"), X);                               \
   if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
     Payload->TryGetNumberField(TEXT("posY"), Y)
+
+// LOAD_MATERIAL_OR_FUNCTION_OR_RETURN for an edit: engine content is refused (McpRefuseEngineMaterialEdit).
+#define LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN()                         \
+  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();                                       \
+  if (McpRefuseEngineMaterialEdit(Bridge, RequestId, Socket, HostOuter))       \
+    return true
 
 // Find an expression in either container by GUID / name / parameter name.
 #define FIND_EXPR_IN_HOST(NodeIdOrName)                                      \

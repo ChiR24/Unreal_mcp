@@ -56,7 +56,6 @@ bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Bluepr
         return true;
     }
     Context.ResultJson->SetBoolField(TEXT("saved"), true);
-    Context.ResultJson->SetBoolField(TEXT("success"), true);
     Context.ResultJson->SetStringField(TEXT("message"), Detail);
     McpHandlerUtils::AddVerification(Context.ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, Message, Context.ResultJson);

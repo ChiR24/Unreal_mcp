@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
@@ -183,7 +184,7 @@ bool UEngineWireSubsystem::HandleSequenceSetPlaybackSpeed(
   TArray<UObject *> Actors;
   if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
     for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
-      if (*It && It->GetSequence() == SeqObj) {
+      if (*It && It->GetSequence() == SeqObj && McpCapabilityPrincipal::ActiveRequestPermitsObject(*It)) {
         Actors.Add(*It);
       }
     }

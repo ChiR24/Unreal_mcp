@@ -4,6 +4,7 @@
 // that has no bound function (the "Could not find a function named None" compile error).
 #include "Domains/LevelStructure/McpLevelStructureActions.h"
 #include "Domains/LevelStructure/McpLevelStructureEditorWorld.h"
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Engine/Level.h"
@@ -90,6 +91,22 @@ bool HandleRemoveLevelBlueprintNode(
                 NodeId.IsEmpty() ? *NodeName : *NodeId, ToRemove.Num(), *FString::Join(Names, TEXT(", "))),
             TEXT("AMBIGUOUS_NODE"));
         return true;
+    }
+    // One named node: the graph door's delete_node removes it, in its own graph, handed only its id. (None found falls
+    // through to the NOT_FOUND below.)
+    if (!bUnboundOnly && ToRemove.Num() == 1)
+    {
+        const TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
+        Request->SetStringField(TEXT("nodeId"), ToRemove[0]->NodeGuid.ToString());
+        McpBlueprintGraphHandlers::FActionContext Context{
+            Subsystem, RequestId, Request, Socket, TEXT("delete_node"), LevelBP, ToRemove[0]->GetGraph(), /*bDeferCompile=*/true};
+        Context.OnSuccess = [&](const FString& Message, const TSharedPtr<FJsonObject>& Result)
+        {
+            // The deferred delete leaves the Blueprint unmarked (RemoveNode with no recompile), as the purge below does not.
+            FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(LevelBP);
+            SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel, Message, Result);
+        };
+        return McpBlueprintGraphHandlers::HandleNodeMutationAction(Context);
     }
     TArray<FString> Removed;
     for (UEdGraphNode* Node : ToRemove)

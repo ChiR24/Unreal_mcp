@@ -32,7 +32,7 @@ const refusals = [
   'Domains/AudioAuthoring/McpAudioLoudness.cpp',
   'Domains/AudioAuthoring/McpAudioSubtitles.cpp',
   'Domains/Geometry/Mesh/McpGeometryLodOperations.cpp',
-  'Domains/MaterialAuthoring/Properties/McpMatSetMatEnum.cpp',
+  'Domains/MaterialAuthoring/McpMatPrivate.h',
   'Domains/Property/McpPropTarget.cpp',
   'Domains/Texture/McpTextureShared.cpp',
 ];

@@ -6,6 +6,7 @@
 // Instancing: static mesh actors of the level that draw one mesh with one set of materials, the groups worth instancing.
 
 #include "Domains/Perception/McpPerception.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Reflection/McpEnumName.h"
@@ -178,7 +179,7 @@ TSharedPtr<FJsonObject> InstancingGroups(UWorld* World)
     for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
     {
         const UStaticMeshComponent* Component = It->GetStaticMeshComponent();
-        if (!Component || !Component->GetStaticMesh())
+        if (!Component || !Component->GetStaticMesh() || !McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
         {
             continue;
         }

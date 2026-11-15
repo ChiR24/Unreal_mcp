@@ -30,12 +30,18 @@ void SetMaterialParameterValue(UEngineWireSubsystem* Bridge, const FString& Requ
 
   UMaterialInstanceConstant* Instance =
       LoadObject<UMaterialInstanceConstant>(nullptr, *ValidatedPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+  if (McpRefuseEngineMaterialEdit(Bridge, RequestId, Socket, Instance)) {
+    return;
+  }
   if (!Instance) {
     // A base material keeps the value as its parameter expression's default.
     UMaterial* BaseMaterial = LoadObject<UMaterial>(nullptr, *ValidatedPath);
     if (!BaseMaterial) {
       Bridge->SendAutomationError(Socket, RequestId,
           TEXT("Could not load a material instance or material at this path."), TEXT("ASSET_NOT_FOUND"));
+      return;
+    }
+    if (McpRefuseEngineMaterialEdit(Bridge, RequestId, Socket, BaseMaterial)) {
       return;
     }
     // The material editor edits a preview duplicate and writes it back over the

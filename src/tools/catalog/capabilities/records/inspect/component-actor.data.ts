@@ -4,7 +4,8 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
-import { TAG_OUT } from '../control-actor/search-records.js';
+import { FIND_BY_CLASS_INPUTS, FIND_LIMIT, FIND_OUTPUT, TAG_OUT } from '../control-actor/search-records.js';
+import { LIST_INPUTS, LIST_OUTPUT } from '../control-actor/state-records.js';
 
 const D = 'inspect';
 
@@ -96,15 +97,15 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'find_by_tag', dispatchAction: 'control_actor', domain: D, family: 'actor',
-    summary: 'Find the level\'s actors that carry tag (the play world while a game runs): each one\'s label, name, path and class, the first limit (1-1000, default 200) with truncated and totalCount when more match. A missing tag is refused (INVALID_ARGUMENT).',
+    summary: 'Find the actors in the level whose Tags list holds tag (the whole tag, case-insensitive), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. control_actor find_by_tag under inspect\'s name, answered as it answers; the Play-In-Editor world is searched while a session runs.',
     whenToUse: ['All actors with a given tag must be enumerated.'],
     whenNotToUse: ['Actors must be found by class; use find_by_class.'],
-    inputProps: { tag: P.tag, limit: { ...P.limit, description: 'Most actors to list (1-1000, default 200); when more match, truncated is true and totalCount counts them.' } },
+    inputProps: { tag: P.tag, limit: FIND_LIMIT },
     required: ['tag'],
     effect: 'read',
     exampleInput: { action: 'find_by_tag', tag: 'Spawn' },
-    exampleOutput: { success: true, message: 'Actors found', actors: [] },
-    outputProps: { actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching actor info objects.' } },
+    exampleOutput: { success: true, message: 'Found 1 actors by tag', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
+    outputProps: FIND_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'create_snapshot', dispatchAction: 'control_actor', domain: D, family: 'snapshot',
@@ -155,18 +156,12 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'list_objects', dispatchAction: 'control_actor', domain: D, family: 'actor',
-    outputProps: {
-      count: { type: 'number', description: 'Number of actors returned.' },
-      totalCount: { type: 'number', description: 'Total actor count in the world.' },
-      isPieWorld: { type: 'boolean', description: 'Whether the world is a PIE world.' },
-      worldName: { type: 'string', description: 'Name of the current world.' },
-      actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Actor info objects.' },
-    },
+    outputProps: LIST_OUTPUT,
     topics: ['world objects', 'enumerate objects'],
-    summary: 'List the level\'s actors (the play world while a game runs): each one\'s name, label, path and class, limit rows (default 100) from offset. filter keeps the actors whose label, name or class holds it (any case); count, matchedCount, totalCount and hasMore say how many there are, isPieWorld and worldName which world was read.',
+    summary: 'List the level\'s actors (the play world while a game runs) with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius lists what is near a point, nearest first; summary counts the level by class, tag and folder instead. control_actor list under inspect\'s name, answered as it answers.',
     whenToUse: ['All actors in the current level must be enumerated.'],
     whenNotToUse: ['Only tagged actors are needed; use find_by_tag.'],
-    inputProps: { filter: { ...P.filter, description: 'Keep the actors whose label, name or class name holds this text (any case).' }, limit: P.limit, offset: P.offset },
+    inputProps: LIST_INPUTS,
     required: [],
     effect: 'read',
     exampleInput: { action: 'list_objects' },
@@ -175,19 +170,16 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'find_by_class', dispatchAction: 'find_by_class', domain: D, family: 'actor',
     topics: ['all actors of a type', 'every instance'],
-    summary: 'Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match\'s name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.',
+    summary: 'Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name. control_actor find_by_class under inspect\'s name, answered as it answers; the Play-In-Editor world is searched while a session runs.',
     whenToUse: ['All actors of a specific class must be enumerated.'],
     whenNotToUse: ['Actors must be found by tag; use find_by_tag.'],
-    inputProps: {
-      className: P.className, classPath: P.classPath,
-      limit: { type: 'number', description: 'Most actors to list (1-1000, default 200); when more match, truncated is true and totalCount counts them.' },
-    },
+    inputProps: FIND_BY_CLASS_INPUTS,
     required: [],
-    requiredOneOf: ['className', 'classPath'],
+    requiredOneOf: ['className', 'class', 'classPath'],
     effect: 'read',
     exampleInput: { action: 'find_by_class', className: 'PointLight' },
-    exampleOutput: { success: true, message: 'Actors found', objects: [] },
-    outputProps: { objects: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching object info.' } },
+    exampleOutput: { success: true, message: 'Found 2 actors by class', actors: [{ label: 'Light1', name: 'Light1' }], count: 2 },
+    outputProps: FIND_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_bounding_box', dispatchAction: 'control_actor', domain: D, family: 'actor',

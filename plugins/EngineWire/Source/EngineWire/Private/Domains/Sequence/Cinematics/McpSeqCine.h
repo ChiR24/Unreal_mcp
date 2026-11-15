@@ -10,6 +10,7 @@ class FMcpBridgeWebSocket;
 class ULevelSequence;
 class UMovieScene;
 class UMovieSceneSection;
+class UMovieSceneSequence;
 class UMovieSceneTrack;
 class UEngineWireSubsystem;
 
@@ -22,8 +23,6 @@ TSharedPtr<FJsonObject> MakeResult(bool bSuccess, const FString &Action,
                                    const FString &Message,
                                    const FString &ErrorCode = FString());
 
-bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
-                                TSharedPtr<FJsonObject> &OutResult);
 bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
                           TSharedPtr<FJsonObject> &OutResult);
 bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
@@ -67,6 +66,9 @@ FFrameNumber GetFrame(const TSharedPtr<FJsonObject> &Params,
                       double DefaultValue = 0.0);
 int32 GetDuration(const TSharedPtr<FJsonObject> &Params, UMovieScene *MovieScene,
                   int32 DefaultDuration = 100);
+// The length of Inner's playback range in Outer's display frames, the length a subsequence or shot section takes when
+// none is sent, as Sequencer's own add takes it; Fallback for an inner sequence with no length.
+int32 InnerSequenceDisplayFrames(UMovieSceneSequence *Inner, UMovieScene *Outer, int32 Fallback);
 ULevelSequence *LoadSequence(const TSharedPtr<FJsonObject> &Params,
                              TSharedPtr<FJsonObject> &OutResult);
 // LoadSequence for a handler that answers for itself: null once the loader's refusal is sent (its error and

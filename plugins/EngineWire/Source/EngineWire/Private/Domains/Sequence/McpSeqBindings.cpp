@@ -46,7 +46,7 @@ bool UEngineWireSubsystem::HandleSequenceAddCamera(
   }
   UClass *CameraClass = ACameraActor::StaticClass();
   const TUniquePtr<FMcpScopedEditorTransaction> SpawnStep = McpBeginSpawnTransaction(RequestId);
-  AActor *Spawned = SpawnActorInActiveWorld<AActor>(
+  AActor *Spawned = SpawnActorInEditorWorld<AActor>(
       CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,
       CameraLabel);
   if (Spawned) {

@@ -29,7 +29,7 @@ export const TIMELINE_STATE_RANGE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Solo a track of a Level Sequence (solo, default true) by muting every other track, or with solo false unmute every track, those muted before included. The reply counts the tracks it changed (affectedTrackCount, disabledOtherTrackCount). One undo step; the sequence is left unsaved.',
     whenToUse: ['A single track must be isolated for preview.'],
     whenNotToUse: ['Multiple tracks need to be audible simultaneously.'],
-    inputProps: { path: P.path, trackName: P.trackName, solo: { type: 'boolean', description: 'Whether to solo.' } },
+    inputProps: { path: P.path, trackName: P.trackName, solo: { type: 'boolean', description: 'True (the default) mutes every other track; false unmutes every track of the sequence, those muted before included.' } },
     required: ['path', 'trackName'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'set_track_solo', path: '/Game/Cinematics/SEQ_Master', trackName: 'Audio', solo: true },

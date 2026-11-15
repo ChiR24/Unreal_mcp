@@ -29,47 +29,6 @@ bool HandleMutePlayer(
     bool bAppliedToVoiceInterface = false;
     FString StatusMessage;
 
-#if MCP_HAS_VOICECHAT
-    static FName VoiceChatFeatureName = FName(TEXT("VoiceChat"));
-    if (IModularFeatures::Get().IsModularFeatureAvailable(VoiceChatFeatureName))
-    {
-        IVoiceChat* VoiceChat = &IModularFeatures::Get().GetModularFeature<IVoiceChat>(VoiceChatFeatureName);
-        if (VoiceChat)
-        {
-            if (VoiceChat->IsInitialized() && VoiceChat->IsLoggedIn())
-            {
-                VoiceChat->SetPlayerMuted(TargetIdentifier, bMuted);
-                bSuccess = true;
-                bAppliedToVoiceInterface = true;
-                StatusMessage = FString::Printf(TEXT("Player '%s' %s via IVoiceChat"),
-                    *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"));
-            }
-            else if (VoiceChat->IsInitialized())
-            {
-                TArray<FString> PlayersToBlock;
-                PlayersToBlock.Add(TargetIdentifier);
-                if (bMuted)
-                {
-                    VoiceChat->BlockPlayers(PlayersToBlock);
-                }
-                else
-                {
-                    VoiceChat->UnblockPlayers(PlayersToBlock);
-                }
-                bSuccess = true;
-                bAppliedToVoiceInterface = true;
-                StatusMessage = FString::Printf(TEXT("Player '%s' %s locally (voice server not connected)"),
-                    *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"));
-            }
-            else
-            {
-                bSuccess = false;
-                StatusMessage = TEXT("VoiceChat module is available but not initialized; mute was not applied");
-            }
-        }
-    }
-    else
-#endif
 #if MCP_HAS_ONLINE_SUBSYSTEM
     {
         IOnlineSubsystem* OnlineSub = IOnlineSubsystem::Get();

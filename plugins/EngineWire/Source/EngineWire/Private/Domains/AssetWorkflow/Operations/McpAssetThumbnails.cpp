@@ -4,6 +4,7 @@
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectFileWrite.h"
+#include "Foundation/BridgeHelpers/Security/McpProjectPathsResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
@@ -45,6 +46,18 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
 
   FString OutputPath;
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
+  // Resolved before anything renders: refused after, the thumbnail was already cached into the asset's package. A
+  // .png only: any project file was writable here, so a config or source file could be replaced with image bytes.
+  FString AbsolutePath;
+  if (!OutputPath.IsEmpty()) {
+    FString SafeOutputPath, ResolveError;
+    if (!McpResolveProjectFilePath(OutputPath, AbsolutePath, SafeOutputPath, ResolveError) ||
+        !SafeOutputPath.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase)) {
+      SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("outputPath must name a .png file inside the project: %s"), *OutputPath), TEXT("SECURITY_VIOLATION"));
+      return true;
+    }
+  }
 
   // NOTE: ProcessAutomationRequest already dispatches to GameThread.
   // Wrapping ALL work (including fast existence checks) in AsyncTask(GameThread, ...)
@@ -71,7 +84,6 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
 
   if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), true);
     Result->SetStringField(TEXT("assetPath"), SafeAssetPath);
     Result->SetStringField(TEXT("assetClass"), Asset->GetClass()->GetName());
     Result->SetNumberField(TEXT("width"), Width);
@@ -127,33 +139,6 @@ bool UEngineWireSubsystem::HandleGenerateThumbnail(
         Color.R = ImageData[i + 2];
         Color.A = ImageData[i + 3];
         ColorData.Add(Color);
-      }
-
-      // SECURITY: Sanitize and validate the output path to prevent path traversal. A .png only: any project file was
-      // writable here, so a config or source file could be replaced with image bytes.
-      FString SafeOutputPath = SanitizeProjectFilePath(OutputPath);
-      if (SafeOutputPath.IsEmpty() || !SafeOutputPath.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase)) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               FString::Printf(TEXT("outputPath must name a .png file inside the project: %s"), *OutputPath),
-                               nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
-      }
-
-      FString AbsolutePath = FPaths::ProjectDir() / SafeOutputPath;
-      AbsolutePath = FPaths::ConvertRelativePathToFull(AbsolutePath);
-      FPaths::NormalizeFilename(AbsolutePath);
-
-      FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-      FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-      if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-        NormalizedProjectDir += TEXT("/");
-      }
-
-      if (!AbsolutePath.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               FString::Printf(TEXT("Output path escapes project directory: %s"), *OutputPath),
-                               nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
       }
 
       // A PNG, as promised: from 5.1 ThumbnailCompressImageArray writes the JPEG a package stores, so the .png held JPEG.

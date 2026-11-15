@@ -49,7 +49,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_voice', selector: 'setting',
-    summary: 'Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.',
+    summary: 'Voice chat: set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player. enable answers NOT_SUPPORTED: starting or stopping voice chat now needs the VoiceChat plugin and an implementation of it, which this plugin does not link.',
     topics: ['voice chat', 'voip settings', 'mic gain', 'noise gate', 'mute player'],
     members: { enable: 'enable_voice_chat', settings: 'configure_voice_settings', mute_player: 'mute_player' },
   },

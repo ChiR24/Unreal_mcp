@@ -5,6 +5,33 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpSeqEditorSupport.h"
 #include "Domains/Sequence/McpSeqPathSecurity.h"
+#include "Domains/Sequence/McpSeqFrameRate.h"
+#include "Domains/Sequence/Cinematics/McpSeqCine.h"
+#include "Domains/Sequence/Validation/McpSeqFrameMath.h"
+#include "Safety/McpSafeOperationsAssetDelete.h"
+
+TSharedPtr<FJsonObject> McpSequence::MasterSequenceAsCreate(const TSharedPtr<FJsonObject> &Payload) {
+  TSharedPtr<FJsonObject> Create = MakeShared<FJsonObject>(*Payload);
+  FString SequencePath = GetJsonStringField(Payload, TEXT("sequencePath"), GetJsonStringField(Payload, TEXT("assetPath")));
+  const FString Name = GetJsonStringField(Payload, TEXT("name"));
+  SequencePath.RemoveFromEnd(TEXT("/"));
+  if (!SequencePath.IsEmpty()) {
+    // sequencePath ending in /name named the sequence itself, as path does for create without a name.
+    if (!Name.IsEmpty() && SequencePath.EndsWith(TEXT("/") + Name, ESearchCase::IgnoreCase)) {
+      Create->RemoveField(TEXT("name"));
+    }
+    Create->SetStringField(TEXT("path"), SequencePath);
+  } else if (!Create->HasField(TEXT("path"))) {
+    Create->SetStringField(TEXT("path"), TEXT("/Game/Cinematics"));
+  }
+  if (!Create->HasField(TEXT("frameRate"))) {
+    Create->SetNumberField(TEXT("frameRate"), 24);
+  }
+  if (!Create->HasField(TEXT("durationFrames")) && !Create->HasField(TEXT("endFrame"))) {
+    Create->SetNumberField(TEXT("durationFrames"), 240);
+  }
+  return Create;
+}
 
 bool UEngineWireSubsystem::HandleSequenceCreate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -67,6 +94,15 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
     return true;
   }
 
+  // The display rate is read before anything is made, so a bad one leaves no asset to clean up.
+  FFrameRate DisplayRate;
+  FString RateError;
+  const bool bHasRate = Payload->HasField(TEXT("frameRate"));
+  if (bHasRate && !McpSequenceFrameRate::TryParse(Payload, TEXT("frameRate"), DisplayRate, RateError)) {
+    SendAutomationError(Socket, RequestId, RateError, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   FString NameError;
   ULevelSequence *NewSequence = McpSequence::CreateSequenceAsset(Name, FPackageName::GetLongPackagePath(FullPath), NameError);
   if (!NameError.IsEmpty()) {
@@ -80,8 +116,24 @@ bool UEngineWireSubsystem::HandleSequenceCreate(
         TEXT("CREATE_ASSET_FAILED"));
     return true;
   }
+  // The display rate and playback range the call sends (a range field left out keeps the new sequence's own).
+  UMovieScene *MovieScene = NewSequence->GetMovieScene();
+  if (MovieScene && bHasRate) {
+    MovieScene->SetDisplayRate(DisplayRate);
+  }
+  if (MovieScene && (Payload->HasField(TEXT("startFrame")) || Payload->HasField(TEXT("durationFrames")) ||
+                     Payload->HasField(TEXT("endFrame")))) {
+    const int32 OwnLength = McpSequenceCinematics::InnerSequenceDisplayFrames(NewSequence, MovieScene, 240);
+    FString FrameError;
+    if (!McpSequenceFrameMath::ValidateCinematicFrameRequest(Payload, MovieScene, FrameError, OwnLength)) {
+      McpSafeOperations::McpDeleteAssetAndFile(FullPath);
+      SendAutomationError(Socket, RequestId, FrameError, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    MovieScene->SetPlaybackRange(McpSequenceCinematics::GetFrame(Payload, MovieScene, TEXT("startFrame")),
+                                 McpSequenceCinematics::GetDuration(Payload, MovieScene, OwnLength));
+  }
   Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewSequence));
-  GCurrentSequencePath = FullPath;
   McpHandlerUtils::AddVerification(Resp, NewSequence);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence created"), Resp, FString());
   return true;

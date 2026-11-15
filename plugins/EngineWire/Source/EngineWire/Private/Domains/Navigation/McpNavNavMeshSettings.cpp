@@ -5,6 +5,53 @@ namespace McpNavigationHandlers
 {
 namespace
 {
+// The supported agent NavMesh registered for (one equivalent to its config, the engine's rule), given the radius and
+// height NavMesh now holds: in the navigation system's class defaults (Project Settings > Navigation System >
+// Supported Agents, saved to DefaultEngine.ini; added when the project lists none and the world runs on the fallback
+// agent), in this world's copy, and in the nav mesh's config. Supported Agents is protected, so it is reached
+// through its property. False when no agent was written.
+bool WriteSupportedAgent(UNavigationSystemV1* NavSys, ARecastNavMesh* NavMesh, FName& OutAgent, bool& bOutConfigSaved)
+{
+    const FArrayProperty* AgentsProperty = FindFProperty<FArrayProperty>(UNavigationSystemV1::StaticClass(), TEXT("SupportedAgents"));
+    const FNavDataConfig Registered = NavMesh->GetConfig();
+    FNavDataConfig Served = Registered;
+    Served.AgentRadius = NavMesh->AgentRadius;
+    Served.AgentHeight = NavMesh->AgentHeight;
+    // No step height override: a registered nav mesh's config holds one (the mesh's, before this call), and SetConfig
+    // applies an override to every resolution, over an agentStepHeight sent with the radius.
+    Served.AgentStepHeight = -1.f;
+    // Nothing to write when the agent already has these (the project file is rewritten only for a real change).
+    if (FMath::IsNearlyEqual(Served.AgentRadius, Registered.AgentRadius) && FMath::IsNearlyEqual(Served.AgentHeight, Registered.AgentHeight))
+    {
+        return false;
+    }
+    const auto Write = [&](UNavigationSystemV1* Owner, bool bAddWhenEmpty)
+    {
+        TArray<FNavDataConfig>& Agents = *AgentsProperty->ContainerPtrToValuePtr<TArray<FNavDataConfig>>(Owner);
+        FNavDataConfig* Agent = Agents.FindByPredicate([&Registered](const FNavDataConfig& Each) { return Each.IsEquivalent(Registered); });
+        if (!Agent && bAddWhenEmpty && Agents.Num() == 0)
+        {
+            Agent = &Agents.Add_GetRef(Served);
+        }
+        if (Agent)
+        {
+            Agent->AgentRadius = Served.AgentRadius;
+            Agent->AgentHeight = Served.AgentHeight;
+        }
+        return Agent != nullptr;
+    };
+    UNavigationSystemV1* Defaults = NavSys->GetClass()->GetDefaultObject<UNavigationSystemV1>();
+    if (!AgentsProperty || !Write(Defaults, true))
+    {
+        return false;
+    }
+    Write(NavSys, false);
+    NavMesh->SetConfig(Served);
+    OutAgent = Served.Name;
+    bOutConfigSaved = Defaults->TryUpdateDefaultConfigFile();
+    return true;
+}
+
 // configure_nav_mesh_settings (generation fields) and set_nav_agent_properties (agent fields) on the editor world's
 // default RecastNavMesh; both take agentStepHeight, and only the fields sent change.
 bool ConfigureNavMesh(
@@ -30,6 +77,9 @@ bool ConfigureNavMesh(
     // 0.01 asks for a hundred thousand cells along each side of a tile. Only then is anything written.
     bool bModified = false;
     bool bCheckOnly = true;
+    bool bAgentWritten = false;
+    bool bConfigSaved = false;
+    FName AgentName;
     FString RangeError;
     const auto Apply = [&](const TCHAR* Field, const UStruct* Owner, const FName PropertyName, auto& Target)
     {
@@ -91,6 +141,20 @@ bool ConfigureNavMesh(
             FPropertyChangedEvent Changed(MeshType->FindPropertyByName(GET_MEMBER_NAME_CHECKED(ARecastNavMesh, TileSizeUU)), EPropertyChangeType::ValueSet);
             NavMesh->PostEditChangeProperty(Changed);
         }
+        else
+        {
+            // Written on the nav mesh alone, a radius or height matched no supported agent and the nav mesh was discarded
+            // at its next registration.
+            if (Payload->HasField(TEXT("agentRadius")) || Payload->HasField(TEXT("agentHeight")))
+            {
+                bAgentWritten = WriteSupportedAgent(NavSys, NavMesh, AgentName, bConfigSaved);
+            }
+            // As the editor does after its own generation edit: a rebuild when navigation auto-updates.
+            if (NavSys->GetIsAutoUpdateEnabled())
+            {
+                NavMesh->RebuildAll();
+            }
+        }
         NavMesh->MarkPackageDirty();
     }
 
@@ -105,6 +169,11 @@ bool ConfigureNavMesh(
         Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
         Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
         Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
+        if (bAgentWritten)
+        {
+            Result->SetStringField(TEXT("supportedAgent"), AgentName.ToString());
+            Result->SetBoolField(TEXT("projectConfigSaved"), bConfigSaved);
+        }
     }
     else
     {

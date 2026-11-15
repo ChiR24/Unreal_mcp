@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "EngineUtils.h"
@@ -45,7 +46,10 @@ static AActor* FindFadeActor(const FString& SoundName, FString& OutComponentName
         for (TActorIterator<AActor> It(World); It; ++It)
         {
             TArray<UAudioComponent*> Owned;
-            It->GetComponents<UAudioComponent>(Owned);
+            if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+            {
+                It->GetComponents<UAudioComponent>(Owned);
+            }
             for (UAudioComponent* Comp : Owned)
             {
                 if (Comp->GetName().Equals(SoundName, ESearchCase::IgnoreCase))

@@ -5,8 +5,11 @@
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "GameFramework/Actor.h"
 #include "EngineWireSubsystem.h"
+#include "MediaPlayer.h"
+#include "MediaSoundComponent.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
 namespace McpSequenceMedia {
@@ -16,11 +19,8 @@ AActor *FindMediaActorByName(const FString &ActorName) {
   if (ActorName.IsEmpty() || !GEditor) {
     return nullptr;
   }
-  // The play world first (live actors, and the running game's roles), then the editor level.
-  if (AActor *Actor = McpHandlerUtils::FindActorByName(ActorName)) {
-    return Actor;
-  }
-  return FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), ActorName, true);
+  // The editor level, while Play runs too: a component added to the running game's actor ended with the session.
+  return FindActorByNameInWorldForMcp(McpHandlerUtils::GetEditorWorld(), ActorName, true);
 }
 
 }
@@ -85,16 +85,18 @@ bool HandleCreateMediaSoundComponent(UEngineWireSubsystem *Subsystem,
                                    *Actor->GetActorLabel(), *ComponentName));
     return true;
   }
-  Actor->Modify();
+  // One undo step for the add: Modify ran with no transaction open, so undo left the component in place.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Media Sound Component")),
+                                          EMcpMutationDurability::EditorStateOnly, {Actor});
   UActorComponent *Component = NewObject<UActorComponent>(
       Actor, ComponentClass, FName(*ComponentName), RF_Transactional);
   if (!Component) {
+    Transaction.Cancel();
     SendMediaError(Subsystem, Socket, RequestId,
                    TEXT("COMPONENT_CREATE_FAILED"),
                    TEXT("Failed to create media sound component"));
     return true;
   }
-  Component->SetFlags(RF_Transactional);
   Actor->AddInstanceComponent(Component);
   Component->OnComponentCreated();
   if (USceneComponent *SceneComponent = Cast<USceneComponent>(Component)) {
@@ -106,9 +108,12 @@ bool HandleCreateMediaSoundComponent(UEngineWireSubsystem *Subsystem,
     SendMediaError(Subsystem, Socket, RequestId, TEXT("MEDIA_BIND_FAILED"),
                    TEXT("Failed to bind media player to media sound component"));
     Component->DestroyComponent();
+    Transaction.Cancel();
     return true;
   }
-  CallVoidObjectFunction(Component, TEXT("SetMediaPlayer"), Player);
+  if (UMediaSoundComponent *Sound = Cast<UMediaSoundComponent>(Component)) {
+    Sound->SetMediaPlayer(Cast<UMediaPlayer>(Player));
+  }
   Component->RegisterComponent();
   if (GetBoolAny(Payload, {TEXT("activate")}, true)) {
     Component->Activate(true);
@@ -124,6 +129,7 @@ bool HandleCreateMediaSoundComponent(UEngineWireSubsystem *Subsystem,
   Result->SetBoolField(TEXT("registered"), Component->IsRegistered());
   Result->SetBoolField(TEXT("active"), Component->IsActive());
   McpHandlerUtils::AddVerification(Result, Component);
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(
       Socket, RequestId, true, TEXT("Media sound component created"), Result);
   return true;

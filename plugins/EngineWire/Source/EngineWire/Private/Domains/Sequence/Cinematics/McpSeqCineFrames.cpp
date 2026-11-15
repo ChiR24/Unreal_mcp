@@ -4,8 +4,21 @@
 #include "Domains/Sequence/Validation/McpSeqFrameMath.h"
 
 #include "MovieScene.h"
+#include "MovieSceneSequence.h"
 
 namespace McpSequenceCinematics {
+int32 InnerSequenceDisplayFrames(UMovieSceneSequence *Inner, UMovieScene *Outer, int32 Fallback) {
+  const UMovieScene *InnerScene = Inner ? Inner->GetMovieScene() : nullptr;
+  const TRange<FFrameNumber> Range = InnerScene ? InnerScene->GetPlaybackRange() : TRange<FFrameNumber>::Empty();
+  if (!Outer || !Range.HasLowerBound() || !Range.HasUpperBound()) {
+    return Fallback;
+  }
+  const FFrameTime Ticks(Range.GetUpperBoundValue() - Range.GetLowerBoundValue());
+  const int32 Frames =
+      FFrameRate::TransformTime(Ticks, InnerScene->GetTickResolution(), Outer->GetDisplayRate()).RoundToFrame().Value;
+  return Frames > 0 ? Frames : Fallback;
+}
+
 FFrameNumber GetFrame(const TSharedPtr<FJsonObject> &Params,
                       UMovieScene *MovieScene, const TCHAR *Name,
                       double DefaultValue) {

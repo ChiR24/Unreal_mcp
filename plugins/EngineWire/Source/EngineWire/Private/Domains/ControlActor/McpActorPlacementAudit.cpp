@@ -1,6 +1,7 @@
 // Copyright (c) 2025 EngineWire Contributors
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/Responses/McpResponseVerify.h"
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
@@ -141,7 +142,7 @@ bool UEngineWireSubsystem::HandleControlActorAuditPlacement(
 
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor *Actor = *It;
-    if (!Actor || Actor->IsHidden()) {
+    if (!Actor || Actor->IsHidden() || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor)) {
       continue;
     }
     if (!McpActorNameContains(Actor, NameFilter)) {

@@ -6,6 +6,7 @@
 // call changes (McpChangeWatch.cpp).
 
 #include "Domains/ControlActor/Placement/McpAuditFinding.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Domains/ControlActor/Placement/McpPlacementMount.h"
 
 #include "Components/MeshComponent.h"
@@ -172,7 +173,7 @@ void MergeContent(UWorld* World, const FString& NameFilter, TArray<FMcpPlacement
     for (TActorIterator<AActor> It(World); It; ++It)
     {
         const AActor* Actor = *It;
-        if (!Actor || Actor->IsHidden())
+        if (!Actor || Actor->IsHidden() || !McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor))
         {
             continue;
         }

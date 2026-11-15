@@ -17,7 +17,7 @@ bool HandleSetNodePosition(UEngineWireSubsystem* Bridge, const FString& RequestI
     return false;
   }
 
-  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+  LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
   FString NodeId;
   if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
     Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));

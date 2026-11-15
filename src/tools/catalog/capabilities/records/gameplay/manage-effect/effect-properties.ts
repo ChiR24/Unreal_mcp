@@ -34,7 +34,7 @@ export const E: PropertyMap = {
   modulePath: str('Canonical /Niagara module script path to insert.'),
   nodeId: str('Niagara graph node identifier.'),
   targetNodeId: str('Niagara graph node the dynamic input is attached to.'),
-  autoConnect: bool('Whether inserted pins are auto-connected.'),
+  autoConnect: bool('Without fromPin and toPin: wire the first free output of fromNode into the first free input of toNode it links to directly; a wire already between them answers alreadyConnected.'),
   dynamicInputScriptPath: str('Canonical /Niagara dynamic input script path.'),
   inputName: str('Module input name receiving the dynamic input.'),
   replaceExisting: bool('Whether an existing dynamic input is replaced.'),

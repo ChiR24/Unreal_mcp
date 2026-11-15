@@ -48,7 +48,7 @@ bool HandleSetupVolumetricFog(
 
     if (!FogActor)
     {
-        FogActor = SpawnActorInActiveWorld<AExponentialHeightFog>(AExponentialHeightFog::StaticClass(), FVector::ZeroVector,
+        FogActor = SpawnActorInEditorWorld<AExponentialHeightFog>(AExponentialHeightFog::StaticClass(), FVector::ZeroVector,
                                                                    FRotator::ZeroRotator);
     }
 

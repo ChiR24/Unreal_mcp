@@ -101,6 +101,7 @@ TSharedPtr<FJsonObject> BuildAssetResponse(
     const FMediaAssetCreateResult &Created,
     const FString &AssetType);
 bool SaveMediaAsset(UObject *Object);
+// Writes by reflection, for members that are protected or private (McpSeqMediaProperties.cpp).
 bool SetObjectProperty(UObject *Object,
                        const FString &PropertyName,
                        UObject *Value);
@@ -116,31 +117,6 @@ bool SetStringObjectMapEntry(UObject *Object,
                              const FString &PropertyName,
                              const FString &Key,
                              UObject *Value);
-bool CallBoolFunction(UObject *Object, const FName &FunctionName);
-bool CallBoolObjectFunction(UObject *Object,
-                            const FName &FunctionName,
-                            UObject *Argument);
-bool CallBoolStringFunction(UObject *Object,
-                            const FName &FunctionName,
-                            const FString &Argument);
-bool CallBoolObjectIntFunction(UObject *Object,
-                               const FName &FunctionName,
-                               UObject *ObjectArgument,
-                               int32 IntArgument);
-UObject *CallObjectIntFunction(UObject *Object,
-                               const FName &FunctionName,
-                               int32 IntArgument);
-bool CallBoolTimespanFunction(UObject *Object,
-                              const FName &FunctionName,
-                              const FTimespan &Argument);
-bool CallVoidStringFunction(UObject *Object,
-                            const FName &FunctionName,
-                            const FString &Argument);
-void CallVoidObjectFunction(UObject *Object,
-                            const FName &FunctionName,
-                            UObject *Argument);
-void CallVoidFunction(UObject *Object, const FName &FunctionName);
-FString GetMediaUrl(UObject *MediaSource);
 bool ValidateMediaSourcePolicy(UObject *MediaSource, FString &OutErrorCode,
                                FString &OutError);
 

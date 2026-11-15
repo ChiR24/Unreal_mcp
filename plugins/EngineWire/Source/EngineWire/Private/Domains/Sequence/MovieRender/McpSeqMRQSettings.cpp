@@ -126,14 +126,18 @@ bool HandleConfigureAntiAliasing(UEngineWireSubsystem *Subsystem,
                                      *Method),
                      TEXT("INVALID_AA_METHOD")),
            true;
+  // One undo step for the edit: Modify ran with no transaction open, so undo reverted the edit before this one.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Anti-Aliasing")), EMcpMutationDurability::EditorStateOnly,
+                                          {Job, Config});
   UMoviePipelineAntiAliasingSetting *AA = Cast<UMoviePipelineAntiAliasingSetting>(
       Config->FindOrAddSettingByClass(UMoviePipelineAntiAliasingSetting::StaticClass(), true));
   if (!AA)
-    return SendError(Subsystem, RequestId, Socket,
+    return Transaction.Cancel(), SendError(Subsystem, RequestId, Socket,
                      TEXT("MRQ anti-aliasing setting is unavailable."),
                      TEXT("MRQ_AA_UNAVAILABLE")),
            true;
 
+  AA->Modify();
   if (bHasSpatial)
     AA->SpatialSampleCount = SpatialSamples;
   if (bHasTemporal)
@@ -142,11 +146,11 @@ bool HandleConfigureAntiAliasing(UEngineWireSubsystem *Subsystem,
     AA->bOverrideAntiAliasing = true;
     AA->AntiAliasingMethod = ParsedMethod;
   }
-  Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
+  Transaction.DescribeInto(Result);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                                    TEXT("MRQ anti-aliasing configured."),
-                                    BuildJobResult(Job, Queue));
+                                    TEXT("MRQ anti-aliasing configured."), Result);
   return true;
 }
 
@@ -189,6 +193,9 @@ bool HandleConfigureConsoleVariables(UEngineWireSubsystem *Subsystem,
   }
   if (!ValidateConsoleVariableResourceLimits(ParsedValues, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  // One undo step for the edit: Modify ran with no transaction open, so undo reverted the edit before this one.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Configure Console Variables")), EMcpMutationDurability::EditorStateOnly,
+                                          {Job, Config});
   UMoviePipelineConsoleVariableSetting *CVars =
       ExistingCVars ? ExistingCVars
                     : Cast<UMoviePipelineConsoleVariableSetting>(
@@ -196,19 +203,20 @@ bool HandleConfigureConsoleVariables(UEngineWireSubsystem *Subsystem,
                               UMoviePipelineConsoleVariableSetting::StaticClass(),
                               true));
   if (!CVars)
-    return SendError(Subsystem, RequestId, Socket,
+    return Transaction.Cancel(), SendError(Subsystem, RequestId, Socket,
                      TEXT("MRQ console-variable setting is unavailable."),
                      TEXT("MRQ_CVAR_UNAVAILABLE")),
            true;
+  CVars->Modify();
   for (const TPair<FString, float> &Entry : ParsedValues)
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
     CVars->AddOrUpdateConsoleVariable(Entry.Key, Entry.Value);
 #else
     CVars->ConsoleVariables.Add(Entry.Key, Entry.Value);
 #endif
-  Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
+  Transaction.DescribeInto(Result);
   Result->SetNumberField(TEXT("consoleVariableCount"), ParsedValues.Num());
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("MRQ console variables configured."),

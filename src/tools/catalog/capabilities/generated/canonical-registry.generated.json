@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c0e85bec2145c8b2",
+  "catalogRevision": "8e422b887c57ed6e",
   "recordCount": 489,
   "records": [
     {
@@ -9851,7 +9851,7 @@
           "reparent material instance",
           "change parent material"
         ],
-        "summary": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.",
+        "summary": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "edit=add_parameter: A new scalar, vector, texture or static-switch parameter must be introduced on a material or material function.",
           "edit=reset_parameters: A material instance must return to its parent's values by dropping every parameter override.",
@@ -9955,7 +9955,7 @@
       },
       "examples": [
         {
-          "title": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter.",
+          "title": "Add a parameter expression to a material or material function, reset every parameter override on a material instance, or give an instance another parent material (reparent: its own shaders are compiled again for it). To override a parameter value on an instance, use set_material_parameter. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "parameterName": "Roughness",
@@ -10033,7 +10033,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "677976487f826d9c77657f67719354c60c304d1ddb67f71f292f76a4dfc22502",
-        "content": "60b1d3186ac932d30d82b48f21b7ec5191c98ccd5fc5908808b9d7ec46f85608"
+        "content": "520a8c29bb5d9fa492f0a49c8ef4e60e1a0043d3095dfaf6dba0517a8f1269f0"
       }
     },
     {
@@ -50613,13 +50613,12 @@
           "open level asset",
           "open the menu level or another map"
         ],
-        "summary": "Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).",
+        "summary": "Open a level from disk in place of the open one: manage_level load under the editor's name, answered as load answers. levelPath is a /Game or /Engine package or object path (/Game/Maps/Demo, /Game/Maps/Demo.Demo), or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game. A level anywhere else (/Script, a plugin) is refused (SECURITY_VIOLATION). Play In Editor is stopped and asset editors close. Open levels with unsaved changes refuse the open (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state). The reply waits for the level to settle (settledSeconds).",
         "whenToUse": [
           "A different level must be loaded into the editor."
         ],
         "whenNotToUse": [
-          "The level is already loaded.",
-          "Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved."
+          "The level must be streamed into the open one as a sublevel (manage_level load with streaming true)."
         ]
       },
       "schemas": {
@@ -50634,6 +50633,14 @@
             "levelPath": {
               "type": "string",
               "description": "Level asset path."
+            },
+            "saveDirtyPackages": {
+              "type": "boolean",
+              "description": "Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded."
+            },
+            "discardUnsaved": {
+              "type": "boolean",
+              "description": "Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word)."
             }
           },
           "required": [
@@ -50659,6 +50666,41 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "alreadyLoaded": {
+              "type": "boolean",
+              "description": "True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone."
+            },
+            "reloaded": {
+              "type": "boolean",
+              "description": "Whether this call loaded the level from disk (false when alreadyLoaded)."
+            },
+            "dirtyWorldPackagesBeforeLoad": {
+              "type": "number",
+              "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
+            },
+            "dirtyContentPackagesBeforeLoad": {
+              "type": "number",
+              "description": "Asset packages with unsaved changes when the call began."
+            },
+            "savedDirtyPackagesBeforeLoad": {
+              "type": "boolean",
+              "description": "Whether saveDirtyPackages saved every dirty package before the load."
+            },
+            "unsaved": {
+              "type": "boolean",
+              "description": "alreadyLoaded only: whether the open level (or one of its external actor packages) still has unsaved changes after any save the call made."
+            },
+            "unsavedPackages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "alreadyLoaded only: the packages with unsaved changes (the first 100)."
+            },
+            "unsavedPackageCount": {
+              "type": "number",
+              "description": "alreadyLoaded only: how many packages have unsaved changes."
+            },
             "settledSeconds": {
               "type": "number",
               "description": "How long the reply waited for the level to settle (its water, streamed textures and effects drawn), so a screenshot right after shows the level as it looks."
@@ -50676,7 +50718,7 @@
       },
       "examples": [
         {
-          "title": "Open a level from disk by its path (/Game/Maps/Demo; an object path such as /Game/Maps/Demo.Demo, or a bare name read as /Game/<name>, works too), replacing the open level: Play In Editor is stopped and asset editors close. Unsaved levels are refused, never saved (DIRTY_PACKAGES); the reply waits for the level to settle (settledSeconds).",
+          "title": "Open a level from disk in place of the open one: manage_level load under the editor's name, answered as load answers. levelPath is a /Game or /Engine package or object path (/Game/Maps/Demo, /Game/Maps/Demo.Demo), or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game. A level anywhere else (/Script, a plugin) is refused (SECURITY_VIOLATION). Play In Editor is stopped and asset editors close. Open levels with unsaved changes refuse the open (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state). The reply waits for the level to settle (settledSeconds).",
           "input": {
             "action": "open_level",
             "levelPath": "/Game/Maps/EntryMap"
@@ -50713,8 +50755,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2d26f9eb5c1c7a01f4e40ae4ac9a8a7368ba514ebc09f829f28f1918432016d4",
-        "content": "b7cfc985c1ad536b7ac42495b6bc55ca245a0591929e2e7a75138a5274e7cd8a"
+        "schema": "3cdb50209381f383039bf96f65093ae3f0bd54a50c4d9c0ba2f5113622adea25",
+        "content": "106b207b65a98b9198038da2c66513b243f3657253678c906c81b77cb545b3b4"
       }
     },
     {
@@ -58070,7 +58112,7 @@
           "all actors of a type",
           "every instance"
         ],
-        "summary": "Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match's name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.",
+        "summary": "Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name. control_actor find_by_class under inspect's name, answered as it answers; the Play-In-Editor world is searched while a session runs.",
         "whenToUse": [
           "All actors of a specific class must be enumerated."
         ],
@@ -58089,15 +58131,21 @@
             },
             "className": {
               "type": "string",
-              "description": "Class name or /Script/ class path to inspect."
+              "description": "Unreal class name or path to find actors by class."
+            },
+            "class": {
+              "type": "string",
+              "description": "Unreal class name or path (alias of className)."
             },
             "classPath": {
               "type": "string",
-              "description": "Class asset path (alias of className)."
+              "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
             },
             "limit": {
               "type": "number",
-              "description": "Most actors to list (1-1000, default 200); when more match, truncated is true and totalCount counts them."
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
             }
           },
           "required": [
@@ -58106,6 +58154,7 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "className",
+            "class",
             "classPath"
           ]
         },
@@ -58126,14 +58175,60 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "objects": {
+            "actors": {
               "type": "array",
               "items": {
                 "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  }
+                },
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matching object info."
+              "description": "Matched actors, each with where it is."
+            },
+            "count": {
+              "type": "number",
+              "description": "Number of actors returned."
+            },
+            "totalCount": {
+              "type": "number",
+              "description": "Present only when limit cut the list: how many actors matched in all."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list short; totalCount says how many matched."
             }
           },
           "required": [
@@ -58144,15 +58239,21 @@
       },
       "examples": [
         {
-          "title": "Find the actors of a class or any subclass of it in the level (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path): each match's name, path and class plus a count, the first limit (default 200) with truncated and totalCount when more match. A class that resolves to nothing is refused as CLASS_NOT_FOUND. Searches the PIE world while a game runs.",
+          "title": "Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name. control_actor find_by_class under inspect's name, answered as it answers; the Play-In-Editor world is searched while a session runs.",
           "input": {
             "action": "find_by_class",
             "className": "PointLight"
           },
           "output": {
             "success": true,
-            "message": "Actors found",
-            "objects": []
+            "message": "Found 2 actors by class",
+            "actors": [
+              {
+                "label": "Light1",
+                "name": "Light1"
+              }
+            ],
+            "count": 2
           }
         }
       ],
@@ -58183,8 +58284,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "50f8a4af33bc511c95fa87e9cb2a2754db5b64c6c0d51581db96aa82e81c8557",
-        "content": "3a361c1bb699f401d1c0f1c5f68d40f82f9ff84f154ee631e528f10cc958418e"
+        "schema": "d991480ed66ceb72ec37d897828a5bf436ec4c3b73d2ca4dcc4bc83cbe28f2c3",
+        "content": "3136bad1c7b3df15aee0fd5ae9b8b735b99ff06235afaba27294d1b9c9f00d79"
       }
     },
     {
@@ -60669,7 +60770,7 @@
           "world objects",
           "enumerate objects"
         ],
-        "summary": "Read placed actors, chosen by lookup. list pages through the actors of the level (the running game during Play): filter narrows by name, limit (default 100) and offset page through them, with totalCount and isPieWorld; control_actor list adds class, tag, folder, near and property filters. by_tag lists the actors carrying tag (name, path, class), stopping at limit (default 200) with the total. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
+        "summary": "Read placed actors, chosen by lookup. list is control_actor list (the same call and answer): the actors of the level (the running game during Play) with label, class, location, rotation and scale, narrowed by filter, tag, className or folder, near a point within radius, paged with limit and offset. by_tag is control_actor find_by_tag: the actors carrying tag (name, path, class), the first limit (default 200) with truncated and totalCount when more match. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
         "whenToUse": [
           "lookup=list: All actors in the current level must be enumerated.",
           "lookup=by_tag: All actors with a given tag must be enumerated.",
@@ -60693,21 +60794,58 @@
               "type": "string",
               "description": "The action to execute on the parent tool."
             },
-            "filter": {
-              "type": "string",
-              "description": "Keep the actors whose label, name or class name holds this text (any case)."
-            },
             "limit": {
               "type": "number",
-              "description": "Maximum objects to return (default 100)."
+              "description": "Maximum number of actors to return in a list."
+            },
+            "filter": {
+              "type": "string",
+              "description": "Optional name substring filter for list."
             },
             "offset": {
               "type": "number",
-              "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
+              "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
             },
             "tag": {
               "type": "string",
-              "description": "Actor tag to match."
+              "description": "Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it."
+            },
+            "className": {
+              "type": "string",
+              "description": "Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C."
+            },
+            "folder": {
+              "type": "string",
+              "description": "Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."
+            },
+            "propertyNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+            },
+            "near": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder."
+            },
+            "radius": {
+              "type": "number",
+              "minimum": 0,
+              "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
+            },
+            "summary": {
+              "type": "boolean",
+              "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
+            },
+            "bounds": {
+              "type": "boolean",
+              "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
             },
             "objectPath": {
               "type": "string",
@@ -60738,7 +60876,7 @@
                 "bounding_box",
                 "export"
               ],
-              "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs): each one's name, label, path and class, limit rows (default 100) from offset. filter keeps the actors whose label, name or class holds it (any case); count, matchedCount, totalCount and hasMore say how many there are, isPieWorld and worldName which world was read.\nby_tag: Find the level's actors that carry tag (the play world while a game runs): each one's label, name, path and class, the first limit (1-1000, default 200) with truncated and totalCount when more match. A missing tag is refused (INVALID_ARGUMENT).\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
+              "description": "Which query object variant to run.\nlist: List the level's actors (the play world while a game runs) with their label, class, location, rotation and scale, plus any propertyNames values and, with bounds, each world bounding box, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius lists what is near a point, nearest first; summary counts the level by class, tag and folder instead. control_actor list under inspect's name, answered as it answers.\nby_tag: Find the actors in the level whose Tags list holds tag (the whole tag, case-insensitive), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. control_actor lookup=by_tag under inspect's name, answered as it answers; the Play-In-Editor world is searched while a session runs.\nmetadata: Read an object's metadata, named by actorName, objectPath or name (a level actor, a component as Actor.Component, or an asset): its metadata key/value pairs with metadataCount, assetRegistryTags for an asset, and for an actor its tags, folderPath and location. Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND.\nbounding_box: The bounding box of a level actor, a component (Actor.Component) or a static or skeletal mesh asset, named by actorName, objectPath or name: bounds {min, max, origin, extent, size, radius} and boundsSource (actor, component, staticMesh or skeletalMesh). Nothing named is INVALID_ARGUMENT, a name that resolves to nothing OBJECT_NOT_FOUND, an object with no bounds UNSUPPORTED_OBJECT.\nexport: Export a world actor or object as text (T3D by default), returned inline as exportedText and, with outputPath, also written to a file inside the project."
             }
           },
           "required": [
@@ -60764,30 +60902,149 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "actors": {
+              "type": "array",
+              "description": "Matched actors; with near, nearest first, each with its distance.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  },
+                  "location": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Where the actor is, {x, y, z} in world cm."
+                  }
+                }
+              }
+            },
             "count": {
               "type": "number",
               "description": "Number of actors returned."
             },
             "totalCount": {
               "type": "number",
-              "description": "Total actor count in the world."
+              "description": "Listable actors matching the filter, before the limit is applied."
+            },
+            "excludedCount": {
+              "type": "number",
+              "description": "Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world."
             },
             "isPieWorld": {
               "type": "boolean",
-              "description": "Whether the world is a PIE world."
+              "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
             },
             "worldName": {
               "type": "string",
-              "description": "Name of the current world."
+              "description": "Name of the active world (or PIE world) the actors were listed from."
             },
-            "actors": {
+            "filter": {
+              "type": "string",
+              "description": "Optional name substring filter for list."
+            },
+            "hasMore": {
+              "type": "boolean",
+              "description": "More matching actors exist past this page."
+            },
+            "nextOffset": {
+              "type": "number",
+              "description": "The offset of the next page; present only when hasMore."
+            },
+            "byClass": {
               "type": "array",
-              "description": "Actor info objects.",
               "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              }
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Class, tag or folder."
+                  },
+                  "count": {
+                    "type": "number",
+                    "description": "Matching actors."
+                  }
+                },
+                "required": [
+                  "name",
+                  "count"
+                ],
+                "additionalProperties": false
+              },
+              "description": "summary: matching actors per class, as {name, count} rows sorted by name."
+            },
+            "byTag": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Class, tag or folder."
+                  },
+                  "count": {
+                    "type": "number",
+                    "description": "Matching actors."
+                  }
+                },
+                "required": [
+                  "name",
+                  "count"
+                ],
+                "additionalProperties": false
+              },
+              "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
+            },
+            "byFolder": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Class, tag or folder."
+                  },
+                  "count": {
+                    "type": "number",
+                    "description": "Matching actors."
+                  }
+                },
+                "required": [
+                  "name",
+                  "count"
+                ],
+                "additionalProperties": false
+              },
+              "description": "summary: matching actors per outliner folder, as {name, count} rows sorted by name (\"(none)\" for the root)."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list short; totalCount says how many matched."
             }
           },
           "required": [
@@ -60798,7 +61055,7 @@
       },
       "examples": [
         {
-          "title": "Read placed actors, chosen by lookup. list pages through the actors of the level (the running game during Play): filter narrows by name, limit (default 100) and offset page through them, with totalCount and isPieWorld; control_actor list adds class, tag, folder, near and property filters. by_tag lists the actors carrying tag (name, path, class), stopping at limit (default 200) with the total. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
+          "title": "Read placed actors, chosen by lookup. list is control_actor list (the same call and answer): the actors of the level (the running game during Play) with label, class, location, rotation and scale, narrowed by filter, tag, className or folder, near a point within radius, paged with limit and offset. by_tag is control_actor find_by_tag: the actors carrying tag (name, path, class), the first limit (default 200) with truncated and totalCount when more match. metadata gives one actor name, label, path, class, tags and location. bounding_box gives its world bounds as origin and extent (half the size on each axis), every component counted. export writes it as T3D text (exportedText), and also to outputPath inside the project when given.",
           "input": {
             "action": "query_object",
             "lookup": "list"
@@ -60844,18 +61101,40 @@
             "export": "export"
           },
           "declaredBy": {
-            "filter": [
-              "list"
-            ],
             "limit": [
               "list",
               "by_tag"
+            ],
+            "filter": [
+              "list"
             ],
             "offset": [
               "list"
             ],
             "tag": [
+              "list",
               "by_tag"
+            ],
+            "className": [
+              "list"
+            ],
+            "folder": [
+              "list"
+            ],
+            "propertyNames": [
+              "list"
+            ],
+            "near": [
+              "list"
+            ],
+            "radius": [
+              "list"
+            ],
+            "summary": [
+              "list"
+            ],
+            "bounds": [
+              "list"
             ],
             "objectPath": [
               "metadata",
@@ -60890,8 +61169,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f63b9634d429b3d064f8ec3c72a08a4e9b66ebfe5a5a47e9ea3d47d93c829123",
-        "content": "9f9aad41c9d9f7dc802341af1a824a66e7893b84adb9d7c4257a8a8d84f7f8a6"
+        "schema": "5831d7f1291103340d864a2993a6d99f7f6032c33c014fd209a89153237598e6",
+        "content": "8be14274173aa385f809a583c31b730314d0023fbeb18b068237a85c6509844d"
       }
     },
     {
@@ -62877,7 +63156,7 @@
                 "smart_link_behavior",
                 "rebuild"
               ],
-              "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set project navigation agent properties.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED)."
+              "description": "Which configure navigation variant to run.\nmesh_settings: Configure project NavMesh generation settings.\nagent_properties: Set the navigation agent the level's nav mesh serves. agentRadius and agentHeight are written to the agent in Project Settings > Navigation System > Supported Agents (saved to the project's DefaultEngine.ini; supportedAgent names the agent, projectConfigSaved says whether the file was written), to this world's navigation system and to the nav mesh, so the nav mesh still matches its agent when the level loads again; agentStepHeight and agentMaxSlope are the nav mesh's own. The nav mesh rebuilds when navigation auto-update is on. Only the fields sent change.\narea_cost: Configure navigation area cost data.\narea_class: Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).\nnav_link: Change the link of a placed NavLinkProxy (actorName): startPoint and endPoint (relative to the actor) and direction go on its smart link when it uses one, else on its point link, and snapRadius on the point link (refused for a smart link). Only what is sent changes, and a call that sends none of them is refused. The navmesh takes the change at once; one undo step, the level left unsaved; the reply gives the link as it is now.\nlink_type: Switch a placed NavLinkProxy (actorName) between a simple link, its point link, and a smart link, its smart link alone (linkType simple or smart), carrying the endpoints and direction over. A proxy already of that type changes nothing (changed false). One undo step; the level is left unsaved.\nsmart_link_behavior: Change the smart link of a NavLinkProxy (actorName): linkEnabled switches it on or off; enabledAreaClass and disabledAreaClass are the navigation areas it marks while on and off (NavArea_Null blocks it); broadcastRadius and broadcastInterval set who hears it switch, heard only while its Notify When Enabled or Disabled is on, and the one left out keeps its value; bCreateBoxObstacle true sets its box obstacle of obstacleAreaClass (default NavArea_Null), obstacleExtent (default 100) and obstacleOffset. An area class that does not load is refused before anything changes, as is a call that sets nothing. The settings stay on a proxy that uses its point link and apply once setting=link_type makes it smart. One undo step; the level is left unsaved.\nrebuild: Rebuild navigation for the loaded editor world, waiting until it is built; hasNavMesh says whether a nav mesh exists after. A level with no NavMeshBoundsVolume is refused (NO_NAV_BOUNDS), and so is a build locked while levels load (NAV_BUILD_LOCKED)."
             }
           },
           "required": [
@@ -63092,8 +63371,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "138f2ab598585d3d63cebb15e702edf744142bc157e3b97d69f8aeeecae25228",
-        "content": "eb60182d81b70ec0bb69cdef2794f0d4cb2e1b1677fd26ab85e73438b764bb86"
+        "schema": "36fc5baa4b5cf3750a4140a2575094108a73f8c147c27942e9ce16bf3217c414",
+        "content": "d81499525c279e70c294f6884744e5ef966083f60aefa4d88bb59209dc736db5"
       }
     },
     {
@@ -78502,7 +78781,7 @@
             },
             "autoConnect": {
               "type": "boolean",
-              "description": "Whether inserted pins are auto-connected."
+              "description": "Without fromPin and toPin: wire the first free output of fromNode into the first free input of toNode it links to directly; a wire already between them answers alreadyConnected."
             },
             "edit": {
               "type": "string",
@@ -78517,7 +78796,7 @@
                 "enable_gpu_simulation",
                 "connect_pins"
               ],
-              "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins."
+              "description": "Which edit niagara system variant to run.\nadd_emitter: Add an emitter to a Niagara system: an emitter asset (emitterPath), or a copy of another system's emitter with its modules, values, renderers and bindings (sourceSystemPath + sourceEmitterName), as the editor's copy and paste does.\nadd_user_parameter: Add a user parameter to a system.\nbind_parameter: Drive a Niagara value from a parameter: a module input named as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding, as the stack's Link Inputs menu does; any other parameterName gets a Set Variables module in particle update that writes it from sourceBinding every frame.\nset_parameter_value: Set Niagara parameter values: a user parameter, a module input named as get_niagara_info lists it (InitializeParticle.Lifetime), or a module's static switch (InitializeParticle.Ribbon Width Mode, an enum by its display name such as Direct Set); one with parameterName and parameterValue, or several with parameters, written together and saved once.\nset_parameter: Set a Niagara user parameter: on a placed effect's component (actorName), so one placement of a shared system gets its own values, or its default on the system asset (assetPath).\nset_dynamic_input: Configure a Niagara dynamic input expression (UE 5.3 and later; NIAGARA_DYNAMIC_INPUT_UNSUPPORTED below).\nset_emitter_properties: Enable or disable an emitter in a Niagara system (emitterProperties.enabled).\nenable_gpu_simulation: Enable GPU simulation on a system.\nconnect_pins: Connect an output pin of fromNode to an input pin of toNode (fromPin, toPin; nodes by GUID, name or title, such as the nodeId add_niagara_module answers). With autoConnect and no pins, the first free output of fromNode is wired into the first free input of toNode it links to directly (no wire is replaced and no conversion node added), and a wire already between them answers alreadyConnected; no such pair is PIN_NOT_FOUND."
             }
           },
           "required": [
@@ -78817,6 +79096,10 @@
               ]
             },
             "connect_niagara_pins": {
+              "required": [
+                "fromNode",
+                "toNode"
+              ],
               "oneOf": [
                 "systemPath",
                 "assetPath"
@@ -78827,8 +79110,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0dba74e2a496e121f65d16122628618d9f346a9f180166eb34fba82070bbbbe5",
-        "content": "620b8b5f9741d6faefa2158d243f4cd2114e89b9b9f74c6aef08699df7657f55"
+        "schema": "987b3987200c984e0bc99c4de83df5c55a69a3b3a7826e178c707b889cdcfa50",
+        "content": "baf0c76d5ab731eec20e69337f4a64ce84e1296697c7126c503596ae989a7395"
       }
     },
     {
@@ -91642,7 +91925,7 @@
           "change level",
           "reload level"
         ],
-        "summary": "Open a level in the editor in place of the open one (levelPath: a /Game package or object path, or a bare name tried under /Game/Maps), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
+        "summary": "Open a level in the editor in place of the open one (levelPath: a package or object path such as /Game/Maps/Demo, or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game; control_editor open_level is the same call, for a level under /Game or /Engine), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
         "whenToUse": [
           "A level must be opened or streamed into the current session."
         ],
@@ -91776,7 +92059,7 @@
       },
       "examples": [
         {
-          "title": "Open a level in the editor in place of the open one (levelPath: a /Game package or object path, or a bare name tried under /Game/Maps), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
+          "title": "Open a level in the editor in place of the open one (levelPath: a package or object path such as /Game/Maps/Demo, or a path without its leading slash: in a mounted root as that root (Engine/Maps/Entry), else under /Game/Maps when a level is there, else under /Game; control_editor open_level is the same call, for a level under /Game or /Engine), or with streaming:true add it to the open level as a sublevel instead (add_sublevel answers). Open levels with unsaved changes refuse the load (DIRTY_PACKAGES, listed in unsavedPackages) until saveDirtyPackages saves them or discardUnsaved drops them; the level already open is not reloaded (alreadyLoaded, with its unsaved state); a missing map answers FILE_NOT_FOUND with both paths it checked. The reply waits for the level to settle (settledSeconds), so a screenshot right after shows it drawn.",
           "input": {
             "action": "load",
             "levelPath": "/Game/Maps/Demo",
@@ -91815,7 +92098,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a7f649f5284ec547d98123e2a85054b0fb00ba59219a31729da09bde4d93c99b",
-        "content": "c19bcf3c996aa25e71b85de229087e25d0c4d7efa1c99614638db5da3c23b6a6"
+        "content": "7024487ee0591f77e2f49200ae46da47ac7422362ec9eb2d1fcd08026fed3ff7"
       }
     },
     {
@@ -95065,7 +95348,7 @@
                 "remove_node",
                 "set_pin_default_value"
               ],
-              "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused), or purge unbound call nodes.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
+              "description": "Which edit level blueprint variant to run.\nopen: Open the Level Blueprint editor of the open level (levelPath picks a loaded sublevel; default the persistent level), creating the Level Blueprint when the level has none yet. A level never saved (/Temp) has none to open, and an editor that does not open is EDITOR_NOT_OPENED; a headless editor only checks the Blueprint is there (headlessSafeMode). Nothing is changed or saved.\nadd_node: Add a node to the level blueprint graph, including an event bound to a placed actor (OnActorBeginOverlap of a trigger), a reference to one, or a getter of its component; the reply lists the node's pins.\nconnect_nodes: Link sourceNodeName.sourcePinName to targetNodeName.targetPinName in the level Blueprint as blueprint.edit_graph edit=connect_pins links two pins: through the graph schema (incompatible types or directions are refused with its reason, CONNECTION_FAILED), a cast gets its conversion node (reported), a pin that takes one link drops its old one, and the link is one undo step; the reply reads it back (connected, the pins' names and types). A pin a node lacks is PIN_NOT_FOUND, naming that node's pins. The level stays unsaved unless save is true (saved).\nremove_node: Remove a level blueprint node by id, name or title (one several nodes share is refused, AMBIGUOUS_NODE) as blueprint.delete_node removes one: its wires are cut, a function's entry and result nodes are refused (PROTECTED_NODE), it is one undo step, and the reply names it (removed, its id). unboundOnly instead purges every call node with no bound function.\nset_pin_default_value: Set the default value of an input pin on a level blueprint node (in its event graph or one of its functions), such as the color SetLightColor sets; a read-only (const reference) pin gets it through a MakeLiteral node wired into it."
             }
           },
           "required": [
@@ -95246,8 +95529,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3a3671c49deb50720e690eca6aaa1970fcf139e45312410e94873c7acfdb9695",
-        "content": "dcc3d2d38c604fcb6dbd2ef011f01e8f1127df4742548f758e500d504b184de6"
+        "schema": "64a9720d16a374e7b75e843014c6726557a3fdd625aafc7a42e1290f2cf632bc",
+        "content": "7b4067fffc1a6f07280f761e3ef7bec6996badc81a0c8e1c02f17c53dc5f2fab"
       }
     },
     {
@@ -98659,9 +98942,9 @@
           "noise gate",
           "mute player"
         ],
-        "summary": "Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.",
+        "summary": "Voice chat: set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player. enable answers NOT_SUPPORTED: starting or stopping voice chat now needs the VoiceChat plugin and an implementation of it, which this plugin does not link.",
         "whenToUse": [
-          "setting=enable: Use it to enable or disable online voice chat.",
+          "setting=enable: Use it to answers NOT_SUPPORTED: starting or stopping voice chat needs the VoiceChat plugin and an implementation of it (EOS or Vivox voice), which this plugin does not link. configure_voice_settings writes the project's VoIP settings, which take effect at the next start.",
           "setting=settings: Use it to configure project VoIP: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the VoIP sample rate. Written to DefaultEngine.ini for packaged games; the voice console variables also apply to the running editor.",
           "setting=mute_player: Use it to mute or unmute an online player through the voice chat or online voice interface; fails with NOT_SUPPORTED when neither applies it."
         ],
@@ -98678,7 +98961,7 @@
             },
             "voiceEnabled": {
               "type": "boolean",
-              "description": "Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled."
+              "description": "Whether voice chat is on. settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled; enable answers NOT_SUPPORTED."
             },
             "micInputGain": {
               "type": "number",
@@ -98725,7 +99008,7 @@
                 "settings",
                 "mute_player"
               ],
-              "description": "Which configure voice variant to run.\nenable: Enable or disable online voice chat.\nsettings: Configure project VoIP: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the VoIP sample rate. Written to DefaultEngine.ini for packaged games; the voice console variables also apply to the running editor.\nmute_player: Mute or unmute an online player through the voice chat or online voice interface; fails with NOT_SUPPORTED when neither applies it."
+              "description": "Which configure voice variant to run.\nenable: Answers NOT_SUPPORTED: starting or stopping voice chat needs the VoiceChat plugin and an implementation of it (EOS or Vivox voice), which this plugin does not link. setting=settings writes the project's VoIP settings, which take effect at the next start.\nsettings: Configure project VoIP: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the VoIP sample rate. Written to DefaultEngine.ini for packaged games; the voice console variables also apply to the running editor.\nmute_player: Mute or unmute an online player through the voice chat or online voice interface; fails with NOT_SUPPORTED when neither applies it."
             }
           },
           "required": [
@@ -98782,7 +99065,7 @@
       },
       "examples": [
         {
-          "title": "Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.",
+          "title": "Voice chat: set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player. enable answers NOT_SUPPORTED: starting or stopping voice chat now needs the VoiceChat plugin and an implementation of it, which this plugin does not link.",
           "input": {
             "action": "configure_voice",
             "voiceEnabled": true,
@@ -98888,8 +99171,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e86d2b22e91ece09523eaa791964cf31bf9ee0fe48439f69ce9fd54e0a8cdb6e",
-        "content": "fd12666101e9f8ac9561bfe3b4e1ba329bcc6a42467ef246388697accc474249"
+        "schema": "4decacc7f9f59788b81a90ea7ad87fa80c3fc0ec1273d75b554d638d23bcf629",
+        "content": "7a45915084e87ca45a4dc24b67c9a132913dd19b0269ee6686d270851f4d274f"
       }
     },
     {
@@ -102870,7 +103153,7 @@
           "material function input",
           "material function output"
         ],
-        "summary": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.",
+        "summary": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "io=input: A material function needs an input pin (scalar, vector, Texture2D, TextureCube, Bool or MaterialAttributes) that callers wire into.",
           "io=output: A material function needs a named result pin so a graph can wire its result out."
@@ -102943,7 +103226,7 @@
       },
       "examples": [
         {
-          "title": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes.",
+          "title": "Add a pin to a material function (assetPath), chosen by io: input adds a Function Input named inputName of inputType (default Vector3; an unknown type is refused) that callers wire into; output adds a Function Output named inputName that carries out whatever is wired into it, of that type. A name the function already has is NAME_TAKEN. The node lands at x, y (default 0, 0), the function recompiles and is left unsaved; the reply gives its nodeId for connect_nodes. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "assetPath": "/Game/Materials/Functions/MF_HeightBlend",
             "inputName": "Height",
@@ -103000,7 +103283,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1aaf37eb95c2be1252920d6ab8c3b266661df024e684cd37e205cf03886a583c",
-        "content": "00224ed26ec7b8f15fddcb02b6c7da390e9a8d672ac5dc72fba3bf04ba6a07e0"
+        "content": "fdf56da373b77500c528a0f2846f83345e5c2f09f3b129098b50c7c7e6e1f411"
       }
     },
     {
@@ -103201,7 +103484,7 @@
           "wire many material nodes",
           "material graph batch"
         ],
-        "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
+        "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "nodeKind=node: An expression is needed by class name with no dedicated adder, such as Constant, Constant3Vector (with defaultValue), ComponentMask or Saturate.",
           "nodeKind=node: A texture object must feed a Custom node or a material function input (nodeType TextureObjectParameter with name and texturePath).",
@@ -103579,7 +103862,7 @@
       },
       "examples": [
         {
-          "title": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
+          "title": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "nodeType": "Constant3Vector",
@@ -103901,7 +104184,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0b7cbe7b3adb8bdaad344a2dbcfcfa1d6192f8d1fff3c65ffc33ec62c2fde0d5",
-        "content": "0e423b66cde9c2af202b92cd317469e9ae59e4a5f75b112eb90a48dec45bdc7d"
+        "content": "67a70f3b0f6e20810c737e20893c0ae193ce22f81f83d5ef8ba677f91f941ecb"
       }
     },
     {
@@ -104243,7 +104526,7 @@
           "connect texture to base color",
           "connect node to base color"
         ],
-        "summary": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.",
+        "summary": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "The output of one material node must feed an input of another node in the same material or function.",
           "A node result must drive a material output such as BaseColor or Roughness (targetNodeId Main)."
@@ -104319,7 +104602,7 @@
       },
       "examples": [
         {
-          "title": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has.",
+          "title": "Wire an output of sourceNodeId (sourcePin: a name, an index or channel letters such as G or RG; default its first output) into targetPin of targetNodeId, replacing whatever fed that input. targetNodeId Main is the material output (BaseColor, Roughness, Normal, EmissiveColor...), or in a material function its output named targetPin (the first when left out). The material recompiles and is left unsaved (save_all keeps it). NODE_NOT_FOUND names Main when the target id is missing; INVALID_PIN or PIN_NOT_FOUND lists the inputs the node has. Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "sourceNodeId": "MaterialExpressionTextureSample_0",
@@ -104363,7 +104646,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6a278a70fabbd1a137cb3e839c8ef834c0340d90c6413d013a8b68e1a5c84c39",
-        "content": "3449a9a2a9e0e22bb3e294d7fe5cba39bf58f1c6ee27b66fd79f4ec84c635952"
+        "content": "8cbfde837ead4b485bd0f1d72dc792a05ad1bb5d6ff96842e1c9e0699f7727de"
       }
     },
     {
@@ -104928,7 +105211,7 @@
         "topics": [
           "delete_node"
         ],
-        "summary": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).",
+        "summary": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "An unused or wrong node must leave a material or function graph, taking its wires with it.",
           "Several stray nodes must go in one call (nodeIds)."
@@ -105016,7 +105299,7 @@
       },
       "examples": [
         {
-          "title": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node).",
+          "title": "Delete nodes from a material or material function graph: nodeId, or nodeIds for several. Every wire to a deleted node is cut, the material outputs it fed included, so what it fed falls back to its default; the material is then recompiled and saved unless save is false. Ids that match nothing come back in notFound, and NOT_FOUND answers only when none matched (read the ids with get_material_info or find_node). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "nodeId": "MaterialExpressionMultiply_0",
@@ -105057,7 +105340,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0a9097ae1f1e0dd6ef3a47a578a5f845a35b6047ebaa28dabb853eec7902d939",
-        "content": "760be1ea2f8629a00ddc4ec38036bebf0b0e0caa15cdf9a47e05b61c58e66e2b"
+        "content": "f98270e877fe8cd845ede90e9e48efae20c6469c1b831e432de4cdf3bd684d06"
       }
     },
     {
@@ -105082,7 +105365,7 @@
         "topics": [
           "disconnect_nodes"
         ],
-        "summary": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).",
+        "summary": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "The wire into one input pin of a node must be cleared while both nodes stay.",
           "A material output such as BaseColor must be unplugged (nodeId Main with pinName BaseColor)."
@@ -105145,7 +105428,7 @@
       },
       "examples": [
         {
-          "title": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it).",
+          "title": "Unplug the wire into pinName of nodeId (or with nodeId Main a material output such as BaseColor), keeping both nodes; the input falls back to its default. A pin name that matches none fails listing the inputs; a material function output node with no pinName unplugs every output. The material recompiles and is left unsaved (save_all keeps it). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "materialPath": "/Game/Materials/M_Base",
             "nodeId": "MaterialExpressionMultiply_0",
@@ -105187,7 +105470,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4d2535083e0767e0e3c02178d25f89ad96f371fc15bc05854de3de543534fb4c",
-        "content": "90d475eedb7deefc281af142236263c26ab0e9f0924429e86c9029ea8ddadad5"
+        "content": "e6101e9df860c8a32280bd8416337b28d5d137a14bacbb7475db5e12510d2731"
       }
     },
     {
@@ -105195,11 +105478,11 @@
       "aliases": [
         "material.get_material_function_info",
         "material.find_node",
-        "material.get_material_node_details",
         "material.get_node_properties",
         "material.get_node_connections",
         "material.get_node_chain",
-        "material.get_connected_subgraph"
+        "material.get_connected_subgraph",
+        "material.get_material_node_details"
       ],
       "legacyIds": [
         {
@@ -105218,13 +105501,6 @@
           "action": "find_node",
           "folded": {
             "info": "find_node"
-          }
-        },
-        {
-          "tool": "manage_asset",
-          "action": "get_material_node_details",
-          "folded": {
-            "info": "node_details"
           }
         },
         {
@@ -105254,6 +105530,13 @@
           "folded": {
             "info": "subgraph"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "get_material_node_details",
+          "folded": {
+            "info": "node_properties"
+          }
         }
       ],
       "discovery": {
@@ -105275,12 +105558,12 @@
           "list material nodes",
           "nodes in a material"
         ],
-        "summary": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.",
+        "summary": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node properties and connections, node chains and connected subgraphs.",
         "whenToUse": [
           "info=material: An existing material must be understood before editing: node ids, parameter names, wiring, domain and blend mode, or the parent and overrides of an instance.",
           "info=function: A material function must be understood before calling or editing it: its inputs, outputs, description and library exposure.",
           "info=find_node: A node id is unknown and the node must be found by expression class, parameter name, function pin name or Custom node title.",
-          "info=node_details|node_properties: The settings of one node must be read back, such as a scalar or vector parameter default or a function input or output pin.",
+          "info=node_properties: The settings of one node must be read back, such as a scalar or vector parameter default or a function input or output pin.",
           "info=node_connections|node_chain: The wiring of a node must be traced across the graph, for example to see where its result ends up at the material output.",
           "info=subgraph: Nodes not wired to any output (orphans) must be found, or the connected island around one node listed."
         ],
@@ -105288,8 +105571,8 @@
           "info=material: Shading model, sampler counts or the instances of a parent are wanted (use asset.query_asset lookup=material_stats or asset.list kind=material_instances).",
           "info=function: The materials that call the function must be found (use asset.inspect_asset with lookup=dependencies and referencers=true).",
           "info=find_node: The material asset itself must be located by name or class (use asset.query_asset).",
-          "info=node_details|node_properties: A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).",
-          "info=node_details|node_properties: Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath \"<material path>.<material name>:<nodeId>\").",
+          "info=node_properties: A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).",
+          "info=node_properties: Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath \"<material path>.<material name>:<nodeId>\").",
           "info=node_connections|node_chain: A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).",
           "info=subgraph: Orphaned nodes are to be removed (use material.delete_node once their ids are known)."
         ]
@@ -105368,13 +105651,12 @@
                 "material",
                 "function",
                 "find_node",
-                "node_details",
                 "node_properties",
                 "node_connections",
                 "node_chain",
                 "subgraph"
               ],
-              "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_details: Retrieve details of a material node.\nnode_properties: Retrieve properties of a node in a material graph.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node.",
+              "description": "Which get material info variant to run; omit for 'material'.\nmaterial: Read a material or material function (domain, blend mode, shading model, parameters, node count), or a material instance (its parent, its parameter overrides, the static switches among them, and the base properties it overrides: blend mode, shading model, two-sided).\nfunction: Retrieve information about a material function.\nfind_node: Find a node in a material graph by type or name.\nnode_properties: Retrieve properties of a node in a material graph, named by nodeId or by expressionIndex (its position in the expression list): its class (type), description, position and the settings of its kind, such as a parameter's name, defaultValue and group or a function input's pin.\nnode_connections: Retrieve connections for a node in a material graph.\nnode_chain: Retrieve the chain of nodes connected to a starting node.\nsubgraph: Retrieve the connected subgraph from a starting node.",
               "default": "material"
             }
           },
@@ -105460,44 +105742,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Resolved node ID."
-            },
-            "nodeType": {
-              "type": "string",
-              "description": "Expression class name."
-            },
-            "parameterName": {
-              "type": "string",
-              "description": "Parameter name, for parameter expressions."
-            },
-            "scalarDefault": {
-              "type": "number",
-              "description": "DefaultValue, for scalar parameter expressions."
-            },
-            "vectorDefault": {
-              "type": "object",
-              "x-unreal-reflection-boundary": true,
-              "description": "DefaultValue as rgba, for vector parameter expressions."
-            },
-            "inputName": {
-              "type": "string",
-              "description": "Pin name, for a function input."
-            },
-            "inputType": {
-              "type": "string",
-              "description": "Pin type, for a function input."
-            },
-            "outputName": {
-              "type": "string",
-              "description": "Pin name, for a function output."
-            },
-            "sortPriority": {
-              "type": "number",
-              "description": "Pin sort priority, for function input/output expressions."
-            },
-            "usePreviewValueAsDefault": {
-              "type": "boolean",
-              "description": "Whether a function input previews its default."
+              "description": "Node the traversal started from."
             },
             "type": {
               "type": "string",
@@ -105524,7 +105769,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.",
+          "title": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node properties and connections, node chains and connected subgraphs.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "action": "get_material_info",
@@ -105572,7 +105817,6 @@
             "material": "get_material_info",
             "function": "get_material_function_info",
             "find_node": "find_node",
-            "node_details": "get_material_node_details",
             "node_properties": "get_node_properties",
             "node_connections": "get_node_connections",
             "node_chain": "get_node_chain",
@@ -105586,7 +105830,6 @@
             "nodeId": [
               "material",
               "function",
-              "node_details",
               "node_properties",
               "node_connections",
               "node_chain",
@@ -105603,7 +105846,7 @@
               "find_node"
             ],
             "expressionIndex": [
-              "node_details"
+              "node_properties"
             ],
             "direction": [
               "node_connections"
@@ -105634,16 +105877,7 @@
                 "assetPath"
               ]
             },
-            "get_material_node_details": {
-              "oneOf": [
-                "materialPath",
-                "assetPath"
-              ]
-            },
             "get_node_properties": {
-              "required": [
-                "nodeId"
-              ],
               "oneOf": [
                 "materialPath",
                 "assetPath"
@@ -105669,14 +105903,20 @@
                 "materialPath",
                 "assetPath"
               ]
+            },
+            "get_material_node_details": {
+              "oneOf": [
+                "materialPath",
+                "assetPath"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e7e129bf1bf96d469dac7f7e047ed7dff5b6ea658d4a201d8de4acd15858cca8",
-        "content": "1e26fe0616dcb0cf951947a7c59ab3c381ce94c948dcca9df4c6cea901bfd088"
+        "schema": "eb9642cf3385f62ca54e9f5c9a7583b2ca88891214afea919f5d693b4d5a844c",
+        "content": "8a0f6ad173ed8c33382c2b59300a244c9233dbe5b19635c2c9bb3f0f97c7429d"
       }
     },
     {
@@ -105743,7 +105983,7 @@
           "vector parameter",
           "recolor several material instances"
         ],
-        "summary": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).",
+        "summary": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
         "whenToUse": [
           "parameterKind=parameter: Several parameter values on a base material or an instance must change in one call (parameters list).",
           "parameterKind=parameter: Several material instances must be retuned at once, a palette recoloured (assets), under one consent instead of one per instance.",
@@ -105848,7 +106088,7 @@
       },
       "examples": [
         {
-          "title": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved).",
+          "title": "Set material parameter values, chosen by parameterKind. On a material instance it overrides a parameter its parent publishes (a name it does not publish is PARAMETER_NOT_FOUND, listing the published ones); on a base material it sets the parameter node's default, refused while the material is open in its editor (ASSET_EDITOR_OPEN; the editor would write its own copy back on close). scalar takes a number value, vector value {r, g, b, a} or [r, g, b, a], texture texturePath, static_switch value true or false, and a missing value is refused; parameter takes parameterType (scalar, the default, vector or texture) with value, several at once with parameters, or several instances under one consent with assets. The asset is saved unless save is false (saved). Engine content is refused (ENGINE_CONTENT): duplicate it into /Game first.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "parameterName": "Roughness",
@@ -105958,7 +106198,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a1dd08b986e70ae90f65833c95e3a85ed0bf723dc153507dd5dff584f2653612",
-        "content": "8f16523550e83d459df87766b75c3b53813d23166be3155492bed0f07ef8abf9"
+        "content": "104a8e89798f8822b80d6a1df3e79a5de768eae6ce3f91a64e5c2c0ed6c3c99b"
       }
     },
     {
@@ -106675,7 +106915,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "actorName": {
               "type": "string",
@@ -106699,7 +106939,7 @@
             },
             "durationFrames": {
               "type": "integer",
-              "description": "Section duration in display-rate frames."
+              "description": "Section duration in display-rate frames. Left out with endFrame, a subsequence or shot section takes its sequence's own length, a master sequence's playback range 240 frames and any other section 100."
             },
             "endFrame": {
               "type": "integer",
@@ -107129,8 +107369,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b826b5f0657ffad70c2167199edc9906f8848d80fcbdbce1413a3e4f3f835239",
-        "content": "d9e231bcaaf1247997895747c7aac917ee61362cf942231a6c19603c4c40c545"
+        "schema": "ca46cd0f2edfa3ab479abca760648446e2f493f20cef5801365e93ee7655a927",
+        "content": "bb86f3baf08b3324f9f75ac09ee252736053d9e7c4e30518837466aeead8a081"
       }
     },
     {
@@ -107356,7 +107596,7 @@
             },
             "durationFrames": {
               "type": "integer",
-              "description": "Section duration in display-rate frames."
+              "description": "Section duration in display-rate frames. Left out with endFrame, a subsequence or shot section takes its sequence's own length, a master sequence's playback range 240 frames and any other section 100."
             },
             "endFrame": {
               "type": "integer",
@@ -107569,8 +107809,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9395a5b2a0f42a3119855c93206d892eb658c357b8dd9246ac6f9eb7836e7793",
-        "content": "4267754af8ed19b8175970c00f903de9afcdeac724829f9e971011b296a063c4"
+        "schema": "afc1c461bd4044e9a555929d20b6c431dd4c8ccbf601aa2d599cbc0a78f1fde3",
+        "content": "22243159fe56909682238366063b50951c3674732ed5e01fbec1e816ad13146a"
       }
     },
     {
@@ -107607,7 +107847,7 @@
           "cine camera actor",
           "master sequence"
         ],
-        "summary": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
+        "summary": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it, as create does (saved says whether the save went through); it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_ALREADY_EXISTS. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
         "whenToUse": [
           "kind=cine_camera_actor: A cinematic camera actor must be created for a shot.",
           "kind=master_sequence: A new cinematic with shots must be scaffolded."
@@ -107782,7 +108022,7 @@
             },
             "durationFrames": {
               "type": "integer",
-              "description": "Section duration in display-rate frames."
+              "description": "Section duration in display-rate frames. Left out with endFrame, a subsequence or shot section takes its sequence's own length, a master sequence's playback range 240 frames and any other section 100."
             },
             "endFrame": {
               "type": "integer",
@@ -107794,7 +108034,7 @@
                 "cine_camera_actor",
                 "master_sequence"
               ],
-              "description": "Which create cinematic asset variant to run.\ncine_camera_actor: Create a CineCameraActor in the level and bind it to the sequence.\nmaster_sequence: Create the master level sequence of a cinematic: an empty sequence at frameRate (default 24 fps) with its playback range, saved; shots and sub-sequences are added to it afterwards."
+              "description": "Which create cinematic asset variant to run.\ncine_camera_actor: Create a CineCameraActor in the level and bind it to the sequence.\nmaster_sequence: Create the master level sequence of a cinematic: create with a master sequence's defaults (a name alone goes in /Game/Cinematics, 24 fps for 240 frames), answered as create answers; shots and sub-sequences are added to it afterwards."
             }
           },
           "required": [
@@ -107842,6 +108082,14 @@
             "sequencePath": {
               "type": "string",
               "description": "Canonical /Game sequence asset path."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new sequence was saved; false when the save failed, which leaves it in memory only."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when a Level Sequence was already at the path: it was kept as it was and nothing was made."
             }
           },
           "required": [
@@ -107852,7 +108100,7 @@
       },
       "examples": [
         {
-          "title": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it; it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_TYPE_MISMATCH. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
+          "title": "Create a cinematic piece, chosen by kind. master_sequence makes a level sequence (name in path, default /Game/Cinematics, or sequencePath) at frameRate (default 24 fps) playing from startFrame (default 0) for durationFrames (default 240) or to endFrame, and saves it, as create does (saved says whether the save went through); it starts with no tracks, so add shots with add_shot_track and sub-sequences with add_subsequence. A level sequence already there is kept (alreadyExists); another asset there is ASSET_ALREADY_EXISTS. cine_camera_actor places a Cine Camera Actor named actorName (or label) at location and rotation with the lens, filmback and focus settings given (appliedProperties) and, with path or sequencePath, binds it to that sequence (bindingGuid); during Play it goes into the running game.",
           "input": {
             "action": "create_cinematic_asset",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -107967,8 +108215,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "db08386fa26f78a91f5ae01fb46ea20dfc39cd9960af3cfc6bf7dcf804d91ce4",
-        "content": "c3971c477bf11029bb91a93e23548fa237bc37f6773faf7723d309525f8f0c73"
+        "schema": "008888e1c618be63d1fe06e20eeac412a97920661209ba88fadcc51db537471d",
+        "content": "d7e7fcc36d30e4169b493ee1ebb7065473c856296139d1054f0cd9d87d508ae5"
       }
     },
     {
@@ -108049,6 +108297,25 @@
               "type": "string",
               "description": "Sequence asset path, such as /Game/Cinematics/SEQ_Shot; with name, create reads it as the folder instead."
             },
+            "frameRate": {
+              "type": [
+                "number",
+                "string"
+              ],
+              "description": "Display rate of the new sequence, as fps or a rate string such as 24fps or 24000/1001; left out, the project default."
+            },
+            "startFrame": {
+              "type": "integer",
+              "description": "First frame of the playback range, in display frames (default 0)."
+            },
+            "durationFrames": {
+              "type": "integer",
+              "description": "Length of the playback range in display frames; left out with endFrame, the new sequence keeps its default length."
+            },
+            "endFrame": {
+              "type": "integer",
+              "description": "Playback range end frame (exclusive); used when durationFrames is absent."
+            },
             "destinationPath": {
               "type": "string",
               "description": "Destination /Game folder for the copy."
@@ -108064,7 +108331,7 @@
                 "duplicate",
                 "rename"
               ],
-              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at the project's default display rate (30 fps out of the box) and 24000 ticks per second.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
+              "description": "Which create variant to run; omit for 'create'.\ncreate: Create a Level Sequence asset and save it: name in the folder path names (default /Game), or path alone naming the sequence itself (/Game/Cinematics/SEQ_Shot). A Level Sequence already there is kept and answered with alreadyExists true; another asset there is ASSET_ALREADY_EXISTS, and a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The new sequence is empty, with no bindings or camera, at frameRate (default the project's display rate, 30 fps out of the box) and 24000 ticks per second, playing from startFrame for durationFrames or to endFrame when they are sent; a bad rate or range is INVALID_ARGUMENT and leaves no asset.\nduplicate: Copy a Level Sequence to destinationPath (a folder; one not starting with / is under the source folder) as newName, and save the copy. A destination already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a destination outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives sequencePath (the copy's package path) and saved; the copy keeps the original's bindings, which still point at the same level actors.\nrename: Rename a Level Sequence: newName keeps its folder, a path starting with / moves it there. The engine saves the renamed sequence and leaves a redirector at the old path when other assets reference it. A name already taken is ASSET_ALREADY_EXISTS, a source that is not a Level Sequence INVALID_SEQUENCE, a path outside the writable content roots SEQUENCE_PATH_NOT_WRITABLE. The reply gives oldPath and sequencePath.",
               "default": "create"
             }
           },
@@ -108109,6 +108376,14 @@
             "existsAfter": {
               "type": "boolean",
               "description": "Whether the asset existed after the call."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new sequence was saved; false when the save failed, which leaves it in memory only."
+            },
+            "alreadyExists": {
+              "type": "boolean",
+              "description": "True when a Level Sequence was already at the path: it was kept as it was and nothing was made."
             },
             "sequencePath": {
               "type": "string",
@@ -108175,6 +108450,18 @@
             "name": [
               "create"
             ],
+            "frameRate": [
+              "create"
+            ],
+            "startFrame": [
+              "create"
+            ],
+            "durationFrames": [
+              "create"
+            ],
+            "endFrame": [
+              "create"
+            ],
             "destinationPath": [
               "duplicate"
             ],
@@ -108208,8 +108495,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8286520e5be8014f50b36d02d117478769f2096fe34658fef85cc508105410f1",
-        "content": "8d2079a91e1289da5f0cf40a895b97292de4ac29c252e490eab57f1eaa5655d6"
+        "schema": "cd5a7ffb513890e47f4ef80aab31773ed43392e140494d81f9527538e47ae5f9",
+        "content": "d33a3a9d77ac6bbc4df554ee2a2a4cfb49e534b54d1d2a41e016662bf09ec68a"
       }
     },
     {
@@ -108269,7 +108556,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "trackName": {
               "type": "string",
@@ -108436,8 +108723,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "70964c418cad11a4410fe2742c1262483d568c5e09228df973e1ed02e06e6ba3",
-        "content": "7afd4a054b518a464aa3cba0e0c037de5de4ae32793159c1a8eec0975e4611b4"
+        "schema": "b9fcd3842af8e365840ae88c4a612f4f545e80b4f36b0ca0b57385c347c8f28c",
+        "content": "107ea8422d6b09f7e707e5184a71e8dc6c7e8ff5a67d18d7f7f2f42859575701"
       }
     },
     {
@@ -108529,7 +108816,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "actorName": {
               "type": "string",
@@ -108727,8 +109014,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cb844b5b7bec5e2a8a6ed8a1dbfe8c146ef054c5ee3f5c1cb1955f60f7582b49",
-        "content": "e5edd15c88d5e5d217d58e58b7c34e6a8ad765c93159e1b304df40296b9e8abb"
+        "schema": "478373631cfe4e0d71f77fb29f41de7df7431f948eb16a25369e6ffadef1208b",
+        "content": "b0c578abf17f2453e0c996f3a0ada159a3270c6910209ad17b85c6a01b3e4e83"
       }
     },
     {
@@ -108856,7 +109143,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "trackType": {
               "type": "string",
@@ -108948,7 +109235,7 @@
             },
             "solo": {
               "type": "boolean",
-              "description": "Whether to solo."
+              "description": "True (the default) mutes every other track; false unmutes every track of the sequence, those muted before included."
             },
             "sectionIndex": {
               "type": "integer",
@@ -109225,8 +109512,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "99f2e6756e3df4cab840e2e5ac99e81cb0baea04cd3a7c015e12d097addfe9d0",
-        "content": "1764d3508b75c050e1bc8593ad40d423390a40aa5793c69f49b6785a360385cd"
+        "schema": "de93c4af7d08ca4c369d821181575cc6e7ead3af78c435087cf0d756df19ae2a",
+        "content": "0b8d39063bddd052689acb8c2dc2442cfb96b5dc5ba9c2292582d22ccc872e1e"
       }
     },
     {
@@ -109264,7 +109551,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "key": {
               "type": "string",
@@ -109382,8 +109669,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "06dfa2393884a8a594bba45589764d93cfa872c5660eb3212b43181b0421f1aa",
-        "content": "15e0952a00a19155fee647df7e55a49a0fbc4a9713db662d3499fd7d59c5b93f"
+        "schema": "0a939740c35dc7f16ddb4e302e671b249f196e82bd4e0a928d951b146d87b90b",
+        "content": "37c9d3e830e5aa040837613dd57ef1e1636df9d26fcc79e3b91bbe99969ff6c7"
       }
     },
     {
@@ -109489,7 +109776,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "trackName": {
               "type": "string",
@@ -109898,8 +110185,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1d36111a8a527125b93964dfcdd96352f2a41b98c04a7309e16aaf39e59a3ee3",
-        "content": "7a28ca4981843a2fb0f57da0003572f391586f04d02b4c51ca9e3fd0eda47afa"
+        "schema": "c4321030cf2c481578762ed04238b55fcb3cd0e061ecac61ba2184e8e309ab06",
+        "content": "eedb075ac8356ac88bbdcbda9a3e4f55d1eea863e42f1ad2a69580eb18e96476"
       }
     },
     {
@@ -112375,7 +112662,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "startTime": {
               "type": "number",
@@ -112498,8 +112785,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bef0667d2d8d71e183300d80f0a41cd57fb6d60147d5a3da87ab5a624e96679b",
-        "content": "3102f536b8e7e2768cc19b9d0c8c3dbeca3d9b21572315bef241140497fe4172"
+        "schema": "cc54e030e9ce73ded1cfa07c90b19a2add2f9a2510148af53081a021cfac4d6f",
+        "content": "807998b808a792b0cf87a207d73ce22fa24f3cd789630311f157d628566633ca"
       }
     },
     {
@@ -113037,7 +113324,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "metadata": {
               "type": "object",
@@ -113136,8 +113423,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "abb9889e278293f781bd4976b24c5e16885f66b3b4ef46897983e63584cbc3cb",
-        "content": "30548de32fc033751bc3c4f49dba4d47c1058b52fd7b4f3a1e4bfa6b0f9e5269"
+        "schema": "4a79893b6179c3311d99405965b36355d6d366e19dea078f4e322acd72f2727e",
+        "content": "ba1816bf6736cd747bc61809772362e25d692f51a9b606a8ca13f57f192924cf"
       }
     },
     {
@@ -113234,7 +113521,7 @@
             },
             "path": {
               "type": "string",
-              "description": "The level sequence's /Game path. Left out (with sequencePath and assetPath), the sequence the last create made in this editor session."
+              "description": "The level sequence's /Game path (sequencePath and assetPath are other spellings of it)."
             },
             "frameRate": {
               "type": [
@@ -113430,8 +113717,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7106491e5bc8641c9677879988741890d148388318d227de91c9af3cde7178c5",
-        "content": "7bcc3dec1b680715a44aef836672aa538a5b21c6e1069d74ba8770ef55e47152"
+        "schema": "4f56fb3e65e2b54b70517a25cd2b16e612168dcd633afdb117baa73b8265f316",
+        "content": "62a8b1b26b1df445eec8855683d51bb3e5459ebbe7b23e3fc56aaf5794254e83"
       }
     },
     {

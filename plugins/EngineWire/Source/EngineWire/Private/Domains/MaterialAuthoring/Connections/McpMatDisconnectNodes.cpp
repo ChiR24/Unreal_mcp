@@ -5,7 +5,7 @@ namespace McpMaterialAuthoringHandlers
 bool HandleDisconnectNodes(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("disconnect_nodes")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString NodeId, PinName;
     Payload->TryGetStringField(TEXT("nodeId"), NodeId);

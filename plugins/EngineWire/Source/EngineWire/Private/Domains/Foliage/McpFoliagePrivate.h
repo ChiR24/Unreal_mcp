@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Dom/JsonObject.h"
+#include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -35,7 +36,10 @@ inline TArray<AInstancedFoliageActor*> AllFoliageActors(UWorld* World)
     {
         for (TActorIterator<AInstancedFoliageActor> It(World); It; ++It)
         {
-            Actors.Add(*It);
+            if (McpCapabilityPrincipal::ActiveRequestPermitsObject(*It))
+            {
+                Actors.Add(*It);
+            }
         }
     }
     return Actors;
@@ -73,22 +77,25 @@ inline void SetFoliageActorChanged(const TSharedPtr<FJsonObject>& Resp, const AI
     Resp->SetArrayField(TEXT("affectedActors"), Changed);
 }
 
-// foliageTypePath (or foliageType), sanitized; a bare name lives in /Game/Foliage. OutPath is empty
-// when neither is given. Replies SECURITY_VIOLATION and returns false for an unsafe path.
+// foliageTypePath (or foliageType), sanitized; a bare name lives in /Game/Foliage. OutPath is empty when neither is
+// given. False for an unsafe path, OutRequested holding the path given.
+inline bool ResolveFoliageTypePath(const TSharedPtr<FJsonObject>& Payload, FString& OutPath, FString& OutRequested)
+{
+    OutRequested = GetJsonStringField(Payload, TEXT("foliageTypePath"), GetJsonStringField(Payload, TEXT("foliageType")));
+    OutPath.Reset();
+    if (OutRequested.IsEmpty()) return true;
+    // Before the canonicalizer, which reads a slashless name as a content root of its own and refuses it.
+    OutPath = SanitizeProjectRelativePath(OutRequested.Contains(TEXT("/")) ? OutRequested : TEXT("/Game/Foliage/") + OutRequested);
+    return !OutPath.IsEmpty();
+}
+
+// ResolveFoliageTypePath that replies SECURITY_VIOLATION and returns false for an unsafe path.
 inline bool ReadFoliageTypePath(UEngineWireSubsystem& Bridge, const FString& RequestId,
                                 TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload, FString& OutPath)
 {
-    const FString Requested = GetJsonStringField(Payload, TEXT("foliageTypePath"), GetJsonStringField(Payload, TEXT("foliageType")));
-    OutPath.Reset();
-    if (Requested.IsEmpty()) return true;
-    const FString SafePath = SanitizeProjectRelativePath(Requested);
-    if (SafePath.IsEmpty())
-    {
-        Bridge.SendAutomationError(Socket, RequestId,
-            McpPathRefusalMessage(TEXT("foliage type path"), Requested), TEXT("SECURITY_VIOLATION"));
-        return false;
-    }
-    OutPath = FPaths::GetPath(SafePath).IsEmpty() ? FString::Printf(TEXT("/Game/Foliage/%s"), *SafePath) : SafePath;
-    return true;
+    FString Requested;
+    if (ResolveFoliageTypePath(Payload, OutPath, Requested)) return true;
+    Bridge.SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("foliage type path"), Requested), TEXT("SECURITY_VIOLATION"));
+    return false;
 }
 }

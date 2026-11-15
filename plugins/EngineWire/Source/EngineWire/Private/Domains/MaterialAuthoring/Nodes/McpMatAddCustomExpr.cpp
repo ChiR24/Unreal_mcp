@@ -107,7 +107,7 @@ bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TShar
 bool HandleAddCustomExpression(UEngineWireSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_custom_expression")) {
-    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+    LOAD_EDITABLE_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString Code, OutputType, Description;
     if (!Payload->TryGetStringField(TEXT("code"), Code) || Code.IsEmpty()) {

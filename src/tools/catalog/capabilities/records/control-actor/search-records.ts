@@ -15,7 +15,8 @@ const FIND_CUT = {
   totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
   truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
 };
-const FIND_OUTPUT = { actors: P.actors, count: P.count, ...FIND_CUT };
+// find_by_tag's and find_by_class's answer, which inspect's finds (the same handlers) declare too.
+export const FIND_OUTPUT = { actors: P.actors, count: P.count, ...FIND_CUT };
 // With no match, labels equal to the query once case, separators and leading zeros are ignored.
 const FIND_BY_NAME_OUTPUT = {
   ...FIND_OUTPUT,
@@ -50,7 +51,10 @@ const FIND_BY_ASSET_OUTPUT = {
   ...FIND_CUT,
   worldSearched: { type: 'string', description: 'The world searched: the Play-In-Editor world while a session runs, else the editor world.' },
 };
-const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
+export const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
+
+// find_by_class's inputs, which inspect.find_by_class (the same handler) declares too.
+export const FIND_BY_CLASS_INPUTS = { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT };
 
 // add_tag's reply, which inspect.add_tag (the same handler) answers with too.
 export const TAG_OUT = {
@@ -209,7 +213,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Find the actors in the level of a class or any subclass of it (a short native name such as PointLight, /Script/Engine.PointLight, or a Blueprint asset path), each with name, path and class: the first limit (default 200), with truncated and totalCount when more match. A class that resolves to nothing is refused with CLASS_NOT_FOUND, naming assets of that name.',
     whenToUse: ['All instances of a class must be located.'],
     whenNotToUse: ['A tag-based lookup is more appropriate (use find_by_tag).'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
+    inputProps: FIND_BY_CLASS_INPUTS,
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,
@@ -226,7 +230,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_class. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_class verb.'],
     whenNotToUse: ['Use find_by_class to avoid alias normalization.'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className).' }, limit: FIND_LIMIT },
+    inputProps: FIND_BY_CLASS_INPUTS,
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,

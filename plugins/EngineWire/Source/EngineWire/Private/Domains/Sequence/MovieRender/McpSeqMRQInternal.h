@@ -2,6 +2,7 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/MovieRender/McpSeqMRQ.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 class UMoviePipelineExecutorJob;
 class UMoviePipelineMasterConfig;
