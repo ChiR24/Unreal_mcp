@@ -1278,7 +1278,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
         arguments: {
           action: 'create',
           name: 'BP_Test',
-          path: '/Game/MCPTest',
+          savePath: '/Game/MCPTest',
           parentClass: 'Actor'
         }
       }, { maxRetries: 3, timeoutMs: 20000, operationName: 'create BP_Test blueprint' }).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
@@ -1312,11 +1312,11 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
         arguments: { action: 'create_folder', path: '/Game/Foliage' }
       }, 10000).catch(() => { /* Folder may already exist */ });
 
-      // Create Grass foliage type using add_foliage_type action
+      // Create Grass foliage type using create_foliage_type action
       await callToolOnce({
         name: 'build_environment',
         arguments: {
-          action: 'add_foliage_type',
+          action: 'create_foliage_type',
           name: 'Grass',
           meshPath: '/Engine/BasicShapes/Sphere',
           density: 100
@@ -1327,7 +1327,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
       await callToolOnce({
         name: 'build_environment',
         arguments: {
-          action: 'add_foliage_type',
+          action: 'create_foliage_type',
           name: 'Tree',
           meshPath: '/Engine/BasicShapes/Sphere',
           density: 50
@@ -1346,7 +1346,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
       // Create TestSphere for boolean operation tests
       await callToolOnce({
         name: 'manage_geometry',
-        arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
+        arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50 }
       }, 15000).catch(err => console.warn('⚠️  TestSphere may already exist:', err?.message || err));
 
       // === End Geometry Setup ===
@@ -1369,12 +1369,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
         arguments: { action: 'rebuild_navigation' }
       }, 30000).catch(err => console.warn('⚠️  Navigation rebuild may have failed:', err?.message || err));
 
-      // Create BP_Test blueprint for create_nav_modifier_component tests
-      await callToolOnce({
-        name: 'manage_blueprint',
-        arguments: { action: 'create_blueprint', name: 'BP_Test', path: '/Game/MCPTest' }
-      }, 15000).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
-
+      // BP_Test comes from the Test Blueprint setup above.
       // Add NavModifier component to BP_Test blueprint
       await callToolOnce({
         name: 'manage_ai',
@@ -1447,7 +1442,7 @@ export async function runToolTests(toolName, suiteCases, { folder } = {}) {
 
         await callToolOnce({
           name: 'manage_geometry',
-          arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
+          arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50 }
         }, 10000);
       } catch (err) {
         console.warn('⚠️  Geometry reset failed:', err?.message || err);

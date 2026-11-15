@@ -67,7 +67,7 @@ const testCases = [
 
   // === LEVEL BLUEPRINT ===
   { scenario: 'ACTION: open_level_blueprint', toolName: 'manage_level_structure', arguments: { action: 'open_level_blueprint' }, expected: 'success' },
-  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 100 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceName', fromField: 'result.nodeName' } },
+  { scenario: 'ADD: add_level_blueprint_node', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_ExecutionSequence', nodeName: SEQUENCE_NODE, nodePosition: { x: 200, y: 500 } }, expected: 'success|already exists|not found', captureResult: { key: 'lbpSequenceName', fromField: 'result.nodeName' } },
   { scenario: 'ADD: add_level_blueprint_node with functionName', toolName: 'manage_level_structure', arguments: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', functionName: 'PrintString' }, expected: 'success' },
   { scenario: 'REMOVE: remove_level_blueprint_node by name', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', nodeName: 'K2Node_CallFunction_0', nodeId: '0F806A8F437089C69734C4BE30FA3B9D', save: false }, expected: 'success|not found' },
   { scenario: 'REMOVE: remove unbound call nodes', toolName: 'manage_level_structure', arguments: { action: 'remove_level_blueprint_node', unboundOnly: true }, expected: 'success' },

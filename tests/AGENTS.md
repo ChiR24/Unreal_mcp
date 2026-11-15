@@ -39,6 +39,11 @@ The runner AUTO-BUILDS: if `dist/cli.js` is missing, or source is newer than dis
 
 A build that is attempted and FAILS now aborts the run. It used to fall through to `ts-node-esm src/cli.ts`, so a full green could be reported while `dist/` — the artifact the package ships — was broken. Set `UNREAL_MCP_ALLOW_TS_FALLBACK=1` to run source anyway and accept that `dist/` is unverified. Choosing source deliberately (stale dist with `UNREAL_MCP_NO_AUTO_BUILD=1`) is unchanged.
 
+## PACING AND ORDER (one editor, several files)
+- The editor refuses a client past 120 tool calls a minute (`MaxClientToolCallsPerMinute`; never raise it for a test run). A case costs about two calls and a file's setup a burst of about 35, so at the default 100ms throttle a whole file voids itself with rate-limit refusals. Run with `UNREAL_MCP_TEST_THROTTLE_MS=2500` and leave 65s between files that share an editor.
+- A file that makes or loads a level (`create_level`, `load`, `saveDirtyPackages`) runs before the Niagara effect file in the same editor: the effect file leaves `/Engine/BasicShapes/BasicShapeMaterial` dirty, engine content is never saved, and `saveDirtyPackages` then refuses every level change for the rest of the session.
+- A level Blueprint made by `create_level` already holds Event BeginPlay at (0,0) and Event Tick at (0,208); a node placed over them is refused `NODE_OVERLAP`, so a case that adds nodes places them clear of that corner.
+
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
@@ -70,6 +75,7 @@ npm run test:params        # static + strict + optional-strict parameter audit
 - Strings split on literal ` or ` or `|`; the first token is the primary intent.
 - Put `success`, `error`, or `timeout` first according to what the case is proving.
 - Success-primary cases may name narrow state alternatives such as `already exists`, `not found`, `not loaded`, or `NOT_PARTITIONED`.
+- Those alternatives are a fixed list (`explicitFailureAlternatives` in `test-runner.mjs`); any other code on a success-primary string, such as `NAME_TAKEN`, is ignored. Use an object expectation, `{ condition: 'success', errorPattern: 'NAME_TAKEN' }`: the pattern is matched against the whole reply, and a fold twin keeps an object as it is.
 - Do not use broad masks such as `success|error` or place `timeout` after `error`; crashes, bridge loss, and non-primary timeouts are infrastructure failures.
 - Object expectations support `condition`, `successPattern`, and `errorPattern`; prefer patterns for exact controlled fallback codes.
 - `structuredContent.success: false`, nested failures, or `isError: true` must not pass a success-primary case unless an explicit allowed alternative matches.
