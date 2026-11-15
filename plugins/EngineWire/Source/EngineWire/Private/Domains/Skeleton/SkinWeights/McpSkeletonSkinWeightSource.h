@@ -39,6 +39,9 @@ struct FSourceMesh
 // weights are that skin weight profile's when the source data has it, else the default ones (UE 5.4+ only: before,
 // the source data keeps no profile this can write, PROFILE_UNSUPPORTED).
 bool Read(USkeletalMesh* Mesh, int32 LOD, bool bWithMorphs, FSourceMesh& Out, FString& OutCode, FString& OutError, FName Profile = NAME_None);
+// The checks Read and Write share: LOD exists and has source data, and the source data can hold Profile.
+bool CheckSourceLod(USkeletalMesh* Mesh, int32 LOD, FString& OutCode, FString& OutError);
+bool CheckProfile(FName Profile, FString& OutCode, FString& OutError);
 // Writes In.Weights (when bWeights; into skin weight profile Profile when one is named, registered when missing) and
 // the Morphs named in MorphNames into the source data, rebuilds the mesh (which normalizes and caps the influences)
 // and waits for the build. Positions are never written.

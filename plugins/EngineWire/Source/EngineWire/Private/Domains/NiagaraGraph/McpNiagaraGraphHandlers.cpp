@@ -18,6 +18,7 @@
 #include "NiagaraNodeOutput.h"
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "EdGraph/EdGraph.h"
+#include "ScopedTransaction.h"
 
 bool UEngineWireSubsystem::HandleNiagaraGraphAction(
     const FString& RequestId,
@@ -189,8 +190,27 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
         {
             const FString RemovedGuid = TargetNode->NodeGuid.ToString();
             FString RemovalError;
-            if (!McpNiagaraGraphHandlers::RemoveNiagaraGraphNodeSafely(
-                    TargetGraph, TargetNode, RemovalError))
+            int32 RemovedCount = 0;
+            bool bRemoved = false;
+            {
+                // One undo step for the whole removal, opened before the first Modify and the first cut and closed before the
+                // save: the schema's own step took back only the re-link, and undo listed the module again with its links cut.
+                FScopedTransaction Transaction(FText::FromString(TEXT("Remove Niagara Node")));
+                // The module's inputs are keys of the scripts' rapid-iteration stores: the scripts are recorded in the step.
+                for (UNiagaraScript* Script : McpNiagaraAuthoringHandlers::GatherModuleInputScripts(System))
+                {
+                    if (Script)
+                    {
+                        Script->Modify(false);
+                    }
+                }
+                bRemoved = McpNiagaraGraphHandlers::RemoveNiagaraGraphNodeSafely(TargetGraph, TargetNode, RemovalError, RemovedCount);
+                if (!bRemoved)
+                {
+                    Transaction.Cancel();
+                }
+            }
+            if (!bRemoved)
             {
                 SendAutomationError(RequestingSocket, RequestId,
                     RemovalError,
@@ -202,6 +222,7 @@ bool UEngineWireSubsystem::HandleNiagaraGraphAction(
             McpHandlerUtils::AddVerification(Result, System);
             Result->SetStringField(TEXT("nodeId"), RemovedGuid);
             Result->SetBoolField(TEXT("removed"), true);
+            Result->SetNumberField(TEXT("removedCount"), RemovedCount);
 
             SendAutomationResponse(RequestingSocket, RequestId, true,
                 TEXT("Node removed."), Result);

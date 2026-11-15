@@ -28,8 +28,11 @@ bool HandleConnectPins(
     UNiagaraSystem* System,
     UNiagaraGraph* TargetGraph);
 
+// Removes TargetNode, reconnecting the parameter map around it; a module takes its override node and the nodes only they
+// read with it. OutRemovedCount is how many nodes went.
 bool RemoveNiagaraGraphNodeSafely(
     UNiagaraGraph* TargetGraph,
     UEdGraphNode* TargetNode,
-    FString& OutError);
+    FString& OutError,
+    int32& OutRemovedCount);
 }

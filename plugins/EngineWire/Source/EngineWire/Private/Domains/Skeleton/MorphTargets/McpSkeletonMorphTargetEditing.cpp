@@ -7,6 +7,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
 #include "UObject/Package.h"
@@ -104,7 +105,8 @@ bool RegisterRenderMorph(USkeletalMesh* Mesh, int32 LOD, FName Name, const TArra
             *Name.ToString(), Deltas.Num(), LOD);
         return false;
     }
-    Mesh->Modify();
+    // One undo step for the registration, as McpSkinSource::Write has for a source write.
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Edit Morph Target")), EMcpMutationDurability::EditorStateOnly, {Mesh});
     if (bCreated)
     {
         Morph = NewObject<UMorphTarget>(Mesh, Name);

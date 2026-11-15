@@ -106,7 +106,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Key sync set',
   }),
   aiRecord({
-    action: 'set_nav_agent_properties', summary: 'Set the navigation agent the level\'s nav mesh serves. agentRadius and agentHeight are written to the agent in Project Settings > Navigation System > Supported Agents (saved to the project\'s DefaultEngine.ini; supportedAgent names the agent, projectConfigSaved says whether the file was written), to this world\'s navigation system and to the nav mesh, so the nav mesh still matches its agent when the level loads again; agentStepHeight and agentMaxSlope are the nav mesh\'s own. The nav mesh rebuilds when navigation auto-update is on. Only the fields sent change.',
+    action: 'set_nav_agent_properties', summary: 'Set the navigation agent the level\'s nav mesh serves. agentRadius and agentHeight are written to the agent in Project Settings > Navigation System > Supported Agents (saved to the project\'s DefaultEngine.ini, the whole Navigation System section as Project Settings saves it; supportedAgent names the agent, projectConfigSaved says whether the file was written), to this world\'s navigation system and to the nav mesh, so the nav mesh still matches its agent when the level loads again; agentStepHeight and agentMaxSlope are the nav mesh\'s own. The nav mesh rebuilds when navigation auto-update is on. Only the fields sent change.',
     use: 'The navigation agent dimensions must change.',
     avoid: 'Use configure_nav_mesh_settings for generation tuning.',
     props: {
