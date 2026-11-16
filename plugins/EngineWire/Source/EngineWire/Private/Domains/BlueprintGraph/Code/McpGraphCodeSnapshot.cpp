@@ -104,7 +104,7 @@ FString TypeIdOf(const UK2Node* Node)
 {
     const FString Title = WithoutWhitespace(MenuTitleOf(Node));
     return Node->IsA<UK2Node_CustomEvent>() ? TEXT("AddEvent|Custom|") + Title
-                                            : WithoutWhitespace(InvariantCategory(Node->GetMenuCategory())) + TEXT("|") + Title;
+                                            : WithoutWhitespace(InvariantCategory(Node->GetMenuCategory(), MemberCategoryOf(Node))) + TEXT("|") + Title;
 }
 
 bool IsEntry(const FNode& Node)

@@ -97,7 +97,8 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
         const FString Title = Spec.MenuName.BuildSourceString().Replace(TEXT(" "), TEXT(""));
         if (CatalogParts::Wanted(CatalogParts::TitleKey(Title), Titles, bPrefix))
         {
-            Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, InvariantCategory(Spec.Category).Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});
+            const FString Own = MemberCategory(Info.GetAssociatedFunction(), Info.GetAssociatedProperty());
+            Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, InvariantCategory(Spec.Category, Own).Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});
         }
     }
     // Byte order of id, then of the owner's path: two reads or writes of one graph pick the same spawner.

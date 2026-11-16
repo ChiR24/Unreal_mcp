@@ -593,6 +593,23 @@ const testCases = [
   { scenario: 'CODE: create_node makes a node by its action-menu id', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|PrintString', posX: 3000, posY: 3000 }, expected: 'success' },
   { scenario: 'ERROR: create_node refuses a menu id the graph does not offer', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Development|NoSuchNodeTitle' }, expected: 'error|MENU_ID_NOT_FOUND' },
   { scenario: 'ERROR: write_graph_from_code refuses unbalanced code', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: '(event Custom|OnCodeProbe' }, expected: 'error|CODE_PARSE_ERROR' },
+  // Menu ids read as an English editor shows them in any editor language: the engine's common categories in English,
+  // and a member's own category as its author wrote it, even one that reads like a translated common category (in a
+  // Spanish editor Juego is how Game shows, and a variable in Juego still read as Variables|Game|...).
+  { scenario: 'Setup: a variable in a category of its own, set after a Sequence', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'Puntos', variableType: 'int', category: 'Juego' },
+    { edit: 'create_node', id: 'ev', nodeType: 'CustomEvent', customEventName: 'OnCategoryProbe' },
+    { edit: 'create_node', id: 'seq', menuId: 'Utilities|FlowControl|Sequence' },
+    { edit: 'create_node', id: 'set', nodeType: 'VariableSet', memberName: 'Puntos' },
+    { edit: 'connect_pins', from: '$ev.then', to: '$seq.execute' },
+    { edit: 'connect_pins', from: '$seq.then_0', to: '$set.execute' },
+  ] }, expected: 'success' },
+  { scenario: 'INFO: read_graph_as_code reads common categories in English and an own category as written', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, entry: 'OnCategoryProbe' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', includes: '(Utilities|FlowControl|Sequence', label: 'the Sequence under the English names of its common categories' },
+    { path: 'structuredContent.result.code', includes: '(Variables|Juego|SetPuntos', label: 'the variable under the category it was given' },
+    { path: 'structuredContent.result.code', notIncludes: 'Variables|Game|SetPuntos', label: 'its own category is not taken for the translated Game' },
+  ] },
+  { scenario: 'CODE: create_node makes the node again by the id read_graph_as_code printed', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', menuId: 'Variables|Juego|SetPuntos', posX: 3000, posY: 3400 }, expected: 'success' },
   { scenario: 'Cleanup: delete the code probe blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_BP_PATH, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete the spawned actor blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: CODE_SPAWNED_PATH, force: true }, expected: 'success|not found' },
 

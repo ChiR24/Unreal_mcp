@@ -3,11 +3,13 @@
 #include "CoreMinimal.h"
 
 class FJsonObject;
+class FProperty;
 class UBlueprint;
 class UBlueprintNodeSpawner;
 class UEdGraph;
 class UEdGraphNode;
 class UEdGraphPin;
+class UFunction;
 class UK2Node;
 
 namespace McpBlueprintGraphHandlers
@@ -137,7 +139,10 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
                                bool bPrefix = false);
 
 /** A menu category as an English editor shows it, whatever language this editor shows (Discovery/McpBPGraphMenuCategory.cpp). */
-FString InvariantCategory(const FText& Category);
+FString InvariantCategory(const FText& Category, const FString& OwnCategory);
+/** The Category a function or variable declares for itself, and the one behind a call or variable node. */
+FString MemberCategory(const UFunction* Function, const FProperty* Property);
+FString MemberCategoryOf(const UEdGraphNode* Node);
 
 /** The title part of a menu id (after its last |), without spaces and underscores, lower case, as Titles hold it. */
 FString MenuTitleKey(const FString& MenuId);
