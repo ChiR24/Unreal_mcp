@@ -144,27 +144,35 @@ describe('read -> write round trips', () => {
     expect(snapshot).toContain('const FString Title = WithoutWhitespace(MenuTitleOf(Node));');
   });
 
-  it('prints and finds a menu id in the text an English editor shows, so one id names the same node in any editor', () => {
+  // Structure only: what the ids read in an editor in another language, and that an id read makes its node again, is
+  // the read_graph_as_code menu-id integration case (tests/mcp-tools/core/manage-blueprint.test.mjs).
+  it('builds a menu id from the text an English editor shows, the same way to read one and to find one', () => {
     const catalog = code(join(CODE, 'McpGraphCodeCatalog.cpp'));
     const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
-    // Titles and categories from their source text, not from ToString(), which is in the editor's display language.
     for (const [name, text] of [['catalog', catalog], ['snapshot', snapshot]] as const) {
+      // Titles and categories from their source text: ToString() is the editor's display language.
       expect(text, name).not.toMatch(/(?:MenuName|Category|GetMenuCategory\(\)|GetNodeTitle\([^)]*\))\.ToString\(\)/u);
-      expect(text, name).toContain('InvariantCategory(');
+      // Both build the category part through the one mapping, so a read id is one the catalog offers.
+      expect(text, name).toMatch(/InvariantCategory\(/u);
     }
-    expect(catalog).toContain('InvariantCategory(Spec.Category)');
-    expect(snapshot).toContain('WithoutWhitespace(InvariantCategory(Node->GetMenuCategory()))');
-    // The editor's common categories reach a node as display text only: each part showing one reads as in English.
     const category = code(join(PRIVATE, 'Domains', 'BlueprintGraph', 'Discovery', 'McpBPGraphMenuCategory.cpp'));
-    expect(category).toContain('Category.BuildSourceString().ParseIntoArray(Parts, TEXT("|"), false);');
-    expect(category).toContain('FEditorCategoryUtils::GetCommonCategory(Common.Key)');
-    // Each English name is paired with its enum value, not with a position in the enum.
-    expect(category).toContain('{ECategory::Gameplay, TEXT("Game")}');
-    expect(category).toContain('{ECategory::Delegates, TEXT("EventDispatchers")}');
-    expect(category).toContain('Shown.Add(UEdGraphSchema_K2::VR_DefaultCategory.ToString().Replace(TEXT(" "), TEXT("")), TEXT("Default"));');
-    for (const shown of ['FlowControl', 'UserInterface', 'Input', 'Utilities']) {
-      expect(category).toContain(`TEXT("${shown}")`);
+    // The editor's common categories reach a node as display text, so they are read from the editor for its language.
+    expect(category).toContain('FEditorCategoryUtils::GetCommonCategory(');
+    expect(category).toContain('UEdGraphSchema_K2::VR_DefaultCategory');
+    // Every common category is paired with the name an English editor shows, by enum value rather than position.
+    const values = ['AI', 'Animation', 'Audio', 'Development', 'Effects', 'Gameplay', 'Input', 'Math', 'Networking', 'Pawn',
+      'Physics', 'Rendering', 'Transformation', 'Utilities', 'FlowControl', 'UserInterface', 'AnimNotify', 'BranchPoint',
+      'String', 'Text', 'Name', 'Enum', 'Struct', 'Macro', 'Delegates', 'Class', 'Variables'];
+    for (const value of values) {
+      expect(category, value).toMatch(new RegExp(`::${value}, TEXT\\("\\w+"\\)`, 'u'));
     }
+    // The names an English editor shows that differ from the enum value.
+    for (const [value, shown] of [['Gameplay', 'Game'], ['Delegates', 'EventDispatchers'], ['AnimNotify', 'AddAnimNotifyEvent'], ['BranchPoint', 'AddMontageBranchingPointEvent']]) {
+      expect(category, value).toMatch(new RegExp(`::${value}, TEXT\\("${shown}"\\)`, 'u'));
+    }
+    // A member's own Category (a Blueprint's variable or function) is read, so the parts the user wrote are left alone.
+    expect(category).toContain('FBlueprintMetadata::MD_FunctionCategory');
+    expect(category).toMatch(/GetMetaData\(TEXT\("Category"\)\)/u);
   });
 
   it('quotes an object or class reference, so one that holds none reads as "" and not as the 0 the writer refuses', () => {
