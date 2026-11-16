@@ -136,6 +136,9 @@ TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles, bool bPrefix = fa
 TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
                                bool bPrefix = false);
 
+/** A menu category as an English editor shows it, whatever language this editor shows (Discovery/McpBPGraphMenuCategory.cpp). */
+FString InvariantCategory(const FText& Category);
+
 /** The title part of a menu id (after its last |), without spaces and underscores, lower case, as Titles hold it. */
 FString MenuTitleKey(const FString& MenuId);
 

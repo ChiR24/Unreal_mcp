@@ -75,7 +75,7 @@ EKind KindOf(const UK2Node* Node)
 FString MenuTitleOf(const UK2Node* Node)
 {
     const ENodeTitleType::Type ListOrMenu = Node->IsA<UK2Node_ConstructObjectFromClass>() ? ENodeTitleType::MenuTitle : ENodeTitleType::ListView;
-    const FString Listed = Node->GetNodeTitle(ListOrMenu).ToString();
+    const FString Listed = Node->GetNodeTitle(ListOrMenu).BuildSourceString();
     const UK2Node_Variable* Variable = (Node->IsA<UK2Node_VariableGet>() || Node->IsA<UK2Node_VariableSet>()) ? Cast<UK2Node_Variable>(Node) : nullptr;
     const FProperty* Property = Variable ? Variable->GetPropertyForVariable() : nullptr;
     const UClass* Owner = Property ? Property->GetOwnerClass() : nullptr;
@@ -89,7 +89,7 @@ FString MenuTitleOf(const UK2Node* Node)
         const FProperty* Field = (Spawner && Spawner->NodeClass.Get() == Node->GetClass()) ? FBlueprintActionInfo(Key, Spawner).GetAssociatedProperty() : nullptr;
         if (Field && Field->GetFName() == Property->GetFName())
         {
-            return Spawner->PrimeDefaultUiSpec().MenuName.ToString();
+            return Spawner->PrimeDefaultUiSpec().MenuName.BuildSourceString();
         }
     }
     return Listed;
@@ -104,7 +104,7 @@ FString TypeIdOf(const UK2Node* Node)
 {
     const FString Title = WithoutWhitespace(MenuTitleOf(Node));
     return Node->IsA<UK2Node_CustomEvent>() ? TEXT("AddEvent|Custom|") + Title
-                                            : WithoutWhitespace(Node->GetMenuCategory().ToString()) + TEXT("|") + Title;
+                                            : WithoutWhitespace(InvariantCategory(Node->GetMenuCategory())) + TEXT("|") + Title;
 }
 
 bool IsEntry(const FNode& Node)
