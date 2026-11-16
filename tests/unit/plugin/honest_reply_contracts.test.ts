@@ -2465,8 +2465,8 @@ describe('a batch lists the steps that have something to say', () => {
 describe('a missing required parameter names the keys sent in its place', () => {
   it('adds the keys the action does not take to the native refusal', () => {
     const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
-    // A key the action's properties lack is collected, however the loop spells the key.
-    expect(source).toMatch(/if \(!\(\*Properties\)->HasField\([^;]+\)\)\s*Stray\.Add\(/u);
+    // Each sent key the action's properties lack is collected, the loop's key spelled as an FString or through *Key.
+    expect(source).toMatch(/for \([^)]*?\b(\w+) : Object->Values\)\s*\{\s*if \(!\(\*Properties\)->HasField\((?:\*?\1\.Key|FString\(\*\1\.Key\))\)\)\s*Stray\.Add\((?:\*?\1\.Key|FString\(\*\1\.Key\))\);/u);
     expect(source).toContain('TEXT("; sent %s, which this action does not take")');
     expect(source).toContain('McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);');
   });
