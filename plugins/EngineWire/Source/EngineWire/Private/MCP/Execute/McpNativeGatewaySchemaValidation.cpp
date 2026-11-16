@@ -46,9 +46,9 @@ bool McpValidateAgainstCanonicalSchema(
 	}
 
 	const FString Pointer = OutViolation.Pointer;
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Keyword : Schema->Values)
+	for (const auto& Keyword : Schema->Values)
 	{
-		if (!McpSchemaKeywords::IsSupportedKeyword(Keyword.Key))
+		if (!McpSchemaKeywords::IsSupportedKeyword(FString(*Keyword.Key)))
 		{
 			OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::UnsupportedKeyword, McpSchemaKeywords::PointerOrRoot(Pointer),
 				FString::Printf(TEXT("Schema keyword '%s' at %s is not implemented by the canonical validator"),
@@ -159,7 +159,7 @@ bool ValidateObjectBody(
 	bool bOpen = true;
 	if (bHasProperties && Schema->TryGetBoolField(TEXT("additionalProperties"), bOpen) && !bOpen)
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values) { if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key); }
+		for (const auto& Entry : Object->Values) { if (!(*Properties)->HasField(FString(*Entry.Key))) Stray.Add(FString(*Entry.Key)); }
 	}
 	const FString StrayNote = Stray.Num() == 0 ? FString() : FString::Printf(TEXT("; sent %s, which this action does not take"), *FString::Join(Stray, TEXT(", ")));
 
@@ -202,13 +202,13 @@ bool ValidateObjectBody(
 		!bAdditionalProperties;
 	if (bClosed && bHasProperties)
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values)
+		for (const auto& Entry : Object->Values)
 		{
-			if (!(*Properties)->HasField(Entry.Key))
+			if (!(*Properties)->HasField(FString(*Entry.Key)))
 			{
 				OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::Undeclared,
-					McpSchemaKeywords::JoinPointer(Pointer, Entry.Key),
-					McpSchemaKeywords::DescribeUndeclaredParameter(Entry.Key, *Properties));
+					McpSchemaKeywords::JoinPointer(Pointer, FString(*Entry.Key)),
+					McpSchemaKeywords::DescribeUndeclaredParameter(FString(*Entry.Key), *Properties));
 				return false;
 			}
 		}
@@ -216,15 +216,15 @@ bool ValidateObjectBody(
 
 	if (bHasProperties)
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values)
+		for (const auto& Entry : Object->Values)
 		{
 			const TSharedPtr<FJsonObject>* PropertySchema = nullptr;
-			if (!(*Properties)->TryGetObjectField(Entry.Key, PropertySchema) || !PropertySchema)
+			if (!(*Properties)->TryGetObjectField(FString(*Entry.Key), PropertySchema) || !PropertySchema)
 			{
 				continue;
 			}
 			FMcpSchemaViolationDetail PropertyViolation;
-			PropertyViolation.Pointer = McpSchemaKeywords::JoinPointer(Pointer, Entry.Key);
+			PropertyViolation.Pointer = McpSchemaKeywords::JoinPointer(Pointer, FString(*Entry.Key));
 			if (!McpValidateAgainstCanonicalSchema(Entry.Value, *PropertySchema, PropertyViolation))
 			{
 				OutViolation = PropertyViolation;
@@ -265,9 +265,9 @@ TSharedPtr<FJsonObject> McpApplyCanonicalSchemaDefaults(
 	{
 		return WithDefaults;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Property : (*Properties)->Values)
+	for (const auto& Property : (*Properties)->Values)
 	{
-		if (WithDefaults->HasField(Property.Key) || !Property.Value.IsValid() ||
+		if (WithDefaults->HasField(FString(*Property.Key)) || !Property.Value.IsValid() ||
 			Property.Value->Type != EJson::Object)
 		{
 			continue;
@@ -276,7 +276,7 @@ TSharedPtr<FJsonObject> McpApplyCanonicalSchemaDefaults(
 		const TSharedPtr<FJsonValue> Default = PropertySchema->TryGetField(TEXT("default"));
 		if (Default.IsValid())
 		{
-			WithDefaults->SetField(Property.Key, Default);
+			WithDefaults->SetField(FString(*Property.Key), Default);
 		}
 	}
 	return WithDefaults;

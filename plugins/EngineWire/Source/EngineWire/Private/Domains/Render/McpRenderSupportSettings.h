@@ -53,7 +53,7 @@ inline bool ApplyJsonSettings(
     }
     // The engine's hard limits (ClampMin/ClampMax), which its Details panel holds every value to, checked before
     // anything is written: a motion blur amount of 50 or an f-stop of 0.5 was written and answered applied.
-    for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
+    for (const auto& Pair : Settings->Values)
     {
         FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
         double Number = 0.0;
@@ -74,36 +74,37 @@ inline bool ApplyJsonSettings(
     }
     const int32 AppliedBefore = OutApplied.Num();
     TArray<FString> Unknown;
-    for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
+    for (const auto& Pair : Settings->Values)
     {
-        FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
+        const FString Name(*Pair.Key);
+        FProperty* Property = StructType->FindPropertyByName(FName(*Name));
         if (!Property)
         {
-            OutUnsupported.Add(Pair.Key);
-            Unknown.Add(Pair.Key);
+            OutUnsupported.Add(Name);
+            Unknown.Add(Name);
             continue;
         }
         if (!ApplyJsonValueToProperty(Target, Property, Pair.Value, OutError))
         {
-            OutError = FString::Printf(TEXT("%s: %s"), *Pair.Key, *OutError);
+            OutError = FString::Printf(TEXT("%s: %s"), *Name, *OutError);
             return false;
         }
         if (bSetOverrides)
         {
             FBoolProperty* Override = CastField<FBoolProperty>(
-                StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Pair.Key))));
+                StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Name))));
             // bMobileHQGaussian's flag is bOverride_MobileHQGaussian: a b-prefixed field kept its override off, so the
             // value it was given never applied.
-            if (!Override && Pair.Key.Len() > 1 && Pair.Key[0] == TEXT('b') && FChar::IsUpper(Pair.Key[1]))
+            if (!Override && Name.Len() > 1 && Name[0] == TEXT('b') && FChar::IsUpper(Name[1]))
             {
-                Override = CastField<FBoolProperty>(StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Pair.Key.Mid(1)))));
+                Override = CastField<FBoolProperty>(StructType->FindPropertyByName(FName(*(TEXT("bOverride_") + Name.Mid(1)))));
             }
             if (Override)
             {
                 Override->SetPropertyValue_InContainer(Target, true);
             }
         }
-        OutApplied.Add(Pair.Key);
+        OutApplied.Add(Name);
     }
     // Every key unknown used to answer success with them all under unsupportedSettings, so
     // {"saturation": 1.1} read as applied. Refuse, and name the fields the keys come close to.

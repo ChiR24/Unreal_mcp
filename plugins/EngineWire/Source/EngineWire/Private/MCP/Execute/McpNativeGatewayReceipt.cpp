@@ -204,11 +204,11 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 
 	if (Guidance.IsValid())
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>> Field : Guidance->Values)
+		for (const auto& Field : Guidance->Values)
 		{
-			if (!Receipt->HasField(Field.Key))
+			if (!Receipt->HasField(FString(*Field.Key)))
 			{
-				Receipt->SetField(Field.Key, Field.Value);
+				Receipt->SetField(FString(*Field.Key), Field.Value);
 			}
 		}
 	}

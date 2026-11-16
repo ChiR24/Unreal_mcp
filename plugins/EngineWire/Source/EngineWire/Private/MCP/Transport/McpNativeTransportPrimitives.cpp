@@ -130,12 +130,12 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		const TSharedPtr<FJsonObject>* ArgsObj = nullptr;
 		if (Params.IsValid() && Params->TryGetObjectField(TEXT("arguments"), ArgsObj) && ArgsObj)
 		{
-			for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*ArgsObj)->Values)
+			for (const auto& Pair : (*ArgsObj)->Values)
 			{
 				FString Val;
 				if (Pair.Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Pair.Value, Val))
 				{
-					Args.Add(Pair.Key, Val);
+					Args.Add(FString(*Pair.Key), Val);
 				}
 			}
 		}

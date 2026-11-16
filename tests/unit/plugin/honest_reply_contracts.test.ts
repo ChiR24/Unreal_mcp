@@ -2465,7 +2465,7 @@ describe('a batch lists the steps that have something to say', () => {
 describe('a missing required parameter names the keys sent in its place', () => {
   it('adds the keys the action does not take to the native refusal', () => {
     const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
-    expect(source).toContain('if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key);');
+    expect(source).toContain('if (!(*Properties)->HasField(FString(*Entry.Key))) Stray.Add(FString(*Entry.Key));');
     expect(source).toContain('TEXT("; sent %s, which this action does not take")');
     expect(source).toContain('McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);');
   });
@@ -4999,7 +4999,7 @@ describe('render console settings say what took', () => {
     const settings = code('Render', 'McpRenderSupportSettings.h');
     expect(settings).toContain('Property->GetMetaData(TEXT("ClampMin"))');
     expect(settings).toContain('Property->GetMetaData(TEXT("ClampMax"))');
-    expect(settings).toContain('TEXT("bOverride_") + Pair.Key.Mid(1)');
+    expect(settings).toContain('TEXT("bOverride_") + Name.Mid(1)');
     const enums = code('Render', 'McpRenderSupportEnums.h');
     expect(enums).not.toContain('AEM_Recovery');
     expect(enums).not.toContain('DOFM_');

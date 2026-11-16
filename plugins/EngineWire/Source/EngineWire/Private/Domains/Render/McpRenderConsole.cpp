@@ -209,11 +209,11 @@ bool HandleRenderConsoleAction(
     TArray<FString> Unknown;
     if (Settings.IsValid())
     {
-        for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
+        for (const auto& Pair : Settings->Values)
         {
-            if (!Known.ContainsByPredicate([&Pair](const FString& Field) { return Field.Equals(Pair.Key, ESearchCase::IgnoreCase); }))
+            if (!Known.ContainsByPredicate([&Pair](const FString& Field) { return Field.Equals(FString(*Pair.Key), ESearchCase::IgnoreCase); }))
             {
-                Unknown.Add(Pair.Key);
+                Unknown.Add(FString(*Pair.Key));
             }
         }
     }
