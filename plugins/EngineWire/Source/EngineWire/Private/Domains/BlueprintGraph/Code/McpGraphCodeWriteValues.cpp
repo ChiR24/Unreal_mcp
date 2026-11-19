@@ -4,6 +4,7 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 #include "K2Node_AddPinInterface.h"
+#include "K2Node_Variable.h"
 
 namespace McpGraphCode
 {
@@ -128,6 +129,17 @@ bool FTranspiler::SetValue(UEdGraphPin* Pin, const FString& Value)
 bool FTranspiler::Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> Args, const FBindings& Bindings, FFlow& Flow)
 {
     const int32 Positional = Args.FilterByPredicate([](const FArg& Each) { return Each.Pin.IsEmpty(); }).Num();
+    // A member variable made on self (Variables|Actor|SetCustomTimeDilation in an Actor Blueprint) given one argument more
+    // than it shows is about another object: its reference turns external, as the node made off another actor's pin is,
+    // and its Target takes the argument after the value, in pin order as read_graph_as_code prints such a node
+    // ((Variables|Actor|SetCustomTimeDilation 0.5 Other)). Only the self form was on the menu.
+    UK2Node_Variable* Member = Cast<UK2Node_Variable>(Node);
+    if (Member && Member->VariableReference.IsSelfContext() &&
+        Positional == DataPins(Node, true).FilterByPredicate([](const UEdGraphPin* Pin) { return !Pin->bHidden; }).Num() + 1)
+    {
+        Member->VariableReference.SetExternalMember(Member->GetVarName(), Member->VariableReference.GetMemberParentClass(Member->GetBlueprintClassFromNode()));
+        Member->ReconstructNode();
+    }
     const TArray<UEdGraphPin*> First = DataPins(Node, true);
     const int32 Skipped = First.Num() > 0 && Positional < First.Num() && IsSelfTarget(Blueprint, First[0]) ? 1 : 0;
     int32 Next = Skipped;
