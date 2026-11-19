@@ -96,14 +96,14 @@ void ScanObject(const TSharedPtr<FJsonObject>& Object, int32 Depth, FScanState& 
 		State.Out->bTruncated = true;
 		return;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Object->Values)
+	for (const auto& Pair : Object->Values)
 	{
 		if (State.NodeBudget <= 0)
 		{
 			State.Out->bTruncated = true;
 			return;
 		}
-		ScanValue(Pair.Value, Pair.Key, Depth + 1, State);
+		ScanValue(Pair.Value, FString(*Pair.Key), Depth + 1, State);
 	}
 }
 

@@ -2465,7 +2465,8 @@ describe('a batch lists the steps that have something to say', () => {
 describe('a missing required parameter names the keys sent in its place', () => {
   it('adds the keys the action does not take to the native refusal', () => {
     const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
-    expect(source).toContain('if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key);');
+    // Each sent key the action's properties lack is collected, the loop's key spelled as an FString or through *Key.
+    expect(source).toMatch(/for \([^)]*?\b(\w+) : Object->Values\)\s*\{\s*if \(!\(\*Properties\)->HasField\((?:\*?\1\.Key|FString\(\*\1\.Key\))\)\)\s*Stray\.Add\((?:\*?\1\.Key|FString\(\*\1\.Key\))\);/u);
     expect(source).toContain('TEXT("; sent %s, which this action does not take")');
     expect(source).toContain('McpSchemaKeywords::JoinPointer(Pointer, Missing[0]), Message + StrayNote);');
   });
@@ -4999,7 +5000,7 @@ describe('render console settings say what took', () => {
     const settings = code('Render', 'McpRenderSupportSettings.h');
     expect(settings).toContain('Property->GetMetaData(TEXT("ClampMin"))');
     expect(settings).toContain('Property->GetMetaData(TEXT("ClampMax"))');
-    expect(settings).toContain('TEXT("bOverride_") + Pair.Key.Mid(1)');
+    expect(settings).toMatch(/TEXT\("bOverride_"\) \+ [^;]*\.Mid\(1\)/u);
     const enums = code('Render', 'McpRenderSupportEnums.h');
     expect(enums).not.toContain('AEM_Recovery');
     expect(enums).not.toContain('DOFM_');

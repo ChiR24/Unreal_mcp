@@ -310,9 +310,9 @@ bool McpNamesCredentialBySibling(const TSharedPtr<FJsonObject>& Object)
 	{
 		return false;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Object->Values)
+	for (const auto& Pair : Object->Values)
 	{
-		if (!NameBearingKeys().Contains(Pair.Key.ToLower()))
+		if (!NameBearingKeys().Contains(FString(*Pair.Key).ToLower()))
 		{
 			continue;
 		}

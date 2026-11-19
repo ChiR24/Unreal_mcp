@@ -179,16 +179,16 @@ bool HandleConfigureConsoleVariables(UEngineWireSubsystem *Subsystem,
               UMoviePipelineConsoleVariableSetting::StaticClass(), true));
   if (!ReadAllowedConsoleVariables(ExistingCVars, ParsedValues, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Object)->Values) {
+  for (const auto& Entry : (*Object)->Values) {
     float Value = 0.0f;
-    if (Entry.Key.TrimStartAndEnd().IsEmpty() ||
+    if (FString(*Entry.Key).TrimStartAndEnd().IsEmpty() ||
         !JsonToFloat(Entry.Value, Value) || !FMath::IsFinite(Value))
       return SendError(Subsystem, RequestId, Socket,
                        FString::Printf(TEXT("Invalid CVar value for %s."),
                                        *Entry.Key),
                        TEXT("INVALID_CONSOLE_VARIABLE")),
              true;
-    ParsedValues.Add(Entry.Key, Value);
+    ParsedValues.Add(FString(*Entry.Key), Value);
   }
   if (!ValidateConsoleVariableResourceLimits(ParsedValues, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;

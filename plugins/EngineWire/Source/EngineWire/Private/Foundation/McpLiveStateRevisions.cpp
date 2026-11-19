@@ -145,10 +145,10 @@ FMcpExpectedRevisionsParseResult FMcpLiveStateRevisions::ParseExpectedRevisions(
 		return Result;
 	}
 
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Pins)->Values)
+	for (const auto& Entry : (*Pins)->Values)
 	{
 		EMcpStateKind Kind = EMcpStateKind::Selection;
-		if (!KindFor(Entry.Key, Kind))
+		if (!KindFor(FString(*Entry.Key), Kind))
 		{
 			Result.bSuccess = false;
 			Result.ErrorCode = TEXT("UNSUPPORTED_OPTION");

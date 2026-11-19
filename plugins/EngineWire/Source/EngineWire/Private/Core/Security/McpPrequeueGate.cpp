@@ -54,14 +54,14 @@ bool ObjectHasBlockedCommand(
 		State.bTruncated = true;
 		return false;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Object->Values)
+	for (const auto& Pair : Object->Values)
 	{
 		if (State.NodeBudget <= 0)
 		{
 			State.bTruncated = true;
 			return false;
 		}
-		if (ScanForBlockedCommand(Pair.Value, Pair.Key, Depth + 1, State))
+		if (ScanForBlockedCommand(Pair.Value, FString(*Pair.Key), Depth + 1, State))
 		{
 			return true;
 		}

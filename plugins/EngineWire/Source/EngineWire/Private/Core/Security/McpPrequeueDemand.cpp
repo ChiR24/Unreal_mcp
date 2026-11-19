@@ -102,9 +102,9 @@ void RaiseForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonO
 	{
 		return;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*RaisedBy)->Values)
+	for (const auto& Pair : (*RaisedBy)->Values)
 	{
-		if (!Payload->HasField(Pair.Key))
+		if (!Payload->HasField(FString(*Pair.Key)))
 		{
 			continue;
 		}
@@ -131,9 +131,9 @@ bool DeclaresPathParameter(const FMcpCapabilityRecord& Record)
 	{
 		return true;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*Properties)->Values)
+	for (const auto& Pair : (*Properties)->Values)
 	{
-		if (McpCapabilityAuthorization::IsPathParameterKey(Pair.Key))
+		if (McpCapabilityAuthorization::IsPathParameterKey(FString(*Pair.Key)))
 		{
 			return true;
 		}

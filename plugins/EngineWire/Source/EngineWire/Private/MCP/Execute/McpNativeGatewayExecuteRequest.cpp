@@ -53,11 +53,11 @@ bool McpValidateExecutionOptions(
 		return true;
 	}
 	const TArray<FString>& Supported = McpExecutionOptionKeys();
-	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Options->Values)
+	for (const auto& Entry : Options->Values)
 	{
-		if (!Supported.Contains(Entry.Key))
+		if (!Supported.Contains(FString(*Entry.Key)))
 		{
-			OutError = McpOptionError(Entry.Key, Supported,
+			OutError = McpOptionError(FString(*Entry.Key), Supported,
 				FString::Printf(TEXT("Unsupported execution option '%s'. Supported: [%s]"),
 					*Entry.Key, *FString::Join(Supported, TEXT(", "))));
 			return false;

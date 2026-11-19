@@ -116,7 +116,9 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
     expect(transform?.policy.raisedBy).toEqual({ inputs: 'write' });
     expect(transform?.behavior.safeToRetry, 'a retry presses the keys again').toBe(false);
     const source = gateDemand();
-    expect(source).toContain('if (!Payload->HasField(Pair.Key))');
+    // The payload is asked for each raisedBy key itself: the loop's key as an FString (before 5.8), through *Key
+    // (UE::FSharedString from 5.8), or a local FString made from it. A check of any other field does not count.
+    expect(source).toMatch(/for \([^)]*?\b(\w+) : \(\*RaisedBy\)->Values\)\s*\{\s*(?:const FString (\w+)\(\*\1\.Key\);\s*if \(!Payload->HasField\(\2\)\)|if \(!Payload->HasField\((?:\*?\1\.Key|FString\(\*\1\.Key\))\)\))/u);
     expect(source).toMatch(/ReadPolicy\(Record, OutDemand\.RequiredScope, OutDemand\.ConsentMode\);\s*RaiseForPayload\(Record, Payload, OutDemand\.AlsoRequiredScopes\);/u);
     expect(source).toMatch(/ReadPolicy\(\*Record, Scope, Consent\);\s*RaiseForPayload\(\*Record, Request\.Payload, Demand\.AlsoRequiredScopes\);/u);
     expect(source).toContain('FindById(Request.CapabilityId, Request.Payload, Store, Demand);');
