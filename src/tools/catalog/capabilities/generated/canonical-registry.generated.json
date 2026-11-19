@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b98a30c9d5656568",
+  "catalogRevision": "1619c635fb4dba71",
   "recordCount": 490,
   "records": [
     {
@@ -8766,7 +8766,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.8"
+        "compiled": [
+          "IKRIG_BATCH_RETARGET"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -8790,7 +8792,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
-        "content": "d6ee501dec55dd2d17b0b924713b433c991ea561dee7f511b16a6feb033b6d0e"
+        "content": "e01845698f6116ae5dd450ff4993662a8d58c3547ec7c50a40dec44781bfbe25"
       }
     },
     {
@@ -8914,7 +8916,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.5"
+        "compiled": [
+          "GEOMETRY_SCRIPT_BONE_WEIGHTS"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -8938,7 +8942,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "183b1d52eeb4ee1cc902a2916c054a99503828535a69137dbafe0edb324ad4ba",
-        "content": "5b6989bf205f759a545ed1f0620cf7189a0a985f2f86eb5aebb878c883cd31e6"
+        "content": "87d900a25413c1b7e70b79b671645274d9bf4f5df8b287ce96c49abf5396bbd7"
       }
     },
     {
@@ -71349,7 +71353,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.5"
+        "compiled": [
+          "METASOUND_GRAPH_DATA"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -71373,7 +71379,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d5cf63fc9280b7fb3702b8053401d81414abc199289b2f8e8604720018423a66",
-        "content": "2b58a0a2114b22915167c2dc62bd57f26631fd5c5b7b634f0541927597a395a8"
+        "content": "32919fb1651255d937940963d4cf7a679e38f20c1403adc8da64dac89522061f"
       }
     },
     {
@@ -81492,7 +81498,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -81534,7 +81542,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1c07222290bfc4220802928d0b518ae57da700b86d994a1bbb47af1d4fc3279f",
-        "content": "fee31528fbb827f8a6c7b36f5a74f38795b9e2e5285516389980406533fbc772"
+        "content": "caaa803480e97f1575077cda587bf6af2a3d7a6ec49450822d016dc2504ba18f"
       }
     },
     {
@@ -81708,7 +81716,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -81799,7 +81809,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "990842cc21739f98b3e0b1dc0c04063fce343ee11604d2a5ff13b96ed61a5dfd",
-        "content": "a2f505534c1688017c9cb36e214895840951e9cebc7c231ef86898b2d9319ba9"
+        "content": "2e140595dec4fba7529f225ff9c4f1a0c23f343c3f9fa63c015e3ffff3265f71"
       }
     },
     {
@@ -81963,7 +81973,10 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT",
+          "GEOMETRY_COLLISION"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -82013,7 +82026,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "897f411f0a65fda2d44fe7604026c9fc8acba1847dee7b357db4a195192c8d24",
-        "content": "d05f8ce0b0bed663389dd921c06256606d4037eb8c27fdb3d05a1cf857cfd323"
+        "content": "2b6feef6cb99deb085de6e94d82d97fa1e1358481f53c9f287ba0ecd58ef455a"
       }
     },
     {
@@ -82184,7 +82197,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -82242,7 +82257,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "282db23467d308984b599b484c22c256a2e6498d222d0b8e57d3b040cfe04a92",
-        "content": "c82f0f0a79b22e8698c4ccbbb206239239dd8c62914bfc14a24add05da9b86d5"
+        "content": "16731cd47751e729bf131d2b5a5665427f4d0508e7f21475df39f9c4b79e1c37"
       }
     },
     {
@@ -82410,7 +82425,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -82434,7 +82451,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "99456cb96550ac71fdfa8324907cd3293042b6e3d41fd598de59527363eebfa3",
-        "content": "7babb206670343bae3ed3b633982c343836e3448d9f9cdd672533113ac09c8a8"
+        "content": "f15e1f1adb9dc1213227a91783a5de9cba0b7662d2fdef04dc7727ace8e75afc"
       }
     },
     {
@@ -82607,7 +82624,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -82631,7 +82650,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "99456cb96550ac71fdfa8324907cd3293042b6e3d41fd598de59527363eebfa3",
-        "content": "1695738bd8fba9d70ff14063205003982b291fa56510f3e0da89d75ae1e63d96"
+        "content": "48ec3df225a644974e8eea1fc613648047ea786689e27be1562cbeb6e23e9ffd"
       }
     },
     {
@@ -83447,7 +83466,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -83641,7 +83662,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a84e285f9089aee86f088edf55d41075fefe85ee3cb12ddbd80afa8745f06bd",
-        "content": "977d97045ed8497d708d2aec28dd6a4f13e2395e0d9c99150711dd0e2d576057"
+        "content": "f386874b6cab7cffc8c30bd67d1f0f27490e7a61c0b2dcc3982c2ad8e832bf1f"
       }
     },
     {
@@ -83918,7 +83939,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -84012,7 +84035,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e62e4ecfb16f4d033e456dd9b1c23c98126f974291f2efc9424de1f0ac50aca4",
-        "content": "dc548c0d94912fc8b2fce937bf8166108d193117866bd9e1155460d58ee21bd4"
+        "content": "c50b7428bdcd9a521965cba796498d4ac1eb41b5ec95dd542a4871b9501e2d1d"
       }
     },
     {
@@ -85663,7 +85686,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -85965,7 +85990,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d0350f4e15689fa6fe304a2e54235d72ccd0171e78873079c3a05be583acf12b",
-        "content": "4ad5df72e9da13b8c868b908dd6bd686e7e8664b6a560417fbed36f479373297"
+        "content": "d191205947a6bfd7f1e2119ec03c704dd386bf29a5d040d901ac6b68d789c78d"
       }
     },
     {
@@ -86168,7 +86193,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -86216,7 +86243,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "40bd617567fd178be546a9e7d41553b959661678dc5e107cb7f3fcbddce8b2b6",
-        "content": "5d067ce86784fcc6f5c06300115ce424b495f99940e0b55614a400f01a818e9f"
+        "content": "6d0f3547d7d2d2c764e4e994f5d87b2cbecfbb16686e187c5d31c2e0f46e2939"
       }
     },
     {
@@ -86328,7 +86355,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -86352,7 +86381,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "af4796f982d14b236a4f4b7f893ed2bf1cda2f0d66a518407814f03231ccbf7a",
-        "content": "b17ec3b5e9d2980d2502003d6fa5d38800cc4e0f226ada851607ef1f41ff419a"
+        "content": "10eab6f5d716b2dcef3cfc02df22bc7bde6f88cd471a010e61eb76a5283774a6"
       }
     },
     {
@@ -86484,7 +86513,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -86508,7 +86539,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "993e119dae9734b5c14d56085a2abb05dc846a12369ccadea738ad7bdc1eaf2c",
-        "content": "d26ed41bcd364e62f812f859216f280d7116184fe0a37704e3b179bda3e10452"
+        "content": "18c922768fe3fd005ab901545002af9ea5a1b0f0c7323807c32300b841778a76"
       }
     },
     {
@@ -86630,7 +86661,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -86654,7 +86687,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b830831d46a0ac10b89af2f66ec38b281e0b8b0af09fa9afa6f6e411ff3c36a7",
-        "content": "25e868768fe22a67accad7d2e1f9e399876c337abd801b006259de0d5c7f7f16"
+        "content": "e92d03b797f9cb1cd9e733b707f896c663eaaff4721908086477431cb8b46e0f"
       }
     },
     {
@@ -87246,7 +87279,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -87530,7 +87565,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4a87451cba77e4ccd86865bd44b08791e4c1bd5f8413a2f25f9a036323c52f96",
-        "content": "620cda7eded5596c2d647e75d393f3b5433e531d68c0789bfc5b207efddb59e5"
+        "content": "947849612ba73f0080311971d0f6342c10452995bce8a6178ab14b081fe1ccd7"
       }
     },
     {
@@ -87877,7 +87912,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -87958,7 +87995,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "030b77fcb6e635fab035bdc1e23fcbff26aee58ee79cfed832e9a83cb83e5cd3",
-        "content": "b6adb9db4e72ba554361270eb1a2d6a7a47be448323adf5dbed55dffce4b0898"
+        "content": "66030c44662182a5c4cda4fc392a08a46eb5b1d334445ae86658355d36cef082"
       }
     },
     {
@@ -88130,7 +88167,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "FULL_GEOMETRY_SCRIPT"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -88154,7 +88193,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ad035081ce63651736e55f4ecd356877edfb702e43f4bbf36c792deeaa8dd79e",
-        "content": "5185314fd846da44d1359a0b4c7e46f19c1d3d85ed4e49f972f52d6c87650645"
+        "content": "b9c7de6ce830bc72dea83ee4e8744bcaf0d088e8b5782f8b5232ce4cea429b97"
       }
     },
     {
@@ -118859,7 +118898,9 @@
           "pie",
           "simulate"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "GAME_FEATURES"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -118883,7 +118924,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a6e4e24ddcb953c99fb900429551d33e5c2cbea3d4a09d5231a14bd0b0862e33",
-        "content": "adba05f50d82c15a2c6632e8d23b742eaef0d460bd884fb1e1b20f66ff2e36e5"
+        "content": "2ca1e91e90e319a7b539dafd78561d763272ee0c56bdedb4a27da86258b06939"
       }
     },
     {
@@ -121986,7 +122027,9 @@
           "pie",
           "simulate"
         ],
-        "minEngineVersion": "5.1"
+        "compiled": [
+          "GAME_FEATURES"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -122010,7 +122053,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72946f390bfde47e5de601a0a71ef25f5531a6a359c2233e44c71e48a00e08f2",
-        "content": "1a0f9dc175a1c2eccfb4bc2ec679b468b629a5a199e040206b376e2a0fd04d67"
+        "content": "994bd44729cafaccc0761280975dab01b5a0d51270176c27dd78dcfd8a06f844"
       }
     },
     {

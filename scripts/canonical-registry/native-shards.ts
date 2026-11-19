@@ -5,7 +5,7 @@
 //
 // Each shard carries the COMPLETE CapabilityRecord for every record (aliases,
 // legacyIds, discovery, schemas.input + output, examples, availability (plugins,
-// editorStates and, where declared, minEngineVersion), behavior, policy,
+// editorStates and, where declared, compiled and minEngineVersion), behavior, policy,
 // cost, routing, normalization, the complete deprecation object, and both
 // hashes). Records are wrapped as {record: full} so native discovery can
 // reproduce every field deterministically. Every record

@@ -21,6 +21,8 @@
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
 #include "UDynamicMesh.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
+MCP_COMPILED_FEATURE(GEOMETRY_SCRIPT_BONE_WEIGHTS)
 #else
 #define MCP_HAS_GEOMETRY_SCRIPT 0
 #endif

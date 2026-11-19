@@ -24,10 +24,10 @@ import { MANAGE_GEOMETRY_FOLDS } from '../folds/manage-geometry.folds.js';
 // operations/deform/optimize), so concatenating them preserves that order
 // verbatim. Keep that historical order: the generated registry sorts by id, so
 // re-sorting here only reshuffles generated output.
-// The whole tool compiles out of a UE 5.0 build: its handler is MCP_HAS_FULL_GEOMETRY_SCRIPT (5.1 and later). A record
-// that declares a later version keeps it (the collision family, 5.4).
-const fromEngine51 = (record: CapabilityRecordSource): CapabilityRecordSource =>
-  ({ ...record, availability: { ...record.availability, minEngineVersion: record.availability.minEngineVersion ?? '5.1' } });
+// The whole tool compiles out of a build without GeometryScripting (UE 5.0, or a package that leaves the Experimental
+// plugin out): its handler is MCP_HAS_FULL_GEOMETRY_SCRIPT. A record that needs more keeps it (the collision family).
+const withGeometryScript = (record: CapabilityRecordSource): CapabilityRecordSource =>
+  ({ ...record, availability: { ...record.availability, compiled: ['FULL_GEOMETRY_SCRIPT', ...(record.availability.compiled ?? [])] } });
 
 /** The authored records before folding; per-action contract tests pin these. */
 export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
@@ -36,7 +36,7 @@ export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[]
   ...GEOMETRY_DEFORM_RECORDS,
   ...GEOMETRY_OPTIMIZE_RECORDS,
   ...GEOMETRY_DYNAMICMESH_RECORDS,
-].map(fromEngine51);
+].map(withGeometryScript);
 
 export const MANAGE_GEOMETRY_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_GEOMETRY_UNFOLDED_SOURCES, MANAGE_GEOMETRY_FOLDS, 'manage_geometry');
 

@@ -2,11 +2,13 @@
 // RootMetaSoundDocument through inspect.get_property (15-40 KB of UE export text per asset,
 // with edges given as bare vertex GUIDs) just to find a node id for set_default.
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
 #include "Domains/AudioAuthoring/McpAudioAuthoringPrivate.h"
 
 namespace McpAudioAuthoring
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND_V2
+MCP_COMPILED_FEATURE(METASOUND_GRAPH_DATA)
 namespace
 {
 FString MetaSoundClassTypeName(EMetasoundFrontendClassType Type)

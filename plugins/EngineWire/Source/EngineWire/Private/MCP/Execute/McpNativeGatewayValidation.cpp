@@ -157,7 +157,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			GatewaySchemaViolationGuidance(ParentTool, LegacyAction, Violation.Pointer, InputSchema));
 	}
 
-	// Availability gate: an engine older than the record's minEngineVersion, or a capability whose
+	// Availability gate: a feature the record's compiled list names that this build left out, an engine older than its
+	// minEngineVersion, or a capability whose
 	// editorStates exclude "edit" with no running world; refused up front instead of failing deep in a handler.
 	{
 		FString GateCode;

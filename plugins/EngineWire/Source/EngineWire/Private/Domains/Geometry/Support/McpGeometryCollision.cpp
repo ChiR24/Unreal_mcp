@@ -1,10 +1,12 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+MCP_COMPILED_FEATURE(GEOMETRY_COLLISION)
 // Generates simple collision from the mesh onto its component; returns the resulting shape count.
 static int32 ApplyMeshCollision(UDynamicMesh* Mesh, UDynamicMeshComponent* DMC, EGeometryScriptCollisionGenerationMethod Method, int32 MaxHulls)
 {

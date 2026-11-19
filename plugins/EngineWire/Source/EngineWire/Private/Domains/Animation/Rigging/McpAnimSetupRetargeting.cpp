@@ -16,6 +16,8 @@
 #if MCP_HAS_IKRIG_PIPELINE && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
 #define MCP_HAS_IKRIG_BATCH_RETARGET 1
 #include "RetargetEditor/IKRetargetBatchOperation.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
+MCP_COMPILED_FEATURE(IKRIG_BATCH_RETARGET)
 #else
 #define MCP_HAS_IKRIG_BATCH_RETARGET 0
 #endif

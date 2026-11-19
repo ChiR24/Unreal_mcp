@@ -15,7 +15,8 @@ const allow = JSON.parse(readFileSync(resolve(process.cwd(), 'tests/unit/plugin/
 const VERSION_TEST = /(#\s*(el)?if|\bif\s*\()[^\n]*\b(ENGINE_(MAJOR|MINOR)_VERSION|UE_VERSION_(NEWER|OLDER)_THAN)\b/;
 const BUILD_CS_TEST = /Target\.Version\.(Major|Minor)Version\s*(==|!=|>=|<=|>|<)/g;
 // buildCsLines: ApplyMsvcCompatibility's test, the one named build quirk (FeatureDetection.json buildQuirks).
-const CAPS = { cppFiles: 137, cppLines: 250, buildCsLines: 2, records: 27 };
+// records: the MVVM family, reflection-only, waits for the engine adapter's roles; the rest moved to availability.compiled.
+const CAPS = { cppFiles: 137, cppLines: 250, buildCsLines: 2, records: 6 };
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

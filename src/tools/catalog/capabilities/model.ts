@@ -85,9 +85,16 @@ export type CapabilityAvailability = {
   /**
    * The first engine ("5.4") whose build of the plugin has this capability's handler, when an older 5.x compiles it
    * out. The plugin compares it with the engine it runs in: search and describe read the capability unavailable
-   * there and execute refuses it ENGINE_VERSION_UNSUPPORTED. Absent when every supported 5.x has it.
+   * there and execute refuses it ENGINE_VERSION_UNSUPPORTED. Absent when every supported 5.x has it. Being replaced by
+   * compiled (and, for reflection-only handlers, by roles): no new record takes it.
    */
   readonly minEngineVersion?: string;
+  /**
+   * Features this build of the plugin must have compiled for the handler to exist, by the names its sources register
+   * with MCP_COMPILED_FEATURE inside each feature's own compile guard. A build that left one out (an engine or package
+   * without it) reads the capability unavailable in search and describe, and execute refuses it FEATURE_UNAVAILABLE.
+   */
+  readonly compiled?: readonly string[];
 };
 
 /** How to reverse a successful call: an inverse capability, or a manual cleanup note. */

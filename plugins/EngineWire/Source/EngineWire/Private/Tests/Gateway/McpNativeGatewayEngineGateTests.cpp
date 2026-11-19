@@ -2,6 +2,7 @@
 // search and describe and is refused by execute's availability gate (McpNativeGatewayCatalog.cpp).
 
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "Runtime/Launch/Resources/Version.h"
 
@@ -60,6 +61,56 @@ bool FMcpNativeEngineGateTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("execute refuses it"), McpCheckAvailabilityGate(Newer, Code, Message));
 	TestEqual(TEXT("with ENGINE_VERSION_UNSUPPORTED"), Code, FString(TEXT("ENGINE_VERSION_UNSUPPORTED")));
 	TestTrue(TEXT("naming both versions"), Message.Contains(Next) && Message.Contains(Here));
+	return true;
+}
+
+// A record's availability.compiled names features this build must have compiled (MCP_COMPILED_FEATURE).
+MCP_COMPILED_FEATURE(MCP_GATE_TEST_FEATURE)
+
+namespace McpCompiledGateTestData
+{
+FMcpCapabilityRecord Record(std::initializer_list<const TCHAR*> Features)
+{
+	FMcpCapabilityRecord Out;
+	Out.Id = TEXT("compiled_gate_test.probe");
+	Out.Parent = TEXT("compiled_gate_test");
+	Out.Availability = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> Names;
+	for (const TCHAR* Feature : Features)
+	{
+		Names.Add(MakeShared<FJsonValueString>(Feature));
+	}
+	Out.Availability->SetArrayField(TEXT("compiled"), Names);
+	return Out;
+}
+} // namespace McpCompiledGateTestData
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpNativeCompiledGateTest,
+	"EngineWire.Gateway.CompiledGate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpNativeCompiledGateTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	FString Code;
+	FString Message;
+	const FMcpCapabilityRecord Built = McpCompiledGateTestData::Record({TEXT("MCP_GATE_TEST_FEATURE")});
+	TestTrue(TEXT("a feature this build registered runs here"), McpRunsOnThisEngine(Built));
+	TestEqual(TEXT("and reads available"), McpCapabilityAvailabilityView(Built, true)->GetStringField(TEXT("status")), FString(TEXT("available")));
+	TestTrue(TEXT("and passes the gate"), McpCheckAvailabilityGate(Built, Code, Message));
+
+	const FMcpCapabilityRecord Left = McpCompiledGateTestData::Record({TEXT("MCP_GATE_TEST_FEATURE"), TEXT("MCP_NEVER_REGISTERED")});
+	const TSharedPtr<FJsonObject> View = McpCapabilityAvailabilityView(Left, true);
+	TestEqual(TEXT("one this build left out reads unavailable"), View->GetStringField(TEXT("status")), FString(TEXT("unavailable")));
+	TestEqual(TEXT("naming the feature"), View->GetStringField(TEXT("missingFeature")), FString(TEXT("MCP_NEVER_REGISTERED")));
+	const TArray<TSharedPtr<FJsonValue>>* Reasons = nullptr;
+	TestTrue(TEXT("for not_compiled"), View->TryGetArrayField(TEXT("reasons"), Reasons) && Reasons &&
+		Reasons->Num() == 1 && (*Reasons)[0]->AsString() == TEXT("not_compiled"));
+	TestFalse(TEXT("its search row is not runnable"), McpSearchRow(Left, true)->GetBoolField(TEXT("runnable")));
+	TestFalse(TEXT("execute refuses it"), McpCheckAvailabilityGate(Left, Code, Message));
+	TestEqual(TEXT("with FEATURE_UNAVAILABLE"), Code, FString(TEXT("FEATURE_UNAVAILABLE")));
+	TestTrue(TEXT("naming the feature"), Message.Contains(TEXT("MCP_NEVER_REGISTERED")));
 	return true;
 }
 

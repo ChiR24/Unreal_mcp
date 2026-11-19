@@ -13,6 +13,15 @@
 #include "McpGameFeaturesProvider.h"
 #include "Modules/ModuleManager.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
+
+// Before 5.1 the engine keeps game feature plugins' state private, so their records read unavailable there.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 1
+#define MCP_GAME_FEATURES_REACHABLE 0
+#else
+#define MCP_GAME_FEATURES_REACHABLE 1
+MCP_COMPILED_FEATURE(GAME_FEATURES)
+#endif
 
 namespace
 {
@@ -43,7 +52,7 @@ IMcpGameFeaturesProvider* GameFeaturesProvider()
 void SendGameFeaturesMissing(UEngineWireSubsystem* Self, const FString& RequestId, FSystemControlSocket RequestingSocket,
                              const TCHAR* Tail)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 1
+#if !MCP_GAME_FEATURES_REACHABLE
 	Self->SendAutomationError(RequestingSocket, RequestId, FString(TEXT("Game feature plugins are reached from UE 5.1 on: "
 		"this engine keeps their state private.")) + Tail, TEXT("ENGINE_VERSION_UNSUPPORTED"));
 #else

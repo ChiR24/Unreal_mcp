@@ -47,7 +47,8 @@ const availabilitySchema = z.strictObject({
   requiredPlugins: z.array(z.string()),
   editorStates: z.array(z.enum(EDITOR_STATES)),
   // 5.0 is every supported engine: a record that runs there declares nothing.
-  minEngineVersion: z.string().regex(/^5\.[1-9]$/u).optional()
+  minEngineVersion: z.string().regex(/^5\.[1-9]$/u).optional(),
+  compiled: z.array(z.string().regex(/^[A-Z][A-Z0-9_]*$/u)).min(1).optional()
 });
 
 const behaviorSchema = z.strictObject({

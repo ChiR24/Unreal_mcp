@@ -1,6 +1,7 @@
 // McpNativeGatewayCatalog.cpp — see header. The availability execute gate came out of McpNativeGatewayValidation.cpp,
 // and the views out of the search and describe files, so each stays under the plugin's 250 pure-line ceiling.
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Editor.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
@@ -60,15 +61,41 @@ bool McpEngineVersionAtLeast(const FString& Version, int32 Major, int32 Minor)
 	return Major != MajorNeeded ? Major > MajorNeeded : Minor >= FCString::Atoi(*NeedMinor);
 }
 
+FString McpMissingCompiledFeature(const FMcpCapabilityRecord& Record)
+{
+	const TArray<TSharedPtr<FJsonValue>>* Listed = nullptr;
+	if (Record.Availability.IsValid() && Record.Availability->TryGetArrayField(TEXT("compiled"), Listed) && Listed)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *Listed)
+		{
+			const FString Name = Value.IsValid() ? Value->AsString() : FString();
+			if (!McpCompiledFeatures::Has(Name))
+			{
+				return Name.IsEmpty() ? FString(TEXT("(unnamed)")) : Name; // fail closed on a malformed entry
+			}
+		}
+	}
+	return FString();
+}
+
 bool McpRunsOnThisEngine(const FMcpCapabilityRecord& Record)
 {
 	const FString Version = McpRecordMinEngineVersion(Record);
-	return Version.IsEmpty() || McpEngineVersionAtLeast(Version, ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION);
+	return McpMissingCompiledFeature(Record).IsEmpty() &&
+		(Version.IsEmpty() || McpEngineVersionAtLeast(Version, ENGINE_MAJOR_VERSION, ENGINE_MINOR_VERSION));
 }
 
 bool McpCheckAvailabilityGate(const FMcpCapabilityRecord& Record, FString& OutCode, FString& OutMessage)
 {
-	// A handler compiled out of this engine's build would only answer that it cannot run here.
+	// A handler compiled out of this build would only answer that it cannot run here.
+	const FString Missing = McpMissingCompiledFeature(Record);
+	if (!Missing.IsEmpty())
+	{
+		OutCode = TEXT("FEATURE_UNAVAILABLE");
+		OutMessage = FString::Printf(TEXT("'%s' needs %s, which this build of EngineWire left out: this engine (or its "
+			"package) lacks what it is built on."), *Record.Id, *Missing);
+		return false;
+	}
 	if (!McpRunsOnThisEngine(Record))
 	{
 		OutCode = TEXT("ENGINE_VERSION_UNSUPPORTED");
@@ -123,15 +150,18 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
 {
 	auto View = MakeShared<FJsonObject>();
 	const FString MinEngine = McpRecordMinEngineVersion(Record);
+	const FString Missing = McpMissingCompiledFeature(Record);
 	const bool bRunsHere = McpRunsOnThisEngine(Record);
 	View->SetStringField(TEXT("status"), !bEnabled ? TEXT("disabled") : bRunsHere ? TEXT("available") : TEXT("unavailable"));
 	TArray<FString> Reasons;
 	if (!bEnabled) Reasons.Add(TEXT("parent_tool_disabled"));
-	if (!bRunsHere) Reasons.Add(TEXT("engine_version"));
+	if (!Missing.IsEmpty()) Reasons.Add(TEXT("not_compiled"));
+	else if (!bRunsHere) Reasons.Add(TEXT("engine_version"));
 	View->SetArrayField(TEXT("reasons"), McpHandlerUtils::ToJsonStringArray(Reasons));
+	if (!Missing.IsEmpty()) View->SetStringField(TEXT("missingFeature"), Missing);
 	if (!MinEngine.IsEmpty()) View->SetStringField(TEXT("minEngineVersion"), MinEngine);
 	// Declared requirements are data, not decided here: discovery has no live editor state to probe.
-	const TCHAR* const Declared[] = {TEXT("requiredPlugins"), TEXT("editorStates")};
+	const TCHAR* const Declared[] = {TEXT("requiredPlugins"), TEXT("editorStates"), TEXT("compiled")};
 	for (const TCHAR* Field : Declared)
 	{
 		TArray<FString> Values;
@@ -144,7 +174,8 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
 			}
 		}
 		Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
-		View->SetArrayField(Field, McpHandlerUtils::ToJsonStringArray(Values));
+		// Most records need no compiled feature: an empty list there was 14 bytes on every search row.
+		if (Values.Num() > 0 || FCString::Strcmp(Field, TEXT("compiled")) != 0) View->SetArrayField(Field, McpHandlerUtils::ToJsonStringArray(Values));
 	}
 	return View;
 }

@@ -202,19 +202,19 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'recompute_tangents', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
-    parentTool: 'manage_geometry', action: 'generate_collision', plugins: PLUGIN, minEngineVersion: '5.4',
+    parentTool: 'manage_geometry', action: 'generate_collision', plugins: PLUGIN, compiled: ['GEOMETRY_COLLISION'],
     family: F, summary: 'Generate simple collision for a dynamic mesh.', whenToUse: ['Simple collision must be generated.'], whenNotToUse: ['Complex collision is needed; use generate_complex_collision.'],
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, collisionType: COLLISION_TYPE, maxHullCount: { type: 'integer', description: 'Hull budget (1 to 64, default 8) when collisionType is convex_decomposition.' } }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'generate_collision', targetActor: 'DM_A', collisionType: 'convex' },
   }),
   buildWorldRecord({
-    parentTool: 'manage_geometry', action: 'generate_complex_collision', plugins: PLUGIN, minEngineVersion: '5.4',
+    parentTool: 'manage_geometry', action: 'generate_complex_collision', plugins: PLUGIN, compiled: ['GEOMETRY_COLLISION'],
     family: F, summary: 'Generate complex (convex decomposition) collision.', whenToUse: ['Complex collision must be generated.'], whenNotToUse: ['Simple collision is sufficient; use generate_collision.'],
     inputProps: { actorName: P.actorName, hullCount: P.hullCount, maxHullCount: P.maxHullCount, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'generate_complex_collision', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
-    parentTool: 'manage_geometry', action: 'simplify_collision', plugins: PLUGIN, minEngineVersion: '5.4',
+    parentTool: 'manage_geometry', action: 'simplify_collision', plugins: PLUGIN, compiled: ['GEOMETRY_COLLISION'],
     family: F, summary: 'Simplify an existing collision hull.', whenToUse: ['A collision hull must be simplified.'], whenNotToUse: ['Collision must be generated; use generate_collision.'],
     inputProps: { actorName: P.actorName, simplificationFactor: P.simplificationFactor, targetHullCount: P.targetHullCount, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'simplify_collision', targetActor: 'DM_A' },

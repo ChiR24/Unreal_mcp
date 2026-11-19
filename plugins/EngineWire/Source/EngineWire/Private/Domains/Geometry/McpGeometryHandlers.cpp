@@ -1,6 +1,10 @@
 #include "Domains/Geometry/McpGeometryHandlers.h"
+#include "Core/Compatibility/McpCompiledFeatures.h"
 #include "Domains/Geometry/McpGeometryScriptGuard.h"
 
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
+MCP_COMPILED_FEATURE(FULL_GEOMETRY_SCRIPT)
+#endif
 
 DEFINE_LOG_CATEGORY(LogMcpGeometryHandlers);
 

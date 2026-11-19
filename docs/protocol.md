@@ -75,10 +75,12 @@ call, and `perActionSchemas` is `false` only on the `{ tool }` summary:
 `search` returns capability rows (`capability`, `parentTool`, `action`,
 `domain`, `family`, `summary`, `effect`, `availability`, `policy`, `outputs`,
 `runnable` and a `describe` `nextCall`) without `inputSchema` bodies. A
-capability whose handler this engine's build compiles out (older than its
-`availability.minEngineVersion`) reads `status: "unavailable"` with reason
-`engine_version` and `runnable: false`, and `execute` refuses it with
-`ENGINE_VERSION_UNSUPPORTED`. Every
+capability whose handler this build compiles out (a feature its
+`availability.compiled` lists that the build left out) reads
+`status: "unavailable"` with reason `not_compiled`, `missingFeature` and
+`runnable: false`, and `execute` refuses it with `FEATURE_UNAVAILABLE`; the
+few records still gated by `availability.minEngineVersion` read reason
+`engine_version` and are refused `ENGINE_VERSION_UNSUPPORTED`. Every
 invalid `search` or `describe` call returns a structured, **guided error**:
 closest-match `suggestions` plus an executable `nextCall` payload. Discovery is
 served from the generated capability store
