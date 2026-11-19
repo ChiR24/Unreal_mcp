@@ -8,7 +8,7 @@
 #include "Materials/MaterialExpressionFunctionInput.h"
 #include "Materials/MaterialExpressionMaterialFunctionCall.h"
 #include "Materials/MaterialExpressionNamedReroute.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2
+#if !MCP_HAS_MATERIAL_ATTRIBUTE_DEFINITION_MAP_HEADER
 #include "MaterialShared.h"
 #else
 #include "Materials/MaterialAttributeDefinitionMap.h"
@@ -78,9 +78,9 @@ inline FString ListMainMaterialInputs(UMaterial* Material)
 // quality, feature-level and shading-path switches index a C array), so every walk counts to this.
 inline int32 McpCountMaterialInputs(UMaterialExpression* Expr)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_MATERIAL_EXPRESSION_COUNT_INPUTS
   return Expr->CountInputs();
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#elif MCP_HAS_MATERIAL_EXPRESSION_INPUTS_VIEW
   return Expr->GetInputsView().Num();
 #else
   return Expr->GetInputs().Num();

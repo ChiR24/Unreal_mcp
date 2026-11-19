@@ -192,7 +192,7 @@ bool HandleCreateCapsule(UEngineWireSubsystem* Self, const FString& RequestId,
         FTransform::Identity,
         Radius, Length,
         HemisphereSteps, Segments,
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_GEOMETRY_SCRIPT_CAPSULE_SEGMENT_STEPS
         DeclaredSegments(Payload, {TEXT("heightSegments")}, 1) - 1,  // SegmentSteps parameter added in UE 5.5
 #endif
         EGeometryScriptPrimitiveOriginMode::Center,

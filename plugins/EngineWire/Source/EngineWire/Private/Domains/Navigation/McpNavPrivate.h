@@ -77,11 +77,11 @@ struct FNavMeshResolution
 // The three resolution fields as stored for the engine version in use.
 inline FNavMeshResolution McpNavMeshResolution(ARecastNavMesh* NavMesh)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_NAV_RESOLUTION_STEP_HEIGHT
     FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
     const UStruct* ParamType = FNavMeshResolutionParam::StaticStruct();
     return {DefaultParams.CellSize, DefaultParams.CellHeight, DefaultParams.AgentMaxStepHeight, ParamType, ParamType};
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#elif MCP_HAS_NAV_MESH_RESOLUTION_PARAMS
     FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
     PRAGMA_DISABLE_DEPRECATION_WARNINGS
     float& StepHeight = NavMesh->AgentMaxStepHeight;

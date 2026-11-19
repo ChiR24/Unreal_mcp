@@ -206,7 +206,7 @@ describe('a value the engine answers with a fatal error is refused first', () =>
     }
     expect(walks).toBeGreaterThanOrEqual(1);
     const helper = code('Domains', 'MaterialAuthoring', 'McpMatMainInputs.h');
-    expect(helper).toMatch(/return Expr->CountInputs\(\);\s*#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3\s*return Expr->GetInputsView\(\)\.Num\(\);\s*#else\s*return Expr->GetInputs\(\)\.Num\(\);/u);
+    expect(helper).toMatch(/return Expr->CountInputs\(\);\s*#elif MCP_HAS_MATERIAL_EXPRESSION_INPUTS_VIEW\s*return Expr->GetInputsView\(\)\.Num\(\);\s*#else\s*return Expr->GetInputs\(\)\.Num\(\);/u);
     expect(code('Domains', 'MaterialAuthoring', 'McpMatPrivate.h')).toContain('const int32 InputCount = McpCountMaterialInputs(Expr);');
   });
 
