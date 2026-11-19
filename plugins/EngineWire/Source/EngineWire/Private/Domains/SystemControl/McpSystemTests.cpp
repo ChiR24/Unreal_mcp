@@ -111,7 +111,7 @@ bool McpTickTestRun(UEngineWireSubsystem* Self, const FString& RequestId, FSyste
     }
     FAutomationTestExecutionInfo Info;
     Run.Current->GetExecutionInfo(Info);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+#if !MCP_HAS_AUTOMATION_LAST_EXECUTION_SUCCESS
     const bool bPassed = Run.Current->GetSuccessState() && !bTimedOut;
 #else
     const bool bPassed = Run.Current->GetLastExecutionSuccessState() && !bTimedOut;

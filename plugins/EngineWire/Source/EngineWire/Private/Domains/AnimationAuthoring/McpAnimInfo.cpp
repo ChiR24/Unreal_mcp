@@ -32,7 +32,7 @@ void AddCurveNames(const UAnimSequenceBase* Asset, const TSharedPtr<FJsonObject>
     TArray<TSharedPtr<FJsonValue>> Curves;
     for (const FFloatCurve& Curve : Asset->GetCurveData().FloatCurves)
     {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_ANIM_CURVE_GET_NAME
         Curves.Add(MakeShared<FJsonValueString>(Curve.GetName().ToString()));
 #else
         Curves.Add(MakeShared<FJsonValueString>(Curve.Name.DisplayName.ToString()));

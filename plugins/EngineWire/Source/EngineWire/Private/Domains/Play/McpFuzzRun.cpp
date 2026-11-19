@@ -40,7 +40,7 @@ struct FFuzzCaught
 const FFrame* TopFrame()
 {
 #if DO_BLUEPRINT_GUARD
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 1
+#if !MCP_HAS_BLUEPRINT_CURRENT_SCRIPT_STACK
     const TArray<const FFrame*>& Stack = FBlueprintContextTracker::Get().GetScriptStack();
 #else
     const TArrayView<const FFrame* const> Stack = FBlueprintContextTracker::Get().GetCurrentScriptStack();

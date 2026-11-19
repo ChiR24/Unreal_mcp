@@ -50,7 +50,7 @@ static void LinkInputToParameter(UNiagaraNodeFunctionCall& Function, const FStri
             Node->DestroyNode();
         }
     }
-#if ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_NIAGARA_LINKED_PARAMETER_KNOWN_SET
     const TSet<FNiagaraVariableBase> Known{Source};
     FNiagaraStackGraphUtilities::SetLinkedParameterValueForFunctionInput(OverridePin, Source, Known);
 #else
