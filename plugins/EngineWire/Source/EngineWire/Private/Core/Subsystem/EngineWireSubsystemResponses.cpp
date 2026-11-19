@@ -4,6 +4,7 @@
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Foundation/BridgeHelpers/Security/McpSecretMask.h"
 #include "Core/Journal/McpChangeJournal.h"
+#include "Core/Requests/McpInflightLedger.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Core/Requests/McpUndoLedger.h"
@@ -217,6 +218,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
         }
         else
         {
+            FMcpInflightLedger::Get().Done(RequestId);
             FMcpTelemetryRegistry::Get().EndRequest(
                 RequestId,
                 bSuccess ? TEXT("success") : TEXT("failure"),

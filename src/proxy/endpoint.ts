@@ -158,7 +158,9 @@ export function probePid(pid: number): PidProbe {
 export function editorState(file: EndpointFile, pid: PidProbe, crash?: CrashReport): EditorState | undefined {
   if (file.state === 'closed_cleanly') return 'editor_closed';
   if (pid !== 'dead') return undefined;
-  return crash?.processId === file.pid && crash.crashType !== 'Ensure' ? 'editor_crashed' : 'editor_terminated_unknown';
+  // A crash type comes only from the crash reporter: last-crash.json without one names the calls, not a crash.
+  return crash?.processId === file.pid && crash.crashType !== undefined && crash.crashType !== 'Ensure'
+    ? 'editor_crashed' : 'editor_terminated_unknown';
 }
 
 /**

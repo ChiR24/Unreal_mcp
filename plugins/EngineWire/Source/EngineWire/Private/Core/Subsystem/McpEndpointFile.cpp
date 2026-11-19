@@ -37,21 +37,26 @@ void Write(const TCHAR* State)
     }
     Json->SetStringField(TEXT("startedAtUtc"), StartedAtUtc);
     Json->SetStringField(TEXT("state"), State);
-    FString Text;
-    const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Text);
-    FJsonSerializer::Serialize(Json, Writer);
-    // Written whole beside it, then moved over it: a proxy reading at that moment sees the old file or the new one.
-    const FString Final = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("MCP"), TEXT("endpoint.json"));
-    const FString Temp = Final + TEXT(".tmp");
-    if (!FFileHelper::SaveStringToFile(Text, *Temp) || !IFileManager::Get().Move(*Final, *Temp, true))
-    {
-        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Could not write %s: the stdio proxy falls back to its default port."), *Final);
-    }
+    McpEndpointFile::WriteWhole(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("MCP"), TEXT("endpoint.json")), Json);
 }
 } // namespace McpEndpointFileState
 
 namespace McpEndpointFile
 {
+bool WriteWhole(const FString& Path, const TSharedRef<FJsonObject>& Json)
+{
+    FString Text;
+    const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Text);
+    FJsonSerializer::Serialize(Json, Writer);
+    const FString Temp = Path + TEXT(".tmp");
+    if (FFileHelper::SaveStringToFile(Text, *Temp) && IFileManager::Get().Move(*Path, *Temp, true))
+    {
+        return true;
+    }
+    UE_LOG(LogEngineWireSubsystem, Warning, TEXT("Could not write %s; the stdio proxy reads it to find this editor and its calls."), *Path);
+    return false;
+}
+
 void WriteListening(int32 Port)
 {
     McpEndpointFileState::Port = Port;

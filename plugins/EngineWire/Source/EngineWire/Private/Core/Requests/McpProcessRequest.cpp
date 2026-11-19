@@ -2,6 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Journal/McpChangeJournal.h"
+#include "Core/Requests/McpInflightLedger.h"
 #include "Core/Requests/McpSaveValidationScope.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
@@ -179,6 +180,11 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     const FString SubAction = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
     EngineWire::SetInFlightAction(RequestId, SubAction.IsEmpty() ? Action : Action + TEXT(" ") + SubAction);
   }
+  // The call by tool and action, as the journal names it (a payload may carry its action as action, not subAction).
+  FString Called = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
+  Called = Called.IsEmpty() && Payload.IsValid() ? GetJsonStringField(Payload, TEXT("action")) : Called;
+  // On disk before the handler runs: if it takes the editor down, the proxy can say which call was running.
+  FMcpInflightLedger::Get().Dispatch(RequestId, Called.IsEmpty() || Called == Action ? Action : Action + TEXT(".") + Called);
   bool bDispatchHandled = false;
   bool bErrorCaptureStarted = false;
   const double DispatchStartSeconds = FPlatformTime::Seconds();
@@ -187,6 +193,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     ON_SCOPE_EXIT {
       // A reply held while the handler's transaction was open goes now, with every capture still running.
       McpUndoLedger::Flush();
+      // A call that has not replied by now answers later (a playtest, a sample run): it is listed as waiting.
+      FMcpInflightLedger::Get().Wait(RequestId);
       // =====================================================================
       // End Error Capture and check for captured errors
       // =====================================================================
@@ -240,6 +248,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
         // above cannot be double counted.
         FMcpTelemetryRegistry::Get().EndRequest(
             RequestId, TEXT("failure"), TEXT("internal"));
+        FMcpInflightLedger::Get().Done(RequestId);
       }
     };
 
@@ -257,11 +266,8 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     McpChangeWatch::Begin(RequestId);
     McpUndoLedger::Begin(RequestId);
     // What changes until the handler returns is this server's doing in the change journal, named by the call.
-    {
-      FString SubAction = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
-      SubAction = SubAction.IsEmpty() && Payload.IsValid() ? GetJsonStringField(Payload, TEXT("action")) : SubAction;
-      McpChangeJournal::BeginRequest(RequestId, SubAction.IsEmpty() ? Action : Action + TEXT(" ") + SubAction);
-    }
+    McpChangeJournal::BeginRequest(RequestId, Called.IsEmpty() ? Action : Action + TEXT(" ") + Called);
+    FMcpInflightLedger::Get().WarnIfEndedIn(Called.IsEmpty() || Called == Action ? Action : Action + TEXT(".") + Called);
 
     // Map this requestId to the requesting socket so responses can be
     // delivered reliably

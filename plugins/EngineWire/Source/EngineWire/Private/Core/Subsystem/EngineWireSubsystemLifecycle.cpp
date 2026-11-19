@@ -7,6 +7,7 @@
 #include "McpConnectionManager.h"
 #include "Core/Subsystem/McpRequestErrorDevice.h"
 #include "Core/Subsystem/McpEndpointFile.h"
+#include "Core/Requests/McpInflightLedger.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
@@ -155,6 +156,7 @@ void UEngineWireSubsystem::Deinitialize()
     }
 
     CancelAllAutomationRequests();
+    FMcpInflightLedger::Get().Stop();
 
     if (LogCaptureDevice.IsValid())
     {
@@ -199,6 +201,11 @@ bool UEngineWireSubsystem::Tick(float DeltaTime)
 
 void UEngineWireSubsystem::StartNativeTransport()
 {
+    // Before any call: calls an earlier editor of this project left running (it ended in them) go to last-crash.json.
+    if (const int32 Left = FMcpInflightLedger::Get().Start())
+    {
+        UE_LOG(LogEngineWireSubsystem, Warning, TEXT("The last editor of this project ended while running %d call(s): Saved/MCP/last-crash.json names them."), Left);
+    }
     const auto* Settings = GetDefault<UEngineWireSettings>();
     if (!Settings->bEnableNativeMCP)
     {

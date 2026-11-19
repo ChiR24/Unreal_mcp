@@ -187,6 +187,9 @@ describe('endpoint discovery', () => {
     expect(editorState(listening(1), 'alive')).toBeUndefined();
     expect(editorState(listening(1), 'dead')).toBe('editor_terminated_unknown');
     expect(editorState(listening(1), 'dead', { processId: 1, crashType: 'Ensure' })).toBe('editor_terminated_unknown');
+    // last-crash.json without a crash type: the next start found the calls but no crash report.
+    expect(editorState(listening(1), 'dead', { processId: 1, inflight: [] })).toBe('editor_terminated_unknown');
+    expect(editorState(listening(1), 'dead', { processId: 1, crashType: 'Crash' })).toBe('editor_crashed');
     expect(editorState({ ...listening(1), state: 'closed_cleanly' }, 'alive')).toBe('editor_closed');
     mcpFile('endpoint.json', listening(4242));
     expect(chooseEndpoint(undefined, folder, () => 'eperm').upstream).toBe('http://127.0.0.1:3123/mcp');
