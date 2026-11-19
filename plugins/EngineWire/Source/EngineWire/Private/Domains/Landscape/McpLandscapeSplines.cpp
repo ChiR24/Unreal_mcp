@@ -139,7 +139,7 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
 
     for (ULandscapeSplineControlPoint *ControlPoint : ControlPoints)
     {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_LANDSCAPE_SPLINE_AUTO_ROTATION_FLAG
         ControlPoint->AutoCalcRotation(false);
 #else
         ControlPoint->AutoCalcRotation();
@@ -214,12 +214,12 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     Landscape->Modify();
     Proxy->Modify();
     Proxy->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_LANDSCAPE_PROXY_GUID_VALIDATION
     Proxy->SetLandscapeGuid(Landscape->GetLandscapeGuid(), false);
     Proxy->SetLandscapeActor(Landscape);
     Proxy->CopySharedProperties(Landscape);
     Proxy->CreateLandscapeInfo(false, false);
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
+#elif MCP_HAS_LANDSCAPE_STREAMING_PROXY_SET_ACTOR
     Proxy->SetLandscapeGuid(Landscape->GetLandscapeGuid());
     Proxy->SetLandscapeActor(Landscape);
     Proxy->GetSharedProperties(Landscape);

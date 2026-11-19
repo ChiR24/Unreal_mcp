@@ -13,7 +13,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "IMeshMergeUtilities.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_MESH_MERGING_SETTINGS_HEADER
 #include "MeshMerge/MeshMergingSettings.h"
 #else
 #include "Engine/MeshMerging.h"

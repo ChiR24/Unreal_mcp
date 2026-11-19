@@ -17,8 +17,8 @@
 #include "Engine/Texture2D.h"
 #include "EngineUtils.h"
 #include "Materials/MaterialInterface.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2
-#include "Components.h" // FMeshUVChannelInfo, in MeshUVChannelInfo.h from 5.2
+#if !MCP_HAS_MESH_UV_CHANNEL_INFO_HEADER
+#include "Components.h" // FMeshUVChannelInfo, before it had its own header
 #else
 #include "MeshUVChannelInfo.h"
 #endif
@@ -46,8 +46,8 @@ struct FTexelSlot
 TArray<UTexture*> TexelTexturesOf(const UMaterialInterface* Material)
 {
     TArray<UTexture*> Textures;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 7
-    Material->GetUsedTextures(Textures); // the five-argument form is deprecated from 5.7 with an empty body: it finds none
+#if MCP_HAS_MATERIAL_USED_TEXTURES_QUALITY_OPTION
+    Material->GetUsedTextures(Textures); // the five-argument form is a deprecated empty body beside this one: it finds none
 #else
     Material->GetUsedTextures(Textures, EMaterialQualityLevel::Num, true, ERHIFeatureLevel::Num, true);
 #endif
