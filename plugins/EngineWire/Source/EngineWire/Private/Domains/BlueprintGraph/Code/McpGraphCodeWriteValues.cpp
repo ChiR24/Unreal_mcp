@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
 
+#include "Algo/AllOf.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
 
@@ -62,6 +63,42 @@ FString TypedOperator(const FString& Op, FName A, FName B)
     }
     const TCHAR* Id = OperatorTypeId(Op);
     return Id ? FString(Id) : FString();
+}
+
+// read_graph_as_code prints a math operator node by its title (Math|Vector|vector+vector, Math|Integer|int/int,
+// Math|Float|float<float), but the menu offers each operator once, typed by what is wired into it: a head of that shape
+// with two arguments is written as the operator form, (+ a b), so read, edit, write gives the same node.
+void OperatorHeadsToForms(TArray<FSExpr>& Exprs)
+{
+    static const TCHAR* const Ops[] = {TEXT("=="), TEXT("!="), TEXT("<="), TEXT(">="), TEXT("+"), TEXT("-"), TEXT("*"), TEXT("/"), TEXT("<"), TEXT(">")};
+    const auto IsTypeWord = [](const FString& Word)
+    {
+        return !Word.IsEmpty() && Algo::AllOf(Word, [](TCHAR C) { return FChar::IsAlnum(C); });
+    };
+    for (FSExpr& Each : Exprs)
+    {
+        if (Each.Type != FSExpr::EType::List)
+        {
+            continue;
+        }
+        OperatorHeadsToForms(Each.Items);
+        FSExpr* Head = Each.Items.Num() == 3 ? &Each.Items[0] : nullptr;
+        FString Title;
+        if (!Head || Head->Type != FSExpr::EType::Symbol || !Head->Text.StartsWith(TEXT("Math|"))
+            || !Head->Text.Split(TEXT("|"), nullptr, &Title, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
+        {
+            continue;
+        }
+        for (const TCHAR* Op : Ops)
+        {
+            FString Left, Right;
+            if (Title.Split(Op, &Left, &Right, ESearchCase::CaseSensitive) && IsTypeWord(Left) && IsTypeWord(Right))
+            {
+                Head->Text = Op;
+                break;
+            }
+        }
+    }
 }
 
 // A path on an object or class pin that loads nothing would leave the pin None (the engine only logs it), so the code

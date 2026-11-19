@@ -142,6 +142,7 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
         Context.SendError(Error.IsEmpty() ? TEXT("code holds no form: write (event Name ...) or (fn Name (params) ...).") : Error, TEXT("CODE_PARSE_ERROR"));
         return true;
     }
+    OperatorHeadsToForms(Forms);
     TArray<FGraphPlan> Plans;
     if (!RouteForms(Context, Forms, Plans))
     {

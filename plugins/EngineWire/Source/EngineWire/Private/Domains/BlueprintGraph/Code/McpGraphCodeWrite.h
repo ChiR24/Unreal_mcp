@@ -133,6 +133,7 @@ FName OperandCategory(const FSExpr& Value, UEdGraphPin* Pre, const FBindings& Bi
 /** The node an operator makes for operands of these pin categories: % is the modulo of their type (no promotable modulo
  *  exists), == and != on text the string compare (the promotable Equal takes no string); others OperatorTypeId. */
 FString TypedOperator(const FString& Op, FName A, FName B);
+void OperatorHeadsToForms(TArray<FSExpr>& Exprs);
 /** One more exec output: the case Name on a switch on string or name, the next case on another switch, the next output
  *  on a sequence; false when the node takes none. */
 bool AddPin(UEdGraphNode* Node, const FString& Name);

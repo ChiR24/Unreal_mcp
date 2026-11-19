@@ -8,6 +8,7 @@
 #include "Engine/Blueprint.h"
 #include "K2Node_CustomEvent.h"
 #include "K2Node_MacroInstance.h"
+#include "UObject/UnrealType.h"
 
 namespace McpGraphCode
 {
@@ -129,7 +130,14 @@ UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
     }
     if (!Node)
     {
-        const TArray<FString> Offered = OfferedIds(Blueprint, Graph, Menu, TypeId);
+        TArray<FString> Offered = OfferedIds(Blueprint, Graph, Menu, TypeId);
+        // The reader prints an engine event as EventBeginPlay; BeginPlay and ReceiveBeginPlay are offered that id.
+        FString EventTitle = TypeId;
+        if (Offered.Num() == 0 && EventTitle.RemoveFromStart(TEXT("AddEvent|")) && !EventTitle.StartsWith(TEXT("Event")))
+        {
+            EventTitle.RemoveFromStart(TEXT("Receive"));
+            Offered = OfferedIds(Blueprint, Graph, Menu, TEXT("AddEvent|Event") + EventTitle);
+        }
         Fail(Offered.Num() > 0 ? FString::Printf(TEXT("the menu of graph %s has no %s; it offers %s."), *Graph->GetName(), *TypeId, *FString::Join(Offered, TEXT(", ")))
                                : FString::Printf(TEXT("the menu of graph %s has no node %s (a type id is Category|Title, spaces removed, as read_graph_as_code prints it)."), *Graph->GetName(), *TypeId));
         return nullptr;
@@ -181,8 +189,14 @@ UEdGraphPin* FTranspiler::Bound(const FString& Name, const FBindings& Bindings)
     TArray<FString> Names;
     Bindings.GetKeys(Names);
     Names.Sort();
+    // A variable of the Blueprint is no name the code binds: its getter and setter are menu entries.
+    const UClass* Class = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
+    const bool bMember = Class && FindFProperty<FProperty>(Class, FName(*Name)) != nullptr;
     Fail(Name.StartsWith(TEXT("/")) ? FString::Printf(TEXT("\"%s\" looks like a class path or asset reference: quote it, \"%s\"."), *Name, *Name)
-                                     : FString::Printf(TEXT("Undefined variable \"%s\". Available: %s."), *Name, *FString::Join(Names, TEXT(", "))));
+         : bMember ? FString::Printf(TEXT("\"%s\" is a variable of the Blueprint, not a name this code binds: read it with its getter and write "
+                                          "it with its setter, as read_graph_as_code prints them (Variables|Get%s and Variables|Set%s, with its "
+                                          "category between when it has one)."), *Name, *Name, *Name)
+                   : FString::Printf(TEXT("Undefined variable \"%s\". Available: %s."), *Name, *FString::Join(Names, TEXT(", "))));
     return nullptr;
 }
 
