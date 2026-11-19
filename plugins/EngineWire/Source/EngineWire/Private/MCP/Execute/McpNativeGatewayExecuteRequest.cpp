@@ -5,6 +5,7 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/Request/McpExecuteAggregate.h"
 #include "MCP/Execute/Request/McpExecuteContractOptions.h"
+#include "MCP/Execute/Request/McpExecuteSelect.h"
 #include "MCP/Execute/Request/McpNativeGatewayReservedParams.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
@@ -20,6 +21,8 @@ const TArray<FString>& McpExecutionOptionKeys()
 		TEXT("expect"),
 		TEXT("require"),
 		TEXT("aggregate"),
+		TEXT("select"),
+		TEXT("omit"),
 	};
 	return Keys;
 }
@@ -98,7 +101,7 @@ bool McpValidateExecutionOptions(
 	// in McpNativeGatewayIdempotency.cpp because this file is at the line ceiling,
 	// as the expect and require checks live in Request/McpExecuteContractOptions.cpp.
 	return McpValidateIdempotencyKeyOption(Options, OutError) && McpExecuteContracts::Validate(Options, OutError) &&
-		McpExecuteAggregate::Validate(Options, OutError);
+		McpExecuteAggregate::Validate(Options, OutError) && McpExecuteSelect::Validate(Options, OutError);
 }
 
 namespace

@@ -114,6 +114,9 @@ struct FMcpReceiptContext
 
 	/** options.aggregate: a list of the result counted instead of sent (Request/McpExecuteAggregate.h); unset, none. */
 	TSharedPtr<FJsonObject> Aggregate;
+
+	/** The call's options when they carry select or omit (Request/McpExecuteSelect.h); unset, the data goes out whole. */
+	TSharedPtr<FJsonObject> Shape;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

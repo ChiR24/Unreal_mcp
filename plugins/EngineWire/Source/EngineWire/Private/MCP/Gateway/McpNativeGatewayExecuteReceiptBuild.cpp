@@ -2,6 +2,7 @@
 
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Execute/Request/McpExecuteAggregate.h"
+#include "MCP/Execute/Request/McpExecuteSelect.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
@@ -185,7 +186,7 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	{
 		WithVerdict->SetStringField(TEXT("message"), Message);
 	}
-	const TSharedPtr<FJsonObject> Canonical =
+	TSharedPtr<FJsonObject> Canonical =
 		McpProjectCanonicalOutput(WithVerdict, OutputSchema);
 	const TSharedPtr<FJsonObject> OutputError = ValidateGatewayExecuteOutput(
 		CapabilityId, OutputSchema, Canonical, Published, Context);
@@ -193,7 +194,14 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	{
 		return OutputError;
 	}
-	const TSharedPtr<FJsonObject> Receipt = McpBuildSuccessReceipt(CapabilityId, Canonical, Context, Published, Message);
+	// options.select / omit trim the data the caller reads, once its contract has passed (Request/McpExecuteSelect.cpp):
+	// handles and changes still come from the whole result, and a path that matched nothing is a warning.
+	FMcpReceiptContext Shaped = Context;
+	if (Context.Shape.IsValid())
+	{
+		Canonical = McpExecuteSelect::Apply(Context.Shape, Canonical, Shaped.GatewayWarnings);
+	}
+	const TSharedPtr<FJsonObject> Receipt = McpBuildSuccessReceipt(CapabilityId, Canonical, Shaped, Published, Message);
 	if (PageBlock.IsValid())
 	{
 		Receipt->SetObjectField(TEXT("page"), PageBlock);

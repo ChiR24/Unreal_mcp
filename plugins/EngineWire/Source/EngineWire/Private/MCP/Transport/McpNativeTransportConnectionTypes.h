@@ -105,6 +105,8 @@ struct FSSEConnection
 	TSharedPtr<struct FMcpPageOwner> PageOwner;
 	// options.aggregate of the call (FMcpReceiptContext::Aggregate).
 	TSharedPtr<FJsonObject> Aggregate;
+	// options.select / omit of the call (FMcpReceiptContext::Shape).
+	TSharedPtr<FJsonObject> Shape;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

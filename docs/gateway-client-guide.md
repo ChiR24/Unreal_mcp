@@ -331,6 +331,22 @@ so raise the call's own `limit` to count everything at once (the actor list
 takes 1000). A reply without that list keeps its data and `aggregate.note` says
 so. The aggregate is part of the idempotency fingerprint, as `expect` is.
 
+### Reading only some fields: `select` and `omit`
+
+`options.select` keeps only the fields of the reply's `data` it names;
+`options.omit` drops the ones it names, after `select`. Each is a list of up to
+32 dotted paths of up to 128 characters, and a path crosses lists:
+`actors.label` (or `actors[].label`) keeps each actor's label, and
+`["actors.label", "actors.class"]` keeps both per actor, in one list. Each item
+of a list keeps its place, as an empty object when it has none of the fields.
+Paths name what `data` holds as the reply shows it, so a field folded into
+`details` is `details.<field>`. The receipt (its `warnings` included) is never
+trimmed, the `undo` block stays in `data` whatever the paths say, and a path
+that matched nothing adds a warning saying so. Both run after `aggregate` and after the output contract is checked; a reply
+too large for one message is still paged, and each page is trimmed alike. Both
+are part of the idempotency fingerprint. An element index (`actors[2]`) is
+refused with `INVALID_OPTIONS`.
+
 ### Many calls in one: `run_script`
 
 `system_control run_script` runs a script of capability calls in one request,

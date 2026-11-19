@@ -48,6 +48,7 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->bTasks = McpModern::Current().bTasks;
 	Conn->PageOwner = Context.PageOwner;
 	Conn->Aggregate = Context.Aggregate;
+	Conn->Shape = Context.Shape;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;
 	{
