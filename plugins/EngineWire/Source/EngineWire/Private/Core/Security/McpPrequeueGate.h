@@ -71,8 +71,14 @@ void ForgetConsentForRequest(const FString& RequestId);
 
 // The handler for RequestId starts now (ProcessAutomationRequest): its grant stays spent whatever it answers. A
 // failure is no proof of no effect (a batch delete that removed one actor and missed another answers DELETE_PARTIAL,
-// and a file a handler wrote is in no journal), so only a refusal before this point is refunded.
+// and a file a handler wrote is in no journal), so only a refusal before this point is refunded, unless the handler
+// itself vouches for having changed nothing.
 void NoteDispatchStarted(const FString& RequestId);
+
+// The handler of RequestId refused, and knows it changed nothing (it touched nothing yet, or put back all it touched):
+// the grant its request burned is issued again, so a typo in a write does not cost a describe for a fresh one. Call it
+// only from such a refusal; a request that succeeded keeps its grant spent whatever comes after.
+void RefundUnchangedConsent(const FString& RequestId);
 
 // Full gate in refusal order: scope, consent, project, path, console command,
 // then quota. Quota is charged last so a request refused on authorization does

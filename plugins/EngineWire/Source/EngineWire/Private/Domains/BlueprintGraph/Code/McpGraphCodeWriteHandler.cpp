@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
 
+#include "Core/Security/McpPrequeueGate.h"
 #include "Domains/BlueprintGraph/Behaviour/McpBPBehaviour.h"
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "EdGraph/EdGraph.h"
@@ -128,10 +129,13 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     {
         return false;
     }
+    // A refusal before the compile changed nothing (a build that fails is rolled back first), so it hands the consent
+    // grant back: a mistyped node name used to cost a describe for a fresh one.
+    const auto Unchanged = [&Context]() { McpPrequeueGate::RefundUnchangedConsent(Context.RequestId); return true; };
     if (GEditor && GEditor->IsPlaySessionInProgress())
     {
         Context.SendError(TEXT("Stop Play In Editor first: compiling a Blueprint during PIE reinstances the running game."), TEXT("PIE_ACTIVE"));
-        return true;
+        return Unchanged();
     }
     UBlueprint* Blueprint = Context.Blueprint;
     FString Code;
@@ -141,20 +145,20 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     if (!ParseSExpr(Code, Forms, Error) || Forms.Num() == 0)
     {
         Context.SendError(Error.IsEmpty() ? TEXT("code holds no form: write (event Name ...) or (fn Name (params) ...).") : Error, TEXT("CODE_PARSE_ERROR"));
-        return true;
+        return Unchanged();
     }
     OperatorHeadsToForms(Forms);
     TArray<FGraphPlan> Plans;
     if (!RouteForms(Context, Forms, Plans))
     {
-        return true;
+        return Unchanged();
     }
     for (FGraphPlan& Plan : Plans)
     {
         if (!PlanGraph(Forms, Plan, Error))
         {
             Context.SendError(Error, TEXT("CODE_INVALID"));
-            return true;
+            return Unchanged();
         }
     }
     const TSet<FString> Titles = CodeTitles(Forms);
@@ -170,7 +174,7 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
         {
             Rollback(Blueprint, Before);
             Context.SendError(Error + TEXT(" Nothing was written."), TEXT("CODE_INVALID"));
-            return true;
+            return Unchanged();
         }
         // A function keeps its old return nodes when the code makes none: they hold its return values.
         bool bReturns = false;

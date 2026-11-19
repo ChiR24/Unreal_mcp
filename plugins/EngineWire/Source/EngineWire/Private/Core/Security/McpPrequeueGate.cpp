@@ -246,7 +246,7 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 		}
 		// Remember what this request burned, so a request refused before its
 		// handler runs (a requirement not met, a dialog in the way) gets it back.
-		// NoteDispatchStarted drops the record once the handler starts.
+		// NoteDispatchStarted moves the record aside once the handler starts.
 		RememberBurnedNonce(Request.RequestId, Grant.ConsentNonce);
 	}
 
@@ -278,8 +278,14 @@ FMcpAuthorizationDecision RequirePrincipal(const FMcpPrequeueRequest& Request)
 void NoteDispatchStarted(const FString& RequestId)
 {
 	// A handler can write a file, run a script or delete what no journal records, so a failed reply is no proof that
-	// nothing happened: from here the grant stays spent, whatever the request answers.
-	TakeBurnedNonce(RequestId);
+	// nothing happened: from here the grant stays spent, whatever the request answers, unless the handler vouches for
+	// having changed nothing (RefundUnchangedConsent). The record moves aside, out of the reply funnel's reach.
+	RememberBurnedNonce(TEXT("dispatched:") + RequestId, TakeBurnedNonce(RequestId));
+}
+
+void RefundUnchangedConsent(const FString& RequestId)
+{
+	FMcpConsentLedger::Get().Refund(TakeBurnedNonce(TEXT("dispatched:") + RequestId));
 }
 
 void RefundConsentForRequest(const FString& RequestId)
@@ -291,6 +297,7 @@ void RefundConsentForRequest(const FString& RequestId)
 void ForgetConsentForRequest(const FString& RequestId)
 {
 	TakeBurnedNonce(RequestId);
+	TakeBurnedNonce(TEXT("dispatched:") + RequestId); // a success: nothing after it may hand the grant back
 }
 
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request)
