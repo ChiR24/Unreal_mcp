@@ -88,7 +88,7 @@ FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload)
 
 bool HasActiveTrace()
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_TRACE_CONNECTION_QUERY
     return FTraceAuxiliary::IsConnected();
 #else
     return false;
@@ -105,11 +105,11 @@ FString ConnectionTypeToString(FTraceAuxiliary::EConnectionType Type)
         return TEXT("file");
     case FTraceAuxiliary::EConnectionType::None:
         return TEXT("none");
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+#if MCP_HAS_TRACE_CUSTOM_RELAY
     case FTraceAuxiliary::EConnectionType::Relay:
         return TEXT("relay");
 #endif
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_TRACE_SECURE_NETWORK
     case FTraceAuxiliary::EConnectionType::SecureNetwork:
         return TEXT("secure_network");
 #endif
@@ -120,7 +120,7 @@ FString ConnectionTypeToString(FTraceAuxiliary::EConnectionType Type)
 
 void AddTraceStatus(TSharedPtr<FJsonObject>& Result)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_TRACE_CONNECTION_QUERY
     FGuid SessionGuid;
     FGuid TraceGuid;
     const bool bConnected = FTraceAuxiliary::IsConnected(SessionGuid, TraceGuid);
@@ -142,7 +142,7 @@ void AddTraceStatus(TSharedPtr<FJsonObject>& Result)
     Result->SetBoolField(TEXT("connectedKnown"), false);
     Result->SetBoolField(TEXT("statusQuerySupported"), false);
 #endif
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_TRACE_SYSTEM_STATUS
     switch (FTraceAuxiliary::GetTraceSystemStatus())
     {
     case FTraceAuxiliary::ETraceSystemStatus::NotAvailable:
@@ -157,13 +157,13 @@ void AddTraceStatus(TSharedPtr<FJsonObject>& Result)
     case FTraceAuxiliary::ETraceSystemStatus::TracingToFile:
         Result->SetStringField(TEXT("traceSystemStatus"), TEXT("tracing_to_file"));
         break;
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+#if MCP_HAS_TRACE_CUSTOM_RELAY
     case FTraceAuxiliary::ETraceSystemStatus::TracingToCustomRelay:
         Result->SetStringField(TEXT("traceSystemStatus"),
             TEXT("tracing_to_custom_relay"));
         break;
 #endif
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_TRACE_SECURE_NETWORK
     case FTraceAuxiliary::ETraceSystemStatus::TracingToSecureNetwork:
         Result->SetStringField(TEXT("traceSystemStatus"),
             TEXT("tracing_to_secure_network"));

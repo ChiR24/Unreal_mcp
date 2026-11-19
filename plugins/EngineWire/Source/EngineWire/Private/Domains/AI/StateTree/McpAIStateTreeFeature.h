@@ -16,7 +16,7 @@
 #include "StateTreeEditorData.h"
 #include "StateTreeSchema.h"
 #include "StateTreeState.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_STATE_TREE_EDITING_SUBSYSTEM
 #include "StateTreeEditingSubsystem.h"
 #else
 #include "CoreGlobals.h"
@@ -129,7 +129,7 @@ inline UClass* McpFindStateTreeSchemaClass(const FString& Schema, FString& OutEr
     return SchemaClass;
 }
 
-#if !(ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5))
+#if !MCP_HAS_STATE_TREE_EDITING_SUBSYSTEM
 // The compile request delegate is data that StateTreeModule exports. Windows delay-loads that DLL (StateTree is an
 // optional plugin), and no data can be imported from a delay-loaded DLL (LNK1194), so there the delegate's address is
 // read from the DLL's export table. Other platforms do not delay-load and take it directly. Null when it is not there.
@@ -158,7 +158,7 @@ inline UE::StateTree::Delegates::FOnRequestCompile* McpStateTreeOnRequestCompile
 // OutMessages gets the errors and warnings.
 inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_STATE_TREE_EDITING_SUBSYSTEM
     struct FLog : FStateTreeCompilerLog
     {
         const TArray<FStateTreeCompilerLogMessage>& All() const { return Messages; }
@@ -168,7 +168,7 @@ inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
     {
         if (Message.Severity <= EMessageSeverity::Warning)
         {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 9)
+#if MCP_HAS_STATE_TREE_LOG_TEXT_MESSAGE
             OutMessages.Add(Message.Message.ToString()); // an FText from 5.9
 #else
             OutMessages.Add(Message.Message);

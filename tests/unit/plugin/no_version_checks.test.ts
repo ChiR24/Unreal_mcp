@@ -16,7 +16,7 @@ const VERSION_TEST = /(#\s*(el)?if|\bif\s*\()[^\n]*\b(ENGINE_(MAJOR|MINOR)_VERSI
 const BUILD_CS_TEST = /Target\.Version\.(Major|Minor)Version\s*(==|!=|>=|<=|>|<)/g;
 // buildCsLines: ApplyMsvcCompatibility's test, the one named build quirk (FeatureDetection.json buildQuirks).
 // records: the MVVM family, reflection-only, waits for the engine adapter's roles; the rest moved to availability.compiled.
-const CAPS = { cppFiles: 137, cppLines: 250, buildCsLines: 2, records: 6 };
+const CAPS = { cppFiles: 133, cppLines: 212, buildCsLines: 2, records: 6 };
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -72,9 +72,12 @@ describe('no engine version comparisons outside Core/Compatibility/', () => {
   it('every Build.cs Detect name has a FeatureDetection.json row, and every row is used', () => {
     const buildCs = readFileSync(join(sourceRoot, 'EngineWire/EngineWire.Build.cs'), 'utf8');
     const table = JSON.parse(readFileSync(join(sourceRoot, 'EngineWire/FeatureDetection.json'), 'utf8')) as {
-      features: { name: string; paths: string[]; marker?: string }[];
+      features: { name: string; paths: string[]; marker?: string; define?: boolean }[];
     };
-    const called = [...buildCs.matchAll(/Detect\(EngineDir, "([A-Z0-9_]+)"\)/g)].map((m) => m[1]).sort();
+    // A row marked define is used by DefineDetectedFeatures (MCP_HAS_<name>); every other row by a Detect call by name.
+    expect(buildCs).toContain('DefineDetectedFeatures(EngineDir);');
+    const called = [...buildCs.matchAll(/Detect\(EngineDir, "([A-Z0-9_]+)"\)/g)].map((m) => m[1])
+      .concat(table.features.filter((row) => row.define).map((row) => row.name)).sort();
     const rows = table.features.map((row) => row.name).sort();
     expect(rows.filter((name, i) => rows.indexOf(name) !== i), 'duplicate rows').toEqual([]);
     expect([...new Set(called)]).toEqual(rows);

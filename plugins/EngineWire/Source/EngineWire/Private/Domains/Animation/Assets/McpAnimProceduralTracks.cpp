@@ -57,7 +57,7 @@ void SetFrameRateVia(UAnimSequence *Sequence, int32 FrameRate) {
   const FFrameRate Current = Sequence->GetDataModel()->GetFrameRate();
   if (FrameRate > 0 && Current.Denominator == 1 && Current.Numerator > 0 &&
       !Target.IsMultipleOf(Current) && !Target.IsFactorOf(Current)) {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_ANIM_DATA_FRAME_COUNT
     // One second converts exactly at every whole rate; the new clip's single 1/30 s frame does not and warned.
     Sequence->GetController().SetNumberOfFrames(FFrameNumber(Current.Numerator));
 #endif
@@ -69,7 +69,7 @@ void SetFrameRateVia(UAnimSequence *Sequence, int32 FrameRate) {
 #endif
 
 void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 FrameRate) {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_ANIM_DATA_FRAME_COUNT
   SetFrameRateVia(Sequence, FrameRate);
   Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
 #elif ENGINE_MINOR_VERSION == 1
@@ -110,14 +110,14 @@ void FillBetweenKeys(TArray<T> &Keys, TArray<int32> Keyed, BlendFn Blend) {
 
 bool McpEnsureBoneTrack(UAnimSequence *Sequence, FName Bone, bool &bOutHad) {
   IAnimationDataController &Controller = Sequence->GetController();
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_ANIM_DATA_FRAME_COUNT
   const auto Has = [&Controller, Bone] { return Controller.GetModel()->IsValidBoneTrackName(Bone); };
 #else
   const auto Has = [&Controller, Bone] { return Controller.GetModel()->FindBoneTrackByName(Bone) != nullptr; };
 #endif
   bOutHad = Has();
   if (!bOutHad) {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_ANIM_DATA_FRAME_COUNT
     Controller.AddBoneCurve(Bone);
 #elif ENGINE_MINOR_VERSION == 1
     Controller.AddBoneTrack(Bone);

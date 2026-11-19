@@ -79,7 +79,7 @@ if (TargetRig)
 MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, TargetRig);
 }
 }
-#if ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_IK_RETARGET_DEFAULT_OPS
 // From 5.6 a retargeter does nothing without its op stack (chains live on the FK Chains op), and the
 // factory makes an empty one; these are the ops the editor's own new-retargeter setup adds.
 Controller->AddDefaultOps();
@@ -145,7 +145,7 @@ FString JoinRetargetChainNames(const TArray<FName>& Names)
 // The source chain driving TargetChain; NAME_None when it is unmapped.
 FName RetargetSourceChainFor(UIKRetargeterController* Controller, FName TargetChain)
 {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_IK_RETARGET_CHAIN_BY_NAME
     return Controller->GetSourceChain(TargetChain);
 #else
     for (const TObjectPtr<URetargetChainSettings>& Settings : Controller->GetChainMappings())
@@ -161,7 +161,7 @@ FName RetargetSourceChainFor(UIKRetargeterController* Controller, FName TargetCh
 
 bool SetRetargetSourceChain(UIKRetargeterController* Controller, FName SourceChain, FName TargetChain)
 {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_IK_RETARGET_CHAIN_BY_NAME
     return Controller->SetSourceChain(SourceChain, TargetChain);
 #else
     for (const TObjectPtr<URetargetChainSettings>& Settings : Controller->GetChainMappings())
@@ -190,7 +190,7 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
     {
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("No IK Retargeter at '%s'."), *AssetPath), TEXT("ASSET_NOT_FOUND"));
     }
-#if ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_IK_RETARGET_RIG_BY_SIDE
     const UIKRigDefinition* SourceRig = Controller->GetIKRig(ERetargetSourceOrTarget::Source);
     const UIKRigDefinition* TargetRig = Controller->GetIKRig(ERetargetSourceOrTarget::Target);
 #else
@@ -222,7 +222,7 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
     // From 5.6 chain mappings live on retarget ops; an empty op stack maps nothing, so it gets the default ops,
     // which are removed again if the mapping then fails.
     bool bOpsAdded = false;
-#if ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_IK_RETARGET_DEFAULT_OPS
     if (Controller->GetNumRetargetOps() == 0)
     {
         Controller->AddDefaultOps();
@@ -232,7 +232,7 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
     int32 Mapped = 0;
     if (bAutoMap)
     {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_IK_RETARGET_CHAIN_BY_NAME
         Controller->AutoMapChains(EAutoMapChainType::Exact, false);
         Controller->AutoMapChains(EAutoMapChainType::Fuzzy, false);
 #else
@@ -241,7 +241,7 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
         for (const FName& Chain : TargetChains) { Mapped += RetargetSourceChainFor(Controller, Chain).IsNone() ? 0 : 1; }
         if (Mapped == 0)
         {
-#if ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_IK_RETARGET_DEFAULT_OPS
             if (bOpsAdded) { Controller->RemoveAllOps(); }
 #endif
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Auto-mapping matched no chains (source: %s; target: %s). Map them one at a time with targetChain and sourceChain."),
@@ -250,7 +250,7 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
     }
     else if (!SetRetargetSourceChain(Controller, Source, Target) || RetargetSourceChainFor(Controller, Target) != Source)
     {
-#if ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_IK_RETARGET_DEFAULT_OPS
         if (bOpsAdded) { Controller->RemoveAllOps(); }
 #endif
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The retargeter did not accept %s -> %s."), *Source.ToString(), *Target.ToString()), TEXT("MAPPING_FAILED"));

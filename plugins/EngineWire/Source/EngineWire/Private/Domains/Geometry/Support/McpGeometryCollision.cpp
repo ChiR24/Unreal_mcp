@@ -5,7 +5,7 @@
 
 namespace McpGeometryHandlers
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_COLLISION
 MCP_COMPILED_FEATURE(GEOMETRY_COLLISION)
 // Generates simple collision from the mesh onto its component; returns the resulting shape count.
 static int32 ApplyMeshCollision(UDynamicMesh* Mesh, UDynamicMeshComponent* DMC, EGeometryScriptCollisionGenerationMethod Method, int32 MaxHulls)
@@ -30,7 +30,7 @@ bool HandleGenerateCollision(UEngineWireSubsystem* Self, const FString& RequestI
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_COLLISION
     EGeometryScriptCollisionGenerationMethod Method = EGeometryScriptCollisionGenerationMethod::MinVolumeShapes;
     int32 MaxHulls = 1;
     if (CollisionType == TEXT("box")) Method = EGeometryScriptCollisionGenerationMethod::AlignedBoxes;
@@ -74,7 +74,7 @@ bool HandleSimplifyCollision(UEngineWireSubsystem* Self, const FString& RequestI
     if (!Target) return true;
     auto [TargetActor, DMC, Mesh] = *Target;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_COLLISION
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
     SimplifyOptions.Method = EGeometryScriptRemoveMeshSimplificationType::StandardQEM;
     SimplifyOptions.bAllowSeamCollapse = true;

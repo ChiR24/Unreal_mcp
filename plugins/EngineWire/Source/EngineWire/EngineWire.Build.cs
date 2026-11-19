@@ -88,6 +88,7 @@ public class EngineWire : ModuleRules {
         if (Detect(EngineDir, "SUBOBJECT_DATA_INTERFACE")) PrivateDependencyModuleNames.Add("SubobjectDataInterface");
         else if (!PrivateDependencyModuleNames.Contains("SubobjectData")) PrivateDependencyModuleNames.Add("SubobjectData");
         PublicDefinitions.Add(Detect(EngineDir, "WP_FOR_EACH_DATALAYER") ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+        DefineDetectedFeatures(EngineDir);
 
         if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Configuration == UnrealTargetConfiguration.Debug)
             PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
@@ -195,11 +196,23 @@ public class EngineWire : ModuleRules {
 
     private JsonObject[] FeatureRows;
 
-    // A FeatureDetection.json row: the first of its paths that exists must hold its marker (or just exist, with none).
-    private bool Detect(string EngineDir, string Name) {
+    private JsonObject[] Rows() {
         if (FeatureRows == null && !JsonObject.Read(new FileReference(Path.Combine(ModuleDirectory, "FeatureDetection.json"))).TryGetObjectArrayField("features", out FeatureRows))
             throw new Exception("EngineWire: FeatureDetection.json has no features array");
-        JsonObject Row = FeatureRows.FirstOrDefault(Each => Each.TryGetStringField("name", out string RowName) && RowName == Name);
+        return FeatureRows;
+    }
+
+    // Every row marked "define": MCP_HAS_<name>, decided as Detect() decides it, for the C++ to test instead of a version.
+    private void DefineDetectedFeatures(string EngineDir) {
+        foreach (JsonObject Row in Rows()) {
+            if (Row.TryGetBoolField("define", out bool bDefine) && bDefine && Row.TryGetStringField("name", out string Name))
+                PublicDefinitions.Add(string.Format("MCP_HAS_{0}={1}", Name, Detect(EngineDir, Name) ? 1 : 0));
+        }
+    }
+
+    // A FeatureDetection.json row: the first of its paths that exists must hold its marker (or just exist, with none).
+    private bool Detect(string EngineDir, string Name) {
+        JsonObject Row = Rows().FirstOrDefault(Each => Each.TryGetStringField("name", out string RowName) && RowName == Name);
         string[] Paths = null;
         if (Row == null || !Row.TryGetStringArrayField("paths", out Paths))
             throw new Exception(string.Format("EngineWire: FeatureDetection.json has no row named {0} with paths", Name));

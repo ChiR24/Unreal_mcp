@@ -22,7 +22,7 @@
 
 namespace
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_BLACKBOARD_KEY_DEFAULTS
 // true/false, 1/0, or the same as text.
 bool ReadBoolValue(const TSharedPtr<FJsonValue>& Value, bool& Out)
 {
@@ -65,7 +65,7 @@ bool ReadRotatorValue(const TSharedPtr<FJsonValue>& Value, FRotator& Out)
 }
 #endif
 
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_BLACKBOARD_ENUM_DEFAULT
 // An enumerator by name, display name (McpParseEnumToken) or value; the key stores it in a byte.
 bool ReadEnumValue(const UEnum* Enum, const TSharedPtr<FJsonValue>& Value, uint8& Out)
 {
@@ -154,7 +154,7 @@ void NotifyBlackboardKeysChanged(UBlackboardData* Blackboard)
 bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJsonValue>& Value, FString& OutError, FString& OutCode)
 {
     const FString Type = BlackboardKeyTypeName(KeyType->GetClass());
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_BLACKBOARD_KEY_DEFAULTS
     const FString Bad = FString::Printf(TEXT("value does not fit a %s key: "), *Type);
     FString Text;
     if (UBlackboardKeyType_Bool* Key = Cast<UBlackboardKeyType_Bool>(KeyType))
@@ -208,7 +208,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
         if (NameKey) { NameKey->DefaultValue = FName(*Text); } else { StringKey->DefaultValue = Text; }
         return true;
     }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_BLACKBOARD_ENUM_DEFAULT
     if (UBlackboardKeyType_Enum* Key = Cast<UBlackboardKeyType_Enum>(KeyType))
     {
         uint8 Parsed = 0;
@@ -246,7 +246,7 @@ bool WriteBlackboardKeyDefault(UBlackboardKeyType* KeyType, const TSharedPtr<FJs
 
 bool ReadBlackboardKeyDefault(const UBlackboardKeyType* KeyType, FString& OutText)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_BLACKBOARD_KEY_DEFAULTS
     if (const UBlackboardKeyType_Bool* Bool = Cast<UBlackboardKeyType_Bool>(KeyType)) { OutText = Bool->bDefaultValue ? TEXT("true") : TEXT("false"); return true; }
     if (const UBlackboardKeyType_Int* Int = Cast<UBlackboardKeyType_Int>(KeyType)) { OutText = FString::FromInt(Int->DefaultValue); return true; }
     if (const UBlackboardKeyType_Float* Float = Cast<UBlackboardKeyType_Float>(KeyType)) { OutText = FString::SanitizeFloat(Float->DefaultValue); return true; }
@@ -255,7 +255,7 @@ bool ReadBlackboardKeyDefault(const UBlackboardKeyType* KeyType, FString& OutTex
     if (const UBlackboardKeyType_Name* Name = Cast<UBlackboardKeyType_Name>(KeyType)) { OutText = Name->DefaultValue.ToString(); return true; }
     if (const UBlackboardKeyType_String* String = Cast<UBlackboardKeyType_String>(KeyType)) { OutText = String->DefaultValue; return true; }
 #endif
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_BLACKBOARD_ENUM_DEFAULT
     if (const UBlackboardKeyType_Enum* Enum = Cast<UBlackboardKeyType_Enum>(KeyType))
     {
         OutText = Enum->EnumType ? Enum->EnumType->GetNameStringByValue(Enum->DefaultValue) : FString::FromInt(Enum->DefaultValue);

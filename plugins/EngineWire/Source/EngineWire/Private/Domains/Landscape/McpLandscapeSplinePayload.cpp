@@ -10,7 +10,7 @@
 #include "LandscapeSplinesComponent.h"
 #include "Misc/App.h"
 #include "UObject/UnrealType.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_LANDSCAPE_EDIT_LAYER_CLASSES
 #include "LandscapeEditLayer.h"
 #endif
 
@@ -144,9 +144,9 @@ namespace {
 // The edit layer reserved for landscape splines: the layer of the splines class from 5.5, the reserved guid before.
 const FLandscapeLayer *McpFindLandscapeSplinesLayer(ALandscape *Landscape)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_LANDSCAPE_FIND_LAYER_CONST
     return Landscape->FindLayerOfTypeConst(ULandscapeEditLayerSplines::StaticClass());
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 5
+#elif MCP_HAS_LANDSCAPE_EDIT_LAYER_CLASSES
     return Landscape->FindLayerOfType(ULandscapeEditLayerSplines::StaticClass());
 #else
     return Landscape->GetLandscapeSplinesReservedLayer();
@@ -163,7 +163,7 @@ bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<F
 {
     ULandscapeInfo *Info = Landscape->GetLandscapeInfo();
     bOutMerge = false;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 7
+#if !MCP_HAS_LANDSCAPE_EDIT_LAYERS_ONLY
     if (!Landscape->HasLayersContent())
     {
         TSet<TObjectPtr<ULandscapeComponent>> Shaped;
@@ -178,7 +178,7 @@ bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<F
     const bool bCreated = !Layer && !Landscape->IsMaxLayersReached();
     if (bCreated)
     {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_LANDSCAPE_EDIT_LAYER_CLASSES
         Landscape->CreateLayer(FName(TEXT("Splines")), ULandscapeEditLayerSplines::StaticClass());
 #else
         const int32 LayerIndex = Landscape->CreateLayer(FName(TEXT("Splines")));
@@ -205,7 +205,7 @@ bool McpApplyLandscapeSplinesToTerrain(ALandscape *Landscape, const TSharedPtr<F
     }
     if (Layer)
     {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_LANDSCAPE_EDIT_LAYER_NAME
         Resp->SetStringField(TEXT("splinesLayer"), Layer->EditLayer ? Layer->EditLayer->GetName().ToString() : FString());
 #else
         Resp->SetStringField(TEXT("splinesLayer"), Layer->Name.ToString());
