@@ -83,6 +83,17 @@ FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
 {
     const TSharedPtr<FJsonObject>* Object = nullptr;
     TSharedPtr<FJsonValue> Field = Item.IsValid() && Item->TryGetObject(Object) && Object ? (*Object)->TryGetField(GroupBy) : nullptr;
+    // A nested field by its dotted path, as the rows show it: location.z.
+    TArray<FString> Steps;
+    if (!Field.IsValid() && Object && GroupBy.ParseIntoArray(Steps, TEXT(".")) > 1)
+    {
+        Field = MakeShared<FJsonValueObject>(*Object);
+        for (const FString& Step : Steps)
+        {
+            const TSharedPtr<FJsonObject>* Inner = nullptr;
+            Field = Field.IsValid() && Field->TryGetObject(Inner) && Inner ? (*Inner)->TryGetField(Step) : nullptr;
+        }
+    }
     // A find row names its actor by name alone (a list row has label too): label falls back to it, as the sample does.
     if (!Field.IsValid() && Object && GroupBy == TEXT("label"))
     {
@@ -103,6 +114,7 @@ FString GroupValue(const TSharedPtr<FJsonValue>& Item, const FString& GroupBy)
     {
         return GroupBy == TEXT("label") || GroupBy == TEXT("name") || GroupBy == TEXT("actorName") ? LabelStem(Text) : Text;
     }
+    if (Field->Type == EJson::Number) { return FString::Printf(TEXT("%g"), Field->AsNumber()); }
     return Field->Type == EJson::Boolean ? (Field->AsBool() ? TEXT("true") : TEXT("false")) : TEXT("(other)");
 }
 
@@ -116,7 +128,7 @@ FString CountableFields(const TSharedPtr<FJsonValue>& Item)
         for (const auto& Entry : (*Object)->Values)
         {
             const FString Key(*Entry.Key); // 5.8 keys are not FString
-            if (Entry.Value.IsValid() && (Entry.Value->Type == EJson::String || Entry.Value->Type == EJson::Boolean))
+            if (Entry.Value.IsValid() && (Entry.Value->Type == EJson::String || Entry.Value->Type == EJson::Boolean || Entry.Value->Type == EJson::Number))
             {
                 Names.Add(Key);
             }
@@ -241,7 +253,7 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
             Block->TryGetStringField(TEXT("note"), Note);
             Block->SetStringField(TEXT("note"), (Note.IsEmpty() ? FString() : Note + TEXT(" ")) +
                 FString::Printf(TEXT("No item has a '%s' value, so each counts as (none)."), *GroupBy) +
-                (Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" An item's fields to count by: %s."), *Fields)));
+                (Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" An item's fields to count by: %s (a nested one by its dotted path, location.z)."), *Fields)));
         }
         TArray<TSharedPtr<FJsonValue>> Rows;
         for (int32 Index = 0; Index < Order.Num() && Index < McpAggregateMaxGroups; ++Index)
