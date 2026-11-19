@@ -4,6 +4,7 @@
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "Safety/McpSafeOperationsAssetClassification.h"
 #include "Safety/McpSafeOperationsLog.h"
+#include "Safety/McpMissingReferences.h"
 #include "PackageTools.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -187,6 +188,9 @@ inline bool McpSafeAssetSave(UObject* Asset)
         if (bSaved && McpPackageHasBackingFile(PackageName))
         {
             ScanPathSynchronous(FPaths::GetPath(PackageName), false);
+            // A reference saved into a path nothing answers to, or into a package never saved, resolves to nothing
+            // once the editor restarts: the saving call says so in its warnings.
+            McpWarnMissingReferences(AssetToSave, EMcpMissingReferenceCheck::Save);
             return true;
         }
 
@@ -211,6 +215,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
     if ((bPromptSaveSucceeded || bEditorSaveSucceeded) && bExistsOnDisk)
     {
         ScanPathSynchronous(FPaths::GetPath(PackageName), false);
+        McpWarnMissingReferences(Package, EMcpMissingReferenceCheck::Save);
         return true;
     }
 

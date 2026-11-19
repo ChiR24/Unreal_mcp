@@ -10,6 +10,7 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Logging/TokenizedMessage.h"
 #include "RenderingThread.h"
+#include "Safety/McpMissingReferences.h"
 
 // Every Blueprint compile the plugin runs (a Control Rig and a copy made by the
 // same call aside: nothing placed is an instance of either). Flushing around
@@ -27,6 +28,8 @@ static inline void McpCompileBlueprint(UBlueprint *Blueprint, FCompilerResultsLo
   FlushRenderingCommands();
   FKismetEditorUtilities::CompileBlueprint(Blueprint, Options, Results);
   FlushRenderingCommands();
+  // A path nothing answers to compiles cleanly and loads as nothing in Play: the compiling call says so in its warnings.
+  McpWarnMissingReferences(Blueprint, EMcpMissingReferenceCheck::Compile);
 
   UClass *Class = Blueprint->GeneratedClass.Get();
   UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
