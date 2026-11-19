@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpBPActionContext.h"
+#include "Domains/Property/McpPropTarget.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpBPCompileHelpers.h"
@@ -141,12 +142,29 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Capture the value before compilation invalidates the Property pointer
-    const TSharedPtr<FJsonValue> CurrentValue =
-        McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property);
-
+    // Captured before the compile frees a property the Blueprint declares. An instanced object exports under a new name
+    // in every copy, so it never reads back as written and is not compared.
+    const FString WrittenText = McpPropertyTarget::ValueText(Property, TargetContainer);
+    const bool bCompare = !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);
+    // A variable the Blueprint declares takes its default back from the declaration on every compile, so the written
+    // value goes there too: the compile below put the old value back while the reply showed the new one.
+    McpPropertyTarget::KeepDeclaredDefault(Blueprint, CDO, PropertyName);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
+    // Read back off the new default object (what a spawn gets): a value the compile did not keep is an error.
+    UObject *Fresh = nullptr;
+    FProperty *Kept = nullptr;
+    void *KeptContainer = nullptr;
+    const bool bFound = McpPropertyTarget::FindOnCurrentDefault(Blueprint, PropertyName, Fresh, Kept, KeptContainer);
+    const FString KeptText = bFound ? McpPropertyTarget::ValueText(Kept, KeptContainer) : FString(TEXT("(property gone)"));
+    if (!bFound || (bCompare && KeptText != WrittenText)) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("The Blueprint compile did not keep the write: '%s' reads '%s' on the Blueprint's default "
+                               "object afterwards, not '%s'."), *PropertyName, *KeptText, *WrittenText),
+          TEXT("PROPERTY_SET_FAILED"));
+      return true;
+    }
+    const TSharedPtr<FJsonValue> CurrentValue = McpPropertyReflection::ExportPropertyToJsonValue(KeptContainer, Kept);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
