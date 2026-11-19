@@ -75,7 +75,9 @@ private:
      *  their defaults so the statement wires it afresh (McpGraphCodeWriteForm.cpp). */
     UEdGraphNode* Reuse(const FString& TypeId);
     /** bValue: the node gives a value, so a menu entry calling a function with a result goes first (FindMenuEntry). */
-    UEdGraphNode* Create(const FString& TypeId, bool bValue = false);
+    // First: the pin the first positional argument comes from, when known; among menu entries sharing TypeId it picks the
+    // one that takes that object (McpGraphCodeWriteNodes.cpp, ByFirstArgument).
+    UEdGraphNode* Create(const FString& TypeId, bool bValue = false, const UEdGraphPin* First = nullptr);
     bool Connect(UEdGraphPin* Out, UEdGraphPin* In);
     // McpGraphCodeWriteValues.cpp: a literal as a pin's value (refused when an object pin's path loads nothing), and a
     // Make Literal node for a pin with no type yet.
@@ -105,6 +107,8 @@ private:
 
     // McpGraphCodeWriteStmts.cpp
     bool Stmts(const TArray<FSExpr>& Body, int32 From, FBindings Bindings, FFlow& Flow);
+    /** Form's body from Start, wired from Entry's exec output, or one (:Pin ...) case per named output (McpGraphCodeWriteStmts.cpp). */
+    bool EntryBody(UEdGraphNode* Entry, const FSExpr& Form, int32 Start, const FBindings& Bindings);
     bool Stmt(const FSExpr& Stmt, FBindings& Bindings, FFlow& Flow);
     bool Bind(const FSExpr& Stmt, FBindings& Bindings, FFlow& Flow);
     bool Return(const FSExpr& Stmt, const FBindings& Bindings, FFlow& Flow);
@@ -172,5 +176,9 @@ bool PlanGraph(const TArray<FSExpr>& Forms, FGraphPlan& Plan, FString& OutError)
  *  (McpGraphCodeWriteForm.cpp). */
 bool BuildForms(UBlueprint* Blueprint, const TArray<FSExpr>& Forms, TArray<FMenuEntry>& Candidates, const TSet<FString>& Titles,
                 FGraphPlan& Plan, TMap<UEdGraphNode*, int32>& Made, TArray<TSharedPtr<FJsonValue>>& FormRows, FString& OutError);
+
+/** Among Menu's entries sharing Found's id, the one whose node takes First's object class (its target, else its first
+ *  object parameter); Found when First is no object or none takes it (McpGraphCodeWriteOps.cpp). */
+const FMenuEntry* ByFirstArgument(const TArray<FMenuEntry>& Menu, const FMenuEntry* Found, const UEdGraphPin* First);
 } // namespace Write
 } // namespace McpGraphCode

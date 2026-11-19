@@ -216,7 +216,8 @@ UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Binding
             return nullptr;
         }
     }
-    UEdGraphNode* Node = Create(TypeId, bValue);
+    const FArg* Lead = Args.Num() > 0 && Args[0].Pin.IsEmpty() ? &Args[0] : nullptr;
+    UEdGraphNode* Node = Create(TypeId, bValue, Lead ? (Lead->Pre ? Lead->Pre : Bindings.FindRef(Lead->Value->Text)) : nullptr);
     if (!Node)
     {
         return nullptr;

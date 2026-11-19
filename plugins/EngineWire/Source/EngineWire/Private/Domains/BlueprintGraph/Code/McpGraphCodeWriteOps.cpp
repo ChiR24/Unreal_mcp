@@ -1,6 +1,9 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
 
+#include "BlueprintActionFilter.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
+#include "UObject/UnrealType.h"
 
 namespace McpGraphCode
 {
@@ -21,9 +24,51 @@ bool IsQuoted(const FSExpr& Value)
 {
     return Value.Type == FSExpr::EType::String;
 }
+
+// The class a function's node takes first: a member function's own class (its target), else its first parameter that is
+// not the hidden world context, when that is an object. Null otherwise.
+const UClass* FirstTaken(const UFunction* Function)
+{
+    if (!Function || !Function->HasAnyFunctionFlags(FUNC_Static))
+    {
+        return Function ? Function->GetOwnerClass() : nullptr;
+    }
+    const FString Context = Function->GetMetaData(TEXT("WorldContext"));
+    for (TFieldIterator<FProperty> It(Function); It && It->HasAnyPropertyFlags(CPF_Parm); ++It)
+    {
+        if (!It->HasAnyPropertyFlags(CPF_ReturnParm | CPF_OutParm) && It->GetName() != Context)
+        {
+            const FObjectPropertyBase* Object = CastField<FObjectPropertyBase>(*It);
+            return Object ? Object->PropertyClass : nullptr;
+        }
+    }
+    return nullptr;
+}
 } // namespace WriteOpsParts
 
 using namespace WriteOpsParts;
+
+// Several entries can share one id (Rendering|Material|SetVectorParameterValue: a Material Instance Dynamic's own, and
+// the Kismet Material Library's for a parameter collection), and the first by owner path was taken whatever the code
+// passed. An object first argument decides: the entry whose node takes that object's class.
+const FMenuEntry* ByFirstArgument(const TArray<FMenuEntry>& Menu, const FMenuEntry* Found, const UEdGraphPin* First)
+{
+    const UClass* Given = First && First->PinType.PinCategory == UEdGraphSchema_K2::PC_Object
+                              ? Cast<UClass>(First->PinType.PinSubCategoryObject.Get()) : nullptr;
+    if (!Found || !Given)
+    {
+        return Found;
+    }
+    for (const FMenuEntry& Entry : Menu)
+    {
+        const UClass* Takes = FirstTaken(FBlueprintActionInfo(Entry.Owner, Entry.Spawner).GetAssociatedFunction());
+        if (Entry.Id.Equals(Found->Id, ESearchCase::CaseSensitive) && Takes && Given->IsChildOf(Takes))
+        {
+            return &Entry;
+        }
+    }
+    return Found;
+}
 
 // Epic's _eval_binop and _eval_not: (op a b), (not a); a + with a quoted string is an Append, since Add takes numbers.
 bool FTranspiler::BinOp(const FSExpr& Call, const FBindings& Bindings, FFlow& Flow, UEdGraphPin*& Out)

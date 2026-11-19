@@ -1,6 +1,8 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
 
+#include "Algo/AllOf.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
 #include "K2Node_FunctionResult.h"
 
 namespace McpGraphCode
@@ -11,6 +13,33 @@ bool IsHead(const FSExpr& Form, const TCHAR* Word)
 {
     return Form.Type == FSExpr::EType::List && Form.Items.Num() > 0 && Form.Items[0].Type == FSExpr::EType::Symbol &&
            Form.Items[0].Text.Equals(Word, ESearchCase::CaseSensitive);
+}
+
+// A form's body starts from its entry's exec output. An entry with named exec outputs and no then (an Enhanced Input
+// action event: Started, Triggered...) takes a body of (:Pin ...) cases, one per output, as read_graph_as_code prints it;
+// such a body read empty and could not be written back.
+bool FTranspiler::EntryBody(UEdGraphNode* Entry, const FSExpr& Form, int32 Start, const FBindings& Bindings)
+{
+    const TArray<FSExpr> Body(Form.Items.GetData() + Start, Form.Items.Num() - Start);
+    const bool bCases = Body.Num() > 0 && !ExecPin(Entry, false, TEXT("then")) && Algo::AllOf(Body, [](const FSExpr& Each)
+        { return Each.Type == FSExpr::EType::List && Each.Items.Num() > 0 && Each.Items[0].Text.StartsWith(TEXT(":")); });
+    for (int32 At = 0; At < (bCases ? Body.Num() : 1); ++At)
+    {
+        const FString PinName = bCases ? Body[At].Items[0].Text.Mid(1) : FString();
+        UEdGraphPin* Exec = ExecPin(Entry, false, PinName);
+        if (!Exec)
+        {
+            return Fail(FString::Printf(TEXT("%s has no exec output %s to start a body from."), *FormName(Form), *PinName));
+        }
+        Graph->GetSchema()->BreakPinLinks(*Exec, true);
+        FFlow Flow{{Exec}, nullptr};
+        TagForExec.Reset();
+        if (!(bCases ? Stmts(Body[At].Items, 1, Bindings, Flow) : Stmts(Form.Items, Start, Bindings, Flow)))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 // Epic's _process_stmts: statement by statement, each wired from where the last left the flow; code after a statement

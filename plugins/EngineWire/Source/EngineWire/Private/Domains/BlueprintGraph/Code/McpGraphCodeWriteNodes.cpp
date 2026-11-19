@@ -126,7 +126,7 @@ bool FTranspiler::Fail(const FString& Message)
 
 // Epic's create_node: a named custom event, else the menu entry with that id (FindMenuEntry: any case when no exact one,
 // a value-giving function first for a value), else a StandardMacros graph of that title.
-UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
+UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue, const UEdGraphPin* First)
 {
     if (UEdGraphNode* Reused = Reuse(TypeId))
     {
@@ -144,7 +144,7 @@ UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
     }
     else
     {
-        const FMenuEntry* Found = FindMenuEntry(Menu, TypeId, bValue);
+        const FMenuEntry* Found = ByFirstArgument(Menu, FindMenuEntry(Menu, TypeId, bValue), First);
         if (Found)
         {
             const FBlueprintActionInfo Info(Found->Owner, Found->Spawner);

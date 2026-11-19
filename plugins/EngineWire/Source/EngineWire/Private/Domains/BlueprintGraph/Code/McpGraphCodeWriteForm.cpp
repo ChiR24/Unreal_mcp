@@ -113,15 +113,7 @@ bool FTranspiler::Body(const FSExpr& Form, UEdGraphNode* InEntry)
         }
         Bindings.Add(TEXT("self"), Self[0]);
     }
-    UEdGraphPin* Then = ExecPin(InEntry, false, FString());
-    if (!Then)
-    {
-        return Fail(FString::Printf(TEXT("%s has no exec output to start a body from."), *FormName(Form)));
-    }
-    Graph->GetSchema()->BreakPinLinks(*Then, true);
-    FFlow Flow{{Then}, nullptr};
-    TagForExec.Reset();
-    return Stmts(Form.Items, Start, Bindings, Flow);
+    return EntryBody(InEntry, Form, Start, Bindings);
 }
 
 // A return node is matched by class: the menu calls it Add Return Node..., the node itself Return Node.

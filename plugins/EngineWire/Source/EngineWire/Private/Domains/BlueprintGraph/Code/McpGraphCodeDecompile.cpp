@@ -196,6 +196,12 @@ FString FDecompiler::Run(TSet<int32>& OutPlaced, TArray<FString>& OutWarnings)
         {
             Stmts(Then, State);
         }
+        // An entry with named exec outputs and no then (an Enhanced Input action event: Started, Triggered...) prints one
+        // (:Pin ...) per wired output, as a call with continuations does; its body read empty.
+        else if (!FindPinNamed(Node.Outs, TEXT("then")))
+        {
+            State.Lines = Continuations(Entry, FState{Bindings, 0, {}});
+        }
         for (const FForm& Form : State.Lines)
         {
             Form.Render(Lines);
