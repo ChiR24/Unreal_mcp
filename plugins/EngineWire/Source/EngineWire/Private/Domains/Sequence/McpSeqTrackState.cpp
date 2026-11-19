@@ -6,7 +6,7 @@
 namespace {
 // An animation section's speed when it is a fixed one: from 5.5 a section can also warp time (a loop, a clamp, a curve).
 double ClipPlayRate(const UMovieSceneSkeletalAnimationSection *Clip, bool &bOutFixed) {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_SEQUENCER_TIME_WARP_VARIANT
   bOutFixed = Clip->Params.PlayRate.GetType() == EMovieSceneTimeWarpType::FixedPlayRate;
   return bOutFixed ? Clip->Params.PlayRate.AsFixedPlayRate() : 1.0;
 #else
@@ -16,7 +16,7 @@ double ClipPlayRate(const UMovieSceneSkeletalAnimationSection *Clip, bool &bOutF
 }
 
 void SetClipPlayRate(UMovieSceneSkeletalAnimationSection *Clip, double Rate) {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if MCP_HAS_SEQUENCER_TIME_WARP_VARIANT
   Clip->Params.PlayRate = FMovieSceneTimeWarpVariant(Rate);
 #else
   Clip->Params.PlayRate = static_cast<float>(Rate);

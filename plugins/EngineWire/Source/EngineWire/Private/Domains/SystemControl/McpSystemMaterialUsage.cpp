@@ -44,7 +44,7 @@ const FMcpUsageNeed McpInstancedNeed{MATUSAGE_InstancedStaticMeshes, TEXT("Insta
 const FMcpUsageNeed McpSplineNeed{MATUSAGE_SplineMesh, TEXT("SplineMesh"), TEXT("bUsedWithSplineMeshes")};
 const FMcpUsageNeed McpSkeletalNeed{MATUSAGE_SkeletalMesh, TEXT("SkeletalMesh"), TEXT("bUsedWithSkeletalMesh")};
 
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_MATERIAL_INSTANCE_USAGE_FLAGS
 // 5.8 gave material instances flags of their own, and sets a missing one without the engine's record of usage flags
 // awaiting a save (UMaterial::IsUsageFlagDirty); its log line is the only notice. "<instance path>|<usage>" to when.
 FCriticalSection GMcpInstanceUsageMutex;
@@ -91,7 +91,7 @@ bool McpUsagePending(UMaterialInterface *Owner, EMaterialUsage Usage)
     {
         return Material->IsUsageFlagDirty(Usage);
     }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_MATERIAL_INSTANCE_USAGE_FLAGS
     FDateTime Given;
     {
         FScopeLock Lock(&GMcpInstanceUsageMutex);
@@ -125,7 +125,7 @@ void McpCheckUsage(UMaterialInterface *Interface, const FMcpUsageNeed &Need, con
     {
         return;
     }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_MATERIAL_INSTANCE_USAGE_FLAGS
     // 5.8 gave material instances flags of their own: the editor sets a missing one on the instance, which then
     // compiles its own shaders. Earlier engines set it on the base material.
     UMaterialInterface *Owner = Interface->IsA<UMaterialInstanceDynamic>() ? Base : Interface;
@@ -202,7 +202,7 @@ void McpCheckComponent(const UPrimitiveComponent *Part, const FString &Name, TAr
 
 void McpWatchMaterialUsage(bool bWatch)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_MATERIAL_INSTANCE_USAGE_FLAGS
     if (GLog && bWatch != bMcpWatchingUsage)
     {
         bWatch ? GLog->AddOutputDevice(&GMcpUsageLogWatch) : GLog->RemoveOutputDevice(&GMcpUsageLogWatch);

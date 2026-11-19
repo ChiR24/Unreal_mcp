@@ -13,7 +13,7 @@
 #include "UObject/Package.h"
 #include "WorldPartition/HLOD/HLODLayer.h"
 #include "WorldPartition/WorldPartition.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WP_MINIMAP_VOLUME
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
 #endif
 
@@ -136,7 +136,7 @@ bool HandleCreateMinimapVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WP_MINIMAP_VOLUME
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));

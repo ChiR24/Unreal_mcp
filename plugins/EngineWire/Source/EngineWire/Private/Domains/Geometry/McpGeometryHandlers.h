@@ -23,14 +23,14 @@
 #include "Subsystems/EditorActorSubsystem.h"
 #include "UDynamicMesh.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_GEOMETRY_CORE_BOUNDARY_LOOPS
 #include "MeshBoundaryLoops.h"
 #include "EdgeLoop.h"
 #endif
 
 // GeometryScripting is linked only when Build.cs finds it, and it is Experimental (so left out) in some
 // packages; its headers are then off the include path and the whole domain compiles out.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && __has_include("GeometryScript/MeshPrimitiveFunctions.h")
+#if MCP_HAS_GEOMETRY_SCRIPT_SELECTION && __has_include("GeometryScript/MeshPrimitiveFunctions.h")
 #define MCP_HAS_FULL_GEOMETRY_SCRIPT 1
 #else
 #define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
@@ -47,7 +47,7 @@
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBasicEditFunctions.h"
 #include "GeometryScript/MeshBooleanFunctions.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_COLLISION
 #include "GeometryScript/CollisionFunctions.h"
 #endif
 #include "GeometryScript/MeshDeformFunctions.h"
@@ -62,8 +62,8 @@
 #include "GeometryScript/MeshTransformFunctions.h"
 #include "GeometryScript/MeshUVFunctions.h"
 
-// The asset functions' Outcome out-parameter is a TEnumAsByte in UE 5.1 and the plain enum from 5.2.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+// The asset functions' Outcome out-parameter: a TEnumAsByte where their header declares one, else the plain enum.
+#if MCP_HAS_GEOMETRY_SCRIPT_OUTCOME_AS_BYTE
 using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
 #else
 using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;

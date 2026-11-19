@@ -53,7 +53,7 @@ static bool AddSimulationStage(FActionContext& Context)
         Source = ENiagaraIterationSource::DataInterface;
         IterationSource = TEXT("DataInterface");
     }
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_NIAGARA_ITERATION_DIRECT_SET
     else if (IterationSource.Equals(TEXT("DirectSet"), ESearchCase::IgnoreCase))
     {
         Source = ENiagaraIterationSource::DirectSet;
@@ -112,7 +112,7 @@ static bool AddSimulationStage(FActionContext& Context)
                 return true;
             }
         }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
         Emitter->AddSimulationStage(NewStage, Target.VersionedEmitter.Version);
 #else
         Emitter->AddSimulationStage(NewStage);

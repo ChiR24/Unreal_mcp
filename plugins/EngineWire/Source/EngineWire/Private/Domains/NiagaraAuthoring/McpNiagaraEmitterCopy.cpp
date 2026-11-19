@@ -74,7 +74,7 @@ static TArray<FString> CopyUserParameters(UNiagaraSystem* System, UNiagaraSystem
         }
         const FNiagaraVariable Param(Var);
         Target.AddParameter(Param, true);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 2
+#if MCP_HAS_NIAGARA_INLINE_COPY_PARAMETER_DATA
         // 5.0 and 5.1 inline CopyParameterData, which logs to LogNiagara, a category the Niagara module does not
         // export: the plugin did not link. The same copy, through the store's exported members.
         const FNiagaraParameterStore& From = Source->GetExposedParameters();
@@ -130,7 +130,7 @@ bool CopyEmitterFromSystem(FActionContext& Context)
                                           *ListEmitterNames(Source)), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     const FVersionedNiagaraEmitter Instance = SourceHandle->GetInstance();
     UNiagaraEmitter* SourceEmitter = Instance.Emitter;
     FVersionedNiagaraEmitterData* SourceData = SourceEmitter ? SourceHandle->GetEmitterData() : nullptr;
@@ -161,7 +161,7 @@ bool CopyEmitterFromSystem(FActionContext& Context)
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     System->Modify();
     // The editor's own add: it stops the system's instances and rebuilds its emitter nodes and overview graph.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     const FGuid AddedId = FNiagaraEditorUtilities::AddEmitterToSystem(*System, *SourceEmitter, Instance.Version, false);
 #else
     const FGuid AddedId = FNiagaraEditorUtilities::AddEmitterToSystem(*System, *SourceEmitter, false);

@@ -6,11 +6,11 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "UObject/UnrealType.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #endif
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
 namespace McpLevelStructure
 {
 

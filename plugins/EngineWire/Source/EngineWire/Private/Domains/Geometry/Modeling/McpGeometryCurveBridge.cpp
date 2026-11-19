@@ -20,11 +20,11 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
     bool bFillHolesInstead = false;
     bool bBridgeFailed = false;
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_GEOMETRY_CORE_BOUNDARY_LOOPS
     // Get direct access to FDynamicMesh3 for low-level operations
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
-    // Find boundary loops using GeometryCore's FMeshBoundaryLoops (UE 5.5+)
+    // Find boundary loops using GeometryCore's FMeshBoundaryLoops
     UE::Geometry::FMeshBoundaryLoops BoundaryLoops(&EditMesh, true);
 
     if (BoundaryLoops.bAborted)
@@ -111,7 +111,7 @@ bool HandleBridge(UEngineWireSubsystem* Self, const FString& RequestId,
         }
     }
 #else
-    BridgeStatus = TEXT("Bridging requires UE 5.5+ (FMeshBoundaryLoops). Filling holes instead.");
+    BridgeStatus = TEXT("Bridging needs GeometryCore's boundary loops (FMeshBoundaryLoops), which this engine lacks. Filling holes instead.");
     bFillHolesInstead = true;
 #endif
     // Nothing changed here, under a reply that said "Bridge applied".

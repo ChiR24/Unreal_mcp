@@ -13,7 +13,7 @@
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
 #include "UObject/StructOnScope.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_DATA_LAYER_ASSETS
 #include "WorldPartition/DataLayer/DataLayerAsset.h"
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
 #endif
@@ -67,7 +67,7 @@ bool HandleCreateDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_DATA_LAYER_ASSETS
     using namespace LevelStructureHelpers;
 
     // CRITICAL: dataLayerName is required - no default fallback
@@ -94,7 +94,7 @@ bool HandleCreateDataLayer(
             "(streams in the game) or Editor (organises the editor only). Nothing was created."), *DataLayerType), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if !MCP_HAS_DATA_LAYER_PRIVATE
     if (bIsPrivate)
     {
         Subsystem->SendAutomationError(Socket, RequestId, TEXT("bIsPrivate needs UE 5.3 or later; omit it on this engine."), TEXT("UNSUPPORTED_VERSION"));
@@ -176,7 +176,7 @@ bool HandleCreateDataLayer(
 #endif
     CreationParams.DataLayerAsset = NewDataLayerAsset;
     CreationParams.WorldDataLayers = World->GetWorldDataLayers();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_DATA_LAYER_PRIVATE
     CreationParams.bIsPrivate = bIsPrivate;
 #endif
 

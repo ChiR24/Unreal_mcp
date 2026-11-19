@@ -10,7 +10,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_SEQUENCER_SHARED_PLAYBACK_STATE
 #include "MovieSceneCommonHelpers.h"
 #include "UniversalObjectLocatorResolveParams.h"
 #endif
@@ -154,7 +154,7 @@ FGuid BindComponentUnderActor(ULevelSequence *Sequence, const FGuid &ParentGuid,
   UMovieScene *MovieScene = Sequence->GetMovieScene();
   const FGuid Guid = MovieScene->AddPossessable(Component->GetName(), Component->GetClass());
   if (FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid)) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_POSSESSABLE_PARENT_OWNER
     Possessable->SetParent(ParentGuid, MovieScene);
 #else
     Possessable->SetParent(ParentGuid);
@@ -201,7 +201,7 @@ FGuid FindExistingBinding(ULevelSequence *Sequence, UObject *Object,
                           UObject *Context) {
   if (!Sequence || !Object || !Context)
     return FGuid();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_SEQUENCER_SHARED_PLAYBACK_STATE
   return Sequence->FindBindingFromObject(
       Object, MovieSceneHelpers::CreateTransientSharedPlaybackState(
                   Context, Sequence));
@@ -215,7 +215,7 @@ void LocateBindingObjects(
     TArray<UObject *, TInlineAllocator<1>> &OutObjects) {
   if (!Sequence || !Context)
     return;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_SEQUENCER_SHARED_PLAYBACK_STATE
   Sequence->LocateBoundObjects(
       BindingGuid, UE::UniversalObjectLocator::FResolveParams(Context),
       MovieSceneHelpers::CreateTransientSharedPlaybackState(Context, Sequence),

@@ -69,8 +69,8 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         return true;
     }
     const EObjectFlags EmitterFlags = RF_Public | RF_Standalone | RF_Transactional;
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
-    // InitializeEmitter is exported only from UE 5.3, so 5.1 and 5.2 go through the factory: its
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && !MCP_HAS_NIAGARA_INITIALIZE_EMITTER_EXPORTED
+    // Where InitializeEmitter is not exported (5.1, 5.2), go through the factory: its
     // virtual FactoryCreateNew makes the emitter and runs InitializeEmitter inside NiagaraEditor.
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew* Factory = NewObject<UNiagaraEmitterFactoryNew>();
@@ -86,7 +86,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));
         return true;
     }
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && MCP_HAS_NIAGARA_INITIALIZE_EMITTER_EXPORTED
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     UNiagaraEmitterFactoryNew::InitializeEmitter(NewEmitter, true);
     McpNameNewEmitterAsset(*NewEmitter);
@@ -137,7 +137,7 @@ static bool AddEmitterToSystem(FActionContext& Context)
         return true;
     }
     FString AddedEmitterName;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     System->Modify();
     Emitter->CheckVersionDataAvailable();

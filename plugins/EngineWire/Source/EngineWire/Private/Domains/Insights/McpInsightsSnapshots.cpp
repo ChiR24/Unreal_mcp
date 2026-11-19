@@ -15,7 +15,7 @@ bool HandleWriteSnapshot(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_TRACE_SNAPSHOTS_EXPORTED
     FString Path;
     FString Error;
     FString ErrorCode;
@@ -54,7 +54,7 @@ bool HandleSendSnapshot(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_TRACE_SNAPSHOTS_EXPORTED
     FString Host;
     int32 Port = 0;
     FString Error;

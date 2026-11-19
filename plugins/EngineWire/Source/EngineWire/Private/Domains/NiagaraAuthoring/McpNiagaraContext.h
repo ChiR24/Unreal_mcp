@@ -36,21 +36,15 @@
 #include "NiagaraMeshRendererProperties.h"
 #include "NiagaraSpriteRendererProperties.h"
 
-#if __has_include("NiagaraEmitterFactoryNew.h") && !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0)
+// MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW and MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW come from FeatureDetection.json.
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW
 #include "NiagaraEmitterFactoryNew.h"
-#define MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW 1
-#else
-#define MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW 0
 #endif
-
-#if __has_include("NiagaraSystemFactoryNew.h") && !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0)
+#if MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW
 #include "NiagaraSystemFactoryNew.h"
-#define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 1
-#else
-#define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 0
 #endif
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "ViewModels/Stack/NiagaraParameterHandle.h"
 #define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 1
@@ -59,7 +53,7 @@
 #endif
 // Giving a module input a value through its override pin (a dynamic input, a linked parameter) needs functions the
 // engine exports only from 5.3: on 5.1 and 5.2 GetOrCreateStackFunctionInputOverridePin does not link.
-#define MCP_HAS_NIAGARA_INPUT_OVERRIDES (MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES && ENGINE_MINOR_VERSION >= 3)
+#define MCP_HAS_NIAGARA_INPUT_OVERRIDES (MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES && MCP_HAS_NIAGARA_INPUT_OVERRIDE_PIN_EXPORTED)
 
 
 namespace McpNiagaraAuthoringHandlers
@@ -127,7 +121,7 @@ struct FEmitterTarget
     FNiagaraEmitterHandle* Handle = nullptr;
     UNiagaraEmitter* Emitter = nullptr;
     MCP_NIAGARA_EMITTER_DATA_TYPE* EmitterData = nullptr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     FVersionedNiagaraEmitter VersionedEmitter;
 #endif
 };

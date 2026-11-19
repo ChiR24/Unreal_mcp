@@ -18,7 +18,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpNiagaraEmitterNameTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && (ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_NIAGARA_EMITTER_FACTORY_NEW && MCP_HAS_NIAGARA_INITIALIZE_EMITTER_EXPORTED
 	// A name ending in "_<number>" is the case that used to be renamed; the leading-zero and plain names never were.
 	const TCHAR* Names[] = { TEXT("NE_McpNameProbe_0"), TEXT("NE_McpNameProbe_7"), TEXT("NE_McpNameProbe_01"), TEXT("NE_McpNameProbe") };
 	const FString Root = FString::Printf(TEXT("/Temp/McpEmitterName_%s/"), *FGuid::NewGuid().ToString(EGuidFormats::Digits));

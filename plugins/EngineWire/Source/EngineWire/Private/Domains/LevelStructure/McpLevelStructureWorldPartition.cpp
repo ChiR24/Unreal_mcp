@@ -7,7 +7,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "UObject/UnrealType.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #endif
 #include "WorldPartition/WorldPartition.h"
@@ -60,7 +60,7 @@ bool HandleConfigureGridSize(
     }
 
     UWorldPartitionRuntimeSpatialHash* SpatialHash = Cast<UWorldPartitionRuntimeSpatialHash>(RuntimeHash);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
     UWorldPartitionRuntimeHashSet* HashSet = Cast<UWorldPartitionRuntimeHashSet>(RuntimeHash);
 
     if (!SpatialHash && !HashSet)
@@ -70,7 +70,7 @@ bool HandleConfigureGridSize(
     {
         TSharedPtr<FJsonObject> ErrorJson = McpHandlerUtils::CreateResultObject();
         ErrorJson->SetStringField(TEXT("currentHashType"), RuntimeHash->GetClass()->GetName());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash, WorldPartitionRuntimeHashSet"));
 #else
         ErrorJson->SetStringField(TEXT("supportedHashTypes"), TEXT("WorldPartitionRuntimeSpatialHash"));
@@ -85,7 +85,7 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
     // Handle RuntimeHashSet (UE 5.3+ only)
     if (HashSet)
     {
@@ -166,7 +166,7 @@ bool HandleConfigureGridSize(
         NewGrid->LoadingRange = LoadingRange;
         NewGrid->bBlockOnSlowStreaming = bBlockOnSlowStreaming;
         NewGrid->Priority = Priority;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_SPATIAL_HASH_GRID_ORIGIN
         NewGrid->Origin = FVector2D::ZeroVector;
 #endif
         NewGrid->DebugColor = FLinearColor::MakeRandomColor();

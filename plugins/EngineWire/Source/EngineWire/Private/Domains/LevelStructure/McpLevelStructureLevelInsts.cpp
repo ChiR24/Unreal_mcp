@@ -12,7 +12,7 @@
 #include "Misc/PackageName.h"
 #include "Safety/McpSafeOperations.h"
 
-#if ENGINE_MINOR_VERSION >= 3 && __has_include("PackedLevelActor/PackedLevelActorBuilder.h")
+#if MCP_HAS_PACKED_LEVEL_ACTOR_BUILDER && __has_include("PackedLevelActor/PackedLevelActorBuilder.h")
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"

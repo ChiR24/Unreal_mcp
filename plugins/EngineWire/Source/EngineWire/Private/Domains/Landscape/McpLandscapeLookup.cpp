@@ -8,17 +8,17 @@
 #include "LandscapeInfo.h"
 #include "Misc/App.h"
 #include "EngineWireSubsystem.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_LANDSCAPE_EDIT_LAYER_CONST
 #include "LandscapeEditLayer.h"
 #endif
 
 namespace McpLandscapeHandlers {
-// The landscape's first edit layer: FLandscapeLayer carried its guid up to 5.5, the edit layer object does from 5.6.
+// The landscape's first edit layer: its edit layer object carries the guid where there is one, else FLandscapeLayer.
 static FGuid FirstEditLayerGuid(const ALandscape *Landscape) {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_LANDSCAPE_EDIT_LAYER_CONST
   const ULandscapeEditLayerBase *Layer = Landscape->GetEditLayerConst(0);
   return Layer ? Layer->GetGuid() : FGuid();
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 5
+#elif MCP_HAS_LANDSCAPE_GET_LAYER_CONST
   const FLandscapeLayer *Layer = Landscape->GetLayerConst(0);
   return Layer ? Layer->Guid : FGuid();
 #else

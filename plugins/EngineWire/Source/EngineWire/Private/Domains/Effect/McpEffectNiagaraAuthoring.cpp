@@ -13,13 +13,13 @@
 #include "NiagaraEmitterHandle.h"
 #include "NiagaraSystem.h"
 #include "UObject/Package.h"
-#if __has_include("NiagaraSystemFactoryNew.h") && !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0)
+#if MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW
 #include "NiagaraSystemFactoryNew.h"
 #define MCP_EFFECT_HAS_NIAGARA_SYSTEM_FACTORY 1
 #else
 #define MCP_EFFECT_HAS_NIAGARA_SYSTEM_FACTORY 0
 #endif
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
 #include "NiagaraEditorUtilities.h"
 #endif
 
@@ -64,7 +64,7 @@ FString DefaultSystemName(const FString& EffectName)
 
 FString AddTemplateEmitter(UNiagaraSystem& System, UNiagaraEmitter& Template)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
     System.Modify();
     Template.CheckVersionDataAvailable();

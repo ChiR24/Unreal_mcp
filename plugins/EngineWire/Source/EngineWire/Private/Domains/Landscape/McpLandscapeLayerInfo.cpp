@@ -12,7 +12,7 @@ namespace McpLandscapeHandlers {
 
 void SetLayerInfoName(ULandscapeLayerInfoObject *LayerInfo, FName LayerName)
 {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+#if MCP_HAS_LANDSCAPE_LAYER_INFO_SETTERS
     LayerInfo->SetLayerName(LayerName, true);
 #else
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -51,7 +51,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     bool bNoWeightBlend = false;
     if (Payload->TryGetBoolField(TEXT("noWeightBlend"), bNoWeightBlend))
     {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+#if MCP_HAS_LANDSCAPE_LAYER_INFO_SETTERS
         LayerInfo->SetBlendMethod(bNoWeightBlend ? ELandscapeTargetLayerBlendMethod::None : ELandscapeTargetLayerBlendMethod::FinalWeightBlending, false);
 #else
         LayerInfo->bNoWeightBlend = bNoWeightBlend;

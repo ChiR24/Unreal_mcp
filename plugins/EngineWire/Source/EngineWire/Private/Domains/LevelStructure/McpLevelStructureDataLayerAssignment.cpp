@@ -8,7 +8,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_DATA_LAYER_ASSETS
 #include "WorldPartition/DataLayer/DataLayerInstance.h"
 #endif
 #include "WorldPartition/WorldPartition.h"
@@ -22,7 +22,7 @@ bool HandleAssignActorToDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_DATA_LAYER_ASSETS
     using namespace LevelStructureHelpers;
 
     // actorName (label or name) or actorPath (the actor's object path); FindActorByNameInWorldForMcp takes either.
