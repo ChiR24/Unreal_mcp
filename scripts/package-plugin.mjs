@@ -148,10 +148,12 @@ async function main() {
     writeJson(outputPlugin, { ...readJson(outputPlugin), Installed: true });
     stripSymbols(pluginDir);
 
-    // bsdtar (Windows 10+, macOS) writes zip from the extension; Linux GNU tar cannot.
+    // bsdtar (Windows 10+, macOS) writes zip from the extension; Linux GNU tar cannot. On Windows it is named by its
+    // path: from Git Bash the first tar on PATH is GNU tar, which reads "X:\..." as a remote host and writes nothing.
+    const tar = process.platform === 'win32' ? join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
     const zipResult = process.platform === 'linux'
       ? spawnSync('zip', ['-qr', zipPath, basename(pluginDir)], { cwd: dirname(pluginDir), stdio: 'inherit' })
-      : spawnSync('tar', ['-a', '-c', '-f', zipPath, basename(pluginDir)], { cwd: dirname(pluginDir), stdio: 'inherit' });
+      : spawnSync(tar, ['-a', '-c', '-f', zipPath, basename(pluginDir)], { cwd: dirname(pluginDir), stdio: 'inherit' });
     if (zipResult.status !== 0 || !existsSync(zipPath) || statSync(zipPath).size === 0) fail('failed to create the zip archive');
 
     const manifest = buildManifest({
