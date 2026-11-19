@@ -4,6 +4,7 @@
 #include "EdGraph/EdGraph.h"
 #include "K2Node.h"
 #include "K2Node_AddPinInterface.h"
+#include "K2Node_FunctionEntry.h"
 #include "K2Node_Switch.h"
 #include "K2Node_SwitchName.h"
 #include "K2Node_SwitchString.h"
@@ -14,6 +15,19 @@ namespace Write
 {
 namespace WriteExprParts
 {
+// A pure function's graph: its entry has no exec output, so nothing in it runs as a step.
+bool IsPureFunctionGraph(const UEdGraph* Graph)
+{
+    for (const UEdGraphNode* Node : Graph->Nodes)
+    {
+        if (const UK2Node_FunctionEntry* Entry = Cast<UK2Node_FunctionEntry>(Node))
+        {
+            return (Entry->GetFunctionFlags() & FUNC_BlueprintPure) != 0;
+        }
+    }
+    return false;
+}
+
 struct FOperator
 {
     const TCHAR* Symbol;
@@ -208,6 +222,14 @@ UEdGraphNode* FTranspiler::CallNode(const FSExpr& Call, const FBindings& Binding
         return nullptr;
     }
     const bool bWired = WireExec(Node, Flow);
+    // Left unwired in a pure function, a call that runs as a step was pruned by the compiler and its value read as the
+    // default, with only a warning.
+    if (!bWired && ExecPin(Node, true, FString()) && IsPureFunctionGraph(Graph))
+    {
+        Fail(FString::Printf(TEXT("%s runs as a step (it has exec pins), and a pure function runs no steps: it would never run and its value "
+                                  "would read as the default. Use a pure function in its place, or make this function impure."), *TypeId));
+        return nullptr;
+    }
     if (Continuations.Num() > 0 || bWired)
     {
         UEdGraphPin* Then = Continuations.Num() > 0 ? nullptr : ExecPin(Node, false, TEXT("then"));
