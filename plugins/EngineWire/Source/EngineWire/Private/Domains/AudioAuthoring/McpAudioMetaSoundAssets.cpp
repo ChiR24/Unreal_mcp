@@ -47,7 +47,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 		return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package"));
 	}
 
-	UMetaSoundSource* MetaSound = NewObject<UMetaSoundSource>(Package, FName(*Name), RF_Public | RF_Standalone);
+	UMetaSoundSource* MetaSound = NewObject<UMetaSoundSource>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 	if (!MetaSound)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create MetaSound asset"));

@@ -99,7 +99,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
         Factory->ParentClass = ParentAnimClass;
         UAnimBlueprint* NewAnimBP = Cast<UAnimBlueprint>(
             Factory->FactoryCreateNew(UAnimBlueprint::StaticClass(), Package,
-                                      FName(*Name), RF_Public | RF_Standalone,
+                                      FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                       nullptr, GWarn));
         if (!NewAnimBP)
         {

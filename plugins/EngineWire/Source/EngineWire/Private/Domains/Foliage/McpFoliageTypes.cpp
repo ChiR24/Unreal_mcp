@@ -122,7 +122,7 @@ bool UEngineWireSubsystem::HandleAddFoliageType(
   if (!FoliageType) {
     UPackage *Package = McpCreatePackageOrNull(FullPackagePath);
     FoliageType = Package ? NewObject<UFoliageType_InstancedStaticMesh>(
-        Package, FName(*AssetName), RF_Public | RF_Standalone) : nullptr;
+        Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional) : nullptr;
   }
   if (!FoliageType) {
     SendAutomationError(RequestingSocket, RequestId,

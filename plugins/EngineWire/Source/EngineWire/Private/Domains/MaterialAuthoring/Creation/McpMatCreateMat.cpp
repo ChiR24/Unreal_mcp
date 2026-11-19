@@ -30,7 +30,7 @@ bool HandleCreateMaterial(UEngineWireSubsystem* Bridge, const FString& RequestId
 
     UMaterial *NewMaterial = Cast<UMaterial>(
         Factory->FactoryCreateNew(UMaterial::StaticClass(), Package,
-                                  FName(*Name), RF_Public | RF_Standalone,
+                                  FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                   nullptr, GWarn));
     if (!NewMaterial) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create material."),

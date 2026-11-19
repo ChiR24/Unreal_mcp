@@ -41,7 +41,7 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
         Factory->TargetSkeleton = Skeleton;
         UAimOffsetBlendSpace* NewAimOffset = Cast<UAimOffsetBlendSpace>(
             Factory->FactoryCreateNew(UAimOffsetBlendSpace::StaticClass(), Package,
-                                      FName(*Name), RF_Public | RF_Standalone,
+                                      FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                       nullptr, GWarn));
         if (!NewAimOffset)
         {

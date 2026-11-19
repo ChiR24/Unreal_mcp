@@ -45,7 +45,7 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 	}
 
 	USoundCueFactoryNew* Factory = NewObject<USoundCueFactoryNew>();
-	USoundCue* NewCue = Cast<USoundCue>(Factory->FactoryCreateNew(USoundCue::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+	USoundCue* NewCue = Cast<USoundCue>(Factory->FactoryCreateNew(USoundCue::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 	if (!NewCue)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundCue"));

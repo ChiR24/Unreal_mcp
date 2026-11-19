@@ -82,7 +82,7 @@ bool UEngineWireSubsystem::HandleCreateLandscapeGrassType(
   ULandscapeGrassType *GrassType =
       NewObject<ULandscapeGrassType>(
           Package, FName(*Name),
-          RF_Public | RF_Standalone);
+          RF_Public | RF_Standalone | RF_Transactional);
 
   // Constructed, not zeroed: a zero EndCullDistance grows nothing, and lighting channel 0 and shadows were off.
   FGrassVariety &Variety = GrassType->GrassVarieties[GrassType->GrassVarieties.AddZeroed()];

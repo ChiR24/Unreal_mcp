@@ -25,7 +25,7 @@ UMaterial* McpNewMaterial(const TCHAR* Folder, const FString& Name)
 {
     UPackage* Package = McpCreatePackageOrNull(FString(Folder) + Name);
     return Package ? Cast<UMaterial>(NewObject<UMaterialFactoryNew>()->FactoryCreateNew(
-                         UMaterial::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
+                         UMaterial::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn))
                    : nullptr;
 }
 
@@ -35,7 +35,7 @@ UMaterialInstanceConstant* McpNewMaterialInstance(UMaterialInterface* Parent, co
     Factory->InitialParent = Parent;
     UPackage* Package = McpCreatePackageOrNull(FString(Folder) + Name);
     return Package ? Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(),
-                         Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn))
+                         Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn))
                    : nullptr;
 }
 

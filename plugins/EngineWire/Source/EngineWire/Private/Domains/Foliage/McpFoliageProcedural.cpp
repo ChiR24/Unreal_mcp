@@ -92,7 +92,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
     return true;
   }
   UProceduralFoliageSpawner *Spawner = NewObject<UProceduralFoliageSpawner>(
-      Package, FName(*AssetName), RF_Public | RF_Standalone);
+      Package, FName(*AssetName), RF_Public | RF_Standalone | RF_Transactional);
   if (!Spawner) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Failed to create spawner asset"),
@@ -126,7 +126,7 @@ bool UEngineWireSubsystem::HandleCreateProceduralFoliage(
       return true;
     }
     UFoliageType_InstancedStaticMesh *FT =
-        NewObject<UFoliageType_InstancedStaticMesh>(FTPackage, FName(*FTName), RF_Public | RF_Standalone);
+        NewObject<UFoliageType_InstancedStaticMesh>(FTPackage, FName(*FTName), RF_Public | RF_Standalone | RF_Transactional);
     FT->SetStaticMesh(Type.Key);
     FT->Density = static_cast<float>(Type.Value);
     FT->ReapplyDensity = true;

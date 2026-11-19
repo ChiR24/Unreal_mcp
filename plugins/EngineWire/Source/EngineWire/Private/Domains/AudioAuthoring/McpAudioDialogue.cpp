@@ -33,7 +33,7 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueVoiceFactory* Factory = NewObject<UDialogueVoiceFactory>();
-		UDialogueVoice* NewVoice = Cast<UDialogueVoice>(Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+		UDialogueVoice* NewVoice = Cast<UDialogueVoice>(Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 		if (!NewVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueVoice")); }
 
 		NewVoice->Gender = LowerGender == TEXT("feminine") ? EGrammaticalGender::Feminine
@@ -72,7 +72,7 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
 
 		UDialogueWaveFactory* Factory = NewObject<UDialogueWaveFactory>();
-		UDialogueWave* NewWave = Cast<UDialogueWave>(Factory->FactoryCreateNew(UDialogueWave::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+		UDialogueWave* NewWave = Cast<UDialogueWave>(Factory->FactoryCreateNew(UDialogueWave::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 		if (!NewWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueWave")); }
 
 		NewWave->SpokenText = SpokenText;

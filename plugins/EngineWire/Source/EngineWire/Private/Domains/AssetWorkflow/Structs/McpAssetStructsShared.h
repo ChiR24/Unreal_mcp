@@ -19,7 +19,7 @@
 // last member makes the engine re-seed a placeholder, so a caller that adds members drops that one afterwards.
 inline UUserDefinedStruct* CreateUnseededUserStruct(UPackage* Package, const FString& Name)
 {
-    UUserDefinedStruct* Struct = FStructureEditorUtils::CreateUserDefinedStruct(Package, FName(*Name), RF_Public | RF_Standalone);
+    UUserDefinedStruct* Struct = FStructureEditorUtils::CreateUserDefinedStruct(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
     if (Struct)
     {
         TArray<FGuid> Seeded;

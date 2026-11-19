@@ -22,5 +22,5 @@ inline UBlueprint* McpNewBlueprint(UPackage* Package, const FName Name, UClass* 
     (void)Type;
 #endif
     return Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, Name, RF_Public | RF_Standalone, nullptr, GWarn));
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, Name, RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 }

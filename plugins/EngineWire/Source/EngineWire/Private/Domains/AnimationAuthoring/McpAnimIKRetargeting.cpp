@@ -49,7 +49,7 @@ TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const 
             UIKRetargeter::StaticClass(),
             Package,
             FName(*Name),
-            RF_Public | RF_Standalone,
+            RF_Public | RF_Standalone | RF_Transactional,
             nullptr,
             GWarn
         ));

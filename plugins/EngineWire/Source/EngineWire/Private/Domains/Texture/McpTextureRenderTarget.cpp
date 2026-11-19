@@ -155,7 +155,7 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
         return Response;
     }
 
-    UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(Package, UTextureRenderTarget2D::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
+    UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(Package, UTextureRenderTarget2D::StaticClass(), FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
     if (!RenderTarget)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create render target"));

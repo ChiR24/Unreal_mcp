@@ -51,7 +51,7 @@ bool HandleCreate(UEngineWireSubsystem* Subsystem,
 
   UBehaviorTree* NewBT = NewObject<UBehaviorTree>(
       Package, UBehaviorTree::StaticClass(), FName(*Name),
-      RF_Public | RF_Standalone);
+      RF_Public | RF_Standalone | RF_Transactional);
   if (!NewBT) {
     Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
                                    TEXT("Failed to create Behavior Tree"),

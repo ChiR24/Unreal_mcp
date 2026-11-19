@@ -29,7 +29,7 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
         Response->SetStringField(TEXT("errorCode"), CreateCode);
         TEXTURE_ERROR_RESPONSE(CreateError);
     }
-    UTexture2D* NewTexture = NewObject<UTexture2D>(Package, FName(*Name), RF_Public | RF_Standalone);
+    UTexture2D* NewTexture = NewObject<UTexture2D>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
     if (!NewTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));

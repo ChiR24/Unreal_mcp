@@ -30,7 +30,7 @@ bool HandleCreateMaterialFunction(UEngineWireSubsystem* Bridge, const FString& R
 
     UMaterialFunction *NewFunc = Cast<UMaterialFunction>(
         Factory->FactoryCreateNew(UMaterialFunction::StaticClass(), Package,
-                                  FName(*Name), RF_Public | RF_Standalone,
+                                  FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                   nullptr, GWarn));
     if (!NewFunc) {
       Bridge->SendAutomationError(Socket, RequestId,

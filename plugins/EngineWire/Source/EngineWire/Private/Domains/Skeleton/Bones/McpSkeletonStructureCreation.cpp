@@ -85,7 +85,7 @@ bool HandleCreateSkeletonAction(UEngineWireSubsystem* Subsystem, const FString& 
         }
 
         // Create skeleton asset
-        USkeleton* NewSkeleton = NewObject<USkeleton>(Package, *SkeletonName, RF_Public | RF_Standalone);
+        USkeleton* NewSkeleton = NewObject<USkeleton>(Package, *SkeletonName, RF_Public | RF_Standalone | RF_Transactional);
         if (!NewSkeleton)
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create skeleton object"), TEXT("CREATION_FAILED"));

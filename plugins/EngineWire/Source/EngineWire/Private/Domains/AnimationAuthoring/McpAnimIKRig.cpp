@@ -59,7 +59,7 @@ if (SubAction == TEXT("create_ik_rig"))
     {
         ANIM_ERROR_RESPONSE(CreateError, CreateCode);
     }
-    UIKRigDefinition* IKRig = NewObject<UIKRigDefinition>(Package, *Name, RF_Public | RF_Standalone);
+    UIKRigDefinition* IKRig = NewObject<UIKRigDefinition>(Package, *Name, RF_Public | RF_Standalone | RF_Transactional);
     if (!IKRig)
     {
         ANIM_ERROR_RESPONSE(TEXT("Failed to create IK Rig asset"), TEXT("CREATION_FAILED"));

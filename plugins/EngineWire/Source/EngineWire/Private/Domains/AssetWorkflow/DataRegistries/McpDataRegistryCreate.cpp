@@ -87,7 +87,7 @@ bool HandleCreate(UEngineWireSubsystem* Self, const FString& RequestId, const TS
 	{
 		return Refuse(FString::Printf(TEXT("Could not create the package %s."), *PackageName), TEXT("PACKAGE_ERROR"));
 	}
-	UObject* Registry = NewObject<UObject>(Package, Class, FName(*FPackageName::GetShortName(PackageName)), RF_Public | RF_Standalone);
+	UObject* Registry = NewObject<UObject>(Package, Class, FName(*FPackageName::GetShortName(PackageName)), RF_Public | RF_Standalone | RF_Transactional);
 	TypeProperty->SetPropertyValue_InContainer(Registry, FName(*RegistryType));
 	StructProperty->SetObjectPropertyValue_InContainer(Registry, const_cast<UScriptStruct*>(RowStruct));
 	FScriptArrayHelper Sources(SourcesProperty, SourcesProperty->ContainerPtrToValuePtr<void>(Registry));

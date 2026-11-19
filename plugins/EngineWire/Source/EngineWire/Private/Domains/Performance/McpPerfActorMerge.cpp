@@ -226,7 +226,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     FStaticMeshCompilingManager::Get().FinishCompilation(MeshesToFinish);
     FlushRenderingCommands();
 
-    MergedMesh->SetFlags(RF_Public | RF_Standalone);
+    MergedMesh->SetFlags(RF_Public | RF_Standalone | RF_Transactional);
     MergedMesh->ClearFlags(RF_Transient);
     MergedMesh->MarkPackageDirty();
 

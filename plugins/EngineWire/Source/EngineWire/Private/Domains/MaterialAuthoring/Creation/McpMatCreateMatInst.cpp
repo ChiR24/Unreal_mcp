@@ -106,7 +106,7 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
     UMaterialInstanceConstant *NewInstance = Cast<UMaterialInstanceConstant>(
         Factory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(),
                                   Package, FName(*Name),
-                                  RF_Public | RF_Standalone, nullptr, GWarn));
+                                  RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
     if (!NewInstance) {
       Bridge->SendAutomationError(Socket, RequestId,
                           TEXT("Failed to create material instance."),

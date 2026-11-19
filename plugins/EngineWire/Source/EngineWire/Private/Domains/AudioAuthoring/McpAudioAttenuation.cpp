@@ -25,7 +25,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		}
 
 		USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();
-		USoundAttenuation* NewAtten = Cast<USoundAttenuation>(Factory->FactoryCreateNew(USoundAttenuation::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+		USoundAttenuation* NewAtten = Cast<USoundAttenuation>(Factory->FactoryCreateNew(USoundAttenuation::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 		if (!NewAtten)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundAttenuation"));

@@ -146,7 +146,7 @@ bool HandleCreateDataLayer(
         return true;
     }
 
-    UDataLayerAsset* NewDataLayerAsset = NewObject<UDataLayerAsset>(AssetPackage, *DataLayerName, RF_Public | RF_Standalone);
+    UDataLayerAsset* NewDataLayerAsset = NewObject<UDataLayerAsset>(AssetPackage, *DataLayerName, RF_Public | RF_Standalone | RF_Transactional);
 
     NewDataLayerAsset->SetType(bRuntime ? EDataLayerType::Runtime : EDataLayerType::Editor);
 

@@ -49,13 +49,13 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
     const EPixelFormat Format = bHDR ? PF_FloatRGBA : PF_B8G8R8A8;
     if (!NewTexture)
     {
-        NewTexture = NewObject<UTexture2D>(Package, UTexture2D::StaticClass(), FName(*TextureName), RF_Public | RF_Standalone);
+        NewTexture = NewObject<UTexture2D>(Package, UTexture2D::StaticClass(), FName(*TextureName), RF_Public | RF_Standalone | RF_Transactional);
     }
     if (!NewTexture)
     {
         return nullptr;
     }
-    NewTexture->SetFlags(RF_Public | RF_Standalone);
+    NewTexture->SetFlags(RF_Public | RF_Standalone | RF_Transactional);
     // A texture loaded to be refilled may still be building from the call that made it: PreEditChange waits for that
     // build, as the engine asks before any change to a texture.
     NewTexture->PreEditChange(nullptr);

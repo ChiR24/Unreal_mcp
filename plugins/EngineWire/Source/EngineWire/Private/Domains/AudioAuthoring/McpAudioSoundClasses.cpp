@@ -80,7 +80,7 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 			return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError);
 		}
 
-		USoundClass* NewClass = NewObject<USoundClass>(Package, FName(*Name), RF_Public | RF_Standalone);
+		USoundClass* NewClass = NewObject<USoundClass>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 		if (!NewClass)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundClass"));

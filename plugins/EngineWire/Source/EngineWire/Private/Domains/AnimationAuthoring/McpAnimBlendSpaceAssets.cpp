@@ -84,7 +84,7 @@ TSharedPtr<FJsonObject> CreateBlendSpace(const TSharedPtr<FJsonObject>& Params, 
     Factory->TargetSkeleton = Skeleton;
     TAsset* NewBlendSpace = Cast<TAsset>(
         Factory->FactoryCreateNew(TAsset::StaticClass(), Package,
-                                  FName(*Name), RF_Public | RF_Standalone,
+                                  FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                   nullptr, GWarn));
     if (!NewBlendSpace)
     {

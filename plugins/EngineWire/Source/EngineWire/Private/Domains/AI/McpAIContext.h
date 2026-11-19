@@ -75,7 +75,7 @@ inline UObject* CreateAIAssetOfClass(UClass* AssetClass, const FString& Path, co
 		return nullptr;
 	}
 
-	UObject* Asset = NewObject<UObject>(Package, AssetClass, FName(*Name), RF_Public | RF_Standalone);
+	UObject* Asset = NewObject<UObject>(Package, AssetClass, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 	if (!Asset)
 	{
 		OutError = FString::Printf(TEXT("Failed to create %s asset"), TypeNoun);

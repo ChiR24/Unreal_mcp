@@ -35,7 +35,7 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
   // CreatePackage + the factory directly: AssetTools' CreateAsset can raise dialogs nobody can answer.
   UPackage *Package = McpCreatePackageOrNull(PackagePath);
   UObject *NewAsset = Package && Factory
-      ? Factory->FactoryCreateNew(AssetClass, Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn)
+      ? Factory->FactoryCreateNew(AssetClass, Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn)
       : nullptr;
   if (!NewAsset) {
     OutCode = TEXT("ASSET_CREATION_FAILED");

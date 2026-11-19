@@ -31,7 +31,7 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 		}
 
 		USoundMixFactory* Factory = NewObject<USoundMixFactory>();
-		USoundMix* NewMix = Cast<USoundMix>(Factory->FactoryCreateNew(USoundMix::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+		USoundMix* NewMix = Cast<USoundMix>(Factory->FactoryCreateNew(USoundMix::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn));
 		if (!NewMix)
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundMix"));

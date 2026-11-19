@@ -86,7 +86,7 @@ bool HandleSpatialActions(
             FString CreateError, CreateCode;
             UPackage* AttenPackage = McpCreatePackageForNewAsset(AttenPackageName, CreateError, CreateCode);
             AttenuationSettings = AttenPackage
-                ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
+                ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone | RF_Transactional)
                 : nullptr;
           }
           if (!AttenuationSettings) {
@@ -200,7 +200,7 @@ bool HandleSpatialActions(
      USoundAttenuationFactory* Factory = NewObject<USoundAttenuationFactory>();
      USoundAttenuation *Atten = Factory ? Cast<USoundAttenuation>(
          Factory->FactoryCreateNew(USoundAttenuation::StaticClass(), Package,
-                                   FName(*Name), RF_Public | RF_Standalone,
+                                   FName(*Name), RF_Public | RF_Standalone | RF_Transactional,
                                    nullptr, GWarn)) : nullptr;
      if (!Atten) {
        Self->SendAutomationError(RequestingSocket, RequestId,

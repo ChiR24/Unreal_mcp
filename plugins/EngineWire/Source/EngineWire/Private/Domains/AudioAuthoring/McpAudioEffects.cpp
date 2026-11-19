@@ -18,7 +18,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		FString CreateError, CreateCode;
 		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
-		UReverbEffect* NewEffect = NewObject<UReverbEffect>(Package, FName(*Name), RF_Public | RF_Standalone);
+		UReverbEffect* NewEffect = NewObject<UReverbEffect>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 		if (!NewEffect) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create ReverbEffect")); }
 
 		if (Params->HasField(TEXT("density"))) { NewEffect->Density = static_cast<float>(GetJsonNumberField(Params, TEXT("density"), 1.0)); }
@@ -49,7 +49,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		FString CreateError, CreateCode;
 		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
-		USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(Package, FName(*Name), RF_Public | RF_Standalone);
+		USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 		if (!NewChain) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create source effect chain")); }
 
 		SaveAudioAsset(NewChain, bSave);
@@ -102,7 +102,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 				EffectPreset = CreateSourceEffectPresetByType(EffectType, PresetPackage);
 				if (EffectPreset)
 				{
-					EffectPreset->SetFlags(RF_Public | RF_Standalone);
+					EffectPreset->SetFlags(RF_Public | RF_Standalone | RF_Transactional);
 					SaveAudioAsset(EffectPreset, bSave);
 					Response->SetStringField(TEXT("effectPresetPath"), EffectPreset->GetPathName());
 					// The receipt lists the new preset beside the chain.
@@ -162,7 +162,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		FString CreateError, CreateCode;
 		UPackage* Package = McpCreatePackageForNewAsset(PackagePath, CreateError, CreateCode);
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(CreateCode, CreateError); }
-		USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
+		USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
 		if (!NewSubmix) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create submix")); }
 		// The preset lives inside the submix package, so the one save persists both.
 		USoundEffectSubmixPreset* Preset = NewObject<USoundEffectSubmixPreset>(NewSubmix, PresetClass, NAME_None, RF_Public | RF_Transactional);

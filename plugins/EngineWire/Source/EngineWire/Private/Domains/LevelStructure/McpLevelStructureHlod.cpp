@@ -86,7 +86,7 @@ bool HandleConfigureHlodLayer(
         return true;
     }
 
-    UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone);
+    UHLODLayer* NewHLODLayer = NewObject<UHLODLayer>(AssetPackage, *HlodLayerName, RF_Public | RF_Standalone | RF_Transactional);
 
     // LayerType, bIsSpatiallyLoaded, CellSize and LoadingRange are reflected properties on every 5.x UHLODLayer
     // (5.7 moved only their public setters), so each is written through reflection and reported as applied or not.

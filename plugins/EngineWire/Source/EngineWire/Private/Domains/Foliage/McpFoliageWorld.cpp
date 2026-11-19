@@ -56,7 +56,7 @@ UFoliageType* ResolveFoliageTypeOrMesh(UEngineWireSubsystem& Bridge, const FStri
         return nullptr;
       }
       UFoliageType_InstancedStaticMesh* AutoType = NewObject<UFoliageType_InstancedStaticMesh>(
-          AutoPackage, FName(*FPackageName::GetShortName(AutoPath)), RF_Public | RF_Standalone);
+          AutoPackage, FName(*FPackageName::GetShortName(AutoPath)), RF_Public | RF_Standalone | RF_Transactional);
       AutoType->SetStaticMesh(Mesh);
       AutoType->Density = 100.0f;
       AutoType->ReapplyDensity = true;

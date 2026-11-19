@@ -30,7 +30,7 @@ UPackage* CreateInventoryAssetPackage(UEngineWireSubsystem& Bridge, const FStrin
 UMcpGenericDataAsset* NewInventoryDataAsset(UPackage* Package, const TSharedPtr<FJsonObject>& Payload, bool& OutSaved,
                                             TFunctionRef<void(UMcpGenericDataAsset&)> Fill)
 {
-  UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, InventoryAssetName(Package), RF_Public | RF_Standalone);
+  UMcpGenericDataAsset* Asset = NewObject<UMcpGenericDataAsset>(Package, InventoryAssetName(Package), RF_Public | RF_Standalone | RF_Transactional);
   Fill(*Asset);
   Asset->MarkPackageDirty();
   FAssetRegistryModule::AssetCreated(Asset);

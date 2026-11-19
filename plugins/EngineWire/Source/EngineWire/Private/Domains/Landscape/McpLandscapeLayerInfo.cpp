@@ -30,7 +30,7 @@ ULandscapeLayerInfoObject *McpNewLandscapeLayerInfo(const FString &PackagePath, 
     {
         return nullptr;
     }
-    ULandscapeLayerInfoObject *LayerInfo = NewObject<ULandscapeLayerInfoObject>(Package, FName(*LayerName), RF_Public | RF_Standalone);
+    ULandscapeLayerInfoObject *LayerInfo = NewObject<ULandscapeLayerInfoObject>(Package, FName(*LayerName), RF_Public | RF_Standalone | RF_Transactional);
     SetLayerInfoName(LayerInfo, FName(*LayerName));
 
     double Hardness = 0.0;

@@ -131,7 +131,7 @@ USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectTy
 		// In Outer's package and named after it, so the preset is an asset of its own; it was made in the transient
 		// package, and the chain saved a reference to an object gone on reload.
 		const FName PresetName = Outer->IsA<UPackage>() ? FName(*FPackageName::GetShortName(Outer->GetName())) : MakeUniqueObjectName(Outer, PresetClass, FName(*EffectType));
-		return Cast<USoundEffectSourcePreset>(NewObject<UObject>(Outer, PresetClass, PresetName, RF_Public | RF_Standalone));
+		return Cast<USoundEffectSourcePreset>(NewObject<UObject>(Outer, PresetClass, PresetName, RF_Public | RF_Standalone | RF_Transactional));
 	}
 	return nullptr;
 }

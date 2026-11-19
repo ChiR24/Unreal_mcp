@@ -148,7 +148,7 @@ bool HandleDataTableAction(
         UPackage* Package = McpCreatePackageForNewAsset(PackageName, CreateError, CreateCode);
         if (!Package) { OutResult = McpDataTableMakeError(*CreateCode, *CreateError); return true; }
 
-        UDataTable* Table = NewObject<UDataTable>(Package, FName(*SanitizedName), RF_Public | RF_Standalone);
+        UDataTable* Table = NewObject<UDataTable>(Package, FName(*SanitizedName), RF_Public | RF_Standalone | RF_Transactional);
         if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create data table")); return true; }
 
         Table->RowStruct = RowStruct;
