@@ -138,10 +138,41 @@ describe('read -> write round trips', () => {
   it('prints a node by the title of the menu entry that makes it, so the menu id it gets makes it back', () => {
     const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
     // A variable's node: the title of its owner's spawner for that property and node class (Set Show Mouse Cursor).
-    expect(snapshot).toMatch(/Spawner->NodeClass\.Get\(\) == Node->GetClass\(\)[\s\S]*GetAssociatedProperty\(\)[\s\S]*Field->GetFName\(\) == Property->GetFName\(\)[\s\S]*return Spawner->PrimeDefaultUiSpec\(\)\.MenuName\.ToString\(\);/u);
+    expect(snapshot).toMatch(/Spawner->NodeClass\.Get\(\) == Node->GetClass\(\)[\s\S]*GetAssociatedProperty\(\)[\s\S]*Field->GetFName\(\) == Property->GetFName\(\)[\s\S]*return Spawner->PrimeDefaultUiSpec\(\)\.MenuName\.BuildSourceString\(\);/u);
     // A node made from a class: its menu title (Spawn Actor from Class), not the list title that names the class.
     expect(snapshot).toContain('Node->IsA<UK2Node_ConstructObjectFromClass>() ? ENodeTitleType::MenuTitle : ENodeTitleType::ListView');
     expect(snapshot).toContain('const FString Title = WithoutWhitespace(MenuTitleOf(Node));');
+  });
+
+  // Structure only: what the ids read in an editor in another language, and that an id read makes its node again, is
+  // the read_graph_as_code menu-id integration case (tests/mcp-tools/core/manage-blueprint.test.mjs).
+  it('builds a menu id from the text an English editor shows, the same way to read one and to find one', () => {
+    const catalog = code(join(CODE, 'McpGraphCodeCatalog.cpp'));
+    const snapshot = code(join(CODE, 'McpGraphCodeSnapshot.cpp'));
+    for (const [name, text] of [['catalog', catalog], ['snapshot', snapshot]] as const) {
+      // Titles and categories from their source text: ToString() is the editor's display language.
+      expect(text, name).not.toMatch(/(?:MenuName|Category|GetMenuCategory\(\)|GetNodeTitle\([^)]*\))\.ToString\(\)/u);
+      // Both build the category part through the one mapping, so a read id is one the catalog offers.
+      expect(text, name).toMatch(/InvariantCategory\(/u);
+    }
+    const category = code(join(PRIVATE, 'Domains', 'BlueprintGraph', 'Discovery', 'McpBPGraphMenuCategory.cpp'));
+    // The editor's common categories reach a node as display text, so they are read from the editor for its language.
+    expect(category).toContain('FEditorCategoryUtils::GetCommonCategory(');
+    expect(category).toContain('UEdGraphSchema_K2::VR_DefaultCategory');
+    // Every common category is paired with the name an English editor shows, by enum value rather than position.
+    const values = ['AI', 'Animation', 'Audio', 'Development', 'Effects', 'Gameplay', 'Input', 'Math', 'Networking', 'Pawn',
+      'Physics', 'Rendering', 'Transformation', 'Utilities', 'FlowControl', 'UserInterface', 'AnimNotify', 'BranchPoint',
+      'String', 'Text', 'Name', 'Enum', 'Struct', 'Macro', 'Delegates', 'Class', 'Variables'];
+    for (const value of values) {
+      expect(category, value).toMatch(new RegExp(`::${value}, TEXT\\("\\w+"\\)`, 'u'));
+    }
+    // The names an English editor shows that differ from the enum value.
+    for (const [value, shown] of [['Gameplay', 'Game'], ['Delegates', 'EventDispatchers'], ['AnimNotify', 'AddAnimNotifyEvent'], ['BranchPoint', 'AddMontageBranchingPointEvent']]) {
+      expect(category, value).toMatch(new RegExp(`::${value}, TEXT\\("${shown}"\\)`, 'u'));
+    }
+    // A member's own Category (a Blueprint's variable or function) is read, so the parts the user wrote are left alone.
+    expect(category).toContain('FBlueprintMetadata::MD_FunctionCategory');
+    expect(category).toMatch(/GetMetaData\(TEXT\("Category"\)\)/u);
   });
 
   it('quotes an object or class reference, so one that holds none reads as "" and not as the 0 the writer refuses', () => {

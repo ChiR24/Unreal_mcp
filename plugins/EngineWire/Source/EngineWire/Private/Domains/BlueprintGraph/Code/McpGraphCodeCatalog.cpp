@@ -70,7 +70,7 @@ TArray<FMenuEntry> MenuCandidates(const TSet<FString>& Titles, bool bPrefix)
             {
                 continue;
             }
-            const FString Title = CatalogParts::TitleKey(Spawner->PrimeDefaultUiSpec().MenuName.ToString());
+            const FString Title = CatalogParts::TitleKey(Spawner->PrimeDefaultUiSpec().MenuName.BuildSourceString());
             if (Title.IsEmpty() || CatalogParts::Wanted(Title, Titles, bPrefix))
             {
                 Candidates.Add(FMenuEntry{Owner, Spawner, FString()});
@@ -94,10 +94,11 @@ TArray<FMenuEntry> MenuEntries(UBlueprint* Blueprint, UEdGraph* Graph, const TAr
             continue;
         }
         const FBlueprintActionUiSpec Spec = Candidate.Spawner->GetUiSpec(Filter.Context, Info.GetBindings());
-        const FString Title = Spec.MenuName.ToString().Replace(TEXT(" "), TEXT(""));
+        const FString Title = Spec.MenuName.BuildSourceString().Replace(TEXT(" "), TEXT(""));
         if (CatalogParts::Wanted(CatalogParts::TitleKey(Title), Titles, bPrefix))
         {
-            Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, Spec.Category.ToString().Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});
+            const FString Own = MemberCategory(Info.GetAssociatedFunction(), Info.GetAssociatedProperty());
+            Entries.Add(FMenuEntry{Candidate.Owner, Candidate.Spawner, InvariantCategory(Spec.Category, Own).Replace(TEXT(" "), TEXT("")) + TEXT("|") + Title});
         }
     }
     // Byte order of id, then of the owner's path: two reads or writes of one graph pick the same spawner.
