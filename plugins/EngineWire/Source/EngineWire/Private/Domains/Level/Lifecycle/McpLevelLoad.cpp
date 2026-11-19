@@ -102,6 +102,7 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
         ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesBeforeLoad);
         ErrorDetails->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
         ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+        AddBlockingDirtyPackages(ErrorDetails);
         Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             TEXT("Cannot load a level in unattended/headless mode while packages are dirty. Pass saveDirtyPackages=true to save them before loading."),
@@ -124,9 +125,10 @@ bool HandleLoadLevelAction(UEngineWireSubsystem& Subsystem, const FString& Reque
           ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
           ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
           ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+          const TArray<UPackage*> Left = AddBlockingDirtyPackages(ErrorDetails);
           Subsystem.SendAutomationResponse(
               RequestingSocket, RequestId, false,
-              TEXT("Cannot load a level while packages remain dirty after the save saveDirtyPackages asked for."),
+              FString::Printf(TEXT("Cannot load a level while packages remain dirty after the save saveDirtyPackages asked for, %s first."), *FirstPackageName(Left)),
               ErrorDetails, TEXT("DIRTY_PACKAGES"));
           return true;
         }

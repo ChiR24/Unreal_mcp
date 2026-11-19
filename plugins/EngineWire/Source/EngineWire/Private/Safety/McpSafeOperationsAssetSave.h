@@ -37,7 +37,9 @@ inline bool McpIsScratchPackage(const UPackage* Package)
 }
 
 // The dirty packages that block a level load, each once and none of them scratch: world packages first, OutWorldCount
-// of them.
+// of them. Engine content is no blocking content package: McpSafeAssetSave never saves it, so saveDirtyPackages could
+// not clear it, and a Niagara sprite renderer dirties /Engine/BasicShapes/BasicShapeMaterial by setting a usage flag.
+// One such flag refused every later level change for the rest of the editor session.
 inline TArray<UPackage*> McpBlockingDirtyPackages(int32& OutWorldCount)
 {
     TArray<UPackage*> WorldPackages;
@@ -55,7 +57,7 @@ inline TArray<UPackage*> McpBlockingDirtyPackages(int32& OutWorldCount)
     OutWorldCount = Blocking.Num();
     for (UPackage* Package : ContentPackages)
     {
-        if (!McpIsScratchPackage(Package))
+        if (!McpIsScratchPackage(Package) && !IsEngineContentPackage(Package->GetName()))
         {
             Blocking.AddUnique(Package);
         }

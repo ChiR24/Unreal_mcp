@@ -14,14 +14,25 @@ using McpSafeOperations::McpSafeAssetSave;
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const ULevel* Level) {
-  // "Is the level saved?" had no read answer; restart_editor validateOnly was the only one.
+TArray<UPackage*> AddBlockingDirtyPackages(const TSharedPtr<FJsonObject>& Result) {
   int32 WorldCount = 0;
   const TArray<UPackage*> Packages = McpSafeOperations::McpBlockingDirtyPackages(WorldCount);
   TArray<TSharedPtr<FJsonValue>> Names;
   for (int32 Index = 0; Index < Packages.Num() && Index < 100; ++Index) {
     Names.Add(MakeShared<FJsonValueString>(Packages[Index]->GetName()));
   }
+  Result->SetArrayField(TEXT("unsavedPackages"), Names);
+  Result->SetNumberField(TEXT("unsavedPackageCount"), Packages.Num());
+  return Packages;
+}
+
+FString FirstPackageName(const TArray<UPackage*>& Packages) {
+  return Packages.Num() > 0 ? Packages[0]->GetName() : FString(TEXT("none"));
+}
+
+void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const ULevel* Level) {
+  // "Is the level saved?" had no read answer; restart_editor validateOnly was the only one.
+  const TArray<UPackage*> Packages = AddBlockingDirtyPackages(Result);
   // A one-file-per-actor (World Partition) level keeps its actors in external packages:
   // moving one dirties that package, not the level's.
   bool bUnsaved = Level && Level->GetOutermost()->IsDirty();
@@ -34,8 +45,6 @@ void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const ULevel* Level)
     }
   }
   Result->SetBoolField(TEXT("unsaved"), bUnsaved);
-  Result->SetArrayField(TEXT("unsavedPackages"), Names);
-  Result->SetNumberField(TEXT("unsavedPackageCount"), Packages.Num());
 }
 
 bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,

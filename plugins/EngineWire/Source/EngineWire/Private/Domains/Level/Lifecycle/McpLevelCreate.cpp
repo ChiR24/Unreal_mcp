@@ -85,11 +85,13 @@ bool HandleCreateNewLevelAction(UEngineWireSubsystem& Subsystem, const FString& 
     if (bSaveDirtyPackages) {
       int32 WorldBefore = 0, ContentBefore = 0, WorldAfter = 0, ContentAfter = 0, Failed = 0;
       if (!SaveBlockingDirtyPackagesForLevelLoad(WorldBefore, ContentBefore, WorldAfter, ContentAfter, Failed)) {
-        Subsystem.SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("saveDirtyPackages: %d package(s) failed to save and %d remain dirty; nothing was created. Save or discard them, then retry"),
-                            Failed, WorldAfter + ContentAfter),
-            TEXT("DIRTY_PACKAGES"));
+        const TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
+        const TArray<UPackage*> Left = AddBlockingDirtyPackages(Details);
+        Subsystem.SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("saveDirtyPackages: %d package(s) failed to save and %d remain dirty, %s first; nothing was created. Save or discard them, then retry"),
+                            Failed, WorldAfter + ContentAfter, *FirstPackageName(Left)),
+            Details, TEXT("DIRTY_PACKAGES"));
         return true;
       }
     }
