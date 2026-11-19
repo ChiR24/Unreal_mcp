@@ -524,7 +524,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     // enforces (propertyPath alone used to be refused by a required propertyName);
     // a missing target is refused by the handler, naming the four spellings.
     inputProps: {
-      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath,
+      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyNameWithElements, propertyPath: P.propertyPath,
       propertyNames: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer.' },
       objectPaths: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'The same read on several objects in one call, in place of objectPath: each entry is a target as objectPath takes it (an actor by name or label, an asset, a class default, PlayerPawn), read as a single call would be, propertyNames included. Answered under targets; a target that cannot be read carries its error and the others still answer.' },
     },
@@ -557,7 +557,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       'A value the object works out from another of its settings: the object puts the write back and the call fails with PROPERTY_SET_FAILED naming both values, so change that setting instead. A value the object only adjusts (a clamp) is written, and the message names what it became.',
     ],
     inputProps: {
-      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
+      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyNameWithElements, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
       properties: {
         type: 'object',
         additionalProperties: true,

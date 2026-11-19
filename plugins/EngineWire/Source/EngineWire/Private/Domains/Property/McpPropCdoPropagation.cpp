@@ -5,6 +5,7 @@
 #include "Dom/JsonValue.h"
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/Properties/McpComponentLookup.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropElements.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 #include "Foundation/BridgeHelpers/Properties/McpPropApply.h"
 #include "UObject/UnrealType.h"
@@ -15,6 +16,13 @@ namespace
 {
 FProperty* ResolveFollowerProperty(UObject* Object, const FString& Path, void*& OutContainer)
 {
+    // An element path (Items[2].Damage) only comes from inspect set_property, which resolved it the same way.
+    if (McpPathHasElements(Path))
+    {
+        FMcpElementPath Element;
+        OutContainer = IsValid(Object) && McpResolveElementPath(Object, Path, false, Element) ? Element.Container : nullptr;
+        return OutContainer ? Element.Property : nullptr;
+    }
     FString ResolvedPath, Error;
     FProperty* Property = IsValid(Object) ? McpResolvePropertyPath(Object, Path, OutContainer, ResolvedPath, Error) : nullptr;
     return OutContainer ? Property : nullptr;

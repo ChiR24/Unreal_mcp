@@ -8,6 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropElements.h"
 
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -30,9 +31,7 @@ bool IsSupersededTarget(const UObject* Object)
 
 void KeepDeclaredDefault(UBlueprint* Blueprint, UObject* DefaultObject, const FString& PropertyPath)
 {
-  const int32 Dot = PropertyPath.Find(TEXT("."));
-  const FString Head = Dot == INDEX_NONE ? PropertyPath : PropertyPath.Left(Dot);
-  const FProperty* Variable = DefaultObject->GetClass()->FindPropertyByName(FName(*Head));
+  const FProperty* Variable = DefaultObject->GetClass()->FindPropertyByName(FName(*McpPathHead(PropertyPath)));
   const int32 Index = Variable ? FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, Variable->GetFName()) : INDEX_NONE;
   if (Index == INDEX_NONE) {
     return;
@@ -52,7 +51,14 @@ bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UO
   }
   void* Container = nullptr;
   FString ResolvedPath, Error;
-  FProperty* Found = Fresh ? McpResolvePropertyPath(Fresh, PropertyPath, Container, ResolvedPath, Error) : nullptr;
+  FProperty* Found = nullptr;
+  if (Fresh && McpPathHasElements(PropertyPath)) {
+    FMcpElementPath Element;
+    Found = McpResolveElementPath(Fresh, PropertyPath, false, Element) ? Element.Property : nullptr;
+    Container = Element.Container;
+  } else if (Fresh) {
+    Found = McpResolvePropertyPath(Fresh, PropertyPath, Container, ResolvedPath, Error);
+  }
   if (!Found || !Container) {
     return false;
   }

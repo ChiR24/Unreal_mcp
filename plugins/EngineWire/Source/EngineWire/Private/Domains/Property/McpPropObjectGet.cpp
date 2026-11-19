@@ -10,6 +10,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropElements.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 
 #include "GameFramework/Actor.h"
@@ -162,7 +163,23 @@ bool UEngineWireSubsystem::HandleGetObjectProperty(
     return true;
   }
 
-  McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(RootObject, EffectivePropertyName);
+  // An element path (Items[2].Damage, Profiles[Id=Axe].Damage, Map[key]) has its own walk, for get and set_property only.
+  McpHandlerUtils::FPropertyResolveResult PropResult;
+  FMcpElementPath Element;
+  if (McpPathHasElements(EffectivePropertyName))
+  {
+      if (!McpResolveElementPath(RootObject, EffectivePropertyName, false, Element))
+      {
+          SendAutomationError(RequestingSocket, RequestId, Element.Error, Element.Code);
+          return true;
+      }
+      PropResult.Property = Element.Property;
+      PropResult.Container = Element.Container;
+  }
+  else
+  {
+      PropResult = McpHandlerUtils::ResolveProperty(RootObject, EffectivePropertyName);
+  }
   if (!PropResult.IsValid())
   {
       SendAutomationError(RequestingSocket, RequestId, PropResult.Error, TEXT("PROPERTY_NOT_FOUND"));

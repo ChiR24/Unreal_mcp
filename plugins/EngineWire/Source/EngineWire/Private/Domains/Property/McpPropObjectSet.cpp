@@ -14,6 +14,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeOperationsEnumUndo.h"
 #include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropElements.h"
 
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
@@ -129,7 +130,18 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   // paths at any depth, and a bare name that lives in one struct member.
   void* TargetContainer = nullptr;
   FString ResolveError, ResolvedPath;
-  FProperty* Property = McpResolvePropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolvedPath, ResolveError);
+  // An element path (Items[2].Damage, Profiles[Id=Axe].Damage, Map[key]) has its own walk, for get and set_property only.
+  FMcpElementPath Element;
+  const bool bElement = McpPathHasElements(EffectivePropertyName);
+  if (bElement && !McpResolveElementPath(RootObject, EffectivePropertyName, true, Element)) {
+      CreatedOverride.Rollback();
+      SendAutomationError(RequestingSocket, RequestId, Element.Error, Element.Code);
+      return true;
+  }
+  ResolvedPath = EffectivePropertyName;
+  TargetContainer = Element.Container;
+  FProperty* Property = bElement ? Element.Property
+      : McpResolvePropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolvedPath, ResolveError);
   if (!Property || !TargetContainer) {
       CreatedOverride.Rollback();
       if (EffectivePropertyName.Contains(TEXT("."))) {
@@ -182,6 +194,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   }
   UMaterialInterface* const ParentBefore = McpMaterialParent::HeldParent(RootObject);
   RootObject->Modify(bMarkDirty);
+  if (bElement && Element.Owner != RootObject) Element.Owner->Modify(bMarkDirty);
 
   FString ConversionError;
   if (!McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError))
@@ -221,9 +234,11 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   // The details panel names the property it changed; PostEditChange() named none, so an object that works one value
   // out from another there (a Niagara system's warm-up tick count from its warm-up time) kept the old one.
   FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);
-  const int32 Dot = ResolvedPath.Find(TEXT("."));
-  if (FProperty* Member = RootObject->GetClass()->FindPropertyByName(FName(*ResolvedPath.Left(Dot == INDEX_NONE ? ResolvedPath.Len() : Dot)))) Changed.MemberProperty = Member;
-  RootObject->PostEditChangeProperty(Changed);
+  if (FProperty* Member = RootObject->GetClass()->FindPropertyByName(FName(*McpPathHead(ResolvedPath)))) Changed.MemberProperty = Member;
+  // An element write names the whole chain, member to leaf, as the details panel does for an entry of a list.
+  if (bElement) McpNotifyElementWrite(Element);
+  else RootObject->PostEditChangeProperty(Changed);
+  if (bElement && Element.Owner != RootObject) McpRefreshComponentAfterEdit(Cast<UActorComponent>(Element.Owner));
   McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
   McpPropertyTarget::NotifyOwners(RootObject);
   EnumUndo.Reset();

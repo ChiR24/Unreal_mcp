@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "be3a38343df78e56",
+  "catalogRevision": "c61403de032d073d",
   "recordCount": 490,
   "records": [
     {
@@ -59416,7 +59416,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled), where one entry of a list, map or set is named in brackets: by index (Items[2].Damage), by a field of the entry (ScalarParameterValues[ParameterInfo.Name=Roughness].ParameterValue; a value with spaces in double quotes) or by a map key (Tags[Boss]). Matching is exact and case-sensitive: a miss lists the entries there are, several matches are refused (AMBIGUOUS_KEY_MATCH), and a set's entry is read-only. On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -59549,8 +59549,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf57c3785275a469432ab65fef4be3efa8b51e3cc88f3c9144ad7c3fd13e569d",
-        "content": "4248f1660bab7e5744bbdea16aa8fa05afbccbb417db6aad7706458096b935b9"
+        "schema": "dc19f140639e9843b7ff82dc3d3ca22b9203de495fe2488ae732a132f1926835",
+        "content": "a445087d703f84ee363f0ebbe922abbec6d8c73b5234006829b2e1cd0764dfe2"
       }
     },
     {
@@ -62338,7 +62338,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled), where one entry of a list, map or set is named in brackets: by index (Items[2].Damage), by a field of the entry (ScalarParameterValues[ParameterInfo.Name=Roughness].ParameterValue; a value with spaces in double quotes) or by a map key (Tags[Boss]). Matching is exact and case-sensitive: a miss lists the entries there are, several matches are refused (AMBIGUOUS_KEY_MATCH), and a set's entry is read-only. On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -62517,8 +62517,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "40113ef67b83416d8b8b3981cf9f20bfc31ed838eab45c4aa7dbc58b242e1eb5",
-        "content": "c67d45b14b50618a93309ed1c84c519cd720c63857908d3c35d2e3f20129aef9"
+        "schema": "7e75725336306789c048b2fb861ac9135570878b30d021c9e85a7ee56f9cdd2e",
+        "content": "3652c787910b66de5f8c69d5123b53dcbbba6803ab24f2fbc6a949d22c9f10a7"
       }
     },
     {

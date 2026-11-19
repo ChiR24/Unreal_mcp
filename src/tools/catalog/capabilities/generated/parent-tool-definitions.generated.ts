@@ -9117,7 +9117,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyName": {
           "type": "string",
-          "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+          "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled), where one entry of a list, map or set is named in brackets: by index (Items[2].Damage), by a field of the entry (ScalarParameterValues[ParameterInfo.Name=Roughness].ParameterValue; a value with spaces in double quotes) or by a map key (Tags[Boss]). Matching is exact and case-sensitive: a miss lists the entries there are, several matches are refused (AMBIGUOUS_KEY_MATCH), and a set's entry is read-only. On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
         },
         "propertyNames": {
           "oneOf": [
