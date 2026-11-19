@@ -5,12 +5,6 @@
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
 #include "Materials/MaterialInterface.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
-
 namespace McpGeometryHandlers
 {
 // outputPath names the converted asset (dogfood #135). A folder

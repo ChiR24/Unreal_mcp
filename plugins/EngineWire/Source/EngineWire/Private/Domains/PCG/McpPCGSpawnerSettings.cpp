@@ -64,27 +64,18 @@ bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshP
     }
 
     SpawnerSettings->Modify();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
-    SpawnerSettings->SetMeshSelectorType(UPCGMeshSelectorWeighted::StaticClass());
-    UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(SpawnerSettings->MeshSelectorInstance);
-    if (!WeightedSelector)
-    {
-        WeightedSelector = NewObject<UPCGMeshSelectorWeighted>(SpawnerSettings);
-        SpawnerSettings->MeshSelectorInstance = WeightedSelector;
-    }
+    // UE 5.3 renamed the spawner's selector instance from MeshSelectorInstance to MeshSelectorParameters.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+    TObjectPtr<UPCGMeshSelectorBase>& Selector = SpawnerSettings->MeshSelectorInstance;
 #else
-    if (!SpawnerSettings->MeshSelectorParameters || !SpawnerSettings->MeshSelectorParameters->IsA<UPCGMeshSelectorWeighted>())
+    TObjectPtr<UPCGMeshSelectorBase>& Selector = SpawnerSettings->MeshSelectorParameters;
+#endif
+    if (!Selector || !Selector->IsA<UPCGMeshSelectorWeighted>())
     {
         SpawnerSettings->SetMeshSelectorType(UPCGMeshSelectorWeighted::StaticClass());
     }
 
-    UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(SpawnerSettings->MeshSelectorParameters);
-    if (!WeightedSelector)
-    {
-        WeightedSelector = NewObject<UPCGMeshSelectorWeighted>(SpawnerSettings);
-        SpawnerSettings->MeshSelectorParameters = WeightedSelector;
-    }
-#endif
+    UPCGMeshSelectorWeighted* WeightedSelector = Cast<UPCGMeshSelectorWeighted>(Selector);
     if (!WeightedSelector)
     {
         OutError = TEXT("Could not create weighted mesh selector for PCG static mesh spawner.");

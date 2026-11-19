@@ -12,12 +12,6 @@
 #include "DynamicMeshEditor.h"
 #include "TransformTypes.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
-
 namespace McpGeometryHandlers
 {
 namespace

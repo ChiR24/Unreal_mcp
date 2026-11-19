@@ -54,9 +54,12 @@ public class EngineWire : ModuleRules {
         PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "EngineWire.uplugin"))));
         // UE 5.8 PCG exports a data symbol (PCG::Private::UserParameterTagData), and MSVC cannot delay-load a DLL
         // data is imported from (LNK1194), so link it normally there. Earlier engines keep the delay-load, so a prebuilt
-        // package still loads in projects where PCG is off; the .uplugin keeps PCG Optional for UE 5.0-5.1, which lack it.
+        // package still loads in projects where PCG is off; the .uplugin keeps PCG Optional for UE 5.0-5.1. PCG support
+        // is enabled from UE 5.2: 5.0 has no PCG, and 5.1's has no Helpers/PCGHelpers.h, UPCGNode::GetSettings or
+        // SetNodePosition, and no subgraph SetSubgraph.
         bool bPcgExportsData = Target.Version.MajorVersion > 5 || (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 8);
-        bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
+        bool bPcgApiPresent = Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 2;
+        bool bHasPCG = bPcgApiPresent && ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
         PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
         bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
         bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });

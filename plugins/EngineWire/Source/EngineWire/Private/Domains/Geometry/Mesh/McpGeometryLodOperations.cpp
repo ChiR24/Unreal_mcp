@@ -8,12 +8,6 @@
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
-
 namespace
 {
 // LOD settings target a static mesh asset; the caller names the level actor that

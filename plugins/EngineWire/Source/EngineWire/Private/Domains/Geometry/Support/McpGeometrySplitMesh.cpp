@@ -8,12 +8,6 @@
 #include "Materials/MaterialInterface.h"
 #include "Selections/MeshConnectedComponents.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
-
 // split_mesh: a merged mesh (a library pack of props imported as one asset, a kit baked together) could only be placed
 // whole. Its triangles are grouped into objects and each object is saved as a static mesh of its own with the source's
 // materials (compacted to the ones it uses) and a collision choice.

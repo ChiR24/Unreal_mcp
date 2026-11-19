@@ -21,11 +21,6 @@
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
 #include "UDynamicMesh.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
 #else
 #define MCP_AUTO_SKIN_HAS_GEOMETRY_SCRIPT 0
 #endif
@@ -73,7 +68,7 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
             return true;
         }
         UDynamicMesh* Working = NewObject<UDynamicMesh>();
-        FMcpGeometryScriptOutcome ReadOutcome = EGeometryScriptOutcomePins::Failure;
+        EGeometryScriptOutcomePins ReadOutcome = EGeometryScriptOutcomePins::Failure;
         UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromSkeletalMesh(
             Mesh, Working, FGeometryScriptCopyMeshFromAssetOptions(), FGeometryScriptMeshReadLOD(), ReadOutcome);
         if (ReadOutcome != EGeometryScriptOutcomePins::Success)
@@ -90,7 +85,7 @@ bool HandleAutoSkinWeightsAction(UEngineWireSubsystem* Subsystem, const FString&
         WriteOptions.bEnableRecomputeNormals = false;
         WriteOptions.bEnableRecomputeTangents = false;
         WriteOptions.bUseOriginalVertexOrder = true;
-        FMcpGeometryScriptOutcome WriteOutcome = EGeometryScriptOutcomePins::Failure;
+        EGeometryScriptOutcomePins WriteOutcome = EGeometryScriptOutcomePins::Failure;
         Mesh->Modify();
         UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshToSkeletalMesh(
             Working, Mesh, WriteOptions, FGeometryScriptMeshWriteLOD(), WriteOutcome);

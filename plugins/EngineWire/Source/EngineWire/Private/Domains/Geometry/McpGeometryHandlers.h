@@ -65,6 +65,13 @@
 #include "GeometryScript/MeshTransformFunctions.h"
 #endif
 #include "GeometryScript/MeshUVFunctions.h"
+
+// The asset functions' Outcome out-parameter is a TEnumAsByte in UE 5.1 and the plain enum from 5.2.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
+#else
+using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
+#endif
 #endif
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpGeometryHandlers, Log, All);

@@ -4,12 +4,6 @@
 
 #include "Foundation/McpScopedEditorTransaction.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
-using FMcpGeometryScriptOutcome = TEnumAsByte<EGeometryScriptOutcomePins>;
-#else
-using FMcpGeometryScriptOutcome = EGeometryScriptOutcomePins;
-#endif
-
 namespace McpGeometryHandlers
 {
 bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& RequestId,
