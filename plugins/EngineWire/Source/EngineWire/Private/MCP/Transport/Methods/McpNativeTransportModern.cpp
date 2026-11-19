@@ -7,6 +7,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Protocol/McpModernRequest.h"
+#include "Misc/App.h"
 #include "Misc/SecureHash.h"
 
 void FMcpNativeTransport::HandleModernRequest(
@@ -50,7 +51,10 @@ void FMcpNativeTransport::HandleModernRequest(
 	McpModern::FCall Call;
 	Call.bActive = true;
 	Call.bTasks = Meta.bTasks;
-	Call.bElicitationForm = Meta.bElicitationForm;
+	// An unattended editor (-unattended: a CI or benchmark run) never asks: nobody may be there to answer, and a client
+	// whose hook declines would lose the step for good. The call is refused with describe's nextCall instead, as for a
+	// client without forms, so a grant from describe still runs it.
+	Call.bElicitationForm = Meta.bElicitationForm && !FApp::IsUnattended();
 	Call.Method = Rpc.Method;
 	const TSharedPtr<FJsonObject>* Responses = nullptr;
 	if (Rpc.Params->TryGetObjectField(TEXT("inputResponses"), Responses) && Responses)
