@@ -1,4 +1,6 @@
 #include "Domains/BlueprintGraph/Code/McpGraphCodeWrite.h"
+#include "Domains/BlueprintGraph/Expression/McpBPGraphMathExpr.h"
+#include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpStandardMacros.h"
 
 #include "BlueprintActionFilter.h"
@@ -8,6 +10,7 @@
 #include "Engine/Blueprint.h"
 #include "K2Node_CustomEvent.h"
 #include "K2Node_MacroInstance.h"
+#include "K2Node_MathExpression.h"
 #include "UObject/UnrealType.h"
 
 namespace McpGraphCode
@@ -16,6 +19,27 @@ namespace Write
 {
 namespace WriteNodeParts
 {
+// The reader prints a Math Expression node as |formula (it has no menu category): one is made with that formula, as
+// edit_graph's set_node_property Expression makes it. Null when the formula leaves the node no output (it did not parse),
+// and for a bare title with no operator or call in it: that is a node id the menu lacks, not a formula.
+UEdGraphNode* MathExpression(UEdGraph* Graph, const FString& Formula)
+{
+    if (Formula.FindLastCharByPredicate([](TCHAR Ch) { return FCString::Strchr(TEXT("+-*/%()<>=!&^"), Ch) != nullptr; }) == INDEX_NONE)
+    {
+        return nullptr;
+    }
+    FGraphNodeCreator<UK2Node_MathExpression> Creator(*Graph);
+    UK2Node_MathExpression* Node = Creator.CreateNode(false);
+    Creator.Finalize();
+    McpBlueprintGraphHandlers::McpTrySetNodeAssetPropertyForMcp(Node, TEXT("Expression"), McpBlueprintMathExpression::RewriteUnaryMinus(Formula));
+    if (Node->Pins.ContainsByPredicate([](const UEdGraphPin* Pin) { return Pin && Pin->Direction == EGPD_Output && !Pin->bOrphanedPin; }))
+    {
+        return Node;
+    }
+    Node->DestroyNode();
+    return nullptr;
+}
+
 // A loop or gate the action menu does not name: the StandardMacros graph of that title.
 UEdGraphNode* StandardMacro(UEdGraph* Graph, const FString& TitleKey)
 {
@@ -127,6 +151,7 @@ UEdGraphNode* FTranspiler::Create(const FString& TypeId, bool bValue)
             Node = Found->Spawner->Invoke(Graph, Info.GetBindings(), FVector2D::ZeroVector);
         }
         Node = Node ? Node : StandardMacro(Graph, MenuTitleKey(TypeId));
+        Node = Node || !TypeId.StartsWith(TEXT("|"), ESearchCase::CaseSensitive) ? Node : MathExpression(Graph, TypeId.Mid(1));
     }
     if (!Node)
     {

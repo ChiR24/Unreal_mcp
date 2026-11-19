@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Math expressions in Blueprint code**: `write_graph_from_code` takes a Math Expression node as `read_graph_as_code` prints it (`(|1-(a*2) x)`), where it was refused as a node the menu lacks.
 - **Consent on refused code writes**: a `write_graph_from_code` refused before anything was written (a parse error, an unknown node, a missing graph) hands its consent grant back, so sending the fixed code needs no fresh describe; a write that ran keeps its grant spent.
 - **Blueprint creation by path**: `blueprint` `create` takes `blueprintPath` (`/Game/Blueprints/BP_Door`) in place of `name` and `savePath`, as the other Blueprint actions do; sending both is refused.
 - **Asset referencers**: the `inspect_asset` summary says what lists the assets that use one (`lookup` `dependencies` with `referencers` true).
