@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔧 Fixed</b></summary>
 
 - **Consent on refused code writes**: a `write_graph_from_code` refused before anything was written (a parse error, an unknown node, a missing graph) hands its consent grant back, so sending the fixed code needs no fresh describe; a write that ran keeps its grant spent.
+- **Blueprint creation by path**: `blueprint` `create` takes `blueprintPath` (`/Game/Blueprints/BP_Door`) in place of `name` and `savePath`, as the other Blueprint actions do; sending both is refused.
+- **Asset referencers**: the `inspect_asset` summary says what lists the assets that use one (`lookup` `dependencies` with `referencers` true).
 - **Component batches**: each `edit_scs` `modify` operation with a `properties` bag names the ones it set (`appliedProperties`), as `add_scs_component` does, beside the refused ones.
 - **Blueprint paths**: a Blueprint path that loads nothing is answered with the Blueprints of that name elsewhere in the project (`get_blueprint` and the other actions that load a Blueprint by path).
 - **Paging fields on execute**: `maxBytes`, `limit`, `offset` or `cursor` sent with an execute (they belong to search and describe) are named in the receipt's warnings with how execute caps a reply, where they were dropped without a word.

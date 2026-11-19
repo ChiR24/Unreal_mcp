@@ -29,14 +29,18 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from', 'parent class', 'blueprint from parent class', 'create blueprint parent class', 'child blueprint', 'camera shake class', 'camera shake blueprint', 'screen shake', 'make a blueprint interface', 'create an interface'],
     aliases: ['blueprint.make_blueprint', 'blueprint.new_blueprint'],
-    summary: 'Create a Blueprint asset named name in savePath (default /Game) and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.',
+    summary: 'Create a Blueprint asset named name in savePath (default /Game), or at blueprintPath, and save it (saved). parentClass is a native class as /Script/Module.Class or a short name (Actor, Pawn, Character, PlayerController), or a Blueprint class path ending in _C; blueprintType Actor, Pawn, Character or FunctionLibrary stands in for a missing parentClass, and Interface without one makes a Blueprint Interface. A parent that resolves to nothing is CLASS_NOT_FOUND, naming classes of that name. properties sets class defaults, Component.Property and struct members by dotted path, reported as appliedProperties and failedProperties (the create stands either way). A Blueprint already at the path is answered with alreadyExists and left unchanged; one with another parent class is ASSET_ALREADY_EXISTS.',
     whenToUse: ['A new Blueprint of a known parent class is needed.', 'A pickup or hazard is needed; its parts come from edit_scs, its logic from add_behaviour.'],
     whenNotToUse: ['An existing Blueprint should be opened or modified instead.'],
     // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
     // native ApplyBlueprintProperties writes each entry onto the generated CDO, so
     // the field is consumed here even though no manage_blueprint record declared it.
-    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties, blueprintType: P.blueprintType },
-    required: ['name', 'savePath'],
+    inputProps: {
+      name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties, blueprintType: P.blueprintType,
+      blueprintPath: { type: 'string', description: 'The new Blueprint\'s asset path (/Game/Blueprints/BP_Door), in place of name and savePath; not with them.' },
+    },
+    // name is required unless blueprintPath stands in for name and savePath; the handler refuses neither given.
+    required: [],
     requiredOneOf: ['parentClass', 'blueprintType'],
     outputProps: CREATE_OUTPUT,
     outputRequired: ['blueprintPath'],

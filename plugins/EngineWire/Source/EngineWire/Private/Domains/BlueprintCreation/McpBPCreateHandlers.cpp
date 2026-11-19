@@ -3,6 +3,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/BlueprintCreation/McpBPCreatePrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpBPPaths.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "EngineWireSubsystem.h"
 
@@ -16,15 +17,27 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
 
   FString Name;
   LocalPayload->TryGetStringField(TEXT("name"), Name);
+  FString SavePath;
+  LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
+  // blueprintPath, which every other Blueprint action takes: /Game/Folder/BP_Door is savePath /Game/Folder, name BP_Door.
+  FString BlueprintPath;
+  if (LocalPayload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) && !BlueprintPath.TrimStartAndEnd().IsEmpty()) {
+    if (!Name.TrimStartAndEnd().IsEmpty() || !SavePath.TrimStartAndEnd().IsEmpty()) {
+      Self->SendAutomationError(RequestingSocket, RequestId,
+                                TEXT("Give blueprintPath, or name and savePath, not both: nothing was created."),
+                                TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    McpBlueprintCheckPath(BlueprintPath.TrimStartAndEnd())
+        .Split(TEXT("/"), &SavePath, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+  }
   if (Name.TrimStartAndEnd().IsEmpty()) {
     Self->SendAutomationError(RequestingSocket, RequestId,
-                              TEXT("blueprint_create requires a name."),
+                              TEXT("blueprint_create requires a name (with savePath), or blueprintPath."),
                               TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
-  FString SavePath;
-  LocalPayload->TryGetStringField(TEXT("savePath"), SavePath);
   if (SavePath.TrimStartAndEnd().IsEmpty())
     SavePath = TEXT("/Game");
 
