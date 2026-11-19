@@ -22,6 +22,19 @@ bool AllowsEditState(const TArray<TSharedPtr<FJsonValue>>& States, TArray<FStrin
 	}
 	return bAllowsEdit;
 }
+
+bool AllowsPlayState(const TArray<TSharedPtr<FJsonValue>>& States)
+{
+	for (const TSharedPtr<FJsonValue>& State : States)
+	{
+		const FString Name = State.IsValid() ? State->AsString() : FString();
+		if (Name.Equals(TEXT("pie"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("simulate"), ESearchCase::IgnoreCase))
+		{
+			return true;
+		}
+	}
+	return false;
+}
 }
 
 FString McpRecordMinEngineVersion(const FMcpCapabilityRecord& Record)
@@ -82,7 +95,20 @@ bool McpCheckAvailabilityGate(const FMcpCapabilityRecord& Record, FString& OutCo
 		return true;
 	}
 	TArray<FString> Names;
-	if (AllowsEditState(*States, Names) || (GEditor && GEditor->PlayWorld != nullptr))
+	const bool bAllowsEdit = AllowsEditState(*States, Names);
+	const bool bPlaying = GEditor && GEditor->PlayWorld != nullptr;
+	// The other direction: a change whose record declares no play state is refused while Play runs, as its contract
+	// says, instead of landing on assets the running game is using. Reads stay open during Play.
+	if (bPlaying && !Record.Effect.Equals(TEXT("read"), ESearchCase::IgnoreCase) && !AllowsPlayState(*States))
+	{
+		OutCode = TEXT("EDITOR_STATE_MISMATCH");
+		OutMessage = FString::Printf(
+			TEXT("'%s' changes the editor and runs only outside Play In Editor (editor states: %s); call again once Play "
+				"has ended (a Play the user started is theirs to stop)."),
+			*Record.Id, *FString::Join(Names, TEXT(", ")));
+		return false;
+	}
+	if (bAllowsEdit || bPlaying)
 	{
 		return true;
 	}
