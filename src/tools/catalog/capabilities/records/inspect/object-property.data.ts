@@ -432,7 +432,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
     editorStates: ANY_EDITOR_STATE,
     summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
-    topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel', 'what is under or in front of the player or an actor'],
+    topics: ['line trace', 'what does a line trace hit', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel', 'what is under or in front of the player or an actor'],
     whenToUse: [
       'The ground height under a point, or what a jump or a drop would land on, must be known.',
       'A line of sight between two points (a camera, an enemy, the player) must be checked.',

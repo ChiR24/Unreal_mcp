@@ -1011,6 +1011,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find all the lights in the level', accepted: ['control_actor.find'] },
   { query: 'is the level too dark', accepted: ['inspect.analyze_view'] },
   { query: 'what is under the player', accepted: ['inspect.raycast_world'] },
+  { query: 'line trace hit', accepted: ['inspect.raycast_world'] },
   { query: 'add echo to the cave', accepted: ['manage_audio.create_audio_actor'] },
   { query: 'make the game run at 60 fps', accepted: ['system_control.configure_performance'] },
   { query: 'make the enemy see the player', accepted: ['manage_ai.setup_perception'] },

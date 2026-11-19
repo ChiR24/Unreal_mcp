@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ea96bac79f4d92b8",
+  "catalogRevision": "bdc9030c01ba725c",
   "recordCount": 489,
   "records": [
     {
@@ -61438,6 +61438,7 @@
         "topics": [
           "raycast_world",
           "line trace",
+          "what does a line trace hit",
           "raycast world",
           "what is below",
           "ground height",
@@ -61661,7 +61662,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fcfc574144bbd2cfa5d2529181a3d29dd9a05075549cdfca0d9d7394e62480ad",
-        "content": "0f7b3094299d89d51d5a6999457acf082cacc77ff320e8cf5e582c51d13f59aa"
+        "content": "f8db212a611f6f6c6b552adecddd4be30810e9895bdcb43b1b0fc31ebfb7cdda"
       }
     },
     {
