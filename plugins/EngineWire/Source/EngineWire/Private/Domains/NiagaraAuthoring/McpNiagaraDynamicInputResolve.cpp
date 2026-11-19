@@ -149,6 +149,7 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     }
 
     TArray<UNiagaraNodeFunctionCall*> Candidates;
+    TArray<UNiagaraNodeFunctionCall*> ByFunctionName; // the candidates whose function name, not only their script, is moduleName
     FString Available;
     FString NamedModuleInputs; // inputs exposed by modules whose name matched (diagnostic for a wrong inputName)
     for (UNiagaraNodeFunctionCall* Module : Modules)
@@ -174,7 +175,17 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
         if (bNameMatches && (FindModuleInput(Module, InputName, Matched) || bGraphUnavailable))
         {
             Candidates.Add(Module);
+            if (!ModuleName.IsEmpty() && FunctionName.Equals(ModuleName, ESearchCase::IgnoreCase))
+            {
+                ByFunctionName.Add(Module);
+            }
         }
+    }
+    // A function name is unique in the graph (SpawnRate, SpawnRate001); a script name is shared by every copy of a
+    // module, so 'SpawnRate' matched the template's module and each copy, and named none of them.
+    if (Candidates.Num() > 1 && ByFunctionName.Num() == 1)
+    {
+        Candidates = ByFunctionName;
     }
     if (Candidates.Num() == 1)
     {
