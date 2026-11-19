@@ -139,7 +139,7 @@
     "EngineWireValidation/Private/McpLintValidator.h": 1
   },
   "buildCs": {
-    "EngineWire/EngineWire.Build.cs": 11
+    "EngineWire/EngineWire.Build.cs": 2
   },
   "minEngineVersionRecords": [
     "animation_physics.setup_retargeting",

@@ -52,31 +52,29 @@ public class EngineWire : ModuleRules {
 
         ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
         PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "EngineWire.uplugin"))));
-        // UE 5.8 PCG exports a data symbol (PCG::Private::UserParameterTagData), and MSVC cannot delay-load a DLL
-        // data is imported from (LNK1194), so link it normally there. Earlier engines keep the delay-load, so a prebuilt
-        // package still loads in projects where PCG is off; the .uplugin keeps PCG Optional for UE 5.0-5.1. PCG support
-        // is enabled from UE 5.2: 5.0 has no PCG, and 5.1's has no Helpers/PCGHelpers.h, UPCGNode::GetSettings or
-        // SetNodePosition, and no subgraph SetSubgraph.
-        bool bPcgExportsData = Target.Version.MajorVersion > 5 || (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 8);
-        bool bPcgApiPresent = Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 2;
+        // Where a PCG header reads exported data (PCG::Private::UserParameterTagData), MSVC cannot delay-load the DLL
+        // data is imported from (LNK1194), so PCG is linked normally there. Elsewhere it keeps the delay-load, so a
+        // prebuilt package still loads in projects where PCG is off; the .uplugin keeps PCG Optional. PCG support needs
+        // Helpers/PCGHelpers.h: an engine without it also lacks UPCGNode::GetSettings, SetNodePosition and SetSubgraph.
+        bool bPcgExportsData = Detect(EngineDir, "PCG_EXPORTS_DATA");
+        bool bPcgApiPresent = Detect(EngineDir, "PCG_API");
         bool bHasPCG = bPcgApiPresent && ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
         PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
-        // UE 5.0's MRQ job has no IsEnabled/SetIsEnabled, no OnIndividualJobFinished and no bRenderMainPass,
-        // all of which the Movie Render Queue handlers need; 5.0 takes the existing NOT_SUPPORTED path instead.
-        bool bHasMovieRenderPipeline = (Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 1) && AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
+        // A Movie Render Queue job without IsEnabled/SetIsEnabled also lacks OnIndividualJobFinished and bRenderMainPass,
+        // all of which the Movie Render Queue handlers need; such an engine takes the existing NOT_SUPPORTED path instead.
+        bool bHasMovieRenderPipeline = Detect(EngineDir, "MRQ_JOB_ENABLE") && AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
             "MovieRenderPipelineCore", "MovieRenderPipelineRenderPasses",
             "MovieRenderPipelineSettings", "MovieRenderPipelineEditor"
         });
         bool bHasMoviePipelineMaskModule = bHasMovieRenderPipeline &&
             AddOptionalModuleGroup(EngineDir, "Movie Pipeline Mask Render Pass", new string[] { "MoviePipelineMaskRenderPass" });
-        bool bHasMoviePipelineObjectIdPass = bHasMoviePipelineMaskModule &&
-            File.Exists(Path.Combine(EngineDir, "Plugins", "MovieScene", "MoviePipelineMaskRenderPass", "Source", "MoviePipelineMaskRenderPass", "Public", "MoviePipelineObjectIdPass.h"));
-        bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bHighPrecisionOutput");
-        bool bHasMoviePipelineLossless = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bUseLosslessCompression");
-        bool bHasSmaa = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "SceneUtils.h"), "AAM_SMAA");
+        bool bHasMoviePipelineObjectIdPass = bHasMoviePipelineMaskModule && Detect(EngineDir, "MOVIE_PIPELINE_OBJECT_ID_PASS");
+        bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline && Detect(EngineDir, "MOVIE_PIPELINE_PASS_METADATA");
+        bool bHasMoviePipelineLossless = bHasMovieRenderPipeline && Detect(EngineDir, "MOVIE_PIPELINE_LOSSLESS");
+        bool bHasSmaa = Detect(EngineDir, "SMAA");
         bool bHasTakeRecorder = AddOptionalModuleGroup(EngineDir, "Take Recorder", new string[] { "TakesCore", "TakeRecorder", "TakeRecorderSources" });
-        bool bHasReplaySubsystemTotalTime = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
-        bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
+        bool bHasReplaySubsystemTotalTime = Detect(EngineDir, "REPLAY_SUBSYSTEM_TOTAL_TIME");
+        bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && Detect(EngineDir, "TAKE_RECORDER_OPEN_SEQUENCER");
         PublicDefinitions.AddRange(new string[] {
             bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
             bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0",
@@ -87,14 +85,18 @@ public class EngineWire : ModuleRules {
 
         AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
 
-        ConfigureSubobjectData(EngineDir);
-        PublicDefinitions.Add(HasWorldPartitionForEachDataLayer(EngineDir) ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
+        if (Detect(EngineDir, "SUBOBJECT_DATA_INTERFACE")) PrivateDependencyModuleNames.Add("SubobjectDataInterface");
+        else if (!PrivateDependencyModuleNames.Contains("SubobjectData")) PrivateDependencyModuleNames.Add("SubobjectData");
+        PublicDefinitions.Add(Detect(EngineDir, "WP_FOR_EACH_DATALAYER") ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
 
         if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Configuration == UnrealTargetConfiguration.Debug)
             PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
 
-        if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 6)
+        // Shadowed names stay warnings where the target makes them errors (its BuildSettingsVersion decides that).
+        if (GetCppWarningLevel("ShadowVariableWarningLevel") == WarningLevel.Error) {
             SetCppWarningLevel("ShadowVariableWarningLevel", WarningLevel.Warning);
+            Console.WriteLine("EngineWire: shadow-variable errors lowered to warnings");
+        }
 
         // Every C4996 this module emits comes from an engine header rather than from Private/: a 5.7
         // editor build reports 978 of them, 373 for UObject::GetAssetRegistryTags alone, each raised
@@ -110,6 +112,7 @@ public class EngineWire : ModuleRules {
         }
     }
 
+    // The one version test left in this file, named under buildQuirks in FeatureDetection.json.
     private static void ApplyMsvcCompatibility(ReadOnlyTargetRules Target) {
         if (Target.Version.MajorVersion != 5 || Target.Version.MinorVersion > 2 || Target.Platform != UnrealTargetPlatform.Win64) return;
 
@@ -181,6 +184,30 @@ public class EngineWire : ModuleRules {
         }
         // ModuleRules.Logger only exists from UE 5.3; Console works on every UBT.
         Console.WriteLine(string.Format("EngineWire: could not set UBT warning level {0}; UBT renamed the setting.", warningName));
+    }
+
+    private WarningLevel? GetCppWarningLevel(string warningName) {
+        var cppSettings = GetType().GetProperty("CppCompileWarningSettings", InstanceFlags)?.GetValue(this);
+        object level = cppSettings?.GetType().GetProperty(warningName, InstanceFlags)?.GetValue(cppSettings)
+            ?? GetType().GetProperty(warningName, InstanceFlags)?.GetValue(this);
+        return level as WarningLevel?;
+    }
+
+    private JsonObject[] FeatureRows;
+
+    // A FeatureDetection.json row: the first of its paths that exists must hold its marker (or just exist, with none).
+    private bool Detect(string EngineDir, string Name) {
+        if (FeatureRows == null && !JsonObject.Read(new FileReference(Path.Combine(ModuleDirectory, "FeatureDetection.json"))).TryGetObjectArrayField("features", out FeatureRows))
+            throw new Exception("EngineWire: FeatureDetection.json has no features array");
+        JsonObject Row = FeatureRows.FirstOrDefault(Each => Each.TryGetStringField("name", out string RowName) && RowName == Name);
+        string[] Paths = null;
+        if (Row == null || !Row.TryGetStringArrayField("paths", out Paths))
+            throw new Exception(string.Format("EngineWire: FeatureDetection.json has no row named {0} with paths", Name));
+        string Found = Paths.Select(Each => Path.Combine(EngineDir, Each)).FirstOrDefault(Each => File.Exists(Each) || Directory.Exists(Each));
+        string Marker = null;
+        bool bPresent = Found != null && (!Row.TryGetStringField("marker", out Marker) || FileContains(Found, Marker));
+        Console.WriteLine(string.Format("EngineWire: feature {0} {1}", Name, bPresent ? "detected" : "absent"));
+        return bPresent;
     }
 
     private static bool FileContains(string path, string text) {
@@ -255,28 +282,4 @@ public class EngineWire : ModuleRules {
         return true;
     }
 
-    private void ConfigureSubobjectData(string EngineDir) {
-        if (Directory.Exists(Path.Combine(EngineDir, "Source", "Editor", "SubobjectDataInterface"))) {
-            PrivateDependencyModuleNames.Add("SubobjectDataInterface");
-        }
-        else if (!PrivateDependencyModuleNames.Contains("SubobjectData")) {
-            PrivateDependencyModuleNames.Add("SubobjectData");
-        }
-    }
-
-    private static bool HasWorldPartitionForEachDataLayer(string EngineDir) {
-        try {
-            string header = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public",
-                "WorldPartition", "DataLayer", "DataLayerManager.h");
-            if (!File.Exists(header)) {
-                header = Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public",
-                    "WorldPartition", "WorldPartition.h");
-            }
-            return File.Exists(header) && File.ReadAllText(header).Contains("ForEachDataLayerInstance(");
-        }
-        catch (Exception Ex) {
-            Console.WriteLine(string.Format("EngineWire: WorldPartition support detection failed: {0}", Ex.Message));
-            return false;
-        }
-    }
 }

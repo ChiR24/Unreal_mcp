@@ -1,0 +1,19 @@
+{
+  "about": "Engine features EngineWire.Build.cs detects from the engine's own files, never from a version number. A row is present when the first of its paths that exists (file or folder, relative to the Engine folder) holds its marker text, or exists at all when it has no marker.",
+  "features": [
+    { "name": "PCG_API", "paths": ["Plugins/PCG/Source/PCG/Public/Helpers/PCGHelpers.h"], "why": "the PCG helpers, node settings and subgraph calls the PCG handlers use" },
+    { "name": "PCG_EXPORTS_DATA", "paths": ["Plugins/PCG/Source/PCG/Public/PCGSubgraph.h"], "marker": "PCG::Private::UserParameterTagData", "why": "a PCG header reads exported data, so PCG cannot be delay-loaded (LNK1194)" },
+    { "name": "MRQ_JOB_ENABLE", "paths": ["Plugins/MovieScene/MovieRenderPipeline/Source/MovieRenderPipelineCore/Public/MoviePipelineQueue.h"], "marker": "SetIsEnabled(", "why": "the Movie Render Queue job API the render handlers need" },
+    { "name": "MOVIE_PIPELINE_OBJECT_ID_PASS", "paths": ["Plugins/MovieScene/MoviePipelineMaskRenderPass/Source/MoviePipelineMaskRenderPass/Public/MoviePipelineObjectIdPass.h"] },
+    { "name": "MOVIE_PIPELINE_PASS_METADATA", "paths": ["Plugins/MovieScene/MovieRenderPipeline/Source/MovieRenderPipelineRenderPasses/Public/MoviePipelineDeferredPasses.h"], "marker": "bHighPrecisionOutput" },
+    { "name": "MOVIE_PIPELINE_LOSSLESS", "paths": ["Plugins/MovieScene/MovieRenderPipeline/Source/MovieRenderPipelineRenderPasses/Public/MoviePipelineDeferredPasses.h"], "marker": "bUseLosslessCompression" },
+    { "name": "SMAA", "paths": ["Source/Runtime/Engine/Public/SceneUtils.h"], "marker": "AAM_SMAA" },
+    { "name": "REPLAY_SUBSYSTEM_TOTAL_TIME", "paths": ["Source/Runtime/Engine/Public/ReplaySubsystem.h"], "marker": "GetReplayTotalTime" },
+    { "name": "TAKE_RECORDER_OPEN_SEQUENCER", "paths": ["Plugins/VirtualProduction/Takes/Source/TakeRecorder/Public/Recorder/TakeRecorderParameters.h"], "marker": "bOpenSequencer" },
+    { "name": "WP_FOR_EACH_DATALAYER", "paths": ["Source/Runtime/Engine/Public/WorldPartition/DataLayer/DataLayerManager.h", "Source/Runtime/Engine/Public/WorldPartition/WorldPartition.h"], "marker": "ForEachDataLayerInstance(" },
+    { "name": "SUBOBJECT_DATA_INTERFACE", "paths": ["Source/Editor/SubobjectDataInterface"], "why": "else the module is SubobjectData" }
+  ],
+  "buildQuirks": [
+    { "name": "MSVC_HAS_FEATURE_WORKAROUND", "why": "UE 5.0-5.2 headers evaluate __has_feature under current MSVC; ApplyMsvcCompatibility keeps its version test, the one named exception" }
+  ]
+}

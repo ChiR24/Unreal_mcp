@@ -14,7 +14,8 @@ const allow = JSON.parse(readFileSync(resolve(process.cwd(), 'tests/unit/plugin/
 };
 const VERSION_TEST = /(#\s*(el)?if|\bif\s*\()[^\n]*\b(ENGINE_(MAJOR|MINOR)_VERSION|UE_VERSION_(NEWER|OLDER)_THAN)\b/;
 const BUILD_CS_TEST = /Target\.Version\.(Major|Minor)Version\s*(==|!=|>=|<=|>|<)/g;
-const CAPS = { cppFiles: 137, cppLines: 250, buildCsLines: 11, records: 27 };
+// buildCsLines: ApplyMsvcCompatibility's test, the one named build quirk (FeatureDetection.json buildQuirks).
+const CAPS = { cppFiles: 137, cppLines: 250, buildCsLines: 2, records: 27 };
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -65,6 +66,18 @@ describe('no engine version comparisons outside Core/Compatibility/', () => {
     expect(grown, 'decide the feature from the engine files (FeatureDetection), not Target.Version').toEqual([]);
     expect(stale, 'migrated: lower or remove these entries in version-allowlist.json').toEqual([]);
     expect(sum(allow.buildCs)).toBeLessThanOrEqual(CAPS.buildCsLines);
+  });
+
+  it('every Build.cs Detect name has a FeatureDetection.json row, and every row is used', () => {
+    const buildCs = readFileSync(join(sourceRoot, 'EngineWire/EngineWire.Build.cs'), 'utf8');
+    const table = JSON.parse(readFileSync(join(sourceRoot, 'EngineWire/FeatureDetection.json'), 'utf8')) as {
+      features: { name: string; paths: string[]; marker?: string }[];
+    };
+    const called = [...buildCs.matchAll(/Detect\(EngineDir, "([A-Z0-9_]+)"\)/g)].map((m) => m[1]).sort();
+    const rows = table.features.map((row) => row.name).sort();
+    expect(rows.filter((name, i) => rows.indexOf(name) !== i), 'duplicate rows').toEqual([]);
+    expect([...new Set(called)]).toEqual(rows);
+    expect(table.features.filter((row) => !Array.isArray(row.paths) || row.paths.length === 0).map((row) => row.name)).toEqual([]);
   });
 
   it('records add no minEngineVersion gate', () => {
