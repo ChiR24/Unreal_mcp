@@ -196,6 +196,7 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     FString FirstError;
     const bool bCompiled = McpCompileBlueprintWithDiagnostics(Blueprint, Result, FirstError, 12);
+    const TEnumAsByte<EBlueprintStatus> CompiledStatus = Blueprint->Status;
     const TArray<TSharedPtr<FJsonValue>> Messages = MessagesByLine(Made);
     for (FGraphPlan& Plan : Plans)
     {
@@ -224,6 +225,9 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
             ++Removed;
         }
     }
+    // Taking the old bodies out marks the Blueprint changed (the schema's link break does), yet the compile above ran
+    // without them, so its status still holds: an expectation "<Blueprint> compiles" read the mark and answered unknown.
+    Blueprint->Status = CompiledStatus;
     if (Messages.Num() > 0)
     {
         Result->SetArrayField(TEXT("compileMessages"), Messages);
