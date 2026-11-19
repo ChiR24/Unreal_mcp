@@ -2,6 +2,7 @@
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformTime.h"
 #include "Core/Journal/McpChangeJournal.h"
+#include "Core/Requests/McpSaveValidationScope.h"
 #include "Core/Requests/McpUndoLedger.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Domains/ControlActor/Placement/McpChangeWatch.h"
@@ -274,6 +275,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
     FMcpCapabilityPrincipal Caller;
     const bool bKnownCaller = McpPrequeueGate::FindRequestPrincipal(RequestId, Caller);
     const McpCapabilityPrincipal::FActiveRequestScope CallerScope(bKnownCaller ? &Caller : nullptr);
+    const FMcpSaveValidationScope SaveValidation; // the reply validates; no Message Log window per save
 
     // What the call requires (options.require) is judged here, inside the request's brackets, so a refusal is
     // answered like any reply and nothing has run.
@@ -318,6 +320,7 @@ void UEngineWireSubsystem::RunLatentReply(const FString &RequestId, const FStrin
   FMcpCapabilityPrincipal Caller;
   const bool bKnownCaller = McpPrequeueGate::FindRequestPrincipal(RequestId, Caller);
   const McpCapabilityPrincipal::FActiveRequestScope CallerScope(bKnownCaller ? &Caller : nullptr);
+  const FMcpSaveValidationScope SaveValidation;
   // As for a dispatch: a dialog the edit raises answers its default instead of blocking the game thread.
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
   bProcessingAutomationRequest = true;

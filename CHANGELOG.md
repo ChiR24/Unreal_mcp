@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Saves**: a write that saves an asset no longer opens the Message Log window on the user's screen: saves made inside a request skip the engine's save-time Data Validation, and the reply still names what the validators find.
 - **Property reads**: the property names `control_actor` `list` and `sample_motion` read through an object an actor holds follow the same object rule as `get_property`.
 - **Builds**: the plugin links on UE 5.3 and 5.4 for Windows, builds on the UE 5.9 preview, and SmartObjects loads again in a Blueprint-only UE 5.5 project.
 - **Builds**: the plugin builds with clang on engines before 5.8 (Linux, Mac), where JSON object keys are `FString` and a range loop that copies each pair is an error (`-Wrange-loop-construct` under `-Werror`). Those loops now take the pair by `const auto&` and read the key through `*Pair.Key`, as the rest of the plugin does, so they build on 5.8 too, where keys are `UE::FSharedString`.
