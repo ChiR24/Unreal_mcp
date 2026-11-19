@@ -32,7 +32,7 @@ int32 ErodeLayerCount(const ALandscape* Landscape)
     {
         return 0;
     }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_LANDSCAPE_GET_LAYERS_CONST
     return Landscape->GetLayersConst().Num();
 #else
     return Landscape->GetLayerCount();

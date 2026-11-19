@@ -106,7 +106,7 @@ bool HandleInspectStructAction(
             const FStructVariableDescription& VarDesc = **FoundVar;
             Member->SetStringField(TEXT("guid"), VarDesc.VarGuid.ToString());
             TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_STRUCT_VARIABLE_METADATA
             for (const TPair<FName, FString>& Meta : VarDesc.MetaData)
             {
                 MetaObj->SetStringField(Meta.Key.ToString(), Meta.Value);

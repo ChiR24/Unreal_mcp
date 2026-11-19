@@ -38,7 +38,7 @@
 #include "Settings/LevelEditorPlaySettings.h"
 #include "Editor/Transactor.h"
 #include "Safety/McpSafeOperationsEnumUndo.h"
-#if ENGINE_MAJOR_VERSION > 5 ||  (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
+#if MCP_HAS_INPUT_DEVICE_MAPPER
 #include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #define MCP_CONTROL_HAS_INPUT_DEVICE_ID 1
 #else

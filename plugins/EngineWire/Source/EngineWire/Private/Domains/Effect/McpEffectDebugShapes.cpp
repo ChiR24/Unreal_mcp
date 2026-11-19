@@ -167,7 +167,7 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         if (UWorld* World = GetEditorWorld())
         {
             bWorldAvailable = true;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_WORLD_LINE_BATCHER_TYPE
             AppendLineBatcherStatus(TEXT("World"), World->GetLineBatcher(UWorld::ELineBatcherType::World), Batchers, Lines, Points, Meshes);
             AppendLineBatcherStatus(TEXT("WorldPersistent"), World->GetLineBatcher(UWorld::ELineBatcherType::WorldPersistent), Batchers, Lines, Points, Meshes);
             AppendLineBatcherStatus(TEXT("Foreground"), World->GetLineBatcher(UWorld::ELineBatcherType::Foreground), Batchers, Lines, Points, Meshes);

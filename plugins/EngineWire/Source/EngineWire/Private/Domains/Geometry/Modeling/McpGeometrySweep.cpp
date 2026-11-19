@@ -56,7 +56,7 @@ bool HandleSweep(UEngineWireSubsystem* Self, const FString& RequestId,
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
         Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
         true, bCap, 1.0f, 1.0f, 0.0f,
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_GEOMETRY_SCRIPT_SWEEP_MITER_LIMIT
         1.0f, // MiterLimit, added in 5.5
 #endif
         nullptr);

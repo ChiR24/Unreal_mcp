@@ -128,7 +128,7 @@ bool HandleNoiseDeform(UEngineWireSubsystem* Self, const FString& RequestId,
 
     FGeometryScriptMeshSelection Selection;
 
-#if ENGINE_MINOR_VERSION >= 7
+#if MCP_HAS_GEOMETRY_SCRIPT_PERLIN_NOISE_2
     // UE 5.7+: Use ApplyPerlinNoiseToMesh2 (updated API)
     UGeometryScriptLibrary_MeshDeformFunctions::ApplyPerlinNoiseToMesh2(
         Mesh, Selection, NoiseOptions, nullptr);

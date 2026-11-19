@@ -12,7 +12,7 @@
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "Rendering/SkeletalMeshLODRenderData.h"
 #include "Rendering/SkeletalMeshRenderData.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_SKINNED_ASSET_COMMON_HEADER
 #include "Engine/SkinnedAssetCommon.h"
 #endif
 #include "StaticMeshResources.h"

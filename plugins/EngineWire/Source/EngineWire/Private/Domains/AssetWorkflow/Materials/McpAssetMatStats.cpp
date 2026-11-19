@@ -37,7 +37,7 @@ bool UEngineWireSubsystem::HandleGetMaterialStats(
   }
 
   // Ensure material is compiled
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_MATERIAL_ENSURE_IS_COMPLETE
   Material->EnsureIsComplete();
 #endif
 

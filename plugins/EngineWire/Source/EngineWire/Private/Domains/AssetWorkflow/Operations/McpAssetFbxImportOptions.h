@@ -111,7 +111,7 @@ inline UFactory *McpMakeFbxFactory(UAutomatedAssetImportData *Owner,
   Fbx->ImportUI->AnimSequenceImportData->bConvertSceneUnit = true;
   // Mocap rarely lands on a whole frame, and the importer rejects a take that
   // does not, with nobody here to answer the prompt it would otherwise raise.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_FBX_ANIM_SNAP_TO_FRAME_BOUNDARY
   Fbx->ImportUI->AnimSequenceImportData->bSnapToClosestFrameBoundary = true;
 #endif
   return Fbx;

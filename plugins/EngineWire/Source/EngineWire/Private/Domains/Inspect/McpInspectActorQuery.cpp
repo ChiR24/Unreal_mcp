@@ -54,7 +54,7 @@ bool McpComputeObjectBounds(UObject *Object, FBox &OutBox, FString &OutSource)
 void McpAppendObjectMetadata(UObject *Object, TSharedPtr<FJsonObject> Resp)
 {
     TSharedPtr<FJsonObject> Metadata = McpHandlerUtils::CreateResultObject();
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_PACKAGE_METADATA_STRUCT
     const TMap<FName, FString> *MetadataMap = FMetaData::GetMapForObject(Object);
 #else
     const TMap<FName, FString> *MetadataMap = UMetaData::GetMapForObject(Object);

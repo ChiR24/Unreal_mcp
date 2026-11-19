@@ -7,7 +7,7 @@ static void AddActorNetworkingInfo(TSharedPtr<FJsonObject>& NetworkingInfo, AAct
     NetworkingInfo->SetBoolField(TEXT("bReplicates"), Actor->GetIsReplicated());
     NetworkingInfo->SetBoolField(TEXT("bAlwaysRelevant"), Actor->bAlwaysRelevant);
     NetworkingInfo->SetBoolField(TEXT("bOnlyRelevantToOwner"), Actor->bOnlyRelevantToOwner);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_ACTOR_NET_UPDATE_FREQUENCY_ACCESSORS
     NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->GetNetUpdateFrequency());
     NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->GetMinNetUpdateFrequency());
     NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->GetNetCullDistanceSquared());

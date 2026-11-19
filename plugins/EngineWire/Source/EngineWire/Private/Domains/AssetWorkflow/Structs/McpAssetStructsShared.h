@@ -37,7 +37,7 @@ inline void ApplyStructMemberTooltipAndMetadata(UUserDefinedStruct* S, const FGu
     const TSharedPtr<FJsonObject>* MetaObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("metadata"), MetaObj) && MetaObj && (*MetaObj).IsValid())
     {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_STRUCT_VARIABLE_METADATA
         for (const auto& Pair : (*MetaObj)->Values) { FStructureEditorUtils::SetMetaData(S, G, *Pair.Key, Pair.Value->AsString()); }
 #endif
     }

@@ -147,7 +147,7 @@ bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
     {
         return true;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_ACTOR_NET_UPDATE_FREQUENCY_ACCESSORS
     if (bHasFrequency) { CDO->SetNetUpdateFrequency(static_cast<float>(NetUpdateFrequency)); }
     if (bHasMin) { CDO->SetMinNetUpdateFrequency(static_cast<float>(MinNetUpdateFrequency)); }
     const float StoredFrequency = CDO->GetNetUpdateFrequency();

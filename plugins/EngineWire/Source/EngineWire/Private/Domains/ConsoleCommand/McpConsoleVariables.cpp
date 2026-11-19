@@ -18,7 +18,7 @@ constexpr int32 MaxHelpChars = 200;
 // and temp layers); the engine names them itself from 5.3, and before that each version's own enumerators are compared.
 const TCHAR* SetByName(EConsoleVariableFlags Flags)
 {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_CONSOLE_VARIABLE_SET_BY_NAME
     return GetConsoleVariableSetByName(Flags);
 #else
     switch (static_cast<uint32>(Flags) & static_cast<uint32>(ECVF_SetByMask))

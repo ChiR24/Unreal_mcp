@@ -128,7 +128,7 @@ bool HandleReplaceActors(UEngineWireSubsystem* Bridge, const FString& RequestId,
     {
         FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Replace Actors")), EMcpMutationDurability::EditorStateOnly,
             TArray<UObject*>(Actors));
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_EDITOR_ACTOR_REPLACE_ACTORS
         UEditorActorSubsystem::ReplaceActors(Factory, AssetData, Actors);
 #else
         GEditor->ReplaceActors(Factory, AssetData, Actors);

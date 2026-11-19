@@ -18,7 +18,7 @@
 #include "UObject/Script.h"
 #include "UObject/Stack.h"
 #include "UObject/UnrealType.h"
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_BLUEPRINT_EXCEPTION_INFO_HEADER
 #include "Blueprint/BlueprintExceptionInfo.h"  // in UObject/Script.h before 5.4
 #endif
 

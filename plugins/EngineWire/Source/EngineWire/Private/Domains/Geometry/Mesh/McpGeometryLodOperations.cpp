@@ -186,7 +186,7 @@ bool HandleSetLODScreenSizes(UEngineWireSubsystem* Self, const FString& RequestI
     // updated". Auto-compute has to go off too, or the next build recomputes
     // the screen sizes straight back over the caller's values.
     int32 NumLODs = StaticMesh->GetNumSourceModels();
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+#if MCP_HAS_STATIC_MESH_AUTO_LOD_SCREEN_SIZE
     StaticMesh->SetAutoComputeLODScreenSize(false);
 #else
     StaticMesh->bAutoComputeLODScreenSize = false;

@@ -151,7 +151,7 @@ bool HandleStructAnalysisCompare(UEngineWireSubsystem& Bridge, const FString& Re
             DiffArr.Add(MakeShared<FJsonValueObject>(Diff));
         }
 
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_STRUCT_VARIABLE_METADATA
         if (!A.MetaData.OrderIndependentCompareEqual(B.MetaData))
         {
             auto MapToJson = [](const TMap<FName, FString>& M)

@@ -50,7 +50,7 @@ UWorld* CreateLevelWorld(const FString& PackagePath, const FString& LevelName, U
 // level is found at once. False when the save failed.
 bool SaveLevelWorld(UWorld* World, const FString& PackagePath);
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_WP_RUNTIME_HASH_SET
 bool HandleConfigureRuntimeHashSetGrid(
     UEngineWireSubsystem* Subsystem,
     const FString& RequestId,

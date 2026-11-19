@@ -135,7 +135,7 @@ static bool AddEventReceiver(FActionContext& Context)
         Context.SendError(TEXT("Failed to create Niagara event handler graph."), TEXT("NIAGARA_GRAPH_CREATE_FAILED"));
         return true;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     Emitter->AddEventHandler(EventProps, Target.VersionedEmitter.Version);
 #else
     Emitter->AddEventHandler(EventProps);
