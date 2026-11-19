@@ -201,7 +201,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
                 SlotTrack->SlotName = FName(*SlotName);
             }
             FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
-#if ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_ANIM_SEGMENT_SET_ANIM_REFERENCE
             Segment.SetAnimReference(Animation);
 #else
             // UE 5.0: Direct member access

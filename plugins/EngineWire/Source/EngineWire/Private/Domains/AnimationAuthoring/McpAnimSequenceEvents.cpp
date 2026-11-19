@@ -25,8 +25,8 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
             return Response;
         }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        // UE 5.3+ API - FAnimationCurveIdentifier takes FName directly
+#if MCP_HAS_ANIM_CURVE_IDENTIFIER_BY_NAME
+        // FAnimationCurveIdentifier takes the curve's FName directly
         IAnimationDataController& Controller = Sequence->GetController();
         FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
 #else

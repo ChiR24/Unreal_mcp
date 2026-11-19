@@ -64,8 +64,8 @@
 #include "RigVMBlueprintGeneratedClass.h"
 #endif
 
-// UE 5.0-5.1 use UControlRigBlueprintGeneratedClass; 5.2 renamed it to URigVMBlueprintGeneratedClass.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
+// Before URigVMBlueprintGeneratedClass (5.2) the class was UControlRigBlueprintGeneratedClass.
+#if !MCP_HAS_RIGVM_BLUEPRINT_GENERATED_CLASS
 #include "ControlRigBlueprintGeneratedClass.h"
 #endif
 

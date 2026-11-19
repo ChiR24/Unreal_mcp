@@ -46,7 +46,7 @@ void AddCurveNames(const UAnimSequenceBase* Asset, const TSharedPtr<FJsonObject>
 void AddBoneTrackNames(const UAnimSequence* Sequence, const TSharedPtr<FJsonObject>& Response)
 {
     TArray<FString> Names;
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2)
+#if MCP_HAS_ANIM_DATA_MODEL_BONE_TRACK_NAMES
     TArray<FName> TrackNames;
     if (Sequence->GetDataModel())
     {

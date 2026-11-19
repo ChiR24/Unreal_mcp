@@ -37,7 +37,7 @@ UClass* ResolveNotifyClassByName(const FString& Requested, const TCHAR* Prefix, 
         }
         else
         {
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
+#if MCP_HAS_FIND_FIRST_OBJECT
             Found = FindFirstObject<UClass>(*Candidate, EFindFirstObjectOptions::None);
 #else
             Found = ResolveClassByName(Candidate);

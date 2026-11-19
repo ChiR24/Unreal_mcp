@@ -9,7 +9,7 @@ namespace {
 // bone with no track yet. A location left out read as (0,0,0) and put the bone on its parent, in an additive clip too.
 FTransform BoneKeyBase(const UAnimSequence* Sequence, FName Bone, int32 Frame)
 {
-#if ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_ANIM_DATA_FRAME_COUNT
     const IAnimationDataModel* Model = Sequence->GetDataModel();
     if (Model && Model->IsValidBoneTrackName(Bone))
     {
