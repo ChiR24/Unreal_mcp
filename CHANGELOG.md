@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>🔄 Changed</b></summary>
 
 - **Reading some fields**: `options.select` and `options.omit` keep or drop fields of an execute reply's `data` by dotted path, across lists (`actors.label` keeps each actor's label); the `undo` block always stays, and a path that matched nothing is a warning.
+- **Playbooks through the tool**: `manage_tools` `get_playbook` reads one of the nine domain playbooks (Blueprint logic, input, UI, Niagara, materials, levels, animation, cinematics, play testing) as data: its traps and its steps with their capability ids. They were reachable only as MCP prompts, which many clients never list.
 - **Source builds**: the plugin's build decides each optional engine feature from the engine's own files (`FeatureDetection.json`), never from its version number; shadowed names are warnings wherever the project's build settings make them errors.
 - **Counting**: `options.aggregate` `groupBy` takes a nested field by its dotted path (`location.z`) and counts numbers by their value, where it answered one `(none)` group.
 - **Code writes**: `write_graph_from_code` takes `codeOnly`, as `read_graph_as_code` does: the reply carries the code (with every node id) and the counts, without the node and link lists.

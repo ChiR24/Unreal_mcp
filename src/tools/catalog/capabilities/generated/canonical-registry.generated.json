@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "4d68c4efb3d53c67",
-  "recordCount": 489,
+  "catalogRevision": "be3a38343df78e56",
+  "recordCount": 490,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -102422,6 +102422,187 @@
         "algorithm": "sha256",
         "schema": "5f226be1a7e7bbc0406bf786b8c87cae200c880c68d83531d2ab64fcde4cf470",
         "content": "76a374dbe6b0307510d3b8785439d44f5dc407357cc6b6339e8e8eac2f5c374c"
+      }
+    },
+    {
+      "id": "manage_tools.get_playbook",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_tools",
+          "action": "get_playbook"
+        }
+      ],
+      "discovery": {
+        "domain": "tools",
+        "family": "tool-playbooks",
+        "topics": [
+          "get_playbook",
+          "playbook",
+          "how do i build",
+          "domain guide",
+          "traps",
+          "which capabilities in what order",
+          "getting started"
+        ],
+        "summary": "Read one domain playbook: the capabilities to use in order (each with its capability id and what to watch) and the traps of the domain, such as what fails without a warning and how to see it.",
+        "whenToUse": [
+          "Starting work in a domain (Blueprint logic, input, UI, Niagara, materials, levels, animation, cinematics, play testing) and wanting the usual order and traps first."
+        ],
+        "whenNotToUse": [
+          "The capability to run is already known (describe it instead)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "name": {
+              "type": "string",
+              "enum": [
+                "blueprint-logic",
+                "input-setup",
+                "widget-ui",
+                "niagara-vfx",
+                "material-authoring",
+                "world-building",
+                "animation-setup",
+                "cinematics",
+                "play-testing"
+              ],
+              "description": "The playbook to read."
+            }
+          },
+          "required": [
+            "action",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "traps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "What goes wrong in this domain and how to see it."
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "capability": {
+                    "type": "string",
+                    "description": "The capability id to describe, then execute."
+                  },
+                  "safety": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "success",
+            "name",
+            "title",
+            "traps",
+            "steps"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read one domain playbook: the capabilities to use in order (each with its capability id and what to watch) and the traps of the domain, such as what fails without a warning and how to see it.",
+          "input": {
+            "action": "get_playbook",
+            "name": "blueprint-logic"
+          },
+          "output": {
+            "success": true,
+            "message": "Playbook blueprint-logic: 6 traps, 6 steps. Describe each step's capability before running it.",
+            "name": "blueprint-logic",
+            "title": "Write gameplay logic in a Blueprint",
+            "traps": [
+              "An exec output holds one wire: fan out through a Sequence node. An exec input accepts many."
+            ],
+            "steps": [
+              {
+                "summary": "Read the graph you will change as code, each statement tagged with its node.",
+                "capability": "blueprint.read_graph_as_code",
+                "safety": "Read-only."
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_tools",
+        "dispatchAction": "get_playbook"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "376c6c1a47a4287da9438b3ee432474f0e4a293377fd3e9dc02b5ba775e6d98f",
+        "content": "e161ab29da953a3caeb6c7c66457a88db39a12fa6cdcf43d5ceef75f1512c0f1"
       }
     },
     {

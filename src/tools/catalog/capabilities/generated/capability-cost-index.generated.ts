@@ -1602,6 +1602,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_tools::disable_tools": "instant|low",
   "manage_tools::enable_category": "instant|low",
   "manage_tools::enable_tools": "instant|low",
+  "manage_tools::get_playbook": "instant|low",
   "manage_tools::get_status": "instant|low",
   "manage_tools::get_task_result": "instant|low",
   "manage_tools::list_categories": "instant|low",
@@ -1698,4 +1699,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1685;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1686;

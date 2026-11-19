@@ -227,6 +227,52 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
       categories: [{ name: 'core', enabled: true, toolCount: 8, enabledCount: 8 }],
     },
   },
+  // The domain playbooks (McpPromptPlaybooks.cpp) were reachable only as MCP prompts, which many clients never list.
+  {
+    action: 'get_playbook',
+    family: 'tool-playbooks',
+    topics: ['playbook', 'how do i build', 'domain guide', 'traps', 'which capabilities in what order', 'getting started'],
+    summary: 'Read one domain playbook: the capabilities to use in order (each with its capability id and what to watch) and the traps of the domain, such as what fails without a warning and how to see it.',
+    whenToUse: ['Starting work in a domain (Blueprint logic, input, UI, Niagara, materials, levels, animation, cinematics, play testing) and wanting the usual order and traps first.'],
+    whenNotToUse: ['The capability to run is already known (describe it instead).'],
+    inputProps: {
+      name: {
+        type: 'string',
+        enum: ['blueprint-logic', 'input-setup', 'widget-ui', 'niagara-vfx', 'material-authoring', 'world-building', 'animation-setup', 'cinematics', 'play-testing'],
+        description: 'The playbook to read.',
+      },
+    },
+    required: ['name'],
+    outputProps: {
+      name: { type: 'string' },
+      title: { type: 'string' },
+      description: { type: 'string' },
+      traps: { type: 'array', items: { type: 'string' }, description: 'What goes wrong in this domain and how to see it.' },
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string' },
+            capability: { type: 'string', description: 'The capability id to describe, then execute.' },
+            safety: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    outputRequired: ['name', 'title', 'traps', 'steps'],
+    effect: 'read',
+    exampleInput: { action: 'get_playbook', name: 'blueprint-logic' },
+    exampleOutput: {
+      success: true,
+      message: 'Playbook blueprint-logic: 6 traps, 6 steps. Describe each step\'s capability before running it.',
+      name: 'blueprint-logic',
+      title: 'Write gameplay logic in a Blueprint',
+      traps: ['An exec output holds one wire: fan out through a Sequence node. An exec input accepts many.'],
+      steps: [{ summary: 'Read the graph you will change as code, each statement tagged with its node.', capability: 'blueprint.read_graph_as_code', safety: 'Read-only.' }],
+    },
+  },
   // A call still open at 27 s answers "still running" with task.taskId; its result went only to the editor log, so a
   // client that gave up at its own timeout, or sent no idempotencyKey, could not read it.
   {

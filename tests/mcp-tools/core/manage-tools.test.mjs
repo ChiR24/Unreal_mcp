@@ -21,6 +21,7 @@ const testCases = [
   // === INFO ===
   { scenario: 'INFO: get_status', toolName: 'manage_tools', arguments: { action: 'get_status' }, expected: 'success', assertions: [{ path: 'structuredContent.categories', includesObject: { name: 'gameplay', enabled: false }, label: 'get_status reflects disabled gameplay category' }] },
   { scenario: 'INFO: get_task_result names a task no call answered as still running', toolName: 'manage_tools', arguments: { action: 'get_task_result', taskId: 'no-such-task' }, expected: 'error|TASK_NOT_FOUND' },
+  { scenario: 'INFO: get_playbook reads the Blueprint logic playbook', toolName: 'manage_tools', arguments: { action: 'get_playbook', name: 'blueprint-logic' }, expected: 'success', assertions: [{ path: 'structuredContent.steps', includesObject: { capability: 'blueprint.read_graph_as_code' }, label: 'the playbook names its capabilities' }] },
   // === ACTION ===
   { scenario: 'ACTION: reset', toolName: 'manage_tools', arguments: { action: 'reset' }, expected: 'success' },
 

@@ -94,6 +94,48 @@ TArray<TSharedPtr<FJsonValue>> McpBuildPromptListEntries()
 	return Items;
 }
 
+TSharedPtr<FJsonObject> McpPlaybookReply(const FString& Name)
+{
+	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+	const TArray<FMcpWorkflowPrompt> Playbooks = McpPlaybookPrompts();
+	const FMcpWorkflowPrompt* Found = Playbooks.FindByPredicate([&Name](const FMcpWorkflowPrompt& Each) { return Each.Id == Name; });
+	if (!Found)
+	{
+		TArray<FString> Names;
+		for (const FMcpWorkflowPrompt& Each : Playbooks)
+		{
+			Names.Add(Each.Id);
+		}
+		Out->SetBoolField(TEXT("success"), false);
+		Out->SetStringField(TEXT("errorCode"), TEXT("PLAYBOOK_NOT_FOUND"));
+		Out->SetStringField(TEXT("error"), FString::Printf(TEXT("No playbook '%s'. Playbooks: %s."), *Name, *FString::Join(Names, TEXT(", "))));
+		return Out;
+	}
+	TArray<TSharedPtr<FJsonValue>> Traps;
+	for (const FString& Trap : Found->Traps)
+	{
+		Traps.Add(MakeShared<FJsonValueString>(Trap));
+	}
+	TArray<TSharedPtr<FJsonValue>> Steps;
+	for (const FMcpPromptStep& Step : Found->Steps)
+	{
+		TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+		Row->SetStringField(TEXT("summary"), Step.Summary);
+		Row->SetStringField(TEXT("capability"), Step.CapabilityId);
+		Row->SetStringField(TEXT("safety"), Step.Safety);
+		Steps.Add(MakeShared<FJsonValueObject>(Row));
+	}
+	Out->SetBoolField(TEXT("success"), true);
+	Out->SetStringField(TEXT("name"), Found->Id);
+	Out->SetStringField(TEXT("title"), Found->Title);
+	Out->SetStringField(TEXT("description"), Found->Description);
+	Out->SetArrayField(TEXT("traps"), Traps);
+	Out->SetArrayField(TEXT("steps"), Steps);
+	Out->SetStringField(TEXT("message"), FString::Printf(TEXT("Playbook %s: %d traps, %d steps. Describe each step's capability before running it."),
+		*Found->Id, Found->Traps.Num(), Found->Steps.Num()));
+	return Out;
+}
+
 FMcpPromptRenderResult McpRenderWorkflowPrompt(const FString& Name, const TMap<FString, FString>& Args)
 {
 	FMcpPromptRenderResult Result;

@@ -21694,11 +21694,13 @@
         "enable_category",
         "disable_category",
         "get_status",
+        "get_playbook",
         "get_task_result",
         "reset"
       ],
       "parameterNames": [
         "category",
+        "name",
         "taskId",
         "tools"
       ],
@@ -21715,6 +21717,21 @@
               "all"
             ],
             "description": "Category name to enable/disable."
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "blueprint-logic",
+              "input-setup",
+              "widget-ui",
+              "niagara-vfx",
+              "material-authoring",
+              "world-building",
+              "animation-setup",
+              "cinematics",
+              "play-testing"
+            ],
+            "description": "The playbook to read."
           },
           "taskId": {
             "type": "string",
@@ -21737,6 +21754,7 @@
               "enable_category",
               "disable_category",
               "get_status",
+              "get_playbook",
               "get_task_result",
               "reset"
             ],

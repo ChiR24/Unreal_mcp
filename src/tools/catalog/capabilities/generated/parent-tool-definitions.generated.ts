@@ -30895,6 +30895,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Category name to enable/disable."
         },
+        "name": {
+          "type": "string",
+          "enum": [
+            "blueprint-logic",
+            "input-setup",
+            "widget-ui",
+            "niagara-vfx",
+            "material-authoring",
+            "world-building",
+            "animation-setup",
+            "cinematics",
+            "play-testing"
+          ],
+          "description": "The playbook to read."
+        },
         "taskId": {
           "type": "string",
           "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
@@ -30916,6 +30931,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_category",
             "disable_category",
             "get_status",
+            "get_playbook",
             "get_task_result",
             "reset"
           ],
@@ -30952,6 +30968,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           }
         },
         "category": {
+          "type": "string"
+        },
+        "description": {
           "type": "string"
         },
         "details": {
@@ -30994,6 +31013,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "name": {
+          "type": "string"
+        },
         "notFound": {
           "type": "array",
           "items": {
@@ -31026,6 +31048,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "queued (waiting for the editor), running, done, or cancelled (cancelled by the client before it ran)."
         },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string"
+              },
+              "capability": {
+                "type": "string",
+                "description": "The capability id to describe, then execute."
+              },
+              "safety": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
@@ -31033,6 +31074,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "taskId": {
           "type": "string",
           "description": "The task read."
+        },
+        "title": {
+          "type": "string"
         },
         "tools": {
           "type": "array",
@@ -31057,6 +31101,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "totalTools": {
           "type": "number"
+        },
+        "traps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What goes wrong in this domain and how to see it."
         }
       },
       "additionalProperties": true

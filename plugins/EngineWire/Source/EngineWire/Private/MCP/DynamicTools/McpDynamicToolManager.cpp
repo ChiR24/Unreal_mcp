@@ -1,5 +1,6 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "Misc/ScopeLock.h"
 
@@ -82,6 +83,10 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 	{
 		FScopeLock Lock(&StateMutex);
 		return GetStatus();
+	}
+	if (Action == TEXT("get_playbook"))
+	{
+		return McpPlaybookReply(Args.IsValid() ? GetJsonStringField(Args, TEXT("name")) : FString());
 	}
 
 	if (Action != TEXT("reset") && !Args.IsValid())
