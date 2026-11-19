@@ -4,6 +4,7 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Dom/JsonObject.h"
@@ -39,6 +40,20 @@ bool FMcpNativeAliasPairTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("execute takes it"), McpParseGatewayExecuteRequest(Call, Request, Error, Guidance));
 	TestEqual(TEXT("as the capability it names"), Request.CapabilityId, FString(TEXT("control_actor.delete")));
 	TestTrue(TEXT("and says which name the call used"), Request.Provenance.IsValid() && Request.Provenance->HasField(TEXT("migratedFrom")));
+
+	// An invented id whose action another namespace owns is guided to that capability, not to the nearest spelling.
+	Call = MakeShared<FJsonObject>();
+	Call->SetStringField(TEXT("capability"), TEXT("control_actor.get_property"));
+	TestFalse(TEXT("an invented capability is refused"), McpParseGatewayExecuteRequest(Call, Request, Error, Guidance));
+	const TSharedPtr<FJsonObject>* Next = nullptr;
+	FString Named;
+	TestTrue(TEXT("its nextCall describes the capability with that action"), Guidance.IsValid() &&
+		Guidance->TryGetObjectField(TEXT("nextCall"), Next) && (*Next)->TryGetStringField(TEXT("capability"), Named) &&
+		Named == TEXT("inspect.get_property"));
+	const FMcpUnknownActionGuide Far = GatewayGuideUnknownCapability(TEXT("control_actor.make_a_lamp"), Index.GetCapabilityIds());
+	FString Query;
+	TestTrue(TEXT("an action nothing is near is searched by its words"), Far.NextCall.IsValid() &&
+		Far.NextCall->TryGetStringField(TEXT("query"), Query) && Query == TEXT("make a lamp"));
 	return true;
 }
 

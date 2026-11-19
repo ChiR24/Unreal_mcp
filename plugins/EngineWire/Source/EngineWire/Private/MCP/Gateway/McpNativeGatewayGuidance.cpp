@@ -124,6 +124,30 @@ FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FStr
 	return Guide;
 }
 
+FMcpUnknownActionGuide GatewayGuideUnknownCapability(const FString& Capability, const TArray<FString>& Ids)
+{
+	FMcpUnknownActionGuide Guide;
+	const FString Id = Capability.TrimStartAndEnd();
+	FString Action = Id;
+	Id.Split(TEXT("."), nullptr, &Action, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+	const auto ActionOf = [](const FString& Each) { FString Tail = Each; Each.Split(TEXT("."), nullptr, &Tail, ESearchCase::CaseSensitive, ESearchDir::FromEnd); return Tail.ToLower(); };
+	for (const FString& Each : Ids)
+	{
+		if (ActionOf(Each) == Action.ToLower()) Guide.Suggestions.Add(Each);
+	}
+	// The nearest spelling first among them (blueprint.create beats material.create for blueprints.create), three at most.
+	Guide.Suggestions = Guide.Suggestions.Num() > 0 ? GatewayClosestMatches(Id, Guide.Suggestions, 3) : GatewayClosestMatches(Id, Ids, 3);
+	if (Guide.Suggestions.Num() > 0 && GatewayLevenshtein(ActionOf(Guide.Suggestions[0]), Action.ToLower()) <= 2)
+	{
+		Guide.NextCall = GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString());
+		Guide.NextCall->SetStringField(TEXT("capability"), Guide.Suggestions[0]);
+		return Guide;
+	}
+	Guide.NextCall = GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString());
+	Guide.NextCall->SetStringField(TEXT("query"), Action.Replace(TEXT("_"), TEXT(" ")));
+	return Guide;
+}
+
 TSharedPtr<FJsonObject> GatewayEnableToolNextCall(const FString& ParentTool)
 {
 	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();

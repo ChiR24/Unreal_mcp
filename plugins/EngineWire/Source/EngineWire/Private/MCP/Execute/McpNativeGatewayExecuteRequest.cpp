@@ -133,10 +133,8 @@ bool ResolveFromCapabilityField(
 		break;
 	}
 
-	const TArray<FString> Suggestions =
-		GatewayClosestMatches(Capability, Index.GetCapabilityIds(), 3);
-	OutGuidance = BuildGuidance(Suggestions,
-		GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString()));
+	const FMcpUnknownActionGuide Guide = GatewayGuideUnknownCapability(Capability, Index.GetCapabilityIds());
+	OutGuidance = BuildGuidance(Guide.Suggestions, Guide.NextCall);
 	OutError = McpValidationError(TEXT("UNKNOWN_CAPABILITY"),
 		FString::Printf(TEXT("Unknown capability '%s'. Call search before execute."), *Capability));
 	return false;

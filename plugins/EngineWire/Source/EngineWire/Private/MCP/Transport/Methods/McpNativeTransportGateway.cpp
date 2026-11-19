@@ -162,12 +162,9 @@ void FMcpNativeTransport::HandleGatewayCall(
 			{
 				TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_CAPABILITY"),
 					FString::Printf(TEXT("Unknown capability '%s'. Call search to find canonical capability IDs."), *Capability));
-				const TArray<FString> Suggestions = GatewayClosestMatches(Capability, Index.GetCapabilityIds(), 3);
-				Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Suggestions));
-				const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(Suggestions.Num() > 0 ? TEXT("describe") : TEXT("search"),
-					FString(), FString(), FString());
-				Next->SetStringField(Suggestions.Num() > 0 ? TEXT("capability") : TEXT("query"), Suggestions.Num() > 0 ? Suggestions[0] : Capability);
-				Error->SetObjectField(TEXT("nextCall"), Next);
+				const FMcpUnknownActionGuide Guide = GatewayGuideUnknownCapability(Capability, Index.GetCapabilityIds());
+				Error->SetArrayField(TEXT("suggestions"), McpHandlerUtils::ToJsonStringArray(Guide.Suggestions));
+				Error->SetObjectField(TEXT("nextCall"), Guide.NextCall);
 				SendDiscoveryResult(Error);
 				return;
 			}

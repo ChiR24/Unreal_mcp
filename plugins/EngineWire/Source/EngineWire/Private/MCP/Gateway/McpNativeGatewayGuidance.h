@@ -51,6 +51,14 @@ FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FStr
 	const TArray<FString>& Actions, const TArray<FString>& OwningTools);
 
 /**
+ * Guidance for a capability id nothing carries, shared by describe and execute. A capability under another namespace
+ * whose action is the same (control_actor.get_property -> inspect.get_property) is described next; else the closest id
+ * when its action is a typo away, else a search for the action's words. Edit distance alone sent get_property to
+ * control_actor.get_components.
+ */
+FMcpUnknownActionGuide GatewayGuideUnknownCapability(const FString& Capability, const TArray<FString>& Ids);
+
+/**
  * The call that turns a disabled parent tool back on, its category included (enable_tools re-enables both): the
  * nextCall of a disabled capability.
  */

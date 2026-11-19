@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Unknown capabilities**: a capability id nothing carries is pointed at the capability with the same action under another name (`control_actor.get_property` to `inspect.get_property`), else at the closest id when its action is a typo away, else at a search for the action's words, on describe and execute alike; describe pointed at the nearest spelling (`control_actor.get_components`) and execute at a search with no query.
 - **Math expressions in Blueprint code**: `write_graph_from_code` takes a Math Expression node as `read_graph_as_code` prints it (`(|1-(a*2) x)`), where it was refused as a node the menu lacks.
 - **Compile checks after a code write**: an expectation `<Blueprint> compiles` on `write_graph_from_code` is judged on the compile the write ran, where it answered unknown ("changed since its last compile") whenever the write replaced nodes.
 - **Search**: `line trace hit` finds `raycast_world` first, where combat hitboxes came first.
