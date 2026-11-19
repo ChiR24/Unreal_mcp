@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Writing a Blueprint's own variable**: `inspect` `set_property` by `blueprintPath` on a variable the Blueprint declares no longer crashes the editor; it read the variable's name after the compile had freed it.
 - **Counting nested lists**: `options.aggregate` counts a list inside an object by its dotted `field` (`widgetInfo.widgets` on `get_widget_info`), and with no `field` takes the largest list one object down when the reply has none at the top, where it answered "no list named" or "no list to aggregate".
 - **Input action events in Blueprint code**: `read_graph_as_code` prints an event with named exec outputs and no `then` (an Enhanced Input action event: `Started`, `Triggered`...) as one `(:Pin ...)` case per wired output, where its body read empty, and `write_graph_from_code` writes such a body back.
 - **Calls that share an id in Blueprint code**: when several menu entries share one id (`Rendering|Material|SetVectorParameterValue` is both a Material Instance Dynamic's own and the Kismet Material Library's for a parameter collection), `write_graph_from_code` takes the one whose node takes the first argument's object class, where it took the first by owner path whatever the code passed.

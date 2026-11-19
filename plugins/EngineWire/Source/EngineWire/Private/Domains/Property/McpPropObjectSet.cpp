@@ -248,6 +248,9 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
       // so a value written to the CDO does not reach instances spawned from the
       // class until something else recompiles. Compile here so the write means
       // what the caller asked for.
+      // A variable the Blueprint declares is a property of the class the compile replaces and frees: its name is read
+      // first, and the property is found again on the new class below (reading it after the compile crashed the editor).
+      const FString PropertyLabel = Property->GetName();
       McpCompileBlueprint(ResolvedBlueprint, nullptr, EBlueprintCompileOptions::None);
       bCompiledBlueprint = true;
       if (bDefaultObject)
@@ -255,7 +258,6 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
           // Read the write back off the new default object: it is what a spawn gets, what the reply describes and
           // what gets saved. A value the compile did not keep is an error, never a success.
           UObject* Replaced = RootObject;
-          const FString PropertyLabel = Property->GetName();
           FString KeptText;
           const bool bFound = McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer);
           if (bFound)
