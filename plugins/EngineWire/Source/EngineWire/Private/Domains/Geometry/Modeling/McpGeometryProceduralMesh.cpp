@@ -23,7 +23,7 @@ bool HandleCreateProceduralMesh(UEngineWireSubsystem* Self, const FString& Reque
     if (!MeshPath.IsEmpty())
     {
         UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
-        EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+        FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
         if (Source)
         {
             UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, DynMesh, FGeometryScriptCopyMeshFromAssetOptions(),

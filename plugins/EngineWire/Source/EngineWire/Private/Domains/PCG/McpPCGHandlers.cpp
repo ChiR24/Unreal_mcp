@@ -11,7 +11,7 @@ bool UEngineWireSubsystem::HandleManagePCGAction(
     }
 
 #if !MCP_HAS_PCG
-    SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build. Enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins), restart the editor, then rebuild this automation plugin so PCG support is compiled in."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
+    SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build. It needs UE 5.2 or later: enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins), restart the editor, then rebuild this automation plugin so PCG support is compiled in."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
     return true;
 #else
     if (!Payload.IsValid())

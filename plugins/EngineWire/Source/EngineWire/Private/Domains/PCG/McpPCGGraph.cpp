@@ -13,7 +13,7 @@ FString GetNodeTitleString(UPCGNode* Node)
     {
         return Node->NodeTitle.ToString();
     }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
     return Node->GetNodeTitle(EPCGNodeTitleType::ListView).ToString();
 #else
     return Node->GetNodeTitle().ToString();
@@ -83,7 +83,7 @@ UPCGNode* FindPCGNode(UPCGGraph* Graph, const FString& NodeId)
         {
             return Node;
         }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
         if (Node->GetNodeTitle(EPCGNodeTitleType::ListView).ToString().Equals(Needle, ESearchCase::IgnoreCase) ||
             Node->GetNodeTitle(EPCGNodeTitleType::FullTitle).ToString().Equals(Needle, ESearchCase::IgnoreCase))
 #else
@@ -220,12 +220,10 @@ bool SaveGraphIfRequested(UPCGGraph* Graph, bool bSave, bool& bOutSaved, FString
 
     Graph->PostEditChange();
     Graph->MarkPackageDirty();
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
     Graph->ForceNotificationForEditor(EPCGChangeType::Structural);
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    Graph->ForceNotificationForEditor();
 #else
-    Graph->NotifyGraphChanged(EPCGChangeType::Structural);
+    Graph->ForceNotificationForEditor();
 #endif
 
     if (bSave)

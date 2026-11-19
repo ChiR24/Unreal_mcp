@@ -70,7 +70,7 @@ bool HandleAppendMesh(UEngineWireSubsystem* Self, const FString& RequestId,
 
     UStaticMesh* Source = Cast<UStaticMesh>(McpLoadAsset(SanitizeProjectRelativePath(MeshPath)));
     UDynamicMesh* Part = NewObject<UDynamicMesh>(GetTransientPackage());
-    EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+    FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     // lod render copies the mesh as it draws: for a Nanite mesh its fallback, often a twentieth of the source triangles.
     const bool bRender = GetJsonStringField(Payload, TEXT("lod")) == TEXT("render");
     FGeometryScriptMeshReadLOD ReadLOD;

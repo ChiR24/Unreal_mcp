@@ -149,7 +149,7 @@ bool HandleSplitMesh(UEngineWireSubsystem* Self, const FString& RequestId, const
     }
 
     UDynamicMesh* Whole = NewObject<UDynamicMesh>();
-    EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
+    FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(Source, Whole, FGeometryScriptCopyMeshFromAssetOptions(),
                                                                        FGeometryScriptMeshReadLOD(), Outcome);
     if (Outcome != EGeometryScriptOutcomePins::Success)

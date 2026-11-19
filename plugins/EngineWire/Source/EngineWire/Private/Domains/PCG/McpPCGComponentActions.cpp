@@ -70,7 +70,15 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     }
 
     const bool bForceGenerate = GetJsonBoolField(Payload, TEXT("force"), true);
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     const FPCGTaskId TaskId = Component->GenerateLocalGetTaskId(bForceGenerate);
+#else
+    // UE 5.2 has no GenerateLocalGetTaskId. Its GenerateLocal schedules nothing while a generation runs and leaves
+    // that generation's id in place, so a component that was already generating counts as not scheduled.
+    const bool bWasGenerating = Component->IsGenerating();
+    Component->GenerateLocal(bForceGenerate);
+    const FPCGTaskId TaskId = bWasGenerating ? InvalidPCGTaskId : Component->GetGenerationTaskId();
+#endif
     if (TaskId == InvalidPCGTaskId)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("PCG generation was not scheduled. The component may already be generating, be up to date with force=false, have no graph, or have invalid bounds."), TEXT("GENERATION_NOT_SCHEDULED"));
@@ -101,6 +109,11 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
 
 bool HandleSetComponentGridSize(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, int32 GridSize, bool bSave)
 {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+    // The PCG component has a generation grid size from UE 5.3 on.
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("UE 5.2's PCG component has no generation grid size; use scope 'world' to set the PCG world actor's partition grid size."), TEXT("NOT_SUPPORTED"));
+    return true;
+#else
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
     const FString ComponentPath = GetJsonStringField(Payload, TEXT("componentPath"));
@@ -143,6 +156,7 @@ bool HandleSetComponentGridSize(UEngineWireSubsystem* Bridge, const FString& Req
     McpHandlerUtils::AddVerification(Result, Component);
     Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("PCG component generation grid size updated."), Result);
     return true;
+#endif
 }
 
 bool HandleSetWorldGridSize(UEngineWireSubsystem* Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, int32 GridSize, bool bSave)

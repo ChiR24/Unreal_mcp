@@ -68,7 +68,7 @@ bool HandleGenerateLODsGeometry(UEngineWireSubsystem* Self, const FString& Reque
     AssetOptions.bEnableRecomputeNormals = true;
     AssetOptions.bEnableRecomputeTangents = true;
     AssetOptions.bEnableNanite = false;
-    EGeometryScriptOutcomePins Outcome;
+    FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     UStaticMesh* StaticMesh = UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
         Target->Mesh, TargetPath, AssetOptions, Outcome, nullptr);
     if (Outcome != EGeometryScriptOutcomePins::Success || !StaticMesh)

@@ -3,6 +3,7 @@
 #include "McpFabInterchange.h"
 
 #include "UObject/Class.h"
+#include "UObject/EnumProperty.h"
 #include "UObject/Object.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"

@@ -91,7 +91,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     CreateOptions.NaniteSettings.bEnabled = bNanite;
 #endif
 
-    EGeometryScriptOutcomePins Outcome;
+    FMcpGeometryScriptOutcome Outcome = EGeometryScriptOutcomePins::Failure;
     UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
         Target->Mesh,
         AssetPath,
