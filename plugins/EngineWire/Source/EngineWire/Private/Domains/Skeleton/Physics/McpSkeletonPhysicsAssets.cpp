@@ -152,8 +152,8 @@ bool UEngineWireSubsystem::HandleCreatePhysicsAsset(
     // Asset dialog does; an empty asset satisfied nothing.
     const bool bAssignToMesh = GetJsonBoolField(Payload, TEXT("assignToMesh"), false);
     FText CreateError;
-    // No progress window in the middle of the call: bShowProgress arrives in 5.4, and earlier engines always show it.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 4
+    // No progress window in the middle of the call: without bShowProgress the engine always shows it.
+#if MCP_HAS_PHYSICS_ASSET_CREATE_PROGRESS_FLAG
     const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh, false);
 #else
     const bool bGenerated = FPhysicsAssetUtils::CreateFromSkeletalMesh(PhysicsAsset, SkeletalMesh, Params, CreateError, bAssignToMesh);

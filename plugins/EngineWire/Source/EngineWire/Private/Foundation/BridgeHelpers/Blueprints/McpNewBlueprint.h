@@ -16,7 +16,7 @@ inline UBlueprint* McpNewBlueprint(UPackage* Package, const FName Name, UClass* 
 {
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = ParentClass;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_BLUEPRINT_FACTORY_TYPE
     Factory->BlueprintType = Type;
 #else
     (void)Type;

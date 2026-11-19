@@ -13,7 +13,7 @@
 #include "Styling/CoreStyle.h"
 
 inline FSlateFontInfo McpTextBlockFont(const UTextBlock *Text) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_TEXT_BLOCK_ACCESSORS
   return Text->GetFont();
 #else
   return Text->Font;
@@ -43,7 +43,7 @@ inline bool McpApplyTextFont(UTextBlock *Text, const TSharedPtr<FJsonObject> &Pa
     }
     Font = McpTextBlockFont(Source);
     if (bWrite) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_TEXT_BLOCK_ACCESSORS
       Text->SetColorAndOpacity(Source->GetColorAndOpacity());
       Text->SetShadowOffset(Source->GetShadowOffset());
       Text->SetShadowColorAndOpacity(Source->GetShadowColorAndOpacity());

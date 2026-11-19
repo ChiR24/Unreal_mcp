@@ -152,8 +152,8 @@ bool HandlePackageProject(UEngineWireSubsystem* Self, const FString& RequestId,
 	IUATHelperModule::Get().CreateUatTask(
 		CommandLine, FText::FromString(Platform), FText::FromString(TEXT("Packaging project")),
 		FText::FromString(TEXT("Package")), FAppStyle::Get().GetBrush(TEXT("MainFrame.PackageProject")),
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
-		nullptr, // analytics attributes, added in 5.1
+#if MCP_HAS_UAT_TASK_ANALYTICS_ATTRIBUTES
+		nullptr, // analytics attributes
 #endif
 		[JobId](FString ResultType, double RuntimeSeconds)
 		{

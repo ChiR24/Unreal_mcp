@@ -40,7 +40,7 @@ void SyncBoneTree(USkeleton* Skeleton, const FRetargetModes& Modes)
     }
 }
 
-#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if !MCP_HAS_REFERENCE_SKELETON_MODIFIER_REMOVE
 // A raw bone to add back: its parent by name (NAME_None for a root) and its local reference pose.
 struct FTailBone
 {
@@ -94,7 +94,7 @@ void RebuildTail(USkeleton* Skeleton, int32 FirstIndex, const TArray<FTailBone>&
 void RemoveBone(USkeleton* Skeleton, FName Bone, bool bRemoveChildren)
 {
     const FRetargetModes Modes = SnapshotModes(Skeleton);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_REFERENCE_SKELETON_MODIFIER_REMOVE
     FReferenceSkeletonModifier(Skeleton).Remove(Bone, bRemoveChildren);
 #else
     // Every bone after Bone but its dropped branch; kept direct children move to its parent with their component-space
@@ -124,7 +124,7 @@ void RemoveBone(USkeleton* Skeleton, FName Bone, bool bRemoveChildren)
 int32 SetBoneParent(USkeleton* Skeleton, FName Bone, FName Parent)
 {
     const FRetargetModes Modes = SnapshotModes(Skeleton);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_REFERENCE_SKELETON_MODIFIER_REMOVE
     FReferenceSkeletonModifier(Skeleton).SetParent(Bone, Parent);
 #else
     // Every bone after Bone outside its branch, then the branch, Bone first and under Parent, so each bone still follows

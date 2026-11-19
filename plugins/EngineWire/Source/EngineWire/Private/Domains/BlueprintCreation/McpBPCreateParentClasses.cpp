@@ -46,7 +46,7 @@ UFactory *CreateBlueprintFactory(const FRequestContext &Context, FString &OutErr
   if (LowerType == TEXT("interface") && Context.ParentClassSpec.IsEmpty()) {
     UBlueprintFactory *Factory = NewObject<UBlueprintFactory>();
     Factory->ParentClass = UInterface::StaticClass();
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_BLUEPRINT_FACTORY_TYPE
     Factory->BlueprintType = BPTYPE_Interface;
 #endif
     return Factory;

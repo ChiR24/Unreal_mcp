@@ -29,7 +29,7 @@ void SetWorldPartitionStreaming(UWorldPartition* WorldPartition, bool bEnabled)
 {
     const FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Set World Partition Enable Streaming")),
                                                   EMcpMutationDurability::EditorStateOnly, TArray<UObject*>{WorldPartition});
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WORLD_PARTITION_SET_ENABLE_STREAMING
     WorldPartition->SetEnableStreaming(bEnabled);
 #else
     // 5.0 applies the change in PostEditChangeProperty, behind a confirmation an automated call answers No.
