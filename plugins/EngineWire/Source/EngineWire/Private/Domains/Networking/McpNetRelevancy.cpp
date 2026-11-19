@@ -26,7 +26,7 @@ bool HandleConfigureNetCullDistance(FNetworkingActionContext& Context)
     }
     if (bHasDistance)
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_ACTOR_NET_CULL_DISTANCE_ACCESSORS
         CDO->SetNetCullDistanceSquared(static_cast<float>(NetCullDistanceSquared));
 #else
         CDO->NetCullDistanceSquared = static_cast<float>(NetCullDistanceSquared);
@@ -36,7 +36,7 @@ bool HandleConfigureNetCullDistance(FNetworkingActionContext& Context)
     {
         CDO->bNetUseOwnerRelevancy = bUseOwnerNetRelevancy;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_ACTOR_NET_CULL_DISTANCE_ACCESSORS
     const float StoredDistance = CDO->GetNetCullDistanceSquared();
 #else
     const float StoredDistance = CDO->NetCullDistanceSquared;

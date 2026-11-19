@@ -117,7 +117,7 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
     double BevelDistance = FaceOpDistance(Payload, 5.0);
     // No segments = a single flat chamfer (the chamfer action routes here). At most 32: the engine took any count.
     int32 Subdivisions = FMath::Clamp(GetJsonIntField(Payload, TEXT("segments"), 0), 0, 32);
-#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if !MCP_HAS_GEOMETRY_SCRIPT_BEVEL_SUBDIVISIONS
     if (Subdivisions > 0)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("segments (rounded bevel subdivisions) needs UE 5.4 or later; omit it for a flat bevel."), TEXT("UNSUPPORTED_VERSION"));
@@ -146,7 +146,7 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
         SelectionOptions.BevelDistance = BevelDistance;
         SelectionOptions.bInferMaterialID = true;
         SelectionOptions.SetMaterialID = MaterialId;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_BEVEL_SUBDIVISIONS
         SelectionOptions.Subdivisions = Subdivisions;
 #endif
         UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshBevelSelection(
@@ -158,7 +158,7 @@ bool HandleBevel(UEngineWireSubsystem* Self, const FString& RequestId,
         BevelOptions.BevelDistance = BevelDistance;
         BevelOptions.bInferMaterialID = true;
         BevelOptions.SetMaterialID = MaterialId;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_GEOMETRY_SCRIPT_BEVEL_SUBDIVISIONS
         BevelOptions.Subdivisions = Subdivisions;
 #endif
         UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(Mesh, BevelOptions, nullptr);

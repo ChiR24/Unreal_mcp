@@ -51,7 +51,7 @@ bool UEngineWireSubsystem::HandleSetMetadata(
 
   // GetMetaData returns the metadata object that is owned by this package.
   // UE 5.0 uses UMetaData*, UE 5.6+ uses FMetaData&
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_PACKAGE_METADATA_STRUCT
   FMetaData& Meta = Package->GetMetaData();
 #else
   UMetaData* Meta = Package->GetMetaData();
@@ -91,7 +91,7 @@ bool UEngineWireSubsystem::HandleSetMetadata(
     }
 
     if (!ValueString.IsEmpty()) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_PACKAGE_METADATA_STRUCT
       Meta.SetValue(Asset, *Key, *ValueString);
 #else
       Meta->SetValue(Asset, *Key, *ValueString);
@@ -141,7 +141,7 @@ bool UEngineWireSubsystem::HandleGetMetadata(
   UPackage *Package = Asset->GetOutermost();
   if (Package) {
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_PACKAGE_METADATA_STRUCT
     const TMap<FName, FString> *ObjectMeta = FMetaData::GetMapForObject(Asset);
 #else
     UMetaData* Meta = Package->GetMetaData();

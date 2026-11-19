@@ -79,7 +79,7 @@ UMovieSceneComponentMaterialTrack *FindSlotTrack(UMovieScene *MovieScene, const 
   const FMovieSceneBinding *Binding = MovieScene->FindBinding(ComponentGuid);
   for (UMovieSceneTrack *Existing : Binding ? Binding->GetTracks() : TArray<UMovieSceneTrack *>()) {
     UMovieSceneComponentMaterialTrack *Track = Cast<UMovieSceneComponentMaterialTrack>(Existing);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_SEQUENCER_COMPONENT_MATERIAL_INFO
     if (Track && Track->GetMaterialInfo().MaterialType == EComponentMaterialType::IndexedMaterial &&
         Track->GetMaterialInfo().MaterialSlotIndex == MaterialIndex)
 #else
@@ -211,7 +211,7 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   if (bCreatedTrack) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+#if MCP_HAS_SEQUENCER_COMPONENT_MATERIAL_INFO
     FComponentMaterialInfo Info;
     Info.MaterialSlotIndex = MaterialIndex;
     Info.MaterialType = EComponentMaterialType::IndexedMaterial;

@@ -17,7 +17,7 @@ bool HandleGetMeshInfo(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("vertexCount"), UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh));
     Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
     // GetHasTriangleNormals/GetHasVertexColors arrive in UE 5.2; read the mesh directly before that.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_GEOMETRY_SCRIPT_MESH_ATTRIBUTE_QUERIES
     Result->SetBoolField(TEXT("hasNormals"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasTriangleNormals(Mesh));
 #else
     bool bHasNormals = false;
@@ -29,7 +29,7 @@ bool HandleGetMeshInfo(UEngineWireSubsystem* Self, const FString& RequestId,
     Result->SetBoolField(TEXT("hasNormals"), bHasNormals);
 #endif
     Result->SetBoolField(TEXT("hasUVs"), UGeometryScriptLibrary_MeshQueryFunctions::GetNumUVSets(Mesh) > 0);
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_GEOMETRY_SCRIPT_MESH_ATTRIBUTE_QUERIES
     Result->SetBoolField(TEXT("hasColors"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasVertexColors(Mesh));
 #else
     Result->SetBoolField(TEXT("hasColors"), bHasColors);
