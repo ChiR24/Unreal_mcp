@@ -11,7 +11,6 @@
     "EngineWire/Private/Domains/BehaviorTree/McpBTPrivate.h": 1,
     "EngineWire/Private/Domains/BehaviorTree/McpBTSerializers.cpp": 1,
     "EngineWire/Private/Domains/ControlEditor/McpEditorSupport.h": 1,
-    "EngineWire/Private/Domains/Geometry/Modeling/McpGeometryTransforms.cpp": 1,
     "EngineWire/Private/Domains/Geometry/Support/McpGeometryAssetConversion.cpp": 1,
     "EngineWire/Private/Domains/Geometry/Support/McpGeometrySafetySupport.cpp": 1,
     "EngineWire/Private/Domains/Geometry/Topology/McpGeometryTopologyEdges.cpp": 1,

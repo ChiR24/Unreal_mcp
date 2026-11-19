@@ -6,15 +6,8 @@ namespace McpGeometryHandlers
 {
 void ScaleMesh(UDynamicMesh* Mesh, const FVector& Scale)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+    // bFixOrientationForNegativeScale: a mirror scales by -1 on one axis, which would turn every face inside out.
     UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, Scale, FVector::ZeroVector, true, nullptr);
-#else
-    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-    for (int32 VID : EditMesh.VertexIndicesItr())
-    {
-        EditMesh.SetVertex(VID, EditMesh.GetVertex(VID) * FVector3d(Scale));
-    }
-#endif
 }
 
 bool HandleMirror(UEngineWireSubsystem* Self, const FString& RequestId,
