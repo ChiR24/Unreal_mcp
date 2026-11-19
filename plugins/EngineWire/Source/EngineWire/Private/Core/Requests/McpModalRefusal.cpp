@@ -5,6 +5,7 @@
 // The modal tick now answers every queued request EDITOR_MODAL_ACTIVE, naming the dialog, without running it.
 #include "EngineWireSubsystem.h"
 
+#include "Core/Requests/McpModalDialog.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Framework/Application/SlateApplication.h"
 #include "MCP/Transport/McpNativeTransport.h"
@@ -17,6 +18,14 @@ void UEngineWireSubsystem::SendModalRefusal(TSharedPtr<FMcpBridgeWebSocket> Sock
     // succeeds unchanged once the dialog is closed.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);
+    // What the dialog asks and which buttons it offers, so the caller can tell the user what to answer.
+    if (FSlateApplication::IsInitialized())
+    {
+        if (const TSharedPtr<FJsonObject> Dialog = McpModalDialog::Describe(FSlateApplication::Get().GetActiveModalWindow()))
+        {
+            Result->SetObjectField(TEXT("dialog"), Dialog);
+        }
+    }
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("The editor is waiting on the dialog '%s'; nothing ran. Close that dialog in the editor, then send the same call again."),

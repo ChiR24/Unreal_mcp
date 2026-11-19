@@ -46,6 +46,9 @@ describe('queued requests are answered, never run, while a dialog is up', () => 
   it('the one refusal names the dialog and answers on the origin it is given', () => {
     const refusal = sliceBetween(source, 'void UEngineWireSubsystem::SendModalRefusal(', 'int32 UEngineWireSubsystem::AnswerQueuedRequestsDuringModal(');
     expect(refusal).toContain('Result->SetStringField(TEXT("modalWindowTitle"), DialogTitle);');
+    // What the dialog asks and its buttons, read (never pressed) from the active modal window.
+    expect(refusal).toContain('McpModalDialog::Describe(FSlateApplication::Get().GetActiveModalWindow())');
+    expect(refusal).toContain('Result->SetObjectField(TEXT("dialog"), Dialog);');
     expect(refusal).toContain('Result, TEXT("EDITOR_MODAL_ACTIVE"), Origin);');
   });
 
