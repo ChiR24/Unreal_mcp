@@ -73,6 +73,17 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	}
 	Context.ExpectedRevisions = Plan.ExpectedRevisions;
 	Context.GatewayWarnings = Plan.Warnings;
+	// search's and describe's paging fields mean nothing to execute: a caller that sent one meant to cap or page this
+	// reply, so it is told how execute does that rather than having the field dropped without a word.
+	for (const TCHAR* Field : {TEXT("maxBytes"), TEXT("limit"), TEXT("offset"), TEXT("cursor")})
+	{
+		if (Params->HasField(Field))
+		{
+			Context.GatewayWarnings.Add(FString::Printf(TEXT("%s is a search and describe field and was not used here: on execute, "
+				"options.aggregate counts a long list instead of returning it, and a reply too large for one message comes in "
+				"pages (options.pageCursor)."), Field));
+		}
+	}
 	// Who may page through the result if it is too large for one reply: this principal, capability and params.
 	Context.PageOwner = MakeShared<FMcpPageOwner>();
 	Context.PageOwner->Principal = GetSessionPrincipal(SessionId).Identity;
