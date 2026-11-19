@@ -157,7 +157,7 @@ bool HandleCreateDataLayer(
     const bool bAssetSaved = McpSafeAssetSave(NewDataLayerAsset);
 
     // Step 2: Create a UDataLayerInstance using the asset
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+#if MCP_HAS_DATA_LAYER_ASSETS && !MCP_HAS_DATA_LAYER_CREATION_PARAMS_EXPORTED
     // 5.1 does not export FDataLayerCreationParameters (DATALAYEREDITOR_API arrives in 5.2), so its out-of-line
     // constructor cannot be called from this module. The struct is made through its reflection instead, which runs
     // that constructor inside DataLayerEditor.

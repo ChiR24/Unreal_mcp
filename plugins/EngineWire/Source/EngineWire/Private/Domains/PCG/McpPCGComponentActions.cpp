@@ -117,7 +117,7 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
 
 bool HandleSetComponentGridSize(UEngineWireSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, int32 GridSize, bool bSave)
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+#if !MCP_HAS_PCG_GENERATION_GRID_SIZE
     // The PCG component has a generation grid size from UE 5.3 on.
     Bridge->SendAutomationError(Socket, RequestId, TEXT("UE 5.2's PCG component has no generation grid size; use scope 'world' to set the PCG world actor's partition grid size."), TEXT("NOT_SUPPORTED"));
     return true;
