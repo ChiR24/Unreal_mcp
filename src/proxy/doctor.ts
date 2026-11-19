@@ -1,7 +1,8 @@
 /**
  * `unreal-engine-mcp-server doctor`: what the proxy needs, one line each, exiting 1 when something fails: the Node
- * version, the capability token and where it comes from (never its value), an editor answering at UNREAL_MCP_URL
- * (its server and version, the protocol it chose), and whether the proxy and the plugin are the same version.
+ * version, the capability token and where it comes from (never its value), what the project's Saved/MCP/endpoint.json
+ * says, an editor answering where the proxy would send (its server and version, the protocol it chose), and whether
+ * the proxy and the plugin are the same version. A file whose editor closed or died gets no request, as in the proxy.
  */
 import { existsSync } from 'node:fs';
 import { type IncomingHttpHeaders, request } from 'node:http';
@@ -10,6 +11,7 @@ import { join } from 'node:path';
 import { PACKAGE } from '../constants.js';
 import { projectRootFromEnv } from '../utils/config/ini-reader.js';
 import { oneLine } from '../utils/logging/logger.js';
+import { chooseEndpoint, type EndpointChoice, fileReport, STALE_FILE_WAY_OUT } from './endpoint.js';
 import { readCapabilityToken, sendsTokenTo } from './native-proxy.js';
 
 export interface DoctorLine { level: 'ok' | 'warn' | 'FAIL'; text: string }
@@ -61,9 +63,27 @@ function initializeAnswer(text: string): Answer {
   try { return (JSON.parse(json) as Answer | null) ?? {}; } catch { return {}; }
 }
 
-export async function doctorLines(url: string = process.env.UNREAL_MCP_URL ?? 'http://127.0.0.1:3000/mcp'): Promise<DoctorLine[]> {
+/** What endpoint.json says, when the project has one: where the editor listens, or why nothing is sent. */
+function endpointLine(choice: EndpointChoice): DoctorLine | undefined {
+  const { file } = choice;
+  if (!file) return undefined;
+  if (choice.upstream) {
+    return { level: 'ok', text: `Saved/MCP/endpoint.json: the editor (pid ${file.pid}) listens on port ${file.port}`
+      + `${file.pluginVersion ? `, plugin ${oneLine(file.pluginVersion)}` : ''}` };
+  }
+  return { level: 'FAIL', text: `${choice.state === 'editor_closed' ? '' : 'Stale endpoint file: '}${fileReport(file, choice)} `
+    + `Nothing was sent: start the editor; if it runs and still does not answer, ${STALE_FILE_WAY_OUT}` };
+}
+
+/** The lines; with no URL given, the editor is looked for where the proxy would send (UNREAL_MCP_URL, endpoint.json, port 3000). */
+export async function doctorLines(explicit?: string): Promise<DoctorLine[]> {
   const found = await readCapabilityToken();
   const lines = [nodeLine(), tokenLine(found)];
+  const choice = chooseEndpoint(explicit ?? process.env.UNREAL_MCP_URL, projectRootFromEnv());
+  const fileLine = endpointLine(choice);
+  if (fileLine) lines.push(fileLine);
+  if (!choice.upstream) return lines;
+  const url = choice.upstream;
   // The proxy's own rule: the token rides plain HTTP to this machine only.
   const token = sendsTokenTo(url) ? found : undefined;
   if (found && !token) {
@@ -77,8 +97,11 @@ export async function doctorLines(url: string = process.env.UNREAL_MCP_URL ?? 'h
     hello = await send(url, 'POST', { ...auth, 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream',
       'Content-Length': Buffer.byteLength(body) }, body);
   } catch (error) {
-    lines.push({ level: 'FAIL', text: `Nothing answers at ${url} (${error instanceof Error ? error.message : String(error)}): start the `
-      + 'editor; if it runs, turn on Project Settings > Plugins > EngineWire > Enable Native MCP Server, or set UNREAL_MCP_URL' });
+    const why = error instanceof Error ? error.message : String(error);
+    lines.push({ level: 'FAIL', text: choice.file
+      ? `Nothing answers at ${url} (${why}): ${fileReport(choice.file, choice)}`
+      : `Nothing answers at ${url} (${why}): start the editor; if it runs, turn on Project Settings > Plugins > EngineWire > `
+        + 'Enable Native MCP Server, or set UNREAL_MCP_URL' });
     return lines;
   }
   // The session this opened is closed again, so it does not hold one of the editor's session slots.
