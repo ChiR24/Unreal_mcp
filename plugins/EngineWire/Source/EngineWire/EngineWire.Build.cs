@@ -197,7 +197,12 @@ public class EngineWire : ModuleRules {
     private JsonObject[] FeatureRows;
 
     private JsonObject[] Rows() {
-        if (FeatureRows == null && !JsonObject.Read(new FileReference(Path.Combine(ModuleDirectory, "FeatureDetection.json"))).TryGetObjectArrayField("features", out FeatureRows))
+        if (FeatureRows != null)
+            return FeatureRows;
+        string Table = Path.Combine(ModuleDirectory, "FeatureDetection.json");
+        // UBT re-runs this file only when an input it knows changes; without this an edited row kept its old macro value.
+        ExternalDependencies.Add(Table);
+        if (!JsonObject.Read(new FileReference(Table)).TryGetObjectArrayField("features", out FeatureRows))
             throw new Exception("EngineWire: FeatureDetection.json has no features array");
         return FeatureRows;
     }

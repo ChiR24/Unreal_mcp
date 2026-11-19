@@ -76,6 +76,8 @@ describe('no engine version comparisons outside Core/Compatibility/', () => {
     };
     // A row marked define is used by DefineDetectedFeatures (MCP_HAS_<name>); every other row by a Detect call by name.
     expect(buildCs).toContain('DefineDetectedFeatures(EngineDir);');
+    // The table is a UBT input: an edited row re-runs Build.cs instead of compiling against the cached macros.
+    expect(buildCs).toContain('ExternalDependencies.Add(Table);');
     const called = [...buildCs.matchAll(/Detect\(EngineDir, "([A-Z0-9_]+)"\)/g)].map((m) => m[1])
       .concat(table.features.filter((row) => row.define).map((row) => row.name)).sort();
     const rows = table.features.map((row) => row.name).sort();
