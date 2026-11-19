@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Blueprint code**: a number a pin's type cannot hold (`(* vector 2.4)`, `(/ integer 42.0)`) goes in through a literal node, so the operator takes it as a float, where `write_graph_from_code` dropped it and left the pin at 0.
 - **Saves**: a write that saves an asset no longer opens the Message Log window on the user's screen: saves made inside a request skip the engine's save-time Data Validation, and the reply still names what the validators find.
 - **Property reads**: the property names `control_actor` `list` and `sample_motion` read through an object an actor holds follow the same object rule as `get_property`.
 - **Builds**: the plugin links on UE 5.3 and 5.4 for Windows, builds on the UE 5.9 preview, and SmartObjects loads again in a Blueprint-only UE 5.5 project.

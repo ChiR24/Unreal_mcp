@@ -199,7 +199,15 @@ bool FTranspiler::WireArg(const FSExpr& Value, UEdGraphPin* Pin, const FBindings
         return Expr(Value, Bindings, Flow, Out) && (!Out || Connect(Out, Pin));
     }
     // A literal into a pin with no type yet goes through a Make Literal node; others take it as the pin's value.
-    if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
+    // A number the pin's own type cannot hold (a float into an integer pin, any number into a vector) goes through a
+    // Make Literal node too: a math operator takes it by changing that pin's type (vector * float, an integer divided
+    // by a float made a float divide), and a pin that cannot take it refuses the code, where the engine would drop the
+    // value silently and leave the pin at 0.
+    const FName Category = Pin->PinType.PinCategory;
+    const bool bNumber = Value.Type == FSExpr::EType::Int || Value.Type == FSExpr::EType::Float;
+    const bool bIntegerPin = Category == UEdGraphSchema_K2::PC_Int || Category == UEdGraphSchema_K2::PC_Int64 || Category == UEdGraphSchema_K2::PC_Byte;
+    const bool bMismatch = bNumber && ((bIntegerPin && Value.Type == FSExpr::EType::Float) || Category == UEdGraphSchema_K2::PC_Struct);
+    if (Category == UEdGraphSchema_K2::PC_Wildcard || bMismatch)
     {
         UEdGraphPin* Literal = MakeLiteral(Value);
         return Literal && Connect(Literal, Pin);
