@@ -16,10 +16,10 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const PLUGIN = 'plugins/EngineWire/Source/EngineWire/Private';
 const read = (relativePath: string): string => readFileSync(resolve(REPO_ROOT, relativePath), 'utf8');
 
-describe('the details fold leaves the message and the expectations to the receipt', () => {
-  it('skips liveRevisions, the message, the expectations and every declared field', () => {
+describe('the details fold leaves the message, the expectations and the changed packages to the receipt', () => {
+  it('skips liveRevisions, the message, the expectations, changedPackages and every declared field', () => {
     expect(read(`${PLUGIN}/MCP/Execute/McpNativeGatewayOutputProjection.cpp`).replace(/\s+/gu, ' '))
-      .toContain('Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || Entry.Key == TEXT("expectations") || (*Properties)->HasField(Entry.Key)');
+      .toContain('Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || Entry.Key == TEXT("expectations") || Entry.Key == TEXT("changedPackages") || (*Properties)->HasField(Entry.Key)');
   });
 });
 

@@ -35,6 +35,9 @@ void AddUserChangeWarning(const FString& RequestId, const TSharedPtr<FJsonObject
 
 /** The asset packages the running request RequestId changed so far (made, edited, saved, renamed); none for another. */
 void AssetsChangedBy(const FString& RequestId, TArray<FString>& OutPackages);
+/** Those packages as Result's changedPackages (none: no field), which the receipt adds to its changes and the reply
+ *  leaves out: a reply names its asset under fields the receipt cannot all know (sequencePath, attributeSetPath). */
+void AddChangedPackages(const FString& RequestId, const TSharedPtr<FJsonObject>& Result);
 
 /** inspect changes_since: what changed after the cursor in since (or the latest changes kept), and the next cursor. */
 bool HandleChangesSince(UEngineWireSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,

@@ -264,4 +264,14 @@ void AssetsChangedBy(const FString& RequestId, TArray<FString>& OutPackages)
         }
     }
 }
+
+void AddChangedPackages(const FString& RequestId, const TSharedPtr<FJsonObject>& Result)
+{
+    TArray<FString> Packages;
+    AssetsChangedBy(RequestId, Packages);
+    if (Result.IsValid() && Packages.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("changedPackages"), McpHandlerUtils::ToJsonStringArray(Packages));
+    }
+}
 } // namespace McpChangeJournal

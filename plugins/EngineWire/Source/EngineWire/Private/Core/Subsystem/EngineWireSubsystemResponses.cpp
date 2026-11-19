@@ -149,6 +149,7 @@ void UEngineWireSubsystem::SendAutomationResponse(
         McpUndoLedger::Describe(RequestId, EffectiveResult);
         McpChangeJournal::AddUserChangeWarning(RequestId, EffectiveResult);
         McpValidateDelta::AddWarnings(RequestId, EffectiveResult);
+        McpChangeJournal::AddChangedPackages(RequestId, EffectiveResult);
         // A play world paused by the game (a title screen, a pause menu) or by control_editor pause moves nothing: a
         // character moved into it stayed in the air where it was put, which read as broken gravity.
         if (ContextWorld && ContextWorld->IsPlayInEditor() && ContextWorld->IsPaused())

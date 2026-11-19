@@ -17,6 +17,10 @@
 
 #include "Engine/DataTable.h"
 #include "Kismet2/StructureEditorUtils.h"
+// TOptional properties (FOptionalProperty): older engines have no such header and no such property.
+#if __has_include("UObject/PropertyOptional.h")
+#include "UObject/PropertyOptional.h"
+#endif
 #include MCP_USER_DEFINED_STRUCT_HEADER
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
 
@@ -76,6 +80,87 @@ inline bool McpDataTableSaveIfRequested(const TSharedPtr<FJsonObject>& Params, U
     return GetJsonBoolField(Params, TEXT("save"), true) && McpSafeOperations::McpSafeAssetSave(Asset);
 }
 
+inline bool McpStructNumbersParse(const UStruct* Struct, const TSharedPtr<FJsonObject>& Object, const FString& Prefix, FString& OutError);
+
+// The converter reads a string into a number with a parse that never fails, so "ten" was written as 0 and the row was
+// not reported invalid. A string for a number must be a number wherever the converter writes it: a column, a struct's
+// field, an array's or a set's element, a map's key or value, a fixed array's slots (as many as it has; a lone value
+// fills the first), a TOptional's value (an enum byte takes value names). Name says where ("Stats.Damage", "Levels[1]").
+inline bool McpNumbersParse(const FProperty* Property, const TSharedPtr<FJsonValue>& Value, const FString& Name, FString& OutError,
+                            bool bSlot = false)
+{
+    const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
+    const TSharedPtr<FJsonObject>* Object = nullptr;
+    const auto ItemsParse = [&Items, &Name, &OutError](const FProperty* Item, bool bItemSlot, int32 Count)
+    {
+        for (int32 Index = 0; Index < FMath::Min(Items->Num(), Count); ++Index)
+        {
+            if (!McpNumbersParse(Item, (*Items)[Index], FString::Printf(TEXT("%s[%d]"), *Name, Index), OutError, bItemSlot)) return false;
+        }
+        return true;
+    };
+    if (!Value.IsValid())
+    {
+        return true;
+    }
+    if (!bSlot && Property->ArrayDim > 1)
+    {
+        return Value->TryGetArray(Items) ? ItemsParse(Property, true, Property->ArrayDim) : McpNumbersParse(Property, Value, Name, OutError, true);
+    }
+#if __has_include("UObject/PropertyOptional.h")
+    if (const FOptionalProperty* Optional = CastField<FOptionalProperty>(Property))
+    {
+        return McpNumbersParse(Optional->GetValueProperty(), Value, Name, OutError, true);
+    }
+#endif
+    const FByteProperty* Byte = CastField<FByteProperty>(Property);
+    double Parsed = 0.0;
+    if (Property->IsA<FNumericProperty>() && !(Byte && Byte->Enum) && Value->Type == EJson::String &&
+        !LexTryParseString(Parsed, *Value->AsString()))
+    {
+        OutError = FString::Printf(TEXT("'%s' takes a number; '%s' is not a number"), *Name, *Value->AsString());
+        return false;
+    }
+    if (const FStructProperty* Struct = CastField<FStructProperty>(Property))
+    {
+        return !Value->TryGetObject(Object) || McpStructNumbersParse(Struct->Struct, *Object, Name + TEXT("."), OutError);
+    }
+    const FArrayProperty* Array = CastField<FArrayProperty>(Property);
+    const FSetProperty* Set = CastField<FSetProperty>(Property);
+    if (const FProperty* Element = Array ? Array->Inner : Set ? Set->ElementProp : nullptr)
+    {
+        return !Value->TryGetArray(Items) || ItemsParse(Element, false, MAX_int32);
+    }
+    const FMapProperty* Map = CastField<FMapProperty>(Property);
+    if (Map && Value->TryGetObject(Object))
+    {
+        for (const auto& Pair : (*Object)->Values)
+        {
+            const FString Key(*Pair.Key);
+            const FString Entry = FString::Printf(TEXT("%s[%s]"), *Name, *Key);
+            if (!McpNumbersParse(Map->KeyProp, MakeShared<FJsonValueString>(Key), Entry, OutError) ||
+                !McpNumbersParse(Map->ValueProp, Pair.Value, Entry, OutError))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+inline bool McpStructNumbersParse(const UStruct* Struct, const TSharedPtr<FJsonObject>& Object, const FString& Prefix, FString& OutError)
+{
+    for (TFieldIterator<FProperty> It(Struct); It; ++It)
+    {
+        const FString Name = It->GetAuthoredName();
+        if (!McpNumbersParse(*It, Object->TryGetField(Name), Prefix + Name, OutError))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Build a row from JSON against RowStruct. Returns false (and sets OutError)
 // when conversion fails so callers short-circuit instead of writing a partial
 // row. OutRowMem is only valid on success; on failure it is left null.
@@ -83,19 +168,9 @@ inline bool McpBuildDataTableRow(const UScriptStruct* RowStruct, const TSharedPt
 {
     OutRowMem = nullptr;
     OutError.Empty();
-    // The converter reads a string into a number column with a parse that never fails, so "ten" was written as 0 and the
-    // row was not reported invalid. A string for a number must be a number (an enum byte column takes value names).
-    for (TFieldIterator<FProperty> It(RowStruct); It; ++It)
+    if (!McpStructNumbersParse(RowStruct, RowData, FString(), OutError))
     {
-        const FNumericProperty* Number = CastField<FNumericProperty>(*It);
-        const FByteProperty* Byte = CastField<FByteProperty>(*It);
-        const TSharedPtr<FJsonValue> Value = Number && !(Byte && Byte->Enum) ? RowData->TryGetField(It->GetAuthoredName()) : nullptr;
-        double Parsed = 0.0;
-        if (Value.IsValid() && Value->Type == EJson::String && !LexTryParseString(Parsed, *Value->AsString()))
-        {
-            OutError = FString::Printf(TEXT("'%s' is a number column; '%s' is not a number"), *It->GetAuthoredName(), *Value->AsString());
-            return false;
-        }
+        return false;
     }
     uint8* RowMem = static_cast<uint8*>(FMemory::Malloc(RowStruct->GetStructureSize()));
     RowStruct->InitializeStruct(RowMem);

@@ -119,6 +119,21 @@ void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const 
 		}
 	}
 }
+
+// The packages the editor's change journal saw the request change (McpChangeJournal::AddChangedPackages): an asset a
+// reply names under a field not listed above (sequencePath, attributeSetPath) changed all the same. One already named,
+// as itself or as an object in it, is not listed twice.
+void AddJournalChanges(const TSharedPtr<FJsonObject>& Result, TArray<FString>& Changes)
+{
+	const TSharedPtr<FJsonValue> Value = ReadField(Result, TEXT("changedPackages"));
+	const TArray<TSharedPtr<FJsonValue>>* Packages = nullptr;
+	for (int32 Index = 0; Value.IsValid() && Value->TryGetArray(Packages) && Index < Packages->Num(); ++Index)
+	{
+		const FString Package = (*Packages)[Index]->AsString();
+		const auto Names = [&Package](const FString& Change) { return Change == Package || Change.StartsWith(Package + TEXT(".")); };
+		if (!Package.IsEmpty() && !Changes.ContainsByPredicate(Names)) Changes.Add(Package);
+	}
+}
 }  // namespace
 
 TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResult)
@@ -155,6 +170,7 @@ TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResul
 	if (!StatedAssets.IsValid() || !StatedAssets->TryGetArray(StatedArray))
 	{
 		AddSingleChanges(RawResult, CHANGE_ASSET_SINGLES, Changes);
+		AddJournalChanges(RawResult, Changes);
 	}
 	// One actor is one change: its name, or its object path when the reply names none. Mirrors extractChanges.
 	AddSingleChanges(RawResult, CHANGE_ACTOR_SINGLES, Changes, true);
@@ -165,10 +181,7 @@ TArray<TSharedPtr<FJsonValue>> McpExtractReceiptHandles(const TSharedPtr<FJsonOb
 {
 	TArray<TSharedPtr<FJsonValue>> Handles;
 	TSet<FString> Seen;
-	if (!RawResult.IsValid())
-	{
-		return Handles;
-	}
+	if (!RawResult.IsValid()) return Handles;
 	const auto AddHandle = [&Handles, &Seen](const TCHAR* Kind, const TCHAR* Field, const FString& Value)
 	{
 		const FString Key = FString(Kind) + TEXT("|") + Value;

@@ -214,6 +214,14 @@ bool HandleCreateSublevel(
 
     ResponseJson->SetBoolField(TEXT("saved"), true);
     ResponseJson->SetBoolField(TEXT("streamingAdded"), true);
+    // Stated: a level package is not among the assets the change journal hands the receipt, so its changes were empty. An
+    // open level never saved (under /Temp) is no asset to name.
+    TArray<FString> Changed = {FullSublevelPath};
+    if (!OpenLevel.StartsWith(TEXT("/Temp/")))
+    {
+        Changed.Add(OpenLevel);
+    }
+    ResponseJson->SetArrayField(TEXT("changedAssets"), McpHandlerUtils::ToJsonStringArray(Changed));
 
     FString Message = FString::Printf(TEXT("Created sublevel: %s at %s"), *SublevelName, *FullSublevelPath);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);

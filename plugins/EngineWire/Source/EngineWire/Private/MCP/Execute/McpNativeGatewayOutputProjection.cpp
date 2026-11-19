@@ -52,14 +52,15 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 				Details = *ExistingObject;
 			}
 		}
-		// The receipt carries the message and the expectations at its top: folded here as well, a reply printed them twice.
+		// The receipt carries the message, the expectations and the changed packages (in changes) at its top: folded here
+		// as well, a reply printed them twice.
 		auto Fold = [&Properties, &Details](const TSharedPtr<FJsonObject>& Source)
 		{
 			for (const auto& Entry : Source->Values)
 			{
 				if (Entry.Key == TEXT("data") || Entry.Key == TEXT("requestId") || Entry.Key == TEXT("type") ||
 					Entry.Key == TEXT("liveRevisions") || Entry.Key == TEXT("message") || Entry.Key == TEXT("expectations") ||
-					(*Properties)->HasField(Entry.Key))
+					Entry.Key == TEXT("changedPackages") || (*Properties)->HasField(Entry.Key))
 				{
 					continue;
 				}
