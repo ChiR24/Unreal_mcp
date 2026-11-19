@@ -84,6 +84,22 @@ describe('no engine version comparisons outside Core/Compatibility/', () => {
     expect(table.features.filter((row) => !Array.isArray(row.paths) || row.paths.length === 0).map((row) => row.name)).toEqual([]);
   });
 
+  it('every MCP_HAS_* an #if reads is defined somewhere (a misspelt one is 0 and silently compiles code out)', () => {
+    const table = JSON.parse(readFileSync(join(sourceRoot, 'EngineWire/FeatureDetection.json'), 'utf8')) as {
+      features: { name: string; define?: boolean }[];
+    };
+    const defined = new Set(table.features.filter((row) => row.define).map((row) => `MCP_HAS_${row.name}`));
+    const used: string[] = [];
+    for (const file of walk(sourceRoot)) {
+      const text = readFileSync(join(sourceRoot, file), 'utf8');
+      for (const m of text.matchAll(/"(MCP_HAS_[A-Z0-9_]+)=|#\s*define\s+(MCP_HAS_[A-Z0-9_]+)/g)) defined.add(m[1] ?? m[2] ?? '');
+      for (const line of text.split(/\r?\n/).filter((l) => /^\s*#\s*(if|elif)\b/.test(l))) {
+        for (const m of line.replace(/defined\s*\(\s*\w+\s*\)/g, '').matchAll(/MCP_HAS_[A-Z0-9_]+/g)) used.push(`${file}: ${m[0]}`);
+      }
+    }
+    expect(used.filter((entry) => !defined.has(entry.split(': ')[1]))).toEqual([]);
+  });
+
   it('records add no minEngineVersion gate', () => {
     const registry = JSON.parse(readFileSync(registryPath, 'utf8')) as {
       records: { id: string; availability?: { minEngineVersion?: string } }[];
