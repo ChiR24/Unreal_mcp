@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Blueprint paths**: a Blueprint path that loads nothing is answered with the Blueprints of that name elsewhere in the project (`get_blueprint` and the other actions that load a Blueprint by path).
 - **Paging fields on execute**: `maxBytes`, `limit`, `offset` or `cursor` sent with an execute (they belong to search and describe) are named in the receipt's warnings with how execute caps a reply, where they were dropped without a word.
 - **Blueprint code round trip**: `write_graph_from_code` takes the operator ids `read_graph_as_code` prints (`Math|Vector|vector+vector`, `Math|Float|float/float`), a Blueprint variable named as a bare name is refused with its getter and setter ids, and an engine event named `BeginPlay` is offered `AddEvent|EventBeginPlay`.
 - **Blueprint code**: a number a pin's type cannot hold (`(* vector 2.4)`, `(/ integer 42.0)`) goes in through a literal node, so the operator takes it as a float, where `write_graph_from_code` dropped it and left the pin at 0.

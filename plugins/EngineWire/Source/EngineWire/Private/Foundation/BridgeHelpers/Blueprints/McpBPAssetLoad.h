@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AssetRegistry/AssetData.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Security/McpAssetPathCanonical.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "CoreMinimal.h"
@@ -101,6 +102,23 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     return BP;
   }
 
-  OutError = FString::Printf(TEXT("Blueprint asset not found: %s"), *Req);
+  // A path that names no Blueprint: the Blueprints of that name elsewhere, since a wrong folder is the usual slip
+  // (BP_Rider asked for under /Game/Blueprints while it lives under /Game/Blueprints/Core).
+  FARFilter Filter;
+  MCP_AR_FILTER_ADD_CLASS(Filter, UBlueprint::StaticClass());
+  Filter.bRecursiveClasses = true;
+  TArray<FAssetData> Blueprints;
+  ARM.Get().GetAssets(Filter, Blueprints);
+  const FName Wanted(*FPaths::GetBaseFilename(PackagePath));
+  TArray<FString> Elsewhere;
+  for (const FAssetData &Each : Blueprints) {
+    if (Each.AssetName == Wanted && Elsewhere.Num() < 5) {
+      Elsewhere.Add(Each.PackageName.ToString());
+    }
+  }
+  OutError = Elsewhere.Num() > 0
+                 ? FString::Printf(TEXT("Blueprint asset not found: %s; Blueprints of that name: %s"), *Req,
+                                   *FString::Join(Elsewhere, TEXT(", ")))
+                 : FString::Printf(TEXT("Blueprint asset not found: %s"), *Req);
   return nullptr;
 }

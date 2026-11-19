@@ -24,7 +24,7 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
     UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, Err);
     if (!BP) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
-                             TEXT("Blueprint not found"),
+                             Err.IsEmpty() ? FString(TEXT("Blueprint not found")) : Err,
                              TEXT("NOT_FOUND"));
       return true;
     }
