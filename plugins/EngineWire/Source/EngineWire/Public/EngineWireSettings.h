@@ -224,10 +224,11 @@ public:
         meta = (DisplayName = "Enable Native MCP Server"))
     bool bEnableNativeMCP = true;
 
-    /** Port for the native MCP HTTP server. Must differ from WebSocket ports. */
+    /** Port for the native MCP HTTP server. Must differ from WebSocket ports. 0 gives this project a port of its own
+     *  (49152-65535, from its path; the next free one when taken), which the stdio proxy finds in Saved/MCP/endpoint.json. */
     UPROPERTY(config, EditAnywhere, Category = "Native MCP",
         meta = (DisplayName = "Native MCP Port", EditCondition = "bEnableNativeMCP",
-                ClampMin = "1024", ClampMax = "65535"))
+                ClampMin = "0", ClampMax = "65535"))
     int32 NativeMCPPort = 3000;
 
     /** Enable every tool category at startup; off enables only the core category until manage_tools enables more. */

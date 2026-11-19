@@ -150,7 +150,7 @@ Both routes negotiate MCP protocol versions `2025-11-25`, `2025-06-18` and `2025
 | Setting | Default | |
 |---------|---------|---|
 | **Enable Native MCP Server** | on (off in Fab's 0.6.0 build) | Serve MCP over Streamable HTTP at `/mcp`; both routes use it |
-| **Native MCP Port** | `3000` | Must differ from the WebSocket ports. The `MCP_NATIVE_PORT` environment variable of the editor process overrides it, for example to run several editors at once. |
+| **Native MCP Port** | `3000` | Must differ from the WebSocket ports. The `MCP_NATIVE_PORT` environment variable of the editor process overrides it, for example to run several editors at once. `0` gives the project a port of its own (49152-65535, from its path; the next free one when taken). Whatever the port, the editor writes it to `Saved/MCP/endpoint.json` once it listens. |
 | **Load All Tools on Start** | on | When off, only the `core` internal tools start enabled; `configure` can enable the rest |
 | **Server Instructions** | empty | Text appended to the instructions native clients receive when they connect |
 | **Listen Host** | `127.0.0.1` | Bind address for both listeners |

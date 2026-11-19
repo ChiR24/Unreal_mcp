@@ -6,6 +6,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "McpConnectionManager.h"
 #include "Core/Subsystem/McpRequestErrorDevice.h"
+#include "Core/Subsystem/McpEndpointFile.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/Diagnostics/McpWorldTickTimer.h"
@@ -150,6 +151,7 @@ void UEngineWireSubsystem::Deinitialize()
     {
         NativeTransport->Shutdown();
         NativeTransport.Reset();
+        McpEndpointFile::WriteClosed();
     }
 
     CancelAllAutomationRequests();
@@ -237,17 +239,21 @@ void UEngineWireSubsystem::StartNativeTransport()
         }
     }
 
-    NativeTransport = MakeShared<FMcpNativeTransport>(this);
-    if (NativeTransport->Start(
-            NativePort,
-            PluginDir,
-            Settings->bLoadAllToolsOnStart,
-            Settings->NativeMCPInstructions,
-            Settings->ListenHost,
-            Settings->bAllowNonLoopback))
+    // Port 0: this project's own port, so editors of several projects never meet on one; a taken one moves up.
+    const bool bProjectPort = NativePort == 0;
+    const int32 FirstPort = bProjectPort ? McpEndpointFile::ProjectPort() : NativePort;
+    for (int32 Try = 0; Try < (bProjectPort ? 16 : 1); ++Try)
     {
-        FMcpReadinessState::Get().SetTransportReady(true);
-        return;
+        NativePort = bProjectPort ? 49152 + (FirstPort - 49152 + Try) % 16384 : FirstPort;
+        NativeTransport = MakeShared<FMcpNativeTransport>(this);
+        if (NativeTransport->Start(NativePort, PluginDir, Settings->bLoadAllToolsOnStart, Settings->NativeMCPInstructions,
+                Settings->ListenHost, Settings->bAllowNonLoopback))
+        {
+            FMcpReadinessState::Get().SetTransportReady(true);
+            // Where the stdio proxy finds this server (Saved/MCP/endpoint.json).
+            McpEndpointFile::WriteListening(NativePort);
+            return;
+        }
     }
 
     UE_LOG(

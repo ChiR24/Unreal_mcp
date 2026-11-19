@@ -300,7 +300,7 @@ Most setups touch one setting: `UE_PROJECT_PATH` for Route B; Route A needs none
 | Setting | Default | |
 | --- | --- | --- |
 | Enable Native MCP Server | on | Serve MCP over HTTP at `/mcp` (both routes use it) |
-| Native MCP Port | `3000` | The `MCP_NATIVE_PORT` environment variable of the editor process overrides it |
+| Native MCP Port | `3000` | The `MCP_NATIVE_PORT` environment variable of the editor process overrides it. `0` gives the project a port of its own (49152-65535); the editor writes the port it bound to `Saved/MCP/endpoint.json` |
 | Listen Ports | `8090,8091` | The plugin's WebSocket listener; neither route uses it |
 | Require Capability Token | on | Both routes refuse clients without the token |
 | Allow Non Loopback | off | LAN access for both listeners. See [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security#lan-access). |
