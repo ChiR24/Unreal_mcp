@@ -33,6 +33,23 @@ bool HandleAnimationCreateProceduralAnimAction(FActionContext &Context,
     Context.Fail(TEXT("LOAD_FAILED"), TEXT("Failed to load skeleton for procedural animation"));
     return false;
   }
+  // A track naming a bone the skeleton lacks was skipped with a log line and the clip saved without it, "created with 0
+  // tracks" when none matched. Every bone is checked first, and nothing is made while one is missing.
+  TArray<FString> Missing;
+  for (const TSharedPtr<FJsonValue> &Track : *BoneTracksArray) {
+    const TSharedPtr<FJsonObject> *TrackObject = nullptr;
+    FString Bone;
+    if (Track.IsValid() && Track->TryGetObject(TrackObject) && (*TrackObject)->TryGetStringField(TEXT("boneName"), Bone) &&
+        !Bone.IsEmpty() && TargetSkeleton->GetReferenceSkeleton().FindBoneIndex(FName(*Bone)) == INDEX_NONE) {
+      Missing.AddUnique(Bone);
+    }
+  }
+  if (Missing.Num() > 0) {
+    Context.Fail(TEXT("BONE_NOT_FOUND"),
+                 FString::Printf(TEXT("%s has no bone %s (get_skeleton_info info bones lists them); nothing was created."),
+                                 *TargetSkeleton->GetName(), *FString::Join(Missing, TEXT(", "))));
+    return false;
+  }
 
   UAnimSequenceFactory *Factory = NewObject<UAnimSequenceFactory>();
   Factory->TargetSkeleton = TargetSkeleton;

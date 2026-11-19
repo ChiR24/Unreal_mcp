@@ -43,7 +43,9 @@ void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& Prope
         bool bKnown = false;
         for (const TCHAR* Name : Known)
         {
-            bKnown |= Key.Equals(Name, ESearchCase::CaseSensitive);
+            // The readers below go through FJsonObject, whose key lookup ignores case, so AttenuationRadius was applied
+            // and also listed as refused.
+            bKnown |= Key.Equals(Name, ESearchCase::IgnoreCase);
         }
         if (!bKnown)
         {

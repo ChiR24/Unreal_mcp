@@ -83,6 +83,20 @@ inline bool McpBuildDataTableRow(const UScriptStruct* RowStruct, const TSharedPt
 {
     OutRowMem = nullptr;
     OutError.Empty();
+    // The converter reads a string into a number column with a parse that never fails, so "ten" was written as 0 and the
+    // row was not reported invalid. A string for a number must be a number (an enum byte column takes value names).
+    for (TFieldIterator<FProperty> It(RowStruct); It; ++It)
+    {
+        const FNumericProperty* Number = CastField<FNumericProperty>(*It);
+        const FByteProperty* Byte = CastField<FByteProperty>(*It);
+        const TSharedPtr<FJsonValue> Value = Number && !(Byte && Byte->Enum) ? RowData->TryGetField(It->GetAuthoredName()) : nullptr;
+        double Parsed = 0.0;
+        if (Value.IsValid() && Value->Type == EJson::String && !LexTryParseString(Parsed, *Value->AsString()))
+        {
+            OutError = FString::Printf(TEXT("'%s' is a number column; '%s' is not a number"), *It->GetAuthoredName(), *Value->AsString());
+            return false;
+        }
+    }
     uint8* RowMem = static_cast<uint8*>(FMemory::Malloc(RowStruct->GetStructureSize()));
     RowStruct->InitializeStruct(RowMem);
     // The converter standardizes case on both sides of its property lookup, so a

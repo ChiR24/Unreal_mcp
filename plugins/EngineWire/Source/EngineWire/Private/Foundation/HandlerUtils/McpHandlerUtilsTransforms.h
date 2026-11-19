@@ -15,10 +15,15 @@ namespace McpHandlerUtils
 {
 // Transform math leaves noise in the last digits: a 90 degree yaw read 89.99999999999999 and a camera y
 // 1710.5776600334307. Ten significant digits keep every real position and angle, and the JSON writer prints the
-// rounded value in its shortest form (90, 1710.57766).
+// rounded value in its shortest form (90, 1710.57766). Significant digits keep the noise of a zero (a roll of
+// -2.772563934e-15, a bone at y -6.255447271e-9), so a magnitude under a millionth (10 nm, a millionth of a degree) is 0.
 inline double ReadableDouble(double Value)
 {
-    return FMath::IsFinite(Value) ? FCString::Atod(*FString::Printf(TEXT("%.10g"), Value)) : Value;
+    if (!FMath::IsFinite(Value))
+    {
+        return Value;
+    }
+    return FMath::Abs(Value) < 1e-6 ? 0.0 : FCString::Atod(*FString::Printf(TEXT("%.10g"), Value));
 }
 
 // A float as it was typed: widened to double, 2.2 read 2.200000047683716. Seven significant digits, all a float holds.

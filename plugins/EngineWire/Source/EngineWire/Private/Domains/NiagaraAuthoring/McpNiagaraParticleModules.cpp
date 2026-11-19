@@ -114,6 +114,8 @@ bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction)
     ModuleName = Added->GetFunctionName();
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("moduleName"), ModuleName);
+    // The id remove_niagara_node and connect_pins take, as the modulePath add answers it.
+    Context.Result->SetStringField(TEXT("nodeId"), Added->NodeGuid.ToString());
     Context.Result->SetBoolField(TEXT("moduleAdded"), true);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(
         TEXT("Added the %s module with its default inputs; set them with set_parameter_value (parameterName \"%s.<Input>\")."), *ModuleName, *ModuleName));

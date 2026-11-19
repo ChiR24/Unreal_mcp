@@ -167,6 +167,7 @@ TSharedPtr<FJsonObject> FinishGeneratedTexture(TSharedPtr<FJsonObject> Response,
     }
 
     Response->SetBoolField(TEXT("success"), true);
+    Response->SetBoolField(TEXT("saved"), true); // a save that failed refused above, so a created texture is on disk
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("%s texture '%s' created"), Kind, *Name));
     McpHandlerUtils::AddVerification(Response, NewTexture);
     return Response;

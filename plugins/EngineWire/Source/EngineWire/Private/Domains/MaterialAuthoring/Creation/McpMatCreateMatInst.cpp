@@ -34,8 +34,10 @@ static bool CreateMaterialInstanceBatch(UEngineWireSubsystem* Bridge, const FStr
       Row->SetStringField(TEXT("errorCode"), Reply.ErrorCode);
       Failed.Add(FString::Printf(TEXT("#%d %s: %s"), Index, *Name, *Error));
     }
+    // An instance made whose parameters then failed exists and was saved: the receipt and created count it, which
+    // counting only the entries that fully succeeded left out.
     FString AssetPath;
-    if (Reply.bSuccess && Row->TryGetStringField(TEXT("assetPath"), AssetPath)) {
+    if (Row->TryGetStringField(TEXT("assetPath"), AssetPath) && GetJsonBoolField(Row, TEXT("existsAfter"), false)) {
       Changed.Add(MakeShared<FJsonValueString>(AssetPath));
     }
     Results.Add(MakeShared<FJsonValueObject>(Row));
@@ -44,7 +46,7 @@ static bool CreateMaterialInstanceBatch(UEngineWireSubsystem* Bridge, const FStr
   Result->SetArrayField(TEXT("instances"), Results);
   // The receipt's changes list these; without them a palette of six answered changes [].
   Result->SetArrayField(TEXT("changedAssets"), Changed);
-  Result->SetNumberField(TEXT("created"), Results.Num() - Failed.Num());
+  Result->SetNumberField(TEXT("created"), Changed.Num());
   Bridge->SendAutomationResponse(Socket, RequestId, Failed.Num() == 0,
       Failed.Num() == 0 ? FString::Printf(TEXT("Created %d material instances."), Results.Num())
                         : FString::Printf(TEXT("%d of %d material instances failed: %s"), Failed.Num(), Results.Num(), *FString::Join(Failed, TEXT("; "))),
@@ -121,9 +123,12 @@ bool HandleCreateMaterialInstance(UEngineWireSubsystem* Bridge, const FString& R
     if (Payload->TryGetArrayField(TEXT("parameters"), Entries) && Entries->Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
-      // The instance was saved as it was made; the values are saved once after them.
-      Result->SetBoolField(TEXT("saved"), ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(),
-                                                                     *Entries, Payload, Socket, Results, Failed));
+      // The instance was saved as it was made; the values are saved once after them. With none written there is no
+      // second save, and the first one stands (it answered saved false for an instance on disk).
+      FString Written;
+      const bool bResaved = ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(),
+                                                       *Entries, Payload, Socket, Results, Failed, &Written);
+      Result->SetBoolField(TEXT("saved"), Written.IsEmpty() ? GetJsonBoolField(Result, TEXT("saved"), false) : bResaved);
       if (Failed.Num() > 0) {
         Result->SetArrayField(TEXT("parameters"), Results);
         Bridge->SendAutomationResponse(Socket, RequestId, false,

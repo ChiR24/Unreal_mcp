@@ -139,7 +139,7 @@ bool HandleRenderPostProcessColorAction(
         return true;
     }
 
-    // "Post-process color settings applied." over an empty Applied list is a
+    // "Post-process settings applied." over an empty Applied list is a
     // lie the caller cannot see past: the volume is untouched and the receipt
     // reads like a success. Refuse instead, and name the thing that was missing.
     // blendWeight or infiniteUnbound alone answered success for any variant while its own value was never sent.
@@ -166,7 +166,7 @@ bool HandleRenderPostProcessColorAction(
     Result->SetBoolField(TEXT("infiniteUnbound"), Volume->bUnbound);
     McpHandlerUtils::AddVerification(Result, Volume);
     Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, true, TEXT("Post-process color settings applied."), Result);
+        RequestingSocket, RequestId, true, TEXT("Post-process settings applied."), Result);
     return true;
 }
 }

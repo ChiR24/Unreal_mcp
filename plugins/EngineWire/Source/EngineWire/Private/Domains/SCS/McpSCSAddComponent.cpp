@@ -83,19 +83,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     Blueprint->SimpleConstructionScript = SCS;
   }
 
+  // Each refusal carries its code: these five set only `error`, so the caller saw a generic engine error.
   UClass *CompClass = ResolveClassByName(ComponentClass);
   if (!CompClass) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"), FString::Printf(TEXT("Component class not found: %s"),
-                                       *ComponentClass));
-    return Result;
+    return SCSFail(Result, FString::Printf(TEXT("Component class not found: %s"), *ComponentClass), TEXT("CLASS_NOT_FOUND"));
   }
 
   if (const FString Refusal = McpScsComponentClassRefusal(CompClass, ComponentClass); !Refusal.IsEmpty()) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(TEXT("error"), Refusal);
-    return Result;
+    return SCSFail(Result, Refusal, TEXT("INVALID_ARGUMENT"));
   }
 
   USCS_Node *ParentNode = nullptr;
@@ -113,23 +108,12 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
         NativeParent = FindNativeSceneComponent(Blueprint, ParentComponentName);
       }
       if (!ParentNode && !NativeParent && !InheritedParent) {
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(
-            TEXT("error"),
-            FString::Printf(
-                TEXT("Parent component not found: %s. Available: %s"),
-                *ParentComponentName,
-                *DescribeParentCandidates(Blueprint, SCS)));
-        return Result;
+        return SCSFail(Result, FString::Printf(TEXT("Parent component not found: %s. Available: %s"), *ParentComponentName,
+                                               *DescribeParentCandidates(Blueprint, SCS)), TEXT("SCS_PARENT_NOT_FOUND"));
       }
       if ((NativeParent || InheritedParent) && !CompClass->IsChildOf(USceneComponent::StaticClass())) {
-        Result->SetBoolField(TEXT("success"), false);
-        Result->SetStringField(
-            TEXT("error"),
-            FString::Printf(
-                TEXT("'%s' is a non-scene component and cannot attach to '%s'"),
-                *ComponentName, *ParentComponentName));
-        return Result;
+        return SCSFail(Result, FString::Printf(TEXT("'%s' is a non-scene component and cannot attach to '%s'"), *ComponentName,
+                                               *ParentComponentName), TEXT("INVALID_ARGUMENT"));
       }
     }
   }
@@ -138,12 +122,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   // forced the taken one back, two members of one name.
   if (FindScsNodeByName(SCS, ComponentName) ||
       SCS->GenerateNewComponentName(CompClass, FName(*ComponentName)) != FName(*ComponentName)) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Component with name '%s' already exists"),
-                        *ComponentName));
-    return Result;
+    return SCSFail(Result, FString::Printf(TEXT("Component with name '%s' already exists"), *ComponentName), TEXT("NAME_TAKEN"));
   }
   // A meshPath or materialPath that did not load, or a class that cannot show it, still added the component and
   // answered success with meshApplied false: an empty component the caller took for a mesh. Both refuse first.

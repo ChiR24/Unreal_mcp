@@ -80,7 +80,7 @@ bool HandleAddInputMapping(
     if (!Key.IsValid())
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Invalid key name."), TEXT("INVALID_ARGUMENT"));
+            FString::Printf(TEXT("Invalid key name: %s"), *KeyName), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
