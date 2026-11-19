@@ -10,7 +10,7 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH_EXPORTED
 #include "AIGraphNode.h"
 #include "BehaviorTreeGraph.h"
 #include "BehaviorTreeGraphNode.h"

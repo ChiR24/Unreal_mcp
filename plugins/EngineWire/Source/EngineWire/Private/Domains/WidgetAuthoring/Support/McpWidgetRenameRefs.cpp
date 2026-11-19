@@ -61,7 +61,7 @@ int32 McpRenameWidgetReferences(UWidgetBlueprint* WidgetBP, FName OldName, FName
             Widget->Navigation->TryToRenameBinding(OldName, NewName);
         }
     });
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_WIDGET_BP_REPLACE_DESIRED_FOCUS
     FWidgetBlueprintEditorUtils::ReplaceDesiredFocus(WidgetBP, OldName, NewName);
 #endif
     return AnimationBindings;
