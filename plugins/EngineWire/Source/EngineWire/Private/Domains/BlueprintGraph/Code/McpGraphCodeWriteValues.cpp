@@ -3,6 +3,7 @@
 #include "Algo/AllOf.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
+#include "K2Node_AddPinInterface.h"
 
 namespace McpGraphCode
 {
@@ -140,6 +141,12 @@ bool FTranspiler::Fill(UEdGraphNode* Node, const FString& TypeId, TArray<FArg> A
             for (int32 In = 0; In < Ins.Num(); ++In)
             {
                 Pin = (Arg.Pin.IsEmpty() ? In == Next : Ins[In]->PinName.ToString() == Arg.Pin) ? Ins[In] : Pin;
+            }
+            // A node that grows its inputs (Make Array, a commutative math node) takes one more for each argument past them.
+            IK2Node_AddPinInterface* Grows = !Pin && Arg.Pin.IsEmpty() ? Cast<IK2Node_AddPinInterface>(Node) : nullptr;
+            if (Grows && Grows->CanAddPin() && (Grows->AddInputPin(), DataPins(Node, true).Num() > Ins.Num()))
+            {
+                continue;
             }
             if (!Pin && Arg.Pin.IsEmpty())
             {
