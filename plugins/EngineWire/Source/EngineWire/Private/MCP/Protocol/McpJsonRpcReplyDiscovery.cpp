@@ -143,8 +143,10 @@ TSharedPtr<FJsonObject> CompactDescribe(const TSharedPtr<FJsonObject>& Reply)
 TSharedPtr<FJsonObject> CompactSearch(const TSharedPtr<FJsonObject>& Reply)
 {
 	TSharedPtr<FJsonObject> Out = Without(Reply, TEXT("query"));
-	if (IsTrue(Out, TEXT("success"))) Out->RemoveField(TEXT("message"));
 	const FJsonArray* Rows = ArrayField(Out, TEXT("results"));
+	// A page with no row keeps its message (nothing matched, or no row fits maxBytes): the wording advice in it is the way
+	// on, and the reply's text line says only "ok".
+	if (IsTrue(Out, TEXT("success")) && Rows && Rows->Num() > 0) Out->RemoveField(TEXT("message"));
 	if (!Rows) return Out;
 	FJsonArray Kept;
 	for (const TSharedPtr<FJsonValue>& Row : *Rows)
