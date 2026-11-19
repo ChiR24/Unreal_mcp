@@ -311,7 +311,8 @@ refused with `IDEMPOTENCY_CONFLICT`, never served the first call's receipt.
 ### Counting instead of reading: `aggregate`
 
 `options.aggregate` counts a list in the plugin instead of sending it. The list
-(`field`, default the largest list in the reply) comes back empty, and the
+(`field`, one inside an object by its dotted path such as `widgetInfo.widgets`;
+default the largest list in the reply, else the largest one object down) comes back empty, and the
 reply's `aggregate` gives its `total`; with `groupBy` (a field of the items,
 such as `class`) each value's `count`, most common first, at most 50 groups
 (`otherGroups` counts the rest), each with a `sample` of up to `sample` items

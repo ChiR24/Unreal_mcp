@@ -89,7 +89,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 							"common first, with a few of each by name. How many actors of each class: aggregate {groupBy: 'class'}."),
 						[](FMcpSchemaBuilder& Aggregate)
 						{
-							Aggregate.String(TEXT("field"), TEXT("The list to count; default the largest list in the reply."), 1, 64)
+							Aggregate.String(TEXT("field"), TEXT("The list to count, one inside an object by its dotted path (widgetInfo.widgets); default the largest list in the reply."), 1, 64)
 								.String(TEXT("groupBy"), TEXT("A field of the list's items to count by, such as class or type. label, name and "
 									"actorName count by their stem: Wall_12 and Wall_3 count as Wall; a row with no label counts by its name, "
 									"one with no class by its classPath or className."), 1, 64)

@@ -47,7 +47,7 @@ FString ChooseField(const TSharedPtr<FJsonObject>& Spec, const TSharedPtr<FJsonO
             bBestDeclared = bIsDeclared;
         }
     }
-    return Best;
+    return Best.IsEmpty() ? McpExecuteAggregate::NestedListField(Result) : Best;
 }
 
 // An actor row's label is the name the outliner and every actor call use; its "name" is the object name
@@ -190,8 +190,10 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
 {
     TSharedPtr<FJsonObject> Block = MakeShared<FJsonObject>();
     const FString Field = InOutResult.IsValid() ? ChooseField(Spec, OutputSchema, InOutResult) : FString();
+    FString Leaf;
+    const TSharedPtr<FJsonObject> Holder = Field.IsEmpty() ? nullptr : CopyToList(InOutResult, Field, Leaf);
     const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
-    if (Field.IsEmpty() || !InOutResult->TryGetArrayField(Field, Items) || !Items)
+    if (!Holder || !Holder->TryGetArrayField(Leaf, Items) || !Items)
     {
         Block->SetStringField(TEXT("note"), Field.IsEmpty() ? TEXT("The reply has no list to aggregate.")
             : FString::Printf(TEXT("The reply has no list named '%s'."), *Field));
@@ -270,10 +272,7 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
             Block->SetNumberField(TEXT("otherGroups"), Order.Num() - McpAggregateMaxGroups);
         }
     }
-    TSharedPtr<FJsonObject> Without = MakeShared<FJsonObject>();
-    Without->Values = InOutResult->Values;
-    Without->SetArrayField(Field, TArray<TSharedPtr<FJsonValue>>());
-    InOutResult = Without;
+    Holder->SetArrayField(Leaf, TArray<TSharedPtr<FJsonValue>>()); // InOutResult is already a copy (CopyToList)
     return Block;
 }
 } // namespace McpExecuteAggregate
