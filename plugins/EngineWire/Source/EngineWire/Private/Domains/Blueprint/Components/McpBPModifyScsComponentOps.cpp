@@ -58,7 +58,17 @@ McpScsPropagate::FDefaults Defaults{Template, LocalBP, FName(*ComponentName)};
 // What did not land - transform parts, properties, mesh and material alike - is named in the batch's warnings.
 TArray<FString> Rejected = McpScsTransform::Apply(Template, Op, Defaults, bAnySuccess);
 if (PropertiesObj.IsValid()) {
-  Rejected.Append(McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess));
+  const TArray<FString> Refused = McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess);
+  // The names that took their value ("Name: reason" is how a refused one reads), as add_scs_component answers them.
+  TArray<FString> Applied;
+  for (const auto &Pair : PropertiesObj->Values) {
+    const FString Key(*Pair.Key); // 5.8 keys are not FString
+    if (!Refused.ContainsByPredicate([&Key](const FString &Each) { return Each.StartsWith(Key + TEXT(":")); })) {
+      Applied.Add(Key);
+    }
+  }
+  OpSummary->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(Applied));
+  Rejected.Append(Refused);
 }
 for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
 bool bAssetsApplied = false;
