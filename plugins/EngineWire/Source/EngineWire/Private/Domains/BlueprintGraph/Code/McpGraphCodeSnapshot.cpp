@@ -279,7 +279,11 @@ void ExpandTypeIds(UBlueprint* Blueprint, const TArray<UEdGraph*>& Graphs, TArra
             {
                 FNode& Node = Reads[GraphAt].Nodes[At];
                 const bool bOnMenu = Entries.ContainsByPredicate([&Node](const FMenuEntry& Entry) { return Entry.Id.Equals(Node.TypeId, ESearchCase::CaseSensitive); });
-                if (const FString* Found = bOnMenu ? nullptr : Best.Find(Name.Key))
+                // The entry of that title calling or reading the node's own member first: a widget's own Setup read as
+                // Pose Search's, and another class's variable as the first class with a member of that title.
+                const FString Member = bOnMenu ? FString() : NodeMember(Graphs[GraphAt], Node.Guid);
+                const FMenuEntry* Own = Member.IsEmpty() ? nullptr : Entries.FindByPredicate([&](const FMenuEntry& Entry) { return MenuTitleKey(Entry.Id) == Name.Key && MenuEntryMember(Entry) == Member; });
+                if (const FString* Found = bOnMenu ? nullptr : Own ? &Own->Id : Best.Find(Name.Key))
                 {
                     Node.TypeId = *Found;
                 }

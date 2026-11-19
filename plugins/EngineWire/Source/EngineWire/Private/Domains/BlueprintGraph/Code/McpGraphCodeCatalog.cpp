@@ -7,6 +7,8 @@
 #include "BlueprintNodeSpawner.h"
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
+#include "K2Node_CallFunction.h"
+#include "K2Node_Variable.h"
 #include "UObject/UnrealType.h"
 
 namespace McpGraphCode
@@ -21,6 +23,12 @@ bool IsStale(FBlueprintActionInfo& Info)
     const FProperty* Property = Function ? nullptr : Info.GetAssociatedProperty();
     const UClass* Owner = Function ? Function->GetOwnerClass() : Property ? Property->GetOwnerClass() : nullptr;
     return Owner && (Owner->HasAnyClassFlags(CLASS_NewerVersionExists) || Owner->GetOutermost() == GetTransientPackage());
+}
+
+FString MemberKey(const UFunction* Function, const FProperty* Property)
+{
+    const UClass* Owner = Function ? Function->GetOwnerClass() : Property ? Property->GetOwnerClass() : nullptr;
+    return Owner ? Owner->GetAuthoritativeClass()->GetPathName() + TEXT(":") + (Function ? Function->GetName() : Property->GetName()) : FString();
 }
 
 // A title key in Titles, or with bPrefix one that starts with a title there.
@@ -149,9 +157,32 @@ const FMenuEntry* FindMenuEntry(const TArray<FMenuEntry>& Entries, const FString
     return Only;
 }
 
+FString MenuEntryMember(const FMenuEntry& Entry)
+{
+    FBlueprintActionInfo Info(Entry.Owner, Entry.Spawner);
+    const UFunction* Function = Info.GetAssociatedFunction();
+    return CatalogParts::MemberKey(Function, Function ? nullptr : Info.GetAssociatedProperty());
+}
+
+FString NodeMember(const UEdGraph* Graph, const FString& Guid)
+{
+    for (const UEdGraphNode* Each : Graph->Nodes)
+    {
+        const UK2Node_CallFunction* Call = Each && Each->NodeGuid.ToString() == Guid ? Cast<UK2Node_CallFunction>(Each) : nullptr;
+        const UK2Node_Variable* Variable = Each && Each->NodeGuid.ToString() == Guid ? Cast<UK2Node_Variable>(Each) : nullptr;
+        if (Call || Variable)
+        {
+            return CatalogParts::MemberKey(Call ? Call->GetTargetFunction() : nullptr, Variable ? Variable->GetPropertyForVariable() : nullptr);
+        }
+    }
+    return FString();
+}
+
 TArray<FString> PickOffered(const TArray<FString>& Ids, const FString& TypeId)
 {
     const FString Key = MenuTitleKey(TypeId);
+    int32 Bar = INDEX_NONE;
+    const FString Category = TypeId.FindLastChar(TEXT('|'), Bar) && Bar > 0 ? TypeId.Left(Bar + 1) : FString();
     TArray<FString> Same;
     TArray<FString> Starting;
     for (const FString& Id : Ids)
@@ -167,9 +198,14 @@ TArray<FString> PickOffered(const TArray<FString>& Ids, const FString& TypeId)
         }
     }
     TArray<FString> Picked = Same.Num() > 0 ? Same : Starting;
+    // A title its own category lacks (Utilities|Array|Contains, which Map and String have) also offers that category's
+    // titles that start with it (Utilities|Array|ContainsItem): the other categories' exact titles hid it.
+    const auto InCategory = [&Category](const FString& Id) { return !Category.IsEmpty() && Id.StartsWith(Category); };
+    for (const FString& Id : Same.ContainsByPredicate(InCategory) ? TArray<FString>() : Starting)
+    {
+        if (InCategory(Id)) Picked.AddUnique(Id);
+    }
     // TypeId's own category first; the order Ids came in stays within each part.
-    int32 Bar = INDEX_NONE;
-    const FString Category = TypeId.FindLastChar(TEXT('|'), Bar) && Bar > 0 ? TypeId.Left(Bar + 1) : FString();
     Picked.StableSort([&Category](const FString& A, const FString& B)
                       { return !Category.IsEmpty() && A.StartsWith(Category) && !B.StartsWith(Category); });
     Picked.SetNum(FMath::Min(Picked.Num(), 8));
@@ -186,7 +222,10 @@ TArray<FString> OfferedIds(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<
     {
         Ids.Add(Entry.Id);
     }
-    if (!Key.IsEmpty() && !Ids.ContainsByPredicate([&Key](const FString& Id) { return MenuTitleKey(Id) == Key; }))
+    // Searched again also when only other categories hold the title: the asked one may hold a longer one.
+    int32 Bar = INDEX_NONE;
+    const FString Category = TypeId.FindLastChar(TEXT('|'), Bar) && Bar > 0 ? TypeId.Left(Bar + 1) : FString();
+    if (!Key.IsEmpty() && !Ids.ContainsByPredicate([&Key, &Category](const FString& Id) { return MenuTitleKey(Id) == Key && Id.StartsWith(Category); }))
     {
         const TSet<FString> Prefix = {Key};
         for (const FMenuEntry& Entry : MenuEntries(Blueprint, Graph, MenuCandidates(Prefix, true), Prefix, true))

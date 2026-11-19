@@ -153,6 +153,12 @@ const FMenuEntry* FindMenuEntry(const TArray<FMenuEntry>& Entries, const FString
  *  else those whose title starts with it (Sin: Sin(Radians), Sin(Degrees)); TypeId's category first, 8 at most. */
 TArray<FString> PickOffered(const TArray<FString>& Ids, const FString& TypeId);
 
+/** The member a menu entry's node calls or reads, and the one a placed node of Graph (by guid) calls or reads, as one key
+ *  (authoritative owner class path:name); empty for neither. Tells apart entries of one title (a widget's own Setup, and
+ *  Pose Search's). */
+FString MenuEntryMember(const FMenuEntry& Entry);
+FString NodeMember(const UEdGraph* Graph, const FString& Guid);
+
 /** PickOffered over Entries, and when none of them has TypeId's title, over this graph's menu ids whose title starts with it. */
 TArray<FString> OfferedIds(UBlueprint* Blueprint, UEdGraph* Graph, const TArray<FMenuEntry>& Entries, const FString& TypeId);
 
