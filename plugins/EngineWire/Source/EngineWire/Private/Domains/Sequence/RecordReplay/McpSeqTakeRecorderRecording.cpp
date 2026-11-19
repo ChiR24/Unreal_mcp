@@ -193,7 +193,7 @@ bool HandleStartTakeRecording(UEngineWireSubsystem* Subsystem, const FString& Re
     Parameters.bOpenSequencer = false;
 #endif
     Parameters.TakeRecorderMode = Panel->GetMode() == ETakeRecorderPanelMode::RecordingInto ? ETakeRecorderMode::RecordIntoSequence : ETakeRecorderMode::RecordNewSequence;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_TAKE_RECORDER_START_FRAME
     Parameters.StartFrame = LevelSequence->GetMovieScene()->GetPlaybackRange().GetLowerBoundValue();
 #endif
     UTakeRecorder* Recorder = UTakeRecorderBlueprintLibrary::StartRecording(LevelSequence, Sources, Panel->GetTakeMetaData(), Parameters);

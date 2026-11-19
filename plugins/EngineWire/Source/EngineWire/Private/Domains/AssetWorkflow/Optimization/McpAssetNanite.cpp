@@ -19,8 +19,8 @@
 namespace {
 // A material draws on a Nanite mesh only with the Nanite usage flag. The editor sets a missing one as it registers the
 // mesh's placed copies, or when it next draws them, but never saves it, and a packaged game then draws that surface
-// without it. 5.8 gives a material instance flags of its own; before it the material holds them.
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+// without it. Where a material instance has flags of its own it holds them; before that the material did.
+#if MCP_HAS_MATERIAL_INSTANCE_USAGE_FLAGS
 UMaterialInterface *McpNaniteFlagOwner(UMaterialInterface *Material) { return Material; }
 bool McpNaniteHasFlag(UMaterialInterface *Owner) { return Owner->GetUsageByFlag(MATUSAGE_Nanite); }
 void McpNaniteSetFlag(UMaterialInterface *Owner) { Owner->SetMaterialUsage(MATUSAGE_Nanite); }

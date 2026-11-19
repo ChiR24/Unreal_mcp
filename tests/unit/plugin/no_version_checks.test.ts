@@ -16,7 +16,7 @@ const VERSION_TEST = /(#\s*(el)?if|\bif\s*\()[^\n]*\b(ENGINE_(MAJOR|MINOR)_VERSI
 const BUILD_CS_TEST = /Target\.Version\.(Major|Minor)Version\s*(==|!=|>=|<=|>|<)/g;
 // buildCsLines: ApplyMsvcCompatibility's test, the one named build quirk (FeatureDetection.json buildQuirks).
 // records: the MVVM family, reflection-only, waits for the engine adapter's roles; the rest moved to availability.compiled.
-const CAPS = { cppFiles: 47, cppLines: 60, buildCsLines: 2, records: 6 };
+const CAPS = { cppFiles: 42, cppLines: 53, buildCsLines: 2, records: 6 };
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

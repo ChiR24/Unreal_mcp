@@ -33,7 +33,7 @@ static FString DescribeEndlessSound(const USoundBase* Sound)
   }
   TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
   const FMetasoundFrontendDocument& Doc = ScriptInterface->GetConstDocument();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+#if MCP_HAS_METASOUND_DEFAULT_INTERFACE
   const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.GetDefaultInterface();
 #else
   const FMetasoundFrontendClassInterface& GraphInterface = Doc.RootGraph.Interface;

@@ -98,8 +98,8 @@
 #else
 #define MCP_METASOUND_FINISH(Name)
 #endif
-// A MetaSound class's interface: its Interface member before 5.6, GetDefaultInterface() from then on.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
+// A MetaSound class's interface: GetDefaultInterface() where the engine has it, else its Interface member.
+#if MCP_HAS_METASOUND_DEFAULT_INTERFACE
 #define MCP_METASOUND_CLASS_INTERFACE(Class) (Class).GetDefaultInterface()
 #else
 #define MCP_METASOUND_CLASS_INTERFACE(Class) (Class).Interface

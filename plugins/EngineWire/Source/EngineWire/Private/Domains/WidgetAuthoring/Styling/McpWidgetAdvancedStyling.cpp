@@ -118,14 +118,14 @@ bool HandleWidgetAuthoringAdvancedStyling(
             // Promised by the refusal message below but never implemented: an
             // editable box keeps its font inside WidgetStyle.TextStyle.
             // GetWidgetStyle/SetWidgetStyle arrive in UE 5.7; before that the style is a plain UPROPERTY.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 7
+#if MCP_HAS_EDITABLE_TEXT_BOX_STYLE_ACCESSORS
             FEditableTextBoxStyle Style = TextBox->GetWidgetStyle();
             ApplyFont(Style.TextStyle.Font);
             TextBox->SetWidgetStyle(Style);
-#elif ENGINE_MINOR_VERSION >= 1
+#elif MCP_HAS_EDITABLE_TEXT_BOX_TEXT_STYLE
             ApplyFont(TextBox->WidgetStyle.TextStyle.Font);
             TextBox->SynchronizeProperties();
-#else // 5.0: FEditableTextBoxStyle holds the font directly
+#else // FEditableTextBoxStyle holds the font directly
             ApplyFont(TextBox->WidgetStyle.Font);
             TextBox->SynchronizeProperties();
 #endif
@@ -137,7 +137,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
             // the box), and UEditableText exposes WidgetStyle with a setter only.
             FEditableTextStyle Style = EditText->WidgetStyle;
             ApplyFont(Style.Font);
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_EDITABLE_TEXT_SET_WIDGET_STYLE
             EditText->SetWidgetStyle(Style);
 #else
             EditText->WidgetStyle = Style;
