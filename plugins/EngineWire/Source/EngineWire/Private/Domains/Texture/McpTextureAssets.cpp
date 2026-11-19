@@ -102,21 +102,26 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
 
 bool UpdateTextureBGRA8(UTexture2D* Texture, int32 Width, int32 Height, const TArray<uint8>& Pixels)
 {
-    if (!Texture || Pixels.Num() != Width * Height * 4 ||
-        !Texture->GetPlatformData() || Texture->GetPlatformData()->Mips.Num() == 0)
+    if (!Texture || Pixels.Num() != Width * Height * 4)
     {
         return false;
     }
 
+    // The pixels are the source; PostEditChange below rebuilds the platform data from it. Mip 0 is written too only so
+    // the texture shows them before that build. The build CreateEmptyTexture waited for can leave no mip (seen right after
+    // an editor start, its texture builds short of memory), and refusing then failed a gradient and left the asset made.
     Texture->Source.Init(Width, Height, 1, 1, TSF_BGRA8, Pixels.GetData());
-    FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
-    Mip.SizeX = Width;
-    Mip.SizeY = Height;
-    Mip.SizeZ = 1;
-    Mip.BulkData.Lock(LOCK_READ_WRITE);
-    void* TextureData = Mip.BulkData.Realloc(Pixels.Num());
-    FMemory::Memcpy(TextureData, Pixels.GetData(), Pixels.Num());
-    Mip.BulkData.Unlock();
+    if (FTexturePlatformData* PlatformData = Texture->GetPlatformData(); PlatformData && PlatformData->Mips.Num() > 0)
+    {
+        FTexture2DMipMap& Mip = PlatformData->Mips[0];
+        Mip.SizeX = Width;
+        Mip.SizeY = Height;
+        Mip.SizeZ = 1;
+        Mip.BulkData.Lock(LOCK_READ_WRITE);
+        void* TextureData = Mip.BulkData.Realloc(Pixels.Num());
+        FMemory::Memcpy(TextureData, Pixels.GetData(), Pixels.Num());
+        Mip.BulkData.Unlock();
+    }
 
     Texture->UpdateResource();
     Texture->PostEditChange();
