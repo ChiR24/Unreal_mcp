@@ -143,10 +143,26 @@ inline bool McpClearImportTarget(const FString &DestPath,
   IAssetRegistry &Registry =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
           .Get();
+  // The editor renames nothing while it still discovers assets (the first minute after a start), so an import that
+  // takes another name than the source file's stood under that one: refused before anything changes.
+  if (Names.Num() > 1 && Registry.IsLoadingAssets()) {
+    OutError = TEXT("The editor is still discovering assets and renames nothing until it is done, so the import could not take its name. Nothing was changed: call again in a moment.");
+    OutErrorCode = TEXT("ASSET_DISCOVERY_RUNNING");
+    return false;
+  }
   for (const FString &Name : Names) {
     const FString Target = McpToObjectPath(DestPath / Name);
     if (!Registry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Target), false).IsValid()) {
       continue;
+    }
+    // The source file's name when it is not the destination is no target of this call, yet the FBX importer would
+    // replace that asset: a take imported beside its character deleted the character's mesh, and saving the wreck
+    // crashed the editor. It is refused, never deleted.
+    if (bDeleteExisting && Name != DestName) {
+      OutError = FString::Printf(TEXT("%s/%s has the source file's name, so the importer would replace it instead of making %s. ")
+                                 TEXT("Nothing was changed: import into a folder without it."), *DestPath, *Name, *DestName);
+      OutErrorCode = TEXT("SOURCE_NAME_TAKEN");
+      return false;
     }
     if (!bOverwrite) {
       OutError = FString::Printf(
@@ -173,8 +189,23 @@ inline bool McpClearImportTarget(const FString &DestPath,
       OutErrorCode = TEXT("REPLACE_FAILED");
       return false;
     }
+    // A deleted asset stays in memory (the undo buffer can hold it past a collection) and keeps its name there, so the
+    // new one could not take it: the rename failed and the import stood under the source file's name. It moves out of
+    // its package, as the editor's own consolidate moves a replaced asset.
+    Existing->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional | REN_DoNotDirty);
   }
   return true;
+}
+
+// Why an import that brought something in did not do what was asked: a take asked alone (skeletonPath without
+// importMesh) that came out as no take, which is not renamed onto the destination. Empty when it is a take.
+inline FString McpTakeProblem(const FMcpFbxImportOptions &Options, const UObject &Asset, FString &OutCode) {
+  if (Options.SkeletonPath.IsEmpty() || Options.bImportMesh || Asset.IsA<UAnimSequence>()) {
+    return FString();
+  }
+  OutCode = TEXT("IMPORT_FAILED");
+  return FString::Printf(TEXT("No animation take came out of the file (the importer made %s %s); the engine errors say why."),
+                         *Asset.GetClass()->GetName(), *Asset.GetPathName());
 }
 
 // The asset an import is about: a mesh before its animations, before its materials and textures. The first one the

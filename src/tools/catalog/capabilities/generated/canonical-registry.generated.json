@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bdc9030c01ba725c",
+  "catalogRevision": "4d68c4efb3d53c67",
   "recordCount": 489,
   "records": [
     {
@@ -10438,7 +10438,7 @@
           "import onto existing skeleton",
           "share a skeleton"
         ],
-        "summary": "Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it). skeletonPath imports an FBX animation take onto that skeleton, or with importMesh binds the imported skeletal mesh to it. The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true); a static or skeletal mesh it made with closed parts wound inside out (up to 1 million triangles are checked) gets a warning naming it, the count and the inspect.check_mesh call that lists them.",
+        "summary": "Import a file inside the project folder (sourcePath, relative to the project or absolute under it; a path outside is SECURITY_VIOLATION, a missing file SOURCE_NOT_FOUND) as an asset at destinationPath: a folder keeps the file name, an object path names it. An asset already there is replaced only with overwrite (DESTINATION_OCCUPIED otherwise): a plain file replaces it in place, keeping what points at it, while an FBX with skeleton or animation options deletes it first (REPLACE_FAILED while something still uses it) and refuses an asset beside it that merely has the source file's name (SOURCE_NAME_TAKEN: the importer would replace that one). skeletonPath imports an FBX animation take onto that skeleton (IMPORT_FAILED when no take comes out), or with importMesh binds the imported skeletal mesh to it; a result that cannot take the destination name is RENAME_FAILED, and a new name asked while the editor still discovers assets after a start is ASSET_DISCOVERY_RUNNING (call again). The reply names assetPath (the mesh when the file holds one), alsoImported (its takes, materials and textures) and saved (default true); a static or skeletal mesh it made with closed parts wound inside out (up to 1 million triangles are checked) gets a warning naming it, the count and the inspect.check_mesh call that lists them.",
         "whenToUse": [
           "A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.",
           "An FBX animation take must be imported onto an existing skeleton without importing the mesh again.",
@@ -10624,7 +10624,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0b20a43e5314064820da0a0f3130eac1aae51499e04cade0b9010734ea52266b",
-        "content": "f6b0ec26c445b9268bb3caeea4c68a10ae5bcf1f011862bb645c0ddaf0c91bea"
+        "content": "01ccdc6c576c64ad18fc10a9b3a79f60fdebf18827775a4a149cf2fae7aa13ec"
       }
     },
     {

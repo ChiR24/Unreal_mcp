@@ -134,28 +134,23 @@ bool UEngineWireSubsystem::HandleImportAsset(
           UObject *Asset = McpPickPrimaryImport(ImportedAssets);
 
           if (Asset) {
-            // Compute the final asset path. If we rename, use the destination
-            // path/name since RenameAssets may invalidate the Asset pointer.
-            FString FinalAssetPath;
-            bool bRenameSucceeded = true;
-
-            // Rename if needed
-            if (Asset->GetName() != DestName) {
+            // A take asked alone that came out as something else keeps its own name (a mesh took the take's), and a
+            // rename the editor refused fails the call: both answered success.
+            FString Code;
+            FString Problem = McpTakeProblem(FbxOptions, *Asset, Code);
+            FString FinalAssetPath = Asset->GetPathName();
+            if (Problem.IsEmpty() && Asset->GetName() != DestName) {
               FAssetRenameData RenameData(Asset, DestPath, DestName);
-              bRenameSucceeded = AssetTools.RenameAssets({RenameData});
-              // After rename, compute path from destination (Asset pointer may
-              // be stale)
-              FinalAssetPath = McpToObjectPath(DestPath / DestName);
-            } else {
-              // No rename needed, safe to use the asset's current path
-              FinalAssetPath = Asset->GetPathName();
+              // After a rename the Asset pointer may be stale, so the path comes from the destination.
+              const bool bRenamed = AssetTools.RenameAssets({RenameData});
+              Code = bRenamed ? Code : TEXT("RENAME_FAILED");
+              Problem = bRenamed ? Problem : FString::Printf(TEXT("The import came in as %s but could not take the name %s; it keeps its own."),
+                                                               *FinalAssetPath, *(DestPath / DestName));
+              FinalAssetPath = bRenamed ? McpToObjectPath(DestPath / DestName) : FinalAssetPath;
             }
 
             TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
             Resp->SetStringField(TEXT("assetPath"), FinalAssetPath);
-            if (!bRenameSucceeded) {
-              Resp->SetBoolField(TEXT("renameWarning"), true);
-            }
             // Add verification data
             UObject *ImportedAsset = McpLoadAsset(FinalAssetPath);
             if (ImportedAsset) {
@@ -165,11 +160,8 @@ bool UEngineWireSubsystem::HandleImportAsset(
             // After McpDescribeImport, which sets the warnings: a mesh wound inside out is added to them.
             McpMeshCheck::AppendInsideOutWarnings(ImportedAssets, Resp);
             Resp->SetBoolField(TEXT("saved"), bSave && McpSaveImports(ImportedAsset, Asset, ImportedAssets));
-            StrongThis->SendAutomationResponse(
-                Socket, RequestId, true,
-                bRenameSucceeded ? TEXT("Asset imported")
-                                 : TEXT("Asset imported but rename failed"),
-                Resp, FString());
+            StrongThis->SendAutomationResponse(Socket, RequestId, Problem.IsEmpty(),
+                                               Problem.IsEmpty() ? FString(TEXT("Asset imported")) : Problem, Resp, Code);
           } else {
             StrongThis->SendAutomationError(
                 Socket, RequestId,
