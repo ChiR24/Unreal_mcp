@@ -77,7 +77,7 @@ TSharedPtr<FJsonObject> McpDescribeWidgetLayout(const UWidget* Widget)
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     Out->SetStringField(TEXT("visibility"), McpVisibilityName(Widget->GetVisibility()));
     Out->SetNumberField(TEXT("renderOpacity"), Widget->GetRenderOpacity());
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WIDGET_RENDER_TRANSFORM_GETTER
     const FWidgetTransform& Transform = Widget->GetRenderTransform();
 #else
     const FWidgetTransform& Transform = Widget->RenderTransform;

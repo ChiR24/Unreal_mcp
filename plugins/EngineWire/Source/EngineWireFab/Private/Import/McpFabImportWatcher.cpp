@@ -119,7 +119,7 @@ void WatchForImport(
 	Watch->AddedHandle = Registry.OnAssetAdded().AddLambda(
 		[Before, OldTops, Watch](const FAssetData& AssetData)
 		{
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_ASSET_DATA_OBJECT_PATH_STRING
 			const FString Path = AssetData.GetObjectPathString();
 			const FName ClassName = AssetData.AssetClassPath.GetAssetName();
 #else

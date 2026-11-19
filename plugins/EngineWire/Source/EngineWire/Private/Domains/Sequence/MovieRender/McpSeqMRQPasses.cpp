@@ -126,7 +126,7 @@ bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
       OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
       return false;
     }
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_MRQ_DEFERRED_MAIN_PASS
     Deferred->bRenderMainPass = true;
 #endif
     return true;

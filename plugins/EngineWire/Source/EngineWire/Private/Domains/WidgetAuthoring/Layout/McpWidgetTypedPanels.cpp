@@ -167,7 +167,7 @@ bool HandleWidgetAuthoringTypedPanels(
             // wrapWidth only takes effect with explicitWrapWidth; giving a width turns it on.
             const bool bExplicit = GetJsonBoolField(Payload, TEXT("explicitWrapWidth"), Payload->HasField(TEXT("wrapWidth")));
             const float Width = static_cast<float>(GetJsonNumberField(Payload, TEXT("wrapWidth"), 500.0));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WRAP_BOX_EXPLICIT_WRAP_SIZE_SETTER
             WrapBox->SetExplicitWrapSize(bExplicit);
             WrapBox->SetWrapSize(Width);
 #else

@@ -139,7 +139,7 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
         EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
         EmitterObj->SetObjectField(TEXT("moduleInputs"), CollectModuleInputs(Scripts, Handle.GetName().ToString()));
         EmitterObj->SetObjectField(TEXT("staticSwitches"), CollectModuleStaticSwitches(Handle));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
         UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
 #else
         UNiagaraEmitter* Emitter = Handle.GetInstance();

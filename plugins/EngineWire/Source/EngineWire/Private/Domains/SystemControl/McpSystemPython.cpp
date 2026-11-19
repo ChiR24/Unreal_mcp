@@ -187,7 +187,7 @@ bool HandleExecutePython(UEngineWireSubsystem* Self,
                               TEXT("PYTHON_NOT_AVAILABLE"));
     return true;
   }
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
+#if MCP_HAS_PYTHON_INITIALIZED_QUERY
   if (!PythonPlugin->IsPythonInitialized()) {
     PythonPlugin->ForceEnablePythonAtRuntime();
   }

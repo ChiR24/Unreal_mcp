@@ -108,7 +108,7 @@ void ApplyGameModeOverride(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config, UClass *Game
       Config->FindOrAddSettingByClass(UMoviePipelineGameOverrideSetting::StaticClass(), true));
   if (!Overrides)
     return;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_MRQ_SOFT_GAME_MODE_OVERRIDE
   Overrides->SoftGameModeOverride = TSoftClassPtr<AGameModeBase>(FSoftObjectPath(GameMode));
 #else
   Overrides->GameModeOverride = GameMode;

@@ -21,7 +21,7 @@ static TRenderer* FindOrCreateRenderer(FEmitterTarget& Target, bool& bOutCreated
     {
         return nullptr;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     Target.Emitter->AddRenderer(NewRenderer, Target.VersionedEmitter.Version);
 #else
     Target.Emitter->AddRenderer(NewRenderer);

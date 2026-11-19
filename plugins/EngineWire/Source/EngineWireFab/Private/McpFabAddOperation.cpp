@@ -44,7 +44,7 @@ TSet<FString> SnapshotGameAssets()
 	Registry.GetAssetsByPath(FName(TEXT("/Game")), Assets, /*bRecursive=*/true);
 	for (const FAssetData& Asset : Assets)
 	{
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_ASSET_DATA_OBJECT_PATH_STRING
 		Paths.Add(Asset.GetObjectPathString());
 #else
 		Paths.Add(Asset.ObjectPath.ToString());

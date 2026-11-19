@@ -209,7 +209,7 @@ bool HandleConfigureConsoleVariables(UEngineWireSubsystem *Subsystem,
            true;
   CVars->Modify();
   for (const TPair<FString, float> &Entry : ParsedValues)
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_MRQ_ADD_OR_UPDATE_CONSOLE_VARIABLE
     CVars->AddOrUpdateConsoleVariable(Entry.Key, Entry.Value);
 #else
     CVars->ConsoleVariables.Add(Entry.Key, Entry.Value);

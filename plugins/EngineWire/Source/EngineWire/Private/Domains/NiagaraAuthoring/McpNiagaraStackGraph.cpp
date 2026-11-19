@@ -61,7 +61,7 @@ bool LoadEmitterTarget(FActionContext& Context, FEmitterTarget& Target)
     {
         return false;
     }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_NIAGARA_VERSIONED_EMITTER
     Target.VersionedEmitter = Target.Handle->GetInstance();
     Target.Emitter = Target.VersionedEmitter.Emitter;
 #else

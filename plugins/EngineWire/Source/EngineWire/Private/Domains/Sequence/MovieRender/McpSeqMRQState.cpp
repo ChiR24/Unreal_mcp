@@ -236,7 +236,7 @@ TSharedPtr<FJsonObject> BuildJobResult(UMoviePipelineExecutorJob *Job,
     }
     if (UMoviePipelineGameOverrideSetting *Overrides = Cast<UMoviePipelineGameOverrideSetting>(
             Config->FindSettingByClass(UMoviePipelineGameOverrideSetting::StaticClass(), true))) {
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#if MCP_HAS_MRQ_SOFT_GAME_MODE_OVERRIDE
       const FString Mode = Overrides->SoftGameModeOverride.ToString();
 #else
       const UClass *ModeClass = Overrides->GameModeOverride.Get();

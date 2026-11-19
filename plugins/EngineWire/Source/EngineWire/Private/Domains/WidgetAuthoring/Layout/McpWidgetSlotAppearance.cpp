@@ -97,7 +97,7 @@ bool HandleWidgetAuthoringSlotAppearance(
     if (bTransform)
     {
         // Start from the widget's own transform, so setting only the angle keeps its translation and scale.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_WIDGET_RENDER_TRANSFORM_GETTER
         FWidgetTransform Transform = Widget->GetRenderTransform();
 #else
         FWidgetTransform Transform = Widget->RenderTransform;

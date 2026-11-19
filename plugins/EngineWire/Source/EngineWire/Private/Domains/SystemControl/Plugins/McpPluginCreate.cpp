@@ -240,7 +240,7 @@ bool HandleRemovePlugin(UEngineWireSubsystem* Self, const FString& RequestId, co
 			"could not drop it: %s"), *Name, *PluginCreateShown(MovedTo), *Error), TEXT("PROJECT_SAVE_FAILED"));
 		return true;
 	}
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_PLUGIN_MANAGER_REMOVE_FROM_LIST
 	IPluginManager::Get().RemoveFromPluginsList(Plugin->GetDescriptorFileName());
 #endif
 	TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

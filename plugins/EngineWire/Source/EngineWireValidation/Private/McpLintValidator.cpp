@@ -36,7 +36,7 @@ EDataValidationResult UMcpLintValidator::ValidateWithLint(UObject* InAsset, TFun
 	return bFailed ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 }
 
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+#if MCP_HAS_VALIDATOR_ASSET_DATA_SIGNATURE
 bool UMcpLintValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
 {
 	return Cast<UBlueprint>(InObject) != nullptr;

@@ -46,7 +46,7 @@ void McpSeekPaused(const TSharedPtr<ISequencer> &Sequencer, FFrameTime Tick) {
       if (It->GetWorld() == World && It->GetUpdateAnimationInEditor() && It->GetAnimInstance()) {
         It->TickAnimation(0.f, false);
         It->RefreshBoneTransforms();
-#if ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_SKINNED_MESH_FOLLOWER_COMPONENTS
         It->RefreshFollowerComponents();
 #else
         It->RefreshSlaveComponents();
