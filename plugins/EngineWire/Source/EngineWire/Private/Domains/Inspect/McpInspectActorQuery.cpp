@@ -142,7 +142,7 @@ bool HandleInspectActorQueryAction(
             FileType = TEXT("T3D");
         }
         FMcpOutputCapture Capture;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_EXPORTER_OUTPUT_DEVICE_RESULT
         const bool bExported = UExporter::ExportToOutputDevice(nullptr, Target, nullptr, Capture, *FileType, 0, 0, false, nullptr);
 #else // returns void before 5.2; an empty capture below still reports a missing exporter
         UExporter::ExportToOutputDevice(nullptr, Target, nullptr, Capture, *FileType, 0, 0, false, nullptr);

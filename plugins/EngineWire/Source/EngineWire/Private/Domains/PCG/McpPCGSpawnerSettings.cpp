@@ -69,7 +69,7 @@ static bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString
 
     SpawnerSettings->Modify();
     // UE 5.3 renamed the spawner's selector instance from MeshSelectorInstance to MeshSelectorParameters.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
+#if !MCP_HAS_PCG_MESH_SELECTOR_PARAMETERS
     TObjectPtr<UPCGMeshSelectorBase>& Selector = SpawnerSettings->MeshSelectorInstance;
 #else
     TObjectPtr<UPCGMeshSelectorBase>& Selector = SpawnerSettings->MeshSelectorParameters;

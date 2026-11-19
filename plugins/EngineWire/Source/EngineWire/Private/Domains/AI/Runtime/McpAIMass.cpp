@@ -140,7 +140,7 @@ bool HandleConfigureMassEntity(UEngineWireSubsystem* Self, const FString& Reques
             }
         }
         ConfigAsset->Modify();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_MASS_ENTITY_CONFIG_SET_PARENT
         Config.SetParentAsset(*ParentConfig);
 #else
         // UE 5.0-5.2 have no SetParentAsset; CopyCompleteValue writes the Parent property on both.

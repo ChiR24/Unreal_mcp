@@ -18,7 +18,7 @@
 #include "Misc/PackageName.h"
 #include "UObject/UObjectIterator.h"
 #include "WidgetBlueprint.h"
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_FIELD_NOTIFICATION_HEADER
 #include "INotifyFieldValueChanged.h" // FieldNotification, a public dependency of UMG from 5.3
 #endif
 
@@ -34,7 +34,7 @@ constexpr int32 MaxViewModels = 200;
 TArray<TSharedPtr<FJsonValue>> NotifyFields(const UClass* Class)
 {
 	TArray<FName> Names;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3
+#if MCP_HAS_FIELD_NOTIFICATION_HEADER
 	// The interface found by path and reached through its address: UNotifyFieldValueChanged::StaticClass() would link
 	// the FieldNotification module, which EngineWire only sees through UMG's headers.
 	UClass* Interface = FindObject<UClass>(nullptr, TEXT("/Script/FieldNotification.NotifyFieldValueChanged"));

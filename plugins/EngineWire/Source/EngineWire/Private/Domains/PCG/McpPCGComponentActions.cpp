@@ -77,7 +77,7 @@ bool HandleExecutePCGGraph(UEngineWireSubsystem* Bridge, const FString& RequestI
     }
 
     const bool bForceGenerate = GetJsonBoolField(Payload, TEXT("force"), true);
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+#if MCP_HAS_PCG_LOCAL_TASK_ID
     const FPCGTaskId TaskId = Component->GenerateLocalGetTaskId(bForceGenerate);
 #else
     // UE 5.2 has no GenerateLocalGetTaskId. Its GenerateLocal schedules nothing while a generation runs and leaves
