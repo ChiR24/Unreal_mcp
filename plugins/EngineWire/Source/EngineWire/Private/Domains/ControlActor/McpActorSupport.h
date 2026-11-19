@@ -12,6 +12,7 @@
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 #include "Foundation/BridgeHelpers/Actors/McpActorSpawnHelpers.h"
+#include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
@@ -77,7 +78,9 @@ inline FString McpActorFolder(const AActor *Actor) {
 // landing lives on a component, not the actor), and "CharacterMovement.MaxWalkSpeed" off the object the
 // actor's own property of that name holds, as get_property reads it (the component is named CharMoveComp).
 // One resolver for the propertyNames of sample_motion and of list. OutOwner is the object to read the
-// property from; null Property when nothing matches.
+// property from; null Property when nothing matches. The object the hop enters is held to the rule the nested
+// property walk applies: an engine-module object (/Script, EngineWire's own settings included) or one outside a
+// path-restricted caller's prefixes reads as missing.
 inline FProperty *McpResolveActorPropertyPath(AActor *Actor, const FString &Wanted, UObject *&OutOwner) {
   FString ComponentName, PropertyName = Wanted;
   OutOwner = Actor;
@@ -86,6 +89,9 @@ inline FProperty *McpResolveActorPropertyPath(AActor *Actor, const FString &Want
     OutOwner = Holder ? Holder->GetObjectPropertyValue_InContainer(Actor) : nullptr;
     if (!OutOwner) {
       OutOwner = FindComponentByName(Actor, ComponentName);
+    }
+    if (OutOwner && !McpSafeReflectionTarget::IsAddressable(OutOwner)) {
+      OutOwner = nullptr;
     }
   }
   return OutOwner ? OutOwner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr;
