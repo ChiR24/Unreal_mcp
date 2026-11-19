@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "15c7d6e688d3dfd9",
+  "catalogRevision": "ca332e28f4fe597f",
   "recordCount": 489,
   "records": [
     {
@@ -28579,6 +28579,10 @@
             "graphName": {
               "type": "string",
               "description": "The event graph (event) forms go into (default: the first). An (fn) form always goes into its own function."
+            },
+            "codeOnly": {
+              "type": "boolean",
+              "description": "Only the code in the reply (default false): nodes and links are left out, nodeCount and linkCount stay, as read_graph_as_code codeOnly does. The code carries every node id a later write or goto needs."
             }
           },
           "required": [
@@ -28617,14 +28621,14 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
             },
             "links": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000."
+              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
             },
             "nodeCount": {
               "type": "number",
@@ -28772,8 +28776,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e18ad860f9fba9dfbafdbe51f03dc9c880f5c05a74190a47d79eb6bc7358be6c",
-        "content": "32451cf37a2cd38de86d6e87befd5a6f3989a10af6f8bd74606afd788a73a379"
+        "schema": "9383c32efc202cbed0cf11563f79c62860ae120a712fb137745b6c5781eecec8",
+        "content": "599870d213a9cb4b6eca688e003c6de90df992a0e66c7c5f0559a28fb7239486"
       }
     },
     {

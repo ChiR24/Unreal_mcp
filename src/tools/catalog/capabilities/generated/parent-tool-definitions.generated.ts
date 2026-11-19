@@ -20416,7 +20416,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000."
+              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
             }
           ],
           "description": "Every wire as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
@@ -20609,7 +20609,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
+              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
             }
           ],
           "description": "Every node: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."

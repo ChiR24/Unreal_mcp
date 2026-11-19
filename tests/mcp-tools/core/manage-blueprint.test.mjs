@@ -533,6 +533,11 @@ const testCases = [
     { path: 'structuredContent.result.created', equals: 0, label: 'nothing new was made' },
     { path: 'structuredContent.result.removed', equals: 0, label: 'nothing was removed' },
   ] },
+  { scenario: 'CODE: write_graph_from_code with codeOnly answers the code, not the node and link lists', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeLoopText}', codeOnly: true }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', exists: true, label: 'the code comes back' },
+    { path: 'structuredContent.result.nodes', exists: false, label: 'no node list' },
+    { path: 'structuredContent.result.links', exists: false, label: 'no link list' },
+  ] },
   // A spawn whose class adds inputs (exposed on spawn) reads back by its menu id and writes back: the class first, then the
   // inputs it added; an object input that holds none reads as "".
   { scenario: 'Setup: an actor to spawn with inputs exposed on spawn', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: CODE_SPAWNED_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },

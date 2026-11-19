@@ -43,8 +43,9 @@ TArray<TSharedPtr<FJsonValue>> MessagesByLine(const TMap<UEdGraphNode*, int32>& 
 }
 
 // The entries the code wrote read back into Result as read_graph_as_code reads them by entry (code, nodes, links and their
-// counts): the whole graphs read back made a one-form edit of a 64-node event graph answer with all 64 nodes.
-void ReadBack(UBlueprint* Blueprint, const TArray<Write::FGraphPlan>& Plans, FJsonObject& Result)
+// counts): the whole graphs read back made a one-form edit of a 64-node event graph answer with all 64 nodes. codeOnly
+// leaves nodes and links out, as it does for read_graph_as_code: a 200-node function wrote back 25 KB of them.
+void ReadBack(UBlueprint* Blueprint, const TArray<Write::FGraphPlan>& Plans, bool bCodeOnly, FJsonObject& Result)
 {
     TArray<UEdGraph*> Graphs;
     TArray<FString> Written;
@@ -61,7 +62,7 @@ void ReadBack(UBlueprint* Blueprint, const TArray<Write::FGraphPlan>& Plans, FJs
     }
     const TSharedPtr<FJsonObject> Read = MakeShared<FJsonObject>();
     TArray<FString> Names;
-    ReadAsCode(Blueprint, Graphs, Written, false, *Read, Names);
+    ReadAsCode(Blueprint, Graphs, Written, bCodeOnly, *Read, Names);
     for (const TCHAR* Field : {TEXT("code"), TEXT("nodes"), TEXT("links"), TEXT("nodeCount"), TEXT("linkCount"), TEXT("truncated")})
     {
         if (const TSharedPtr<FJsonValue> Value = Read->TryGetField(Field))
@@ -223,7 +224,9 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     {
         Result->SetArrayField(TEXT("compileMessages"), Messages);
     }
-    ReadBack(Blueprint, Plans, *Result);
+    bool bCodeOnly = false;
+    Context.Payload->TryGetBoolField(TEXT("codeOnly"), bCodeOnly);
+    ReadBack(Blueprint, Plans, bCodeOnly, *Result);
     Result->SetArrayField(TEXT("forms"), FormRows);
     Result->SetNumberField(TEXT("created"), Made.Num() - Kept);
     Result->SetNumberField(TEXT("kept"), Kept);
