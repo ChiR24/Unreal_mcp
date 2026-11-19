@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c61403de032d073d",
+  "catalogRevision": "b98a30c9d5656568",
   "recordCount": 490,
   "records": [
     {
@@ -120512,7 +120512,7 @@
           "what did the game print",
           "see the console output"
         ],
-        "summary": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
+        "summary": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count. A line the editor repeats within 2 seconds (an error logged every frame) is kept once with its count: \"(60x, last at 12.345)\".",
         "whenToUse": [
           "A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds)."
         ],
@@ -120617,7 +120617,7 @@
       },
       "examples": [
         {
-          "title": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
+          "title": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count. A line the editor repeats within 2 seconds (an error logged every frame) is kept once with its count: \"(60x, last at 12.345)\".",
           "input": {
             "action": "read_log",
             "lines": 50,
@@ -120662,7 +120662,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dc26f651c08a7dc77e115d5dfebf475e9fea9bfa83568db67ecc898af67767e7",
-        "content": "d4c8b48fb29019838711595c76e45745884190077d5c514027a64a07c2e49940"
+        "content": "f3144b5beda77914875cdb782b6a63ed51cf7e23f3de11b7cc812307b1eec776"
       }
     },
     {

@@ -50,7 +50,7 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     TArray<FString> Result = FMcpScriptErrors::Get().LinesSince(SinceSeconds, ScriptMessages);
     // A Raise Script Error with an empty message is in every line, so it left out every warning of the window.
     ScriptMessages.RemoveAll([](const FString& Text) { return Text.TrimStartAndEnd().IsEmpty(); });
-    TArray<FString> Logged;
+    TArray<TPair<FString, int32>> Logged; // a line and how many times it came
     {
         FScopeLock Lock(&Mutex);
         const int32 Count = Lines.Num();
@@ -58,11 +58,11 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
         for (int32 Offset = 0; Offset < Count; ++Offset)
         {
             const FLine& Line = Lines[(Head + Offset) % Count];
-            if (Line.Seconds >= SinceSeconds && Line.Verbosity != ELogVerbosity::NoLogging &&
+            if (Line.LastSeconds >= SinceSeconds && Line.Verbosity != ELogVerbosity::NoLogging &&
                 Line.Verbosity <= ELogVerbosity::Warning && Line.Category != OwnCategory &&
                 !ScriptMessages.ContainsByPredicate([&Line](const FString& Text) { return Line.Message.Contains(Text); }))
             {
-                Logged.Add(FString::Printf(TEXT("%s: %s"), *Line.Category.ToString(), *Line.Message.TrimStartAndEnd()));
+                Logged.Emplace(FString::Printf(TEXT("%s: %s"), *Line.Category.ToString(), *Line.Message.TrimStartAndEnd()), Line.Repeats);
             }
         }
     }
@@ -70,18 +70,18 @@ TArray<FString> FMcpLogHistory::WarningsSince(double SinceSeconds, int32 MaxDist
     TArray<FString> Messages;
     TArray<int32> Counts;
     int32 Unlisted = 0;
-    for (const FString& Raw : Logged)
+    for (const TPair<FString, int32>& Raw : Logged)
     {
-        const FString Text = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw);
+        const FString Text = EngineWireSubsystemResponse::SanitizeEngineErrorForResponse(Raw.Key);
         const int32 Index = Messages.Find(Text);
         if (Index != INDEX_NONE)
         {
-            ++Counts[Index];
+            Counts[Index] += Raw.Value;
         }
         else if (Messages.Num() < MaxDistinct)
         {
             Messages.Add(Text);
-            Counts.Add(1);
+            Counts.Add(Raw.Value);
         }
         else
         {
@@ -114,11 +114,26 @@ void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, co
     }
     FLine Line;
     Line.Seconds = Now();
+    Line.LastSeconds = Line.Seconds;
     Line.Category = Category;
     Line.Verbosity = static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask);
     Line.Message = FString(V).Left(1024);
 
     FScopeLock Lock(&Mutex);
+    // A line logged every frame (an Accessed None in Tick) is counted on its recent copy: 660 of them in seconds pushed
+    // the Play start lines that explained a missing pawn out of the ring.
+    const int32 Count = Lines.Num();
+    for (int32 Offset = 1; Offset <= FMath::Min(Count, RepeatScan); ++Offset)
+    {
+        FLine& Recent = Lines[(Head - Offset + Count) % Count];
+        if (Recent.Category == Line.Category && Recent.Verbosity == Line.Verbosity &&
+            Line.Seconds - Recent.Seconds <= RepeatWindowSeconds && Recent.Message.Equals(Line.Message, ESearchCase::CaseSensitive))
+        {
+            ++Recent.Repeats;
+            Recent.LastSeconds = Line.Seconds;
+            return;
+        }
+    }
     if (Lines.Num() < Capacity)
     {
         Lines.Add(MoveTemp(Line));
@@ -206,7 +221,8 @@ TArray<FString> FMcpLogHistory::Read(int32 MaxLines, const FString& Contains, co
                 continue;
             }
             Candidates.Add(FString::Printf(TEXT("[%.3f] %s: %s: %s"), Line.Seconds, *Line.Category.ToString(),
-                                           ToString(Line.Verbosity), *Line.Message));
+                                           ToString(Line.Verbosity), *Line.Message) +
+                           (Line.Repeats > 1 ? FString::Printf(TEXT(" (%dx, last at %.3f)"), Line.Repeats, Line.LastSeconds) : FString()));
         }
     }
     return ShowMatches(Candidates, Alternatives, MaxLines, OutMatched);

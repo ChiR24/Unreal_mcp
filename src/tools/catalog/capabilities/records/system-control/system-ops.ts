@@ -295,7 +295,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'logs',
     family: 'logs',
     topics: ['compile errors', 'build output', 'previous run', 'editor output', 'check for errors', 'show errors', 'see game messages', 'what did the game print', 'see the console output'],
-    summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.',
+    summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count. A line the editor repeats within 2 seconds (an error logged every frame) is kept once with its count: "(60x, last at 12.345)".',
     whenToUse: [
       'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',
     ],

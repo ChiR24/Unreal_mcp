@@ -58,13 +58,19 @@ public:
 private:
     struct FLine
     {
-        double Seconds = 0.0;
+        double Seconds = 0.0;     // when it was first logged
+        double LastSeconds = 0.0; // its last repeat (Seconds when it came once)
+        int32 Repeats = 1;
         FName Category;
         ELogVerbosity::Type Verbosity = ELogVerbosity::Log;
         FString Message;
     };
 
     static constexpr int32 Capacity = 2000;
+    // A line that repeats one of the last RepeatScan lines within RepeatWindowSeconds of its first is counted there, not
+    // kept again: a per-frame error filled the ring in seconds and pushed out the lines that explained it.
+    static constexpr int32 RepeatScan = 16;
+    static constexpr double RepeatWindowSeconds = 2.0;
     mutable FCriticalSection Mutex;
     TArray<FLine> Lines;
     int32 Head = 0;
