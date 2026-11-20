@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6f2911ee9c5b0212",
+  "catalogRevision": "1a727450ef534bb4",
   "recordCount": 512,
   "records": [
     {
@@ -30004,7 +30004,7 @@
             },
             "codeOnly": {
               "type": "boolean",
-              "description": "Only the code in the reply (default false): nodes and links are left out, nodeCount and linkCount stay, as read_graph_as_code codeOnly does. The code carries every node id a later write or goto needs."
+              "description": "Only the code in the reply (default true): nodes and links are left out, nodeCount and linkCount stay, as read_graph_as_code codeOnly does. The code carries every node id a later write or goto needs; false lists the nodes (with their GUIDs) and links too."
             }
           },
           "required": [
@@ -30043,14 +30043,14 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "The nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500; not given with codeOnly."
+              "description": "With codeOnly false: the nodes those events and functions run and the values those read: id (as the code names it), nodeId (its GUID) and type (its action-menu id). At most 500."
             },
             "links": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "The wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000; not given with codeOnly."
+              "description": "With codeOnly false: the wires out of those nodes as \"id.OutPin -> id.InPin\". At most 1000."
             },
             "nodeCount": {
               "type": "number",
@@ -30135,21 +30135,6 @@
             "success": true,
             "message": "Wrote 1 form(s) into BP_Door: 1 node(s) made, 0 kept, 1 removed.",
             "code": "; graph EventGraph\n(event EventBeginPlay  ; n8c1d0e\n  (Development|PrintString \"Door ready\"))  ; n5a6b7c\n",
-            "nodes": [
-              {
-                "id": "n8c1d0e",
-                "nodeId": "8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F",
-                "type": "AddEvent|EventBeginPlay"
-              },
-              {
-                "id": "n5a6b7c",
-                "nodeId": "5A6B7C8D9E0F41A2B3C4D5E6F7A8B9C0",
-                "type": "Development|PrintString"
-              }
-            ],
-            "links": [
-              "n8c1d0e.then -> n5a6b7c.execute"
-            ],
             "nodeCount": 2,
             "linkCount": 1,
             "forms": [
@@ -30198,8 +30183,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9383c32efc202cbed0cf11563f79c62860ae120a712fb137745b6c5781eecec8",
-        "content": "3185a9af05ca6135b3831abe1321e4a43cd6a92af7bec14bfd4ad83051d393ba"
+        "schema": "be0ac547327d7385dc2af6f0641084c2c475a0534af3f94eecdc33314348a958",
+        "content": "70fc084db27c28c319f21192f0a942f5b22c96bd3b32b6ca92c51dd244d66c35"
       }
     },
     {

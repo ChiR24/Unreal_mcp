@@ -541,11 +541,14 @@ const testCases = [
     { path: 'structuredContent.result.kept', equals: 2, label: 'the loop and the print kept their nodes' },
     { path: 'structuredContent.result.created', equals: 0, label: 'nothing new was made' },
     { path: 'structuredContent.result.removed', equals: 0, label: 'nothing was removed' },
-  ] },
-  { scenario: 'CODE: write_graph_from_code with codeOnly answers the code, not the node and link lists', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeLoopText}', codeOnly: true }, expected: 'success', assertions: [
+    // One changed statement in a 200-node function answered 25 KB of node and link lists: a write answers the code alone.
     { path: 'structuredContent.result.code', exists: true, label: 'the code comes back' },
-    { path: 'structuredContent.result.nodes', exists: false, label: 'no node list' },
-    { path: 'structuredContent.result.links', exists: false, label: 'no link list' },
+    { path: 'structuredContent.result.nodes', exists: false, label: 'no node list unless asked' },
+  ] },
+  { scenario: 'CODE: write_graph_from_code with codeOnly false lists the nodes and links too', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeLoopText}', codeOnly: false }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.code', exists: true, label: 'the code comes back' },
+    { path: 'structuredContent.result.nodes', exists: true, label: 'the node list' },
+    { path: 'structuredContent.result.links', exists: true, label: 'the link list' },
   ] },
   // A spawn whose class adds inputs (exposed on spawn) reads back by its menu id and writes back: the class first, then the
   // inputs it added; an object input that holds none reads as "".

@@ -232,7 +232,9 @@ bool HandleWriteGraphFromCode(const McpBlueprintGraphHandlers::FActionContext& C
     {
         Result->SetArrayField(TEXT("compileMessages"), Messages);
     }
-    bool bCodeOnly = false;
+    // codeOnly unless the caller asks for the lists: one changed statement in a 200-node function still answered 25 KB
+    // of them, while the code read back carries every id a later write needs.
+    bool bCodeOnly = true;
     Context.Payload->TryGetBoolField(TEXT("codeOnly"), bCodeOnly);
     ReadBack(Blueprint, Plans, bCodeOnly, *Result);
     Result->SetArrayField(TEXT("forms"), FormRows);
