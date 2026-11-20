@@ -134,7 +134,7 @@ TSharedPtr<FJsonObject> Screenshot()
 const TArray<FString>& McpRuntimeCapabilities()
 {
     static const TArray<FString> Names = {TEXT("runtime.list_actors"), TEXT("runtime.get_transform"), TEXT("runtime.frame_cost"),
-                                          TEXT("runtime.screenshot")};
+                                          TEXT("runtime.screenshot"), TEXT("runtime.press_key")};
     return Names;
 }
 
@@ -152,6 +152,7 @@ TSharedPtr<FJsonObject> McpRuntimeRead(const FString& Capability, const TSharedP
     if (Capability == TEXT("runtime.get_transform")) return GetTransform(*World, Args, OutError);
     if (Capability == TEXT("runtime.frame_cost")) return FrameCost();
     if (Capability == TEXT("runtime.screenshot")) return Screenshot();
+    if (Capability == TEXT("runtime.press_key")) return McpRuntimePressKey(*World, Args, OutError);
     OutError = FString::Printf(TEXT("UNKNOWN_CAPABILITY: '%s'; this runtime serves %s."), *Capability,
                                *FString::Join(McpRuntimeCapabilities(), TEXT(", ")));
     return nullptr;

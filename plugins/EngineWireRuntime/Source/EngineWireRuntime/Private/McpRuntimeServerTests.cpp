@@ -65,6 +65,9 @@ bool FMcpRuntimeServerTest::RunTest(const FString& Parameters)
     const TSharedPtr<FJsonObject> Listed = McpRuntimeRead(TEXT("runtime.list_actors"), nullptr, Error);
     TestTrue(TEXT("list_actors reads the world it finds"), Listed.IsValid() && Listed->HasField(TEXT("totalCount")));
     TestTrue(TEXT("frame_cost reads the frame"), McpRuntimeRead(TEXT("runtime.frame_cost"), nullptr, Error).IsValid());
+    const TSharedPtr<FJsonObject> NoKey = MakeShared<FJsonObject>();
+    NoKey->SetStringField(TEXT("key"), TEXT("NoSuchKey_MCP"));
+    TestTrue(TEXT("an unknown key is refused"), !McpRuntimeRead(TEXT("runtime.press_key"), NoKey, Error).IsValid() && Error.StartsWith(TEXT("INVALID_KEY")));
 
     FMcpRuntimeServer Server;
     if (!TestTrue(TEXT("the server starts on a free port"), Server.Start(0)))

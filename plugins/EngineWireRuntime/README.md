@@ -1,6 +1,6 @@
 # EngineWire Runtime
 
-Reads of a running game for an MCP client, in Development and Test builds. It is a separate plugin from EngineWire (which is editor only), has one `DeveloperTool` module (never part of a Shipping build), and does nothing until the game is started with `-EngineWireRuntime`.
+Reads of a running game, and key presses in it, for an MCP client, in Development and Test builds. It is a separate plugin from EngineWire (which is editor only), has one `DeveloperTool` module (never part of a Shipping build), and does nothing until the game is started with `-EngineWireRuntime`.
 
 ## Use
 
@@ -16,9 +16,10 @@ One tool, `unreal`, with `operation: "execute"` and one of these capabilities:
 | `runtime.get_transform` | `actorName` | location, rotation, scale and velocity |
 | `runtime.frame_cost` | none | frame, game thread, render thread and GPU milliseconds, average FPS |
 | `runtime.screenshot` | none | the path of the PNG the next frame is saved as |
+| `runtime.press_key` | `key` (SpaceBar, W, Gamepad_FaceButton_Bottom), `holdSeconds?` (default 0.1) | the key pressed through the game viewport, as a player's key comes (Enhanced Input sees it), released after the hold; the cursor never moves |
 
 ## Security
 
 - It listens on 127.0.0.1 only, through its own loop: the engine's HTTP server takes its bind address from the engine config, where `any` binds every interface.
 - Every request carries the token, compared in constant time; a request without it is answered 401.
-- Reads only: nothing it serves changes the game.
+- It reads the game and presses keys in it, as a player would; nothing it serves writes an asset or a file, except the screenshot it is asked for.
