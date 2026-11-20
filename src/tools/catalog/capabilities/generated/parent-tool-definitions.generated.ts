@@ -316,6 +316,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Animation curve name."
         },
+        "databasePath": {
+          "type": "string",
+          "description": "The Pose Search database asset (/Game/...)."
+        },
         "deltas": {
           "type": "array",
           "items": {
@@ -1390,6 +1394,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "setup_physics_simulation",
             "create_physical_material",
             "edit_blend_space",
+            "get_pose_search_database",
             "setup_retargeting",
             "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
@@ -1727,6 +1732,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when this call made it; false when it tuned one already there."
         },
+        "databasePath": {
+          "type": "string",
+          "description": "The database read."
+        },
         "deleted": {
           "type": "boolean",
           "description": "True when the transition and its rule graph were removed."
@@ -1748,6 +1757,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Hierarchy elements in order (up to 500): type (Bone, Null, Control, Curve ...), name and parent."
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each entry: index, kind (its struct), asset (the animation it plays)."
+        },
+        "entriesProperty": {
+          "type": "string",
+          "description": "The engine's name for the entry list (AnimationAssets or DatabaseAnimationAssets)."
+        },
+        "entryCount": {
+          "type": "number",
+          "description": "How many entries it holds."
         },
         "existingAsset": {
           "type": "boolean",
@@ -2185,6 +2211,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "number"
             }
           }
+        },
+        "schema": {
+          "type": "string",
+          "description": "Its schema asset path."
         },
         "skeletalMeshPath": {
           "type": "string",

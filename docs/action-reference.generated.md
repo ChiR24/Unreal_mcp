@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `3f5cfd715e955947`
+Catalog revision: `079a7a4870b4b076`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 499 capabilities across
+The catalog declares 500 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 32 | 5 | 25 | 2 | animation physics |
+| `animation_physics` | 33 | 6 | 25 | 2 | animation physics |
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 499 capabilities require consent.
+77 of 500 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -174,6 +174,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` `animation_physics.copy_weights` `animation_physics.mirror_weights` `animation_physics.prune_weights` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
 | `animation_physics.get_control_rig` | `animation_physics` | `get_control_rig` | read | read | none | `animation_physics.get_control_rig` |
+| `animation_physics.get_pose_search_database` | `animation_physics` | `get_pose_search_database` | read | read | none | `animation_physics.get_pose_search_database` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
 | `animation_physics.list_rig_units` | `animation_physics` | `list_rig_units` | read | read | none | `animation_physics.list_rig_units` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |

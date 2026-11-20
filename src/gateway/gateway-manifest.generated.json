@@ -23,6 +23,7 @@
         "setup_physics_simulation",
         "create_physical_material",
         "edit_blend_space",
+        "get_pose_search_database",
         "setup_retargeting",
         "skin_mesh_to_skeleton",
         "configure_anim_graph_node",
@@ -95,6 +96,7 @@
         "createIfMissing",
         "crossfadeDuration",
         "curveName",
+        "databasePath",
         "deltas",
         "density",
         "depth",
@@ -551,6 +553,10 @@
           "curveName": {
             "type": "string",
             "description": "Animation curve name."
+          },
+          "databasePath": {
+            "type": "string",
+            "description": "The Pose Search database asset (/Game/...)."
           },
           "deltas": {
             "type": "array",
@@ -1626,6 +1632,7 @@
               "setup_physics_simulation",
               "create_physical_material",
               "edit_blend_space",
+              "get_pose_search_database",
               "setup_retargeting",
               "skin_mesh_to_skeleton",
               "configure_anim_graph_node",

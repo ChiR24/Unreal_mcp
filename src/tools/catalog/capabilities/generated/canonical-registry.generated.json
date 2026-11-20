@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "3f5cfd715e955947",
-  "recordCount": 499,
+  "catalogRevision": "079a7a4870b4b076",
+  "recordCount": 500,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -6857,6 +6857,155 @@
         "algorithm": "sha256",
         "schema": "a21c540684ce5711711d8b5329da896db15981ad746437061f70d84d2828d20f",
         "content": "f4caf80b37aa307f3a022a8597a2460415d169e983475ccfe0b265a85bcf85af"
+      }
+    },
+    {
+      "id": "animation_physics.get_pose_search_database",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "get_pose_search_database"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "motion-matching",
+        "topics": [
+          "get_pose_search_database",
+          "pose search database",
+          "motion matching database",
+          "which animations are in the database",
+          "pose search schema"
+        ],
+        "summary": "Read a Pose Search (motion matching) database: its schema and each animation entry with its kind (sequence, blend space, montage entry struct) and asset, in order (index), found by reflection on every engine that has Pose Search, whatever the engine calls the entry list (entriesProperty).",
+        "whenToUse": [
+          "A motion matching setup must be checked: which animations the database searches and with which schema."
+        ],
+        "whenNotToUse": [
+          "An animation asset itself is wanted (inspect get_animation_info or the asset readers)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "databasePath": {
+              "type": "string",
+              "description": "The Pose Search database asset (/Game/...)."
+            }
+          },
+          "required": [
+            "databasePath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "databasePath": {
+              "type": "string",
+              "description": "The database read."
+            },
+            "schema": {
+              "type": "string",
+              "description": "Its schema asset path."
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each entry: index, kind (its struct), asset (the animation it plays)."
+            },
+            "entryCount": {
+              "type": "number",
+              "description": "How many entries it holds."
+            },
+            "entriesProperty": {
+              "type": "string",
+              "description": "The engine's name for the entry list (AnimationAssets or DatabaseAnimationAssets)."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a Pose Search (motion matching) database: its schema and each animation entry with its kind (sequence, blend space, montage entry struct) and asset, in order (index), found by reflection on every engine that has Pose Search, whatever the engine calls the entry list (entriesProperty).",
+          "input": {
+            "action": "get_pose_search_database",
+            "databasePath": "/Game/Locomotion/PSD_Walk"
+          },
+          "output": {
+            "success": true,
+            "message": "PSD_Walk: 2 animation entries",
+            "schema": "/Game/Locomotion/PSS_Default",
+            "entryCount": 2,
+            "entries": [
+              {
+                "index": 0,
+                "kind": "PoseSearchDatabaseSequence",
+                "asset": "/Game/Locomotion/A_Walk_Fwd"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "PoseSearch"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "roles": [
+          "PoseSearch"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "get_pose_search_database"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "84f96f77308532b05f82e9aa80fe03f11228ce1f1505664609bbe9608aa6846a",
+        "content": "8b5712b274fbf3f54353d019953e9df4d6ef5984ec1ca926e46828f976f2e906"
       }
     },
     {

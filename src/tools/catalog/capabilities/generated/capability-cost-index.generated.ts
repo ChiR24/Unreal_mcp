@@ -85,6 +85,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::get_bone_transform": "instant|low",
   "animation_physics::get_control_rig": "instant|low",
   "animation_physics::get_physics_asset_info": "instant|low",
+  "animation_physics::get_pose_search_database": "instant|low",
   "animation_physics::get_skeleton_info": "instant|low",
   "animation_physics::import_morph_targets": "long-running|high",
   "animation_physics::link_sections": "interactive|low",
@@ -1709,4 +1710,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1696;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1697;

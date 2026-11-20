@@ -127,6 +127,8 @@ const testCases = [
 { scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [TEST_ANIM_SEQUENCE_PATH], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true, "sourceMesh": TEST_SKELETAL_MESH_PATH, "targetMesh": TEST_SKELETAL_MESH_PATH, "retargeterPath": TEST_IK_RETARGETER_PATH}, expected: 'success|NOT_SUPPORTED|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Skin a static mesh onto a skeleton so it deforms with the body) ===
+// A database that is not there is NOT_FOUND (the suite runs where the PoseSearch plugin is on).
+{ scenario: 'ERROR: get_pose_search_database names a database that is not there', toolName: 'animation_physics', arguments: { action: 'get_pose_search_database', databasePath: '/Game/MCPTest/NoSuchDatabase_MCP' }, expected: 'error|NOT_FOUND' },
 { scenario: 'ACTION: skin_mesh_to_skeleton', toolName: 'animation_physics', arguments: {"action": "skin_mesh_to_skeleton", "staticMeshPath": "/Engine/BasicShapes/Cube", "skeletonPath": TEST_SKELETON_PATH, "outputPath": `${TEST_FOLDER}/SKM_SkinTest`, "sourceSkeletalMesh": TEST_SKELETAL_MESH_PATH, "save": true}, expected: 'success|already exists|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===

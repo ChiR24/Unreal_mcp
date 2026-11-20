@@ -73,6 +73,7 @@ bool UEngineWireSubsystem::HandleAnimationPhysicsAction(
       {TEXT("create_pose_library"), McpAnimationHandlers::HandleAnimationCreatePoseLibraryAction},
       {TEXT("setup_retargeting"), McpAnimationHandlers::HandleAnimationSetupRetargetingAction},
       {TEXT("skin_mesh_to_skeleton"), McpAnimationHandlers::HandleAnimationSkinMeshToSkeletonAction},
+      {TEXT("get_pose_search_database"), McpAnimationHandlers::HandleGetPoseSearchDatabase},
   };
 
   bool bMatchedAction = false;
