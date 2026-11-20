@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "749620bbeaf75384",
+  "catalogRevision": "ac06f6491c90d524",
   "recordCount": 511,
   "records": [
     {
@@ -2756,7 +2756,7 @@
           "create pose search database",
           "new motion matching database"
         ],
-        "summary": "Create a Pose Search (motion matching) database named name in path (default /Game) with the own factory of the PoseSearch plugin, optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
+        "summary": "Create a Pose Search (motion matching) database named name in path (default /Game), optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
         "whenToUse": [
           "A motion matching setup needs a new database of animations."
         ],
@@ -2821,7 +2821,7 @@
       },
       "examples": [
         {
-          "title": "Create a Pose Search (motion matching) database named name in path (default /Game) with the own factory of the PoseSearch plugin, optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
+          "title": "Create a Pose Search (motion matching) database named name in path (default /Game), optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
           "input": {
             "action": "create_pose_search_database",
             "name": "PSD_Walk",
@@ -2868,7 +2868,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3779e0db01e0a0f976810c680f5c4d6356e49463e68aecece13d2b3b3834c96c",
-        "content": "563e6a0fd72dfa6703c94c7d3ceb4ed6b1733bbc821b4ce760303ca8e39bbea6"
+        "content": "bb92c7632f7e94f622c0748c63b3a39980af0bfd43961a2534d9279104fd2f82"
       }
     },
     {

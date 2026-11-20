@@ -119,7 +119,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'PSD_Walk: 2 animation entries', schema: '/Game/Locomotion/PSS_Default', entryCount: 2, entries: [{ index: 0, kind: 'PoseSearchDatabaseSequence', asset: '/Game/Locomotion/A_Walk_Fwd' }] } }),
   buildRecord({ parentTool: T, id: `${T}.create_pose_search_database`, action: 'create_pose_search_database', family: 'motion-matching',
     topics: ['create pose search database', 'new motion matching database'],
-    summary: 'Create a Pose Search (motion matching) database named name in path (default /Game) with the own factory of the PoseSearch plugin, optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.',
+    summary: 'Create a Pose Search (motion matching) database named name in path (default /Game), optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.',
     whenToUse: ['A motion matching setup needs a new database of animations.'],
     whenNotToUse: ['The database exists: add entries with add_pose_search_entry, read it with get_pose_search_database.'],
     inputProps: { name: { type: 'string', description: 'The database asset name (PSD_Walk).' }, path: { type: 'string', description: 'The /Game folder it goes in (default /Game).' }, schemaPath: { type: 'string', description: 'A Pose Search schema asset to set on it.' } },

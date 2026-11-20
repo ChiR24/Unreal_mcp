@@ -1,5 +1,6 @@
 // create_pose_search_database and add_pose_search_entry (item 17's writes), by reflection only: no link to PoseSearch.
-// The database comes from the plugin's own factory, made by class path. An entry is one element of the
+// The database is made directly: the plugin's factory (5.5-5.9) makes one only after its modal schema picker set a
+// schema, and then does only NewObject plus that schema. An entry is one element of the
 // PoseSearch.DatabaseEntries role: a plain struct holding the animation (5.7 and later) or an instanced struct of the
 // entry kind for the animation's class (earlier engines that have one in CoreUObject).
 
@@ -7,7 +8,6 @@
 
 #include "Animation/AnimationAsset.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Factories/Factory.h"
 #include "Foundation/BridgeHelpers/Assets/McpAssetCreation.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpProjectPaths.h"
@@ -41,10 +41,9 @@ namespace McpAnimationHandlers
 {
 bool HandleCreatePoseSearchDatabase(FActionContext& Context, const TSharedPtr<FJsonObject>& Payload)
 {
-    FModuleManager::Get().LoadModule(TEXT("PoseSearchEditor"));
+    FModuleManager::Get().LoadModule(TEXT("PoseSearch"));
     UClass* DatabaseClass = Cast<UClass>(McpEngineRoles::TypeOf(TEXT("PoseSearch.Database")));
-    UClass* FactoryClass = FindObject<UClass>(nullptr, TEXT("/Script/PoseSearchEditor.PoseSearchDatabaseFactory"));
-    if (!DatabaseClass || !FactoryClass)
+    if (!DatabaseClass)
     {
         Context.Fail(TEXT("FEATURE_UNAVAILABLE"), TEXT("Pose Search is not available here: enable the PoseSearch plugin (system_control enable_plugin) and restart the editor."));
         return false;
@@ -58,8 +57,7 @@ bool HandleCreatePoseSearchDatabase(FActionContext& Context, const TSharedPtr<FJ
         Context.Fail(Code.IsEmpty() ? TEXT("INVALID_ARGUMENT") : *Code, Error.IsEmpty() ? FString(TEXT("name and a /Game path are required.")) : Error);
         return false;
     }
-    UFactory* Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
-    UObject* Database = Factory->FactoryCreateNew(DatabaseClass, Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional, nullptr, GWarn);
+    UObject* Database = NewObject<UObject>(Package, DatabaseClass, FName(*Name), RF_Public | RF_Standalone | RF_Transactional);
     const FString SchemaPath = GetJsonStringField(Payload, TEXT("schemaPath"));
     FObjectPropertyBase* Schema = CastField<FObjectPropertyBase>(McpEngineRoles::PropertyOf(TEXT("PoseSearch.DatabaseSchema")));
     UObject* SchemaAsset = SchemaPath.IsEmpty() ? nullptr : McpLoadAsset(SchemaPath);
@@ -69,7 +67,7 @@ bool HandleCreatePoseSearchDatabase(FActionContext& Context, const TSharedPtr<FJ
     }
     if (!Database)
     {
-        Context.Fail(TEXT("CREATE_FAILED"), TEXT("The Pose Search database factory made nothing."));
+        Context.Fail(TEXT("CREATE_FAILED"), TEXT("The Pose Search database could not be made."));
         return false;
     }
     FAssetRegistryModule::AssetCreated(Database);
