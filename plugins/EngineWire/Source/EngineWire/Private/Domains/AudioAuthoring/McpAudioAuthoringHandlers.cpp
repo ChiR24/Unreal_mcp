@@ -14,7 +14,7 @@ static void ReregisterEditedMetaSound(const TSharedPtr<FJsonObject>& Params)
 	UMetaSoundSource* MetaSound = AssetPath.IsEmpty() ? nullptr : FindObject<UMetaSoundSource>(nullptr, *AssetPath);
 	UMetaSoundEditorSubsystem* MetaSoundEditor = GEditor ? GEditor->GetEditorSubsystem<UMetaSoundEditorSubsystem>() : nullptr;
 	if (!MetaSound || !MetaSoundEditor) { return; }
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4
+#if MCP_HAS_METASOUND_INVALIDATE_DOCUMENT_CACHE && !MCP_HAS_METASOUND_FIND_BUILDER
 	// 5.5+ edits through the engine's own builder for the MetaSound when there is
 	// one (MCP_METASOUND_BUILDER), so its cached layout stays true. 5.4 cannot find
 	// that builder, so the edit went through another and the cache must be dropped

@@ -118,7 +118,7 @@ public:
 			{
 				FMcpFabDownloadResult Result;
 				Result.bSuccess = Stats.bIsSuccess;
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+#if MCP_HAS_FAB_DOWNLOAD_CACHED_FLAG
 				Result.bServedFromCache = Stats.bIsCached;
 #endif
 				Result.CompletedBytes = Stats.CompletedBytes;

@@ -76,7 +76,7 @@ static inline UClass *ResolveUClass(const FString &Input) {
 static inline UClass *McpFindTypeQuiet(const FString &NameOrPath) {
   if (NameOrPath.IsEmpty() || NameOrPath == TEXT("None"))
     return nullptr;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_FIND_FIRST_OBJECT
   if (FPackageName::IsShortPackageName(NameOrPath))
     return FindFirstObject<UClass>(*NameOrPath, EFindFirstObjectOptions::NativeFirst);
 #endif

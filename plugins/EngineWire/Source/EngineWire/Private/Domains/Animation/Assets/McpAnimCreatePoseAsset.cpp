@@ -71,10 +71,10 @@ bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context, const TShar
     return false;
   }
   const bool bSaved = McpSafeAssetSave(PoseAsset);
-  // Before 5.3 the pose names are curve names registered on the Skeleton; unsaved, they vanish on restart
-  // and PoseByName finds nothing.
+  // Where curves are not yet named by plain FName (before 5.3), the pose names are curve names registered on the
+  // Skeleton; unsaved, they vanish on restart and PoseByName finds nothing.
   bool bSkeletonSaved = false;
-#if ENGINE_MINOR_VERSION < 3
+#if !MCP_HAS_ANIM_CURVE_GET_NAME
   if (Skeleton->GetOutermost()->IsDirty()) {
     bSkeletonSaved = McpSafeAssetSave(Skeleton);
   }

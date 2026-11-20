@@ -368,7 +368,7 @@
 // Before 5.2 nothing public assigns the target rig (5.0's SetTargetIKRig only remaps the chains, and
 // UIKRetargeter keeps TargetIKRigAsset private), so McpSetRetargetTargetRig (McpAnimSupport.h) writes it
 // through its UPROPERTY.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#if MCP_HAS_IKRETARGETER_SET_IK_RIG
     #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
     #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
 #else

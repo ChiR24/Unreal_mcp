@@ -92,7 +92,7 @@ bool HandleConvertToStaticMesh(UEngineWireSubsystem* Self, const FString& Reques
     CreateOptions.bEnableRecomputeNormals = true;
     CreateOptions.bEnableRecomputeTangents = true;
     CreateOptions.bEnableNanite = bNanite;
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_GEOMETRY_SCRIPT_NEW_MESH_NANITE_SETTINGS
     // From 5.1 the new mesh takes these settings whole when Nanite is asked for, and their
     // bEnabled defaults to false, so bEnableNanite alone baked every "Nanite" mesh without it.
     CreateOptions.NaniteSettings.bEnabled = bNanite;

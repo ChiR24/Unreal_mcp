@@ -89,7 +89,8 @@ bool FMcpBridgeWebSocket::EstablishTls() {
     return true;
   }
 
-#if ENGINE_MINOR_VERSION >= 7
+// TLS takes the OS socket over from the engine's FSocket, which can hand it out only where it has ReleaseNativeSocket.
+#if MCP_HAS_SOCKET_RELEASE_NATIVE
   if (!Socket || bNativeSocketReleased) {
     UE_LOG(LogEngineWireSubsystem, Error,
            TEXT("TLS requested without a valid socket."));

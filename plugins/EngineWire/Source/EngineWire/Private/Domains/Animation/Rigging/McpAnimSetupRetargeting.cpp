@@ -13,7 +13,7 @@
 // FIKRetargetBatchOperationInputs and RunBatchRetarget are 5.8+; 5.6 and 5.7
 // ship only the deprecated DuplicateAndRetarget, which cannot target a folder,
 // so the bake is gated separately from the rig pipeline it sits on.
-#if MCP_HAS_IKRIG_PIPELINE && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
+#if MCP_HAS_IKRIG_PIPELINE && MCP_HAS_IKRETARGET_BATCH_INPUTS
 #define MCP_HAS_IKRIG_BATCH_RETARGET 1
 #include "RetargetEditor/IKRetargetBatchOperation.h"
 #include "Core/Compatibility/McpCompiledFeatures.h"

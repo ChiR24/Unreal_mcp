@@ -112,7 +112,7 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
 // The integer properties the version's integer track writes: FIntProperty up to 5.6, whose int32 traits wrote four
 // bytes at any integer property's offset; from 5.7 a variant over the signed 8- to 64-bit types that asserts on a
 // property it cannot match. Bytes, enums and unsigned integers take none of them.
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 7
+#if MCP_HAS_INTEGER_TRACK_SIGNED_SIZES
 const TCHAR *const IntegerTrackTypes = TEXT("int8, int16, int32 or int64");
 bool IsIntegerTrackProperty(const FProperty *Property) {
   return Property && (Property->IsA<FIntProperty>() || Property->IsA<FInt64Property>() ||

@@ -35,7 +35,7 @@ bool HandleSetupGlobalIllumination(
 
     // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI). Standalone ray-traced GI left
     // the engine in 5.4, where method 3 became Plugin: RayTraced switched on a GI plugin there.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 4
+#if MCP_HAS_GI_METHOD_STANDALONE_RAY_TRACED
     static const TMap<FString, int32> GIMethods = {
         {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("RayTraced"), 3}, {TEXT("Lightmass"), 0}};
     const TCHAR* ValidMethods = TEXT("LumenGI, ScreenSpace, None, RayTraced, Lightmass");

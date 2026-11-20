@@ -128,7 +128,7 @@
 #define MCP_HAS_IKRETARGETER_CONTROLLER 0
 #endif
 
-#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER && !MCP_HAS_IKRETARGETER_SET_IK_RIG
 #include "UObject/UnrealType.h"
 // Before UE 5.2 no controller call assigns a retargeter's target rig (5.0's SetTargetIKRig only remaps the chains,
 // 5.1 has no target setter) and UIKRetargeter keeps the rig and its preview mesh private. So both are written
