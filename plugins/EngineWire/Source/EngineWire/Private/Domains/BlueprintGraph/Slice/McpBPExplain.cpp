@@ -84,7 +84,14 @@ TSharedPtr<FJsonObject> Verdict(const TSharedPtr<FJsonObject>& Writer)
         const FString Text = Condition->GetStringField(TEXT("condition"));
         if (!Branch || Branch->Runs == 0)
         {
-            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("never set: the Branch on %s before it never ran, so nothing reached it (see the writer's entries: the event or call that leads there did not happen)"), *Text));
+            TArray<FString> Entries;
+            const TArray<TSharedPtr<FJsonValue>>* Rows = nullptr;
+            for (const TSharedPtr<FJsonValue>& Entry : Writer->TryGetArrayField(TEXT("entries"), Rows) ? *Rows : TArray<TSharedPtr<FJsonValue>>())
+            {
+                Entries.Add(Entry->AsObject()->GetStringField(TEXT("node")));
+            }
+            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("never set: the Branch on %s before it never ran, so what leads there (%s) did not happen in that Play"),
+                *Text, Entries.Num() > 0 ? *FString::Join(Entries, TEXT(", ")) : TEXT("no entry found")));
             return Out;
         }
         FString Read;
