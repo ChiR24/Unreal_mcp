@@ -11,7 +11,7 @@
  * GEditor->GetEditorWorldContext().World() (NO_WORLD on failure) -- the EDITOR
  * world, not a PIE world. run_behavior_tree / stop_behavior_tree add or remove
  * a Blueprint variable on the controller ASSET; no handler touches
- * GEditor->PlayWorld. manage_ai therefore declares no 'pie'/'simulate' action.
+ * GEditor->PlayWorld. Only get_live_ai_state (its own record, not built here) reads the Play world.
  */
 import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { buildRecord } from '../helpers.js';

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `96e94c5ebbd1477c`
+Catalog revision: `a0818473eae97d1d`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 497 capabilities across
+The catalog declares 499 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,14 +44,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
 | `inspect` | 29 | 24 | 4 | 1 | inspect |
-| `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
+| `manage_ai` | 18 | 4 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
 | `manage_blueprint` | 45 | 13 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
-| `manage_gas` | 6 | 1 | 5 | 0 | manage gas |
+| `manage_gas` | 7 | 2 | 5 | 0 | manage gas |
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 497 capabilities require consent.
+77 of 499 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -411,6 +411,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.edit_smart_object` | `manage_ai` | `create_smart_object_definition` | write | write | none | `manage_ai.edit_smart_object` `manage_ai.create_smart_object_definition` `manage_ai.add_smart_object_slot` `manage_ai.configure_slot_behavior` `manage_ai.add_smart_object_component` |
 | `manage_ai.edit_state_tree` | `manage_ai` | `create_state_tree` | write | write | none | `manage_ai.edit_state_tree` `manage_ai.create_state_tree` `manage_ai.add_state_tree_state` `manage_ai.add_state_tree_transition` `manage_ai.configure_state_tree_task` |
 | `manage_ai.get_ai_info` | `manage_ai` | `get_ai_info` | read | read | none | `manage_ai.get_ai_info` `manage_ai.get_navigation_info` `manage_ai.get_navigation_path` |
+| `manage_ai.get_live_ai_state` | `manage_ai` | `get_live_ai_state` | read | read | none | `manage_ai.get_live_ai_state` |
 | `manage_ai.get_tree` | `manage_ai` | `get_tree` | read | read | none | `manage_ai.get_tree` `manage_ai.get_blackboard_value` |
 | `manage_ai.run_behavior_tree` | `manage_ai` | `run_behavior_tree` | write | write | none | `manage_ai.run_behavior_tree` `manage_ai.stop_behavior_tree` `manage_ai.assign_behavior_tree` `manage_ai.assign_blackboard` |
 | `manage_ai.set_ai_movement` | `manage_ai` | `set_ai_movement` | write | write | none | `manage_ai.set_ai_movement` |
@@ -471,6 +472,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_gas.configure_gameplay_effect` | `manage_gas` | `set_effect_duration` | write | write | none | `manage_gas.configure_gameplay_effect` `manage_gas.set_effect_duration` `manage_gas.set_effect_stacking` `manage_gas.set_effect_tags` `manage_gas.add_effect_modifier` `manage_gas.set_modifier_magnitude` `manage_gas.add_effect_execution_calculation` `manage_gas.add_effect_cue` |
 | `manage_gas.create_gas_asset` | `manage_gas` | `create_gameplay_ability` | write | write | none | `manage_gas.create_gas_asset` `manage_gas.create_gameplay_ability` `manage_gas.create_gameplay_effect` `manage_gas.create_attribute_set` `manage_gas.create_gameplay_cue_notify` `manage_gas.create_execution_calculation` |
 | `manage_gas.get_gas_info` | `manage_gas` | `get_gas_info` | read | read | none | `manage_gas.get_gas_info` |
+| `manage_gas.get_live_gas_state` | `manage_gas` | `get_live_gas_state` | read | read | none | `manage_gas.get_live_gas_state` |
 | `manage_geometry.array_mesh` | `manage_geometry` | `array_linear` | write | write | none | `manage_geometry.array_mesh` `manage_geometry.array_linear` `manage_geometry.array_radial` |
 | `manage_geometry.boolean_mesh` | `manage_geometry` | `boolean_union` | write | write | none | `manage_geometry.boolean_mesh` `manage_geometry.boolean_union` `manage_geometry.boolean_subtract` `manage_geometry.boolean_intersection` `manage_geometry.boolean_trim` `manage_geometry.self_union` |
 | `manage_geometry.configure_mesh_collision` | `manage_geometry` | `generate_collision` | write | write | none | `manage_geometry.configure_mesh_collision` `manage_geometry.generate_collision` `manage_geometry.generate_complex_collision` `manage_geometry.simplify_collision` |

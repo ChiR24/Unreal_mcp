@@ -176,6 +176,8 @@ const testCases = [
   { scenario: 'ERROR: add_mass_spawner refuses a query path that is no Environment Query', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', configPath: '${captured:configPath}', queryPath: '${captured:configPath}' }, expected: 'error|TYPE_MISMATCH' },
 
   // === UTILITY / ALIASES ===
+  // get_live_ai_state reads the Play world: in the editor world it is refused before it runs.
+  { scenario: 'ERROR: get_live_ai_state outside Play', toolName: 'manage_ai', arguments: { action: 'get_live_ai_state', actorName: 'NoSuchAI_MCP' }, expected: 'error|EDITOR_STATE_MISMATCH' },
   { scenario: 'INFO: get_ai_info', toolName: 'manage_ai', arguments: { action: 'get_ai_info', controllerPath: '${captured:controllerPath}' }, expected: 'success' },
   // `params` is the gateway passthrough merged into top-level arguments by
   // consolidated-call-utils.ts for clients that cannot send arbitrary top-level

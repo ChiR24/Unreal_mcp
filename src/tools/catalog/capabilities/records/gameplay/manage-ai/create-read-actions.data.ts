@@ -2,6 +2,7 @@
  * manage_ai records, shard 3 of 4: the create_* actions and the read actions.
  */
 import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
+import { buildRecord } from '../helpers.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
 import { AI, xyz } from './properties.js';
@@ -173,6 +174,30 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
       },
     },
     example: { controllerPath: '/Game/AI/AIC_Enemy' }, result: 'AI info read',
+  }),
+  buildRecord({
+    parentTool: 'manage_ai', id: 'manage_ai.get_live_ai_state', action: 'get_live_ai_state', family: 'ai',
+    topics: ['what is the ai doing', 'behavior tree running node', 'blackboard values in play', 'why is my enemy idle', 'live ai state'],
+    summary: 'Read what an AI does in Play right now: the Behavior Tree it runs (behaviorTree, treeRunning), the node it is on (activeNode, activeNodeClass), the tasks active (activeTasks), and every blackboard key\'s current value (keys). actorName is the pawn or its AI controller; a pawn no AI controller possesses is NOT_AI_CONTROLLED.',
+    whenToUse: ['An AI in Play does not do what its tree says, and where it is stuck and what its blackboard holds must be read.'],
+    whenNotToUse: ['The tree or blackboard asset itself is wanted (get_ai_info, get_tree, get_blackboard_value).'],
+    inputProps: { actorName: { type: 'string', description: 'The AI pawn or its AI controller, by label or name in the Play world.' } },
+    required: ['actorName'],
+    outputProps: {
+      controller: { type: 'string', description: 'The AI controller read.' },
+      pawn: { type: 'string', description: 'The pawn it possesses.' },
+      treeRunning: { type: 'boolean', description: 'Whether its Behavior Tree runs.' },
+      behaviorTree: { type: 'string', description: 'The tree it runs.' },
+      activeNode: { type: 'string', description: 'The node it is on.' },
+      activeNodeClass: { type: 'string', description: 'That node\'s class.' },
+      activeTasks: { type: 'string', description: 'The tasks active, as the engine describes them.' },
+      blackboard: { type: 'string', description: 'Its blackboard asset.' },
+      keys: { type: 'object', additionalProperties: { type: 'string' }, description: 'Each blackboard key\'s current value, as text.' },
+    },
+    outputRequired: [],
+    effect: 'read', latency: 'instant', resources: 'low', editorStates: ['pie', 'simulate'],
+    exampleInput: { action: 'get_live_ai_state', actorName: 'BP_Enemy_C_0' },
+    exampleOutput: { success: true, message: 'AIC_Enemy_C_0 runs MoveTo', controller: 'AIC_Enemy_C_0', treeRunning: true, activeNode: 'MoveTo', keys: { TargetActor: 'BP_Hero_C_0', CanSeePlayer: 'true' } },
   }),
   aiRecord({
     action: 'get_blackboard_value', summary: 'Read a Blackboard key: its type, whether it is instance-synced, and its default (value and valueAvailable; valueNumber or valueBool for number and Bool keys). Defaults exist from UE 5.4 for Bool, Int, Float, Vector, Rotator, Name and String keys and from 5.5 for Enum, Object and Class keys; a vector or rotator never set has none. A key a parent Blackboard holds is answered KEY_IN_PARENT, naming the parent to read.',

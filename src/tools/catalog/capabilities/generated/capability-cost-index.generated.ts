@@ -554,6 +554,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::edit_state_tree": "interactive|medium",
   "manage_ai::get_ai_info": "interactive|medium",
   "manage_ai::get_blackboard_value": "interactive|medium",
+  "manage_ai::get_live_ai_state": "instant|low",
   "manage_ai::get_navigation_info": "interactive|medium",
   "manage_ai::get_navigation_path": "interactive|medium",
   "manage_ai::get_tree": "interactive|medium",
@@ -1155,6 +1156,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_gas::create_gameplay_effect": "interactive|medium",
   "manage_gas::create_gas_asset": "interactive|medium",
   "manage_gas::get_gas_info": "instant|low",
+  "manage_gas::get_live_gas_state": "instant|low",
   "manage_gas::set_ability_cooldown": "interactive|low",
   "manage_gas::set_ability_costs": "interactive|low",
   "manage_gas::set_ability_tags": "interactive|low",
@@ -1706,4 +1708,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1693;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1695;

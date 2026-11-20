@@ -7214,6 +7214,7 @@
         "create_ai_controller",
         "create_nav_actor",
         "get_ai_info",
+        "get_live_ai_state",
         "get_tree",
         "analyze_level_layout",
         "set_ai_movement"
@@ -8455,6 +8456,7 @@
               "create_ai_controller",
               "create_nav_actor",
               "get_ai_info",
+              "get_live_ai_state",
               "get_tree",
               "analyze_level_layout",
               "set_ai_movement"
@@ -15293,7 +15295,8 @@
         "configure_attribute_set",
         "configure_ability",
         "configure_gameplay_effect",
-        "get_gas_info"
+        "get_gas_info",
+        "get_live_gas_state"
       ],
       "parameterNames": [
         "abilityClass",
@@ -15302,6 +15305,7 @@
         "activationBlockedTags",
         "activationPolicy",
         "activationRequiredTags",
+        "actorName",
         "applicationRequiredTags",
         "assetPath",
         "attributeName",
@@ -15311,6 +15315,7 @@
         "blueprintPath",
         "calculationClass",
         "cancelAbilitiesWithTag",
+        "compareWith",
         "componentName",
         "cooldownEffectPath",
         "costEffectPath",
@@ -15333,6 +15338,7 @@
         "period",
         "removalTags",
         "replicationMode",
+        "saveAs",
         "setByCallerTag",
         "setPath",
         "setting",
@@ -15385,6 +15391,10 @@
             },
             "description": "Tags required to activate this ability."
           },
+          "actorName": {
+            "type": "string",
+            "description": "The actor with the ability system, by label or name in the Play world."
+          },
           "applicationRequiredTags": {
             "type": "array",
             "items": {
@@ -15429,6 +15439,10 @@
               "type": "string"
             },
             "description": "Tags of abilities cancelled when this activates."
+          },
+          "compareWith": {
+            "type": "string",
+            "description": "A name an earlier read was saved as: changes lists what changed since (STATE_NOT_FOUND when none was)."
           },
           "componentName": {
             "type": "string",
@@ -15559,6 +15573,10 @@
             ],
             "description": "How gameplay effects replicate: Full (every effect to every client, for single player), Mixed (effects to the owning client only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI)."
           },
+          "saveAs": {
+            "type": "string",
+            "description": "Keep this read under a name, for a later compareWith in this editor session."
+          },
           "setByCallerTag": {
             "type": "string",
             "description": "Gameplay tag keying a SetByCaller magnitude."
@@ -15639,7 +15657,8 @@
               "configure_attribute_set",
               "configure_ability",
               "configure_gameplay_effect",
-              "get_gas_info"
+              "get_gas_info",
+              "get_live_gas_state"
             ],
             "description": "Action to invoke on manage_gas."
           }

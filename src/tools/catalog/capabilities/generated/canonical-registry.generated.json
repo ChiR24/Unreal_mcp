@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "96e94c5ebbd1477c",
-  "recordCount": 497,
+  "catalogRevision": "a0818473eae97d1d",
+  "recordCount": 499,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -67152,6 +67152,164 @@
       }
     },
     {
+      "id": "manage_ai.get_live_ai_state",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_ai",
+          "action": "get_live_ai_state"
+        }
+      ],
+      "discovery": {
+        "domain": "manage ai",
+        "family": "ai",
+        "topics": [
+          "get_live_ai_state",
+          "what is the ai doing",
+          "behavior tree running node",
+          "blackboard values in play",
+          "why is my enemy idle",
+          "live ai state"
+        ],
+        "summary": "Read what an AI does in Play right now: the Behavior Tree it runs (behaviorTree, treeRunning), the node it is on (activeNode, activeNodeClass), the tasks active (activeTasks), and every blackboard key's current value (keys). actorName is the pawn or its AI controller; a pawn no AI controller possesses is NOT_AI_CONTROLLED.",
+        "whenToUse": [
+          "An AI in Play does not do what its tree says, and where it is stuck and what its blackboard holds must be read."
+        ],
+        "whenNotToUse": [
+          "The tree or blackboard asset itself is wanted (get_ai_info, get_tree, get_blackboard_value)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "actorName": {
+              "type": "string",
+              "description": "The AI pawn or its AI controller, by label or name in the Play world."
+            }
+          },
+          "required": [
+            "actorName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "controller": {
+              "type": "string",
+              "description": "The AI controller read."
+            },
+            "pawn": {
+              "type": "string",
+              "description": "The pawn it possesses."
+            },
+            "treeRunning": {
+              "type": "boolean",
+              "description": "Whether its Behavior Tree runs."
+            },
+            "behaviorTree": {
+              "type": "string",
+              "description": "The tree it runs."
+            },
+            "activeNode": {
+              "type": "string",
+              "description": "The node it is on."
+            },
+            "activeNodeClass": {
+              "type": "string",
+              "description": "That node's class."
+            },
+            "activeTasks": {
+              "type": "string",
+              "description": "The tasks active, as the engine describes them."
+            },
+            "blackboard": {
+              "type": "string",
+              "description": "Its blackboard asset."
+            },
+            "keys": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Each blackboard key's current value, as text."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read what an AI does in Play right now: the Behavior Tree it runs (behaviorTree, treeRunning), the node it is on (activeNode, activeNodeClass), the tasks active (activeTasks), and every blackboard key's current value (keys). actorName is the pawn or its AI controller; a pawn no AI controller possesses is NOT_AI_CONTROLLED.",
+          "input": {
+            "action": "get_live_ai_state",
+            "actorName": "BP_Enemy_C_0"
+          },
+          "output": {
+            "success": true,
+            "message": "AIC_Enemy_C_0 runs MoveTo",
+            "controller": "AIC_Enemy_C_0",
+            "treeRunning": true,
+            "activeNode": "MoveTo",
+            "keys": {
+              "TargetActor": "BP_Hero_C_0",
+              "CanSeePlayer": "true"
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_ai",
+        "dispatchAction": "get_live_ai_state"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "434433754bf0b2e12b22599ef5530d07efbbcf47b2a6aa7323f5957338777e78",
+        "content": "290a34c19102a2dee003352795f7aa3a9b1ef94f275151f640b0dc2379ca3094"
+      }
+    },
+    {
       "id": "manage_ai.get_tree",
       "aliases": [
         "manage_ai.get_blackboard_value"
@@ -81897,6 +82055,183 @@
         "algorithm": "sha256",
         "schema": "219e6fcf09b1647a79c4b0fd860700d520a346fdbd8f2aaf0b23c8fde6353c47",
         "content": "e94df76c60fffd603a7e6f58e26680544ed666c1ab0afacf5b659999a4c65042"
+      }
+    },
+    {
+      "id": "manage_gas.get_live_gas_state",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_gas",
+          "action": "get_live_gas_state"
+        }
+      ],
+      "discovery": {
+        "domain": "manage gas",
+        "family": "gas",
+        "topics": [
+          "get_live_gas_state",
+          "ability system in play",
+          "attribute values in play",
+          "active gameplay effects",
+          "gameplay tags on actor",
+          "did the ability drain",
+          "gas state diff"
+        ],
+        "summary": "Read an actor's ability system in Play right now: its owned gameplay tags (tags), every attribute of every attribute set it holds with its current value (attributes, as Set.Attribute), and its active effects (activeEffects: effect class, stacks, secondsLeft, -1 for one with no end). saveAs keeps this state under a name for the editor session; compareWith lists what changed since one (changes: tagsGained, tagsLost, attributesChanged with before and after), so a read before and after an ability shows exactly what it did.",
+        "whenToUse": [
+          "An ability or effect ran in Play and what it changed (a drained attribute, a granted tag, an effect still active) must be read."
+        ],
+        "whenNotToUse": [
+          "A GAS asset's authored settings are wanted (get_gas_info)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "actorName": {
+              "type": "string",
+              "description": "The actor with the ability system, by label or name in the Play world."
+            },
+            "saveAs": {
+              "type": "string",
+              "description": "Keep this read under a name, for a later compareWith in this editor session."
+            },
+            "compareWith": {
+              "type": "string",
+              "description": "A name an earlier read was saved as: changes lists what changed since (STATE_NOT_FOUND when none was)."
+            }
+          },
+          "required": [
+            "actorName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actor": {
+              "type": "string",
+              "description": "String parameter."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The gameplay tags it owns."
+            },
+            "attributes": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Each attribute's current value, keyed Set.Attribute."
+            },
+            "activeEffects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each active effect: effect (class), stacks, secondsLeft (-1: no end)."
+            },
+            "changes": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With compareWith: tagsGained, tagsLost, attributesChanged ({attribute, before, after})."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read an actor's ability system in Play right now: its owned gameplay tags (tags), every attribute of every attribute set it holds with its current value (attributes, as Set.Attribute), and its active effects (activeEffects: effect class, stacks, secondsLeft, -1 for one with no end). saveAs keeps this state under a name for the editor session; compareWith lists what changed since one (changes: tagsGained, tagsLost, attributesChanged with before and after), so a read before and after an ability shows exactly what it did.",
+          "input": {
+            "action": "get_live_gas_state",
+            "actorName": "BP_Hero_C_0",
+            "compareWith": "before_dash"
+          },
+          "output": {
+            "success": true,
+            "message": "BP_Hero_C_0: 1 tag(s), 2 attribute(s), 0 active effect(s)",
+            "tags": [
+              "State.Dashing"
+            ],
+            "attributes": {
+              "HeroAttributes.Mana": 60,
+              "HeroAttributes.Shield": 100
+            },
+            "changes": {
+              "tagsGained": [
+                "State.Dashing"
+              ],
+              "tagsLost": [],
+              "attributesChanged": [
+                {
+                  "attribute": "HeroAttributes.Mana",
+                  "before": 100,
+                  "after": 60
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "GameplayAbilities"
+        ],
+        "editorStates": [
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_gas",
+        "dispatchAction": "get_live_gas_state"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "f377545c88cec2c98c2990a1b673db6dedecb149c3315ef88a3f55a420c1ae38",
+        "content": "f2420f2d59d95ddbbee49f0c5b4b422f56d2b0d84925a0bc3863ec7ba926816b"
       }
     },
     {

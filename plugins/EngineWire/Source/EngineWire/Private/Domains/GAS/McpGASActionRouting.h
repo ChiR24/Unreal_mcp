@@ -13,6 +13,7 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
 bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FString& SubAction);
 bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAction);
 bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction);
+bool HandleGASLiveState(const FGASRequestContext& Context, const FString& SubAction); // McpGASLiveState.cpp
 bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubAction);
 // Authoring/: the mutations that compile, verify and save what they wrote.
 bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubAction);

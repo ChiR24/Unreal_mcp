@@ -170,6 +170,7 @@ MCP_AI_HANDLER_DECL(HandleCreateMassEntityConfig);
 MCP_AI_HANDLER_DECL(HandleConfigureMassEntity);
 MCP_AI_HANDLER_DECL(HandleAddMassSpawner);
 MCP_AI_HANDLER_DECL(HandleGetAIInfo);
+MCP_AI_HANDLER_DECL(HandleGetLiveAIState); // Runtime/McpAILiveState.cpp
 MCP_AI_HANDLER_DECL(HandleSetAIPerception);
 MCP_AI_HANDLER_DECL(HandleCreateNavModifier);
 MCP_AI_HANDLER_DECL(HandleSetAIMovement);

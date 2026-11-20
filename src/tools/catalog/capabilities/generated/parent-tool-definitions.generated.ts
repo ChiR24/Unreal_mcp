@@ -12260,6 +12260,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_ai_controller",
             "create_nav_actor",
             "get_ai_info",
+            "get_live_ai_state",
             "get_tree",
             "analyze_level_layout",
             "set_ai_movement"
@@ -12275,6 +12276,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "activeNode": {
+          "type": "string",
+          "description": "The node it is on."
+        },
+        "activeNodeClass": {
+          "type": "string",
+          "description": "That node's class."
+        },
+        "activeTasks": {
+          "type": "string",
+          "description": "The tasks active, as the engine describes them."
+        },
         "actorName": {
           "type": "string",
           "description": "Target actor name in the current level."
@@ -12410,9 +12423,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class path an Object or Class key is based on."
         },
+        "behaviorTree": {
+          "type": "string",
+          "description": "The tree it runs."
+        },
         "behaviorTreePath": {
           "type": "string",
           "description": "Canonical /Game Behavior Tree asset path."
+        },
+        "blackboard": {
+          "type": "string",
+          "description": "Its blackboard asset."
         },
         "blackboardPath": {
           "type": "string",
@@ -12444,6 +12465,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "configPath": {
           "type": "string",
           "description": "Canonical /Game Mass Entity config asset path."
+        },
+        "controller": {
+          "type": "string",
+          "description": "The AI controller read."
         },
         "controllerPath": {
           "type": "string",
@@ -12536,6 +12561,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isRoot": {
           "type": "boolean",
           "description": "Whether this node became the tree root."
+        },
+        "keys": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Each blackboard key's current value, as text."
         },
         "loops": {
           "type": "number",
@@ -12655,6 +12687,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pathLength": {
           "type": "number",
           "description": "Length of the path in cm."
+        },
+        "pawn": {
+          "type": "string",
+          "description": "The pawn it possesses."
         },
         "points": {
           "type": "array",
@@ -12798,6 +12834,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Serialized Behavior Tree graph (root node, children, decorators, services) reported by the native BehaviorTree domain (HandleGetTree).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "treeRunning": {
+          "type": "boolean",
+          "description": "Whether its Behavior Tree runs."
         },
         "unreachable": {
           "type": "array",
@@ -23194,6 +23234,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Tags required to activate this ability."
         },
+        "actorName": {
+          "type": "string",
+          "description": "The actor with the ability system, by label or name in the Play world."
+        },
         "applicationRequiredTags": {
           "type": "array",
           "items": {
@@ -23238,6 +23282,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Tags of abilities cancelled when this activates."
+        },
+        "compareWith": {
+          "type": "string",
+          "description": "A name an earlier read was saved as: changes lists what changed since (STATE_NOT_FOUND when none was)."
         },
         "componentName": {
           "type": "string",
@@ -23368,6 +23416,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "How gameplay effects replicate: Full (every effect to every client, for single player), Mixed (effects to the owning client only, cues and tags to all, for player characters) or Minimal (cues and tags only, for AI)."
         },
+        "saveAs": {
+          "type": "string",
+          "description": "Keep this read under a name, for a later compareWith in this editor session."
+        },
         "setByCallerTag": {
           "type": "string",
           "description": "Gameplay tag keying a SetByCaller magnitude."
@@ -23448,7 +23500,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_attribute_set",
             "configure_ability",
             "configure_gameplay_effect",
-            "get_gas_info"
+            "get_gas_info",
+            "get_live_gas_state"
           ],
           "description": "Action to invoke on manage_gas."
         }
@@ -23469,6 +23522,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game gameplay ability asset path."
         },
+        "activeEffects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each active effect: effect (class), stacks, secondsLeft (-1: no end)."
+        },
+        "actor": {
+          "type": "string",
+          "description": "String parameter."
+        },
         "assetName": {
           "type": "string",
           "description": "String parameter."
@@ -23476,6 +23542,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Each attribute's current value, keyed Set.Attribute."
+        },
+        "changes": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With compareWith: tagsGained, tagsLost, attributesChanged ({attribute, before, after})."
         },
         "class": {
           "type": "string",
@@ -23545,6 +23624,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The gameplay tags it owns."
         }
       },
       "additionalProperties": true

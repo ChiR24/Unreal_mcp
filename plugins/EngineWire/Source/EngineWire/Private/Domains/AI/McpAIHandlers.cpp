@@ -65,6 +65,7 @@ bool UEngineWireSubsystem::HandleManageAIAction(
         {TEXT("configure_mass_entity"),          &McpAIHandlers::HandleConfigureMassEntity},
         {TEXT("add_mass_spawner"),               &McpAIHandlers::HandleAddMassSpawner},
         {TEXT("get_ai_info"),                    &McpAIHandlers::HandleGetAIInfo},
+        {TEXT("get_live_ai_state"),              &McpAIHandlers::HandleGetLiveAIState},
         {TEXT("set_ai_perception"),              &McpAIHandlers::HandleSetAIPerception},
         {TEXT("create_nav_modifier"),            &McpAIHandlers::HandleCreateNavModifier},
         {TEXT("set_ai_movement"),                &McpAIHandlers::HandleSetAIMovement},

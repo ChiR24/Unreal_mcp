@@ -98,6 +98,8 @@ const testCases = [
   },
   // `tag` is the handler-level fallback for `tagName` (gas-special-actions.ts#handleAddTagToAsset),
   // so it needs its own case: the tagName spelling above never exercises that branch.
+  // get_live_gas_state reads the Play world: in the editor world it is refused before it runs.
+  { scenario: 'ERROR: get_live_gas_state outside Play', toolName: 'manage_gas', arguments: { action: 'get_live_gas_state', actorName: 'NoSuchHero_MCP', saveAs: 'mcp_before', compareWith: 'mcp_none' }, expected: 'error|EDITOR_STATE_MISMATCH' },
   { scenario: 'INFO: get_gas_info', toolName: 'manage_gas', arguments: { action: 'get_gas_info', assetPath: '${captured:abilityPath}' }, expected: 'success' },
   // params envelope: clients that cannot send arbitrary top-level fields nest them
   // under `params`, which is merged with top-level arguments before routing.
