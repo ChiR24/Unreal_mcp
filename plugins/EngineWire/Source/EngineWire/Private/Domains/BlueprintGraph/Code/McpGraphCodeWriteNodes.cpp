@@ -229,6 +229,13 @@ bool FTranspiler::WireArg(const FSExpr& Value, UEdGraphPin* Pin, const FBindings
 {
     if (Value.Type == FSExpr::EType::Symbol)
     {
+        // A bare value of the pin's enum (AlwaysSpawn) is that value, as the quoted one is: a small model wrote it bare
+        // and was told it was an undefined variable. A bound name of the same spelling still wins.
+        const UEnum* Enum = Cast<UEnum>(Pin->PinType.PinSubCategoryObject.Get());
+        if (Enum && !Bindings.Contains(Value.Text) && Enum->GetIndexByNameString(Value.Text) != INDEX_NONE)
+        {
+            return SetValue(Pin, Value.Text);
+        }
         UEdGraphPin* Source = Bound(Value.Text, Bindings);
         return Source && Connect(Source, Pin);
     }

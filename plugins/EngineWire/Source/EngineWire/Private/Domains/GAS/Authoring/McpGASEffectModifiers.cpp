@@ -9,8 +9,27 @@
 #include "Engine/Blueprint.h"
 #include "AttributeSet.h"
 #include "GameplayEffect.h"
+#include "Interfaces/IProjectManager.h"
+#include "ProjectDescriptor.h"
 #include "UObject/UObjectIterator.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+
+namespace McpGASModifierDetail
+{
+// A class of this project: a /Game Blueprint, or native code in one of the .uproject's own modules (not an engine or
+// plugin module, whose test AttributeSets carry Health too).
+bool IsProjectClass(const UClass* Class)
+{
+    const FString Package = Class ? Class->GetOutermost()->GetName() : FString();
+    const FProjectDescriptor* Project = IProjectManager::Get().GetCurrentProject();
+    bool bOwn = Package.StartsWith(TEXT("/Game/"));
+    for (int32 Index = 0; Project && !bOwn && Index < Project->Modules.Num(); ++Index)
+    {
+        bOwn = Package == TEXT("/Script/") + Project->Modules[Index].Name.ToString();
+    }
+    return bOwn;
+}
+} // namespace McpGASModifierDetail
 
 namespace McpGASHandlers
 {
@@ -143,7 +162,13 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
                         // AttributeSet is found again through every subclass. Count its DECLARING class
                         // once; two genuinely different properties still yield two owners.
                         const UClass* DeclaringClass = Found->GetOwnerClass();
-                        AmbiguousOwners.AddUnique(DeclaringClass ? DeclaringClass->GetName() : Candidate->GetName());
+                        const FString OwnerName = DeclaringClass ? DeclaringClass->GetName() : Candidate->GetName();
+                        // The project's own set first, so the refusal's example names it (a plugin's test set came first).
+                        if (McpGASModifierDetail::IsProjectClass(DeclaringClass ? DeclaringClass : Candidate) && !AmbiguousOwners.Contains(OwnerName))
+                        {
+                            AmbiguousOwners.Insert(OwnerName, 0);
+                        }
+                        AmbiguousOwners.AddUnique(OwnerName);
                         if (!AttributeProperty)
                         {
                             AttributeProperty = Found;
