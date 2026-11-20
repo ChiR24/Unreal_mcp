@@ -49,6 +49,11 @@ FString ValueText(FProperty* Property, void* Container);
 bool WriteValue(UObject* Root, const FString& Path, FProperty* Property, void* Container,
                 const TSharedPtr<FJsonValue>& Value, FString& OutError);
 
+// McpResolvePropertyPath, and when Path names no property but ends in a setter key that has none of its own name
+// (SimulatePhysics: a primitive's SetSimulatePhysics), the flag that setter keeps (BodyInstance.bSimulatePhysics), so
+// the value reads back; WriteValue still writes the key through the setter.
+FProperty* ResolveForWrite(UObject* Root, const FString& Path, void*& OutContainer, FString& OutResolved, FString& OutError);
+
 // Tells the owner of an instanced subobject (a water body's wave generator) that the property holding it changed, as
 // the details panel does, up the chain of owners: the waves were not regenerated when only the generator heard it.
 void NotifyOwners(UObject* Edited);

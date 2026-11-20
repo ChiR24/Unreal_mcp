@@ -141,7 +141,7 @@ bool UEngineWireSubsystem::HandleSetObjectProperty(
   ResolvedPath = EffectivePropertyName;
   TargetContainer = Element.Container;
   FProperty* Property = bElement ? Element.Property
-      : McpResolvePropertyPath(RootObject, EffectivePropertyName, TargetContainer, ResolvedPath, ResolveError);
+      : McpPropertyTarget::ResolveForWrite(RootObject, EffectivePropertyName, TargetContainer, ResolvedPath, ResolveError);
   if (!Property || !TargetContainer) {
       CreatedOverride.Rollback();
       if (EffectivePropertyName.Contains(TEXT("."))) {

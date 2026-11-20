@@ -9,6 +9,7 @@
 #include "EngineWireSubsystem.h"
 #include "Foundation/BridgeHelpers/Security/McpSafeReflectionTarget.h"
 #include "Foundation/BridgeHelpers/Properties/McpNestedPropElements.h"
+#include "Foundation/BridgeHelpers/Properties/McpNestedPropPath.h"
 
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -222,6 +223,20 @@ bool WriteValue(UObject* Root, const FString& Path, FProperty* Property, void* C
   McpApplyComponentProperties(Component, Bag, Applied, Warnings);
   OutError = FString::Join(Warnings, TEXT("; "));
   return Applied.Num() > 0;
+}
+
+FProperty* ResolveForWrite(UObject* Root, const FString& Path, void*& OutContainer, FString& OutResolved, FString& OutError)
+{
+  FProperty* Property = McpResolvePropertyPath(Root, Path, OutContainer, OutResolved, OutError);
+  FString Head, Last = Path;
+  Path.Split(TEXT("."), &Head, &Last, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+  if (Property || !(Last.Equals(TEXT("SimulatePhysics"), ESearchCase::IgnoreCase) || Last.Equals(TEXT("bSimulatePhysics"), ESearchCase::IgnoreCase))) {
+    return Property;
+  }
+  FString Unused;
+  FProperty* Stored = McpResolvePropertyPath(Root, (Head.IsEmpty() ? FString() : Head + TEXT(".")) + TEXT("BodyInstance.bSimulatePhysics"),
+                                             OutContainer, OutResolved, Unused);
+  return Stored ? Stored : Property;
 }
 
 void NotifyOwners(UObject* Edited)
