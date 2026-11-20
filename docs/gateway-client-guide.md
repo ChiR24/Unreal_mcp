@@ -353,9 +353,10 @@ refused with `INVALID_OPTIONS`.
 characters, for a client with a small context. Over it, the reply shrinks in a
 fixed order: its `details` and `examples` go (unless its output contract
 requires them), then its largest list goes out a page at a time (the `page`
-block's `nextCall` reads on, so nothing is lost), then its longest strings are
-cut to 4000, 1000 or 200 characters, each ending with how many characters were
-cut. The reply's `cuts` names every step taken. A reply that cannot fit is
+block's `nextCall` reads on, so nothing is lost). When one item alone is too
+large for a page, its longest strings are cut to 4000, 1000 or 200 characters,
+each ending with how many characters were cut, and the cut reply is paged. The
+reply's `cuts` names every step taken. A reply that cannot fit is
 refused `RESULT_TOO_LARGE`, naming the ceiling. The size is measured on the
 result as the handler sent it, before `select` and `omit`, and the ceiling is
 part of the idempotency fingerprint.

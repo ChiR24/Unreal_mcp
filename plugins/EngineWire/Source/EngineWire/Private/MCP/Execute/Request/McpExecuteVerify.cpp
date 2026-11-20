@@ -150,7 +150,10 @@ void Stamp(const TSharedPtr<FJsonObject>& Behavior, const TSharedPtr<FJsonObject
         const FString Field(*Pair.Key);
         const FString Input = Pair.Value.IsValid() ? Pair.Value->AsString().RightChop(8) : FString(); // "$params."
         const TSharedPtr<FJsonValue> Sent = Params->TryGetField(Input);
-        const TSharedPtr<FJsonValue> Back = Data->TryGetField(Field);
+        // A field the output contract does not declare is under details, where the reply's projection put it.
+        TSharedPtr<FJsonValue> Back = Data->TryGetField(Field);
+        const TSharedPtr<FJsonObject>* Details = nullptr;
+        if (!Back.IsValid() && Data->TryGetObjectField(TEXT("details"), Details) && Details) Back = (*Details)->TryGetField(Field);
         const EMatch Verdict = Compare(Sent, Back);
         if (Verdict == EMatch::Unknown)
         {

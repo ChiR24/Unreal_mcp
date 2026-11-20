@@ -120,6 +120,17 @@ bool FMcpNativeResultPagesRefusalTest::RunTest(const FString& Parameters)
 		McpFirstResultPage(PagesTestResult(3, 9000), PagesTestBudget, Owner, Page));
 	TestEqual(TEXT("a cursor never issued is refused"),
 		McpNextResultPage(TEXT("never-issued"), Owner, PagesTestBudget, Page), FString(TEXT("PAGE_CURSOR_EXPIRED")));
+
+	// options.maxReplyChars: a small ceiling pages, and the continuation (which sends only the cursor) keeps it.
+	FMcpResultPage Small;
+	if (TestTrue(TEXT("a 1500-character ceiling still pages"), McpFirstResultPage(PagesTestResult(20, 100), 1500, Owner, Small)))
+	{
+		const int32 Left = 20 - PagesTestNumber(Small.Page, TEXT("returned"));
+		FMcpResultPage Later;
+		TestEqual(TEXT("the next page reads on"),
+			McpNextResultPage(Small.Page->GetStringField(TEXT("cursor")), Owner, McpReplyCharBudget, Later), FString());
+		TestTrue(TEXT("within the first page's ceiling"), PagesTestNumber(Later.Page, TEXT("returned")) < Left);
+	}
 	return true;
 }
 

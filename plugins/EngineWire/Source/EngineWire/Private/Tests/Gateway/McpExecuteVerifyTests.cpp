@@ -2,6 +2,7 @@
 // comparison's rules on fixed values, and the receipt stamp (verified, mismatches, nothing when nothing compares).
 
 #include "MCP/Execute/Request/McpExecuteVerify.h"
+#include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Dom/JsonValue.h"
@@ -57,6 +58,19 @@ bool FMcpExecuteVerifyTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("verify false skips it"), Receipt->HasField(TEXT("receipt")));
     McpExecuteVerify::Stamp(Behavior, nullptr, Params, Json(TEXT("{\"applied\":2}"))->AsObject(), Receipt);
     TestFalse(TEXT("a reply without the field says nothing"), Receipt->HasField(TEXT("receipt")));
+
+    // set_property's real reply: the value read back is undeclared output, so the projection put it under details.
+    McpExecuteVerify::Stamp(Behavior, nullptr, Params, Json(TEXT("{\"saved\":true,\"details\":{\"value\":5000}}"))->AsObject(), Receipt);
+    TestTrue(TEXT("a read-back under details is compared"), Receipt->HasField(TEXT("receipt")) &&
+        Receipt->GetObjectField(TEXT("receipt"))->GetBoolField(TEXT("verified")));
+
+    // On the wire: the reply's compaction keeps the verdict and the mismatches in the receipt it trims.
+    const TSharedPtr<FJsonObject> Reply = Json(TEXT("{\"success\":true,\"operation\":\"execute\",\"data\":{\"value\":1000},"
+        "\"receipt\":{\"verified\":false,\"mismatches\":[{\"field\":\"value\",\"sent\":5000,\"readBack\":1000}],\"handles\":[]}}"))->AsObject();
+    const TSharedPtr<FJsonObject> Wire = McpJsonRpcReply::MakeCompactReply(Reply);
+    const TSharedPtr<FJsonObject>* Kept = nullptr;
+    TestTrue(TEXT("the compacted reply keeps verified and mismatches"), Wire.IsValid() && Wire->TryGetObjectField(TEXT("receipt"), Kept) &&
+        Kept && (*Kept)->HasField(TEXT("verified")) && (*Kept)->HasField(TEXT("mismatches")));
     return true;
 }
 

@@ -139,17 +139,23 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (McpSerializedResultExceeds(Published, ResultCharBudget, &SerializedChars))
 	{
 		// One top-level array that carries the size goes out a page at a time instead (McpNativeResultPages.cpp); a
-		// payload reporting a failure is never paged.
+		// payload reporting a failure is never paged. Under options.maxReplyChars, when an item alone is too large to
+		// page, long strings are cut and the cut result is paged.
 		bool bPayloadOk = true;
 		Result->TryGetBoolField(TEXT("success"), bPayloadOk);
-		FMcpResultPage Paged;
-		if (bPayloadOk && Context.PageOwner.IsValid() && McpFirstResultPage(Published, ResultCharBudget, *Context.PageOwner, Paged))
+		const auto Page = [&]()
 		{
+			FMcpResultPage Paged;
+			if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Published, ResultCharBudget, *Context.PageOwner, Paged))
+			{
+				return false;
+			}
 			Published = Paged.Result;
 			PageBlock = Paged.Page;
 			if (Budget > 0) Cuts.Add(TEXT("paged the largest list (page.nextCall reads on)"));
-		}
-		else if (!(Budget > 0 && bPayloadOk && McpExecuteBudget::CutStrings(Published, Budget, Cuts)))
+			return true;
+		};
+		if (!Page() && !(Budget > 0 && bPayloadOk && (McpExecuteBudget::CutStrings(Published, Budget, Cuts) || Page())))
 		{
 			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"), Budget > 0
 				? FString::Printf(TEXT("Result is %lld chars, over options.maxReplyChars %d even with its details dropped and long strings cut. Raise it, or narrow the request with this capability's own filter parameters."), SerializedChars, Budget)

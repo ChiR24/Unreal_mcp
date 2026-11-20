@@ -94,6 +94,10 @@ TSharedPtr<FJsonObject> ReceiptOutcome(const TSharedPtr<FJsonObject>& Receipt, c
 		if (List && List->Num() > 0) Out->SetArrayField(Field, *List);
 	}
 	if (const TSharedPtr<FJsonObject> Task = McpHandlerUtils::GetObjectFieldOrNull(Receipt, TEXT("task"))) Out->SetObjectField(TEXT("task"), Task);
+	// Whether a write took (Request/McpExecuteVerify.h): the verdict, and what differed when it did not.
+	bool bVerified = false;
+	if (Receipt->TryGetBoolField(TEXT("verified"), bVerified)) Out->SetBoolField(TEXT("verified"), bVerified);
+	if (const FJsonArray* Mismatches = ArrayField(Receipt, TEXT("mismatches"))) Out->SetArrayField(TEXT("mismatches"), *Mismatches);
 	// Over the bridge the receipt's error repeats typedError; it is kept only for what it alone says.
 	if (const TSharedPtr<FJsonObject> Error = McpHandlerUtils::GetObjectFieldOrNull(Receipt, TEXT("error")))
 	{

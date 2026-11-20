@@ -21,8 +21,6 @@ namespace
 {
 constexpr double McpPageTtlSeconds = 300.0;
 constexpr int32 McpMaxKeptPages = 8;
-// The page block, its continuation call and the field name, kept out of the items' share of the budget.
-constexpr int64 McpPageOverheadChars = 2000;
 
 struct FMcpKeptResult
 {
@@ -33,6 +31,7 @@ struct FMcpKeptResult
 	TArray<int64> Sizes;
 	TSet<int32> Issued; // the offsets this result's pages handed out
 	double Expires = 0.0;
+	int64 Budget = 0; // the first page's: a later page never takes more, so options.maxReplyChars holds to the end
 };
 
 FCriticalSection& McpPagesMutex()
@@ -69,10 +68,17 @@ int64 McpObjectChars(const TSharedPtr<FJsonObject>& Object)
 	return Chars;
 }
 
+// The page block and its continuation call (the first call's own routing and params, a cursor and the field name), kept
+// out of the items' share of the budget. A fixed 2000 left no room at all under a small options.maxReplyChars.
+int64 McpPageOverheadChars(const FMcpPageOwner& Owner)
+{
+	return 600 + (Owner.Call.IsValid() ? McpObjectChars(Owner.Call) : 0);
+}
+
 // Caller holds McpPagesMutex. Takes at least one item (every item was checked to fit alone), so paging advances.
 void McpSlicePage(FMcpKeptResult& Entry, const FString& Id, int32 Offset, int64 Budget, double Now, FMcpResultPage& Out)
 {
-	const int64 Room = Budget - McpObjectChars(Entry.Rest) - McpPageOverheadChars;
+	const int64 Room = Budget - McpObjectChars(Entry.Rest) - McpPageOverheadChars(Entry.Owner);
 	int64 Used = 0;
 	int32 End = Offset;
 	while (End < Entry.Items.Num() && (End == Offset || Used + Entry.Sizes[End] + 1 <= Room))
@@ -138,12 +144,13 @@ bool McpFirstResultPage(const TSharedPtr<FJsonObject>& Result, int64 Budget, con
 	FMcpKeptResult Entry;
 	Entry.Owner = Owner;
 	Entry.Field = Field;
+	Entry.Budget = Budget;
 	Entry.Items = Result->GetArrayField(Field);
 	Entry.Rest = MakeShared<FJsonObject>();
 	Entry.Rest->Values = Result->Values;
 	Entry.Rest->RemoveField(Field);
 	// Nothing pages when the rest alone, or one item alone, is too large for a reply.
-	const int64 Room = Budget - McpObjectChars(Entry.Rest) - McpPageOverheadChars;
+	const int64 Room = Budget - McpObjectChars(Entry.Rest) - McpPageOverheadChars(Owner);
 	for (const TSharedPtr<FJsonValue>& Item : Entry.Items)
 	{
 		const int64 Chars = McpArrayChars(TArray<TSharedPtr<FJsonValue>>({Item})) - 2;
@@ -205,6 +212,6 @@ FString McpNextResultPage(const FString& Cursor, const FMcpPageOwner& Owner, int
 	{
 		return TEXT("PAGE_CURSOR_MISMATCH");
 	}
-	McpSlicePage(*Entry, Id, Offset, Budget, Now, Out);
+	McpSlicePage(*Entry, Id, Offset, FMath::Min(Budget, Entry->Budget), Now, Out);
 	return FString();
 }
