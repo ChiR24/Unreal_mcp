@@ -5463,6 +5463,57 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
         },
+        "judge": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "properties": {
+              "expect": {
+                "type": "string",
+                "description": "What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll or a name from propertyNames, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or \"in low..high\"; terms joined with and, each optionally not: \"location.z in 120..220\", \"not bDead == true\"."
+              },
+              "when": {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "ever",
+                  "atEnd",
+                  "at"
+                ],
+                "description": "always (default): every sample in the window; ever: at least one; atEnd: the last sample; at: the first sample at or after atSeconds."
+              },
+              "atSeconds": {
+                "type": "number",
+                "description": "With when at: game seconds into the run (or after after first held)."
+              },
+              "after": {
+                "type": "object",
+                "properties": {
+                  "expect": {
+                    "type": "string",
+                    "description": "What must hold first, in the same form; the first sample where it does opens the window."
+                  }
+                },
+                "required": [
+                  "expect"
+                ],
+                "additionalProperties": false,
+                "description": "Judge only from the first sample where this holds (the key went down, a door opened); one that never holds fails a full run."
+              },
+              "withinSeconds": {
+                "type": "number",
+                "description": "With after: how many game seconds the window stays open."
+              }
+            },
+            "required": [
+              "expect"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Clauses the run is judged by once it ends, each over the samples (1-16): \"pressing Jump lifts the pawn 100-200 cm within 0.6 s\" is [{\"after\": {\"expect\": \"velocity.z > 0\"}, \"expect\": \"location.z in 150..250\", \"when\": \"ever\", \"withinSeconds\": 0.6}]. Each gets ok, failed (the time and the values read) or unknown (the run ended before it could be judged, or a value it names is in no sample); judgeVerdict sums them up."
+        },
         "kinds": {
           "oneOf": [
             {
@@ -5724,7 +5775,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "transform",
             "motion"
           ],
-          "description": "Which get transform variant to run; omit for 'transform'.\ntransform: Read the world transform (location, rotation, scale) of an actor.\nmotion: Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs) and wait for another actor's property to change before it starts (startWhen). The warnings say what the game logged while it ran, and a Blueprint runtime error names the node, graph and Blueprint that raised it.",
+          "description": "Which get transform variant to run; omit for 'transform'.\ntransform: Read the world transform (location, rotation, scale) of an actor.\nmotion: Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also follow points on the actor (bones, sockets, components) with their height over the ground, press keys at exact game times (inputs), wait for another actor's property to change before it starts (startWhen), and judge the run by clauses (judge: always, ever, at a time, at the end, after an event), each ok, failed or unknown. The warnings say what the game logged while it ran, and a Blueprint runtime error names the node, graph and Blueprint that raised it.",
           "default": "transform"
         },
         "relations": {
@@ -6561,6 +6612,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isPieWorld": {
           "type": "boolean",
           "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
+        },
+        "judge": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With judge: one verdict per clause, in order: clause (its index), verdict (ok, failed or unknown), atSeconds (the sample that decided it), read (the values that sample held) and why (for an unknown, or an after that never held)."
+        },
+        "judgeVerdict": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "failed",
+            "unknown"
+          ],
+          "description": "With judge: ok when every clause is ok, failed when any failed, else unknown. Unknown is never a pass."
         },
         "kept": {
           "type": "number",

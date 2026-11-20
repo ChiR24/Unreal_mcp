@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Motion/McpMotionFeel.h"
+#include "Domains/ControlActor/Motion/McpMotionJudge.h"
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
@@ -32,6 +33,7 @@ struct FMcpMotionRun {
   FMcpMotionOverlaps Overlaps;
   FMcpMotionFeel Feel;
   FMcpMotionTrigger Trigger;
+  TArray<TSharedPtr<FJsonValue>> Judge; // judge's clauses, judged on the samples once the run ends (Motion/McpMotionJudge.h)
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
   bool bWaiting = false;
@@ -96,6 +98,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   McpAddMotionPointStats(Run.Points, *Data);
   McpAddMotionFeel(Run.Feel, Run.Inputs, *Data);
   McpAddMotionOverlapResult(Run.Overlaps, *Data);
+  McpMotionJudge::AddTo(Run.Judge, Run.Samples, Ended, *Data);
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
   }
@@ -227,7 +230,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
     Run->bWaiting = McpInitMotionTrigger(FindActorByName(GateName), *When, World, Run->Trigger, TimelineError);
   }
   if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError) ||
-      !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError)) {
+      !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError) || !McpMotionJudge::Take(Payload, Run->Judge, TimelineError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), TimelineError);
     return true;
   }
