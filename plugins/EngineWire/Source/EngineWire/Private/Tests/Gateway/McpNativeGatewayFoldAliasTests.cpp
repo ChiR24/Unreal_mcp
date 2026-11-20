@@ -115,6 +115,16 @@ bool FMcpNativeFoldAliasTest::RunTest(const FString& Parameters)
 	FMcpGatewayExecutePlan StatePlan;
 	TestEqual(TEXT("get_editor_state with no editorState is taken"), FoldAliasPlan(State, StatePlan), FString());
 	TestEqual(TEXT("as world_settings"), StatePlan.LegacyAction, FString(TEXT("get_world_settings")));
+
+	// A call naming a tool and no action is pointed at the one action whose inputs declare every param sent.
+	TSharedPtr<FJsonObject> FinderParams = MakeShared<FJsonObject>();
+	FinderParams->SetStringField(TEXT("memberClass"), TEXT("GameplayAbility"));
+	FinderParams->SetStringField(TEXT("words"), TEXT("end ability"));
+	TestEqual(TEXT("the function finder's params fit inspect_graph"), McpToolActionFitting(TEXT("manage_blueprint"), FinderParams),
+		FString(TEXT("inspect_graph")));
+	TSharedPtr<FJsonObject> Shared = MakeShared<FJsonObject>();
+	Shared->SetStringField(TEXT("blueprintPath"), TEXT("/Game/BP_X"));
+	TestEqual(TEXT("params many actions take fit none in particular"), McpToolActionFitting(TEXT("manage_blueprint"), Shared), FString());
 	return true;
 }
 

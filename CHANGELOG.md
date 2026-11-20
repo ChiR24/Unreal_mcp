@@ -154,6 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Where an added widget goes**: the `add_panel_widget` and `add_content_widget` kinds take `index`, the place among the parent's children (0 first), and answer with it; a widget meant for the top of a box took an add and a reparent.
 - **Long names in code**: `write_graph_from_code`, `run_script` and recipes refuse a name, id or keyword longer than 1023 characters when they read the text; it became an FName, and one that long stopped the editor.
 - **A Blueprint class path reads its defaults**: `get_property` and `set_property` take a generated class's path (`/Game/X/GE_Heal.GE_Heal_C`) as its class defaults, as they take the asset's path; a read there found nothing.
+- **A tool sent without an action**: when the params sent fit one action of that tool, the refusal's `nextCall` is that action's contract instead of the whole action list.
 
 </details>
 

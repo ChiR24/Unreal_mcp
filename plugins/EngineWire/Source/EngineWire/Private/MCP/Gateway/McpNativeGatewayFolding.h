@@ -58,6 +58,10 @@ void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<F
  *  params name none of those. Two or more mean the params fit several variants: the refusal names them. */
 TArray<FString> McpFoldSelectorCandidates(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params);
 
+/** For an execute that named a tool and no action: the one action of that tool whose inputs declare every parameter
+ *  sent, "" when none or several do. A small model sent manage_blueprint with the function finder's params only. */
+FString McpToolActionFitting(const FString& Tool, const TSharedPtr<FJsonObject>& Sent);
+
 /**
  * The bridge action to dispatch once params are validated: an old name
  * dispatches itself, the primary maps its selector through dispatchBy, and

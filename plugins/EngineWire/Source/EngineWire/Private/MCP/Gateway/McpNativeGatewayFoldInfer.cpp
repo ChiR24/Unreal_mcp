@@ -1,7 +1,38 @@
 #include "MCP/Gateway/McpNativeGatewayFolding.h"
 
 #include "Dom/JsonObject.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+
+FString McpToolActionFitting(const FString& Tool, const TSharedPtr<FJsonObject>& Sent)
+{
+	const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
+	const FString Parent = Index.ResolveToolNamespace(Tool);
+	FString Fit;
+	for (const FMcpCapabilityRecord& Record : FMcpCapabilityStore::Get().GetRecords())
+	{
+		const TSharedPtr<FJsonObject>* Properties = nullptr;
+		if (Record.Parent != Parent || !Sent.IsValid() || Sent->Values.Num() == 0 || !Record.InputSchema.IsValid() ||
+			!Record.InputSchema->TryGetObjectField(TEXT("properties"), Properties))
+		{
+			continue;
+		}
+		bool bDeclaresAll = true;
+		for (const auto& Param : Sent->Values)
+		{
+			bDeclaresAll &= (*Properties)->HasField(FString(*Param.Key));
+		}
+		if (bDeclaresAll)
+		{
+			if (!Fit.IsEmpty())
+			{
+				return FString(); // several fit: the action list decides
+			}
+			Fit = Index.GetLegacyActionForCapability(Record.Id);
+		}
+	}
+	return Fit;
+}
 
 TArray<FString> McpFoldSelectorCandidates(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
 {
