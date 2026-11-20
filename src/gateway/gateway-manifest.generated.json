@@ -5426,7 +5426,7 @@
           },
           "startPlay": {
             "type": "boolean",
-            "description": "With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
+            "description": "With no Play In Editor running, start one for this run of actorName (not spawnOf) and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
           },
           "startWhen": {
             "type": "object",

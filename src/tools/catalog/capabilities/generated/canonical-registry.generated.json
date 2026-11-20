@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "62c746c01bcbe206",
+  "catalogRevision": "931202c4e4076e29",
   "recordCount": 511,
   "records": [
     {
@@ -45583,7 +45583,7 @@
             },
             "startPlay": {
               "type": "boolean",
-              "description": "With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
+              "description": "With no Play In Editor running, start one for this run of actorName (not spawnOf) and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
             },
             "fps": {
               "type": "number",
@@ -46156,8 +46156,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4a228a68e643e5b654e6ada9d8af2db8587cc395522ea7430575f01c1c823685",
-        "content": "c6abc69a9493bdc620eae9b84e66b473b302325feb45e71f6afa6004615d8d0b"
+        "schema": "0f97658949fbe9c1a8eaf5bb670c939661c4f06caa99a705a723ccd97c3e9ac1",
+        "content": "e1e09b2de94a610267c7f2500e2a16f71d2faa1d8427a314aae9fb194d9e672e"
       }
     },
     {

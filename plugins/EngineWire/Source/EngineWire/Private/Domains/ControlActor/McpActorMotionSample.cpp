@@ -79,6 +79,13 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   // startPlay with no Play running: start one, enter here again once it has begun, end it after the run.
   if (GetJsonBoolField(Payload, TEXT("startPlay")) && GEditor && !GEditor->PlayWorld) {
+    // spawnOf waits past this call's entry for a spawn, so the Play it started would end before the run began.
+    if (Payload->HasField(TEXT("spawnOf"))) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("startPlay watches an actor the level already has (actorName); to watch a spawn (spawnOf), "
+                                     "start Play first (control_editor play)."));
+      return true;
+    }
     TWeakObjectPtr<UEngineWireSubsystem> Weak(this);
     McpSampleMotionInOwnPlay(this, RequestId, Socket, [Weak, RequestId, Payload, Socket]() {
       if (Weak.IsValid()) Weak->HandleControlActorSampleMotion(RequestId, Payload, Socket);
