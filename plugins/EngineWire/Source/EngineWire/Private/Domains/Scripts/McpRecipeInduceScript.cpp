@@ -6,6 +6,7 @@
 #include "Domains/Scripts/McpScript.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 
 namespace McpRecipeInduceDetail
 {
