@@ -155,6 +155,13 @@ bool ResolvePropertyTarget(UEngineWireSubsystem& Bridge, const FString& RequestI
       Out.RootObject = AsBlueprint->GeneratedClass->GetDefaultObject();
       Out.ObjectPath = Out.RootObject->GetPathName();
     }
+    // So does its generated class's path (/Game/X/GE_Heal.GE_Heal_C): an effect's Modifiers read there failed as not
+    // found, a property of the class object being asked for.
+    UClass* AsClass = Cast<UClass>(Out.RootObject);
+    if (AsClass && UBlueprint::GetBlueprintFromClass(AsClass) && !FindFProperty<FProperty>(AsClass->GetClass(), FName(*Head))) {
+      Out.RootObject = AsClass->GetDefaultObject();
+      Out.ObjectPath = Out.RootObject->GetPathName();
+    }
     // A caller naming a Blueprint CDO directly (...Default__BP_Foo_C) lands here
     // rather than in the blueprintPath branch. Recover the owning Blueprint so a
     // write is compiled into the class defaults (otherwise every newly spawned
