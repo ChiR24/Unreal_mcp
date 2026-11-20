@@ -192,6 +192,14 @@ bool ReadForm(const TArray<FToken>& Tokens, int32& Pos, TMap<int32, FString>& Ta
     }
     if (!Tokens[Pos].bParen)
     {
+        // A name becomes an FName (a variable, a node id, a pin), which holds 1023 characters: a longer one stopped the
+        // editor ("FName's 1023 max length exceeded"). Quoted text stays a string and may be longer.
+        if (Tokens[Pos].Atom.Type == FSExpr::EType::Symbol && Tokens[Pos].Atom.Text.Len() >= NAME_SIZE)
+        {
+            OutError = FString::Printf(TEXT("Line %d: a name of %d characters; a name, id or keyword holds at most %d."),
+                                       Tokens[Pos].Atom.Line, Tokens[Pos].Atom.Text.Len(), NAME_SIZE - 1);
+            return false;
+        }
         Out = Tokens[Pos++].Atom;
         return true;
     }

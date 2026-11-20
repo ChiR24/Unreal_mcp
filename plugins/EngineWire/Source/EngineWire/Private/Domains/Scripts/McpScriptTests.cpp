@@ -52,6 +52,9 @@ bool FMcpScriptTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("a map's item is not bound after it"), CodeOf(TEXT("(let xs (map a (range 3) a))\n(return a)"), None),
               FString(TEXT("SCRIPT_UNBOUND_NAME")));
     TestEqual(TEXT("a map takes a plain name"), CodeOf(TEXT("(let xs (map 1 (range 3) 2))"), None), FString(TEXT("SCRIPT_INVALID")));
+    // Every name becomes an FName, whose 1023 characters a longer one overran, stopping the editor: refused at the parse.
+    TestEqual(TEXT("a name longer than an FName holds is refused at the parse"),
+              CodeOf(FString::Printf(TEXT("(let %s 1)"), *FString::ChrN(1100, TEXT('a'))), None), FString(TEXT("PARSE")));
     TArray<FSExpr> Lone;
     FString Why;
     FString WhyCode;

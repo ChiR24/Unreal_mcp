@@ -63,6 +63,8 @@ const testCases = [
   { scenario: 'READ: crate C stands where the value ifs put it', toolName: 'control_actor', arguments: { action: 'get_transform', actorName: C }, expected: 'success', assertions: [
     { path: 'structuredContent.result.location.1', approximately: 31100, tolerance: 1, label: 'y from (if (> crates.count 2) 31100 ...)' },
   ] },
+  // Every name becomes an FName, which holds 1023 characters: a longer one stopped the editor. Refused at the parse.
+  { scenario: 'ERROR: a script name longer than an FName holds is refused before anything runs', toolName: 'system_control', arguments: run(`(let ${'n'.repeat(1100)} 1)`), expected: 'error|SCRIPT_PARSE_ERROR', assertions: [{ path: 'structuredContent.error', includes: 'at most 1023', label: 'names the limit' }] },
   // A loop's lets stay inside it, so no script could gather a list: (map item list value) makes one value per item.
   { scenario: 'READ: map gathers one value per crate', toolName: 'system_control', arguments: run(`(let crates (control_actor.list :filter "${PREFIX}"))
 (let labels (map c crates.actors c.label))

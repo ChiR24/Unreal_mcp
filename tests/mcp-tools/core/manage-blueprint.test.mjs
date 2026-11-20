@@ -536,6 +536,8 @@ const testCases = [
     { path: 'structuredContent.result.forms.0.nodes', equals: 2, label: 'a loop and a print were made' },
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles' },
   ] },
+  { scenario: 'ERROR: write_graph_from_code refuses a name longer than an FName holds', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, code: `(event Custom|${'E'.repeat(1100)}
+  (Development|PrintString "x"))` }, expected: 'error|CODE_PARSE_ERROR' },
   { scenario: 'INFO: read the loop back with its node ids', toolName: 'manage_blueprint', arguments: { action: 'read_graph_as_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph' }, expected: 'success', captureResult: { key: 'codeLoopText', fromField: 'result.code' } },
   { scenario: 'CODE: write_graph_from_code keeps the nodes its ids name', toolName: 'manage_blueprint', arguments: { action: 'write_graph_from_code', blueprintPath: CODE_BP_PATH, graphName: 'EventGraph', code: '${captured:codeLoopText}' }, expected: 'success', assertions: [
     { path: 'structuredContent.result.kept', equals: 2, label: 'the loop and the print kept their nodes' },

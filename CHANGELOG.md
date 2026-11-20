@@ -152,6 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Widget previews over any colour**: `preview_widget` takes `background` ([r, g, b], 0-1), the colour it draws the widget over; a dark panel could not be judged on the near-black default.
 - **Lists gathered in a script**: `run_script` takes `(map item list value)`, a list of one value per item; a loop's lets stay inside it, so a script could not gather a list.
 - **Where an added widget goes**: the `add_panel_widget` and `add_content_widget` kinds take `index`, the place among the parent's children (0 first), and answer with it; a widget meant for the top of a box took an add and a reparent.
+- **Long names in code**: `write_graph_from_code`, `run_script` and recipes refuse a name, id or keyword longer than 1023 characters when they read the text; it became an FName, and one that long stopped the editor.
 
 </details>
 
