@@ -14,12 +14,13 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- services/            (1) # telemetry schema (a generator input)
 |   |-- tools/                   # catalog/ (records = contracts, generated/), definitions/
 |   `-- utils/                   # commands (console policy rules), config, logging, serialization, validation
-|-- plugins/EngineWire/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab, lint and game feature adapters)
+|-- plugins/EngineWire/ # the editor plugin; editor-only UE (bridge + native MCP + Fab, lint and game feature adapters)
 |   |-- Source/EngineWire/{Public (22), Private/}
 |   |   Private/ (source files, subfolders included, 2026-11-13): Core(48) Domains(1491 / 56 domains) Foundation(170) MCP(158) Safety(20) Transport(24) Tests(43) UI(2)
 |   |-- Source/EngineWireFab/     # Fab asset-store adapter module (delay-loaded, optional)
 |   |-- Source/EngineWireValidation/ # lint_blueprint's rules as a Data Validation validator
 |   `-- Source/EngineWireGameFeatures/ # game feature plugins for system_control (loaded where GameFeatures is on)
+|-- plugins/EngineWireRuntime/ # opt-in DeveloperTool plugin (never in Shipping): loopback reads of a running Development/Test game, started with -EngineWireRuntime
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync
 |-- docs/                        # protocol, security, testing, gateway client guide, generated action reference
@@ -70,7 +71,7 @@ There is no TypeScript gateway or action layer: search, describe, execute and co
 ### Security Boundaries
 - Loopback-only by default. Non-loopback requires `bAllowNonLoopback` (plugin).
 - **Fail-closed LAN posture**: the native MCP transport never binds non-loopback (it has no TLS, so a token would cross the network in clear text; remote clients use an SSH tunnel or a TLS proxy to loopback). The WebSocket bridge binds non-loopback only with `bAllowNonLoopback`, `bRequireCapabilityToken` and `bEnableTls`. A browser `Origin` the endpoint does not allow is refused.
-- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the proxy reads it on every request via `UE_PROJECT_PATH`, resolution order = env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/EngineWire/Source/EngineWire/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
+- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer: the editor plugin, or EngineWire Runtime where no token exists yet, the proxy reads it on every request via `UE_PROJECT_PATH`, resolution order = env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/EngineWire/Source/EngineWire/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
 - Paths limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and the content mounts the editor has. File keys keep the static roots plus `/Saved` and `/tmp`. Preserve `/Game/...` normalization; do not add code depending on unnormalized `/Content/...`. The `/Content` alias is mapped in ONE shared canonicalizer — route new path handling through it rather than re-implementing the alias.
 
 ### Capability Authorization (fail-closed, plugin is the sole authority)
