@@ -28,9 +28,36 @@ bool HandleInspectStructAction(
     }
 
     UScriptStruct* Struct = McpResolveStructByName(StructPath);
+    // An enum by path or name (EGameplayModOp): its values, which a small model otherwise went to engine source for.
+    UEnum* Enum = Struct || !StructPath.StartsWith(TEXT("/")) ? nullptr : FindObject<UEnum>(nullptr, *StructPath);
+    for (TObjectIterator<UEnum> It; !Struct && It && !Enum; ++It)
+    {
+        Enum = It->GetName().Equals(StructPath, ESearchCase::IgnoreCase) ? *It : nullptr;
+    }
+    if (Enum)
+    {
+        TArray<TSharedPtr<FJsonValue>> Values;
+        for (int32 Index = 0; Index < Enum->NumEnums() - (Enum->ContainsExistingMax() ? 1 : 0); ++Index)
+        {
+            TSharedPtr<FJsonObject> Value = MakeShared<FJsonObject>();
+            Value->SetStringField(TEXT("name"), Enum->GetNameStringByIndex(Index));
+            Value->SetStringField(TEXT("displayName"), Enum->GetDisplayNameTextByIndex(Index).ToString());
+            Value->SetNumberField(TEXT("value"), static_cast<double>(Enum->GetValueByIndex(Index)));
+            Values.Add(MakeShared<FJsonValueObject>(Value));
+        }
+        TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetStringField(TEXT("enumName"), Enum->GetName());
+        Result->SetStringField(TEXT("enumPath"), Enum->GetPathName());
+        Result->SetArrayField(TEXT("values"), Values);
+        Result->SetNumberField(TEXT("valueCount"), Values.Num());
+        TSharedPtr<FJsonObject> Reply = MakeShared<FJsonObject>();
+        Reply->SetObjectField(TEXT("result"), Result);
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("Enum %s: %d value(s)"), *Enum->GetName(), Values.Num()), Reply);
+        return true;
+    }
     if (!Struct)
     {
-        Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
+        Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("No struct or enum named %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
     UUserDefinedStruct* UserStruct = Cast<UUserDefinedStruct>(Struct);
@@ -146,6 +173,10 @@ bool HandleInspectStructAction(
         Members.Add(MakeShared<FJsonValueObject>(Member));
     }
 
+    if (OwnedDefaultMemory.Num() > 0)
+    {
+        Struct->DestroyStruct(OwnedDefaultMemory.GetData()); // a native default holding strings or arrays freed them
+    }
     Result->SetArrayField(TEXT("members"), Members);
     Result->SetNumberField(TEXT("memberCount"), Members.Num());
 

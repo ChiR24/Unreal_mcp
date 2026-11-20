@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpActorSupport.h"
 #include "Domains/ControlActor/Find/McpFindByAsset.h"
+#include "Domains/ControlActor/Layout/McpLayoutStyle.h"
 #include "Domains/ControlActor/Materials/McpColorMaterial.h"
 #include "Domains/ControlActor/Materials/McpLightFlicker.h"
 #include "Domains/ControlActor/Placement/McpCoplanarFaces.h"
@@ -156,6 +157,11 @@ bool UEngineWireSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("fix_placement"))
     return McpPlacementFix::HandleFixPlacement(this, RequestId, Payload, RequestingSocket,
                                                [this](const FString &Name) { return FindActorByName(Name); });
+  if (LowerSub == TEXT("learn_layout_style"))
+    return McpLayoutStyle::HandleLearn(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("suggest_companions"))
+    return McpLayoutStyle::HandleSuggest(this, RequestId, Payload, RequestingSocket,
+                                         [this](const FString &Name) { return FindActorByName(Name); });
   if (LowerSub == TEXT("describe_relations"))
     return McpRelations::HandleDescribeRelations(this, RequestId, Payload, RequestingSocket,
                                                  [this](const FString &Name) { return FindActorByName(Name); });

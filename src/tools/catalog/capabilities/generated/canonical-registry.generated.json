@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "828533b38532d912",
-  "recordCount": 504,
+  "catalogRevision": "c0e6d1510edb45c6",
+  "recordCount": 507,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -29035,6 +29035,203 @@
       }
     },
     {
+      "id": "blueprint.slice_function",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "slice_function"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "slice",
+        "topics": [
+          "slice_function",
+          "who calls this function",
+          "why does this function never run",
+          "where is a custom event called",
+          "find every call of a function",
+          "unused function"
+        ],
+        "summary": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Nothing compiles or changes.",
+        "whenToUse": [
+          "A function or custom event never runs, and where it is called and what must hold for each call to run are wanted.",
+          "A function may be called from nowhere."
+        ],
+        "whenNotToUse": [
+          "A variable's sets and reads are wanted (slice_variable)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "function": {
+              "type": "string",
+              "description": "The function or custom event, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
+            },
+            "scope": {
+              "type": "string",
+              "description": "The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath's own Blueprint is always read."
+            },
+            "maxBlueprints": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most Blueprints read (1-1000, default 200); truncated says when more were left out."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "function"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "function": {
+              "type": "string",
+              "description": "The function sliced."
+            },
+            "callers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Each call (up to 100): blueprint, graph, node, nodeId, entries and conditions as slice_variable gives a writer."
+            },
+            "callerCount": {
+              "type": "number",
+              "description": "Every call found, listed or not."
+            },
+            "uncalled": {
+              "type": "boolean",
+              "description": "Present and true when nothing in scope calls it."
+            },
+            "scope": {
+              "type": "string",
+              "description": "The folder read."
+            },
+            "blueprintsRead": {
+              "type": "number",
+              "description": "Blueprints read, its own included."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "Present and true when the folder holds more Blueprints than maxBlueprints."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Nothing compiles or changes.",
+          "input": {
+            "action": "slice_function",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "function": "OpenDoor"
+          },
+          "output": {
+            "success": true,
+            "message": "BP_Door.OpenDoor: 1 call(s) in 14 Blueprint(s) under /Game.",
+            "function": "OpenDoor",
+            "callers": [
+              {
+                "blueprint": "/Game/Blueprints/BP_Door",
+                "graph": "EventGraph",
+                "node": "Open Door",
+                "nodeId": "5A0C3E1B9D2F4A6B8C7D1E2F3A4B5C6D",
+                "entries": [
+                  {
+                    "blueprint": "/Game/Blueprints/BP_Door",
+                    "graph": "EventGraph",
+                    "node": "Event ActorBeginOverlap",
+                    "nodeId": "1B2C3D4E5F60718293A4B5C6D7E8F901",
+                    "kind": "event"
+                  }
+                ],
+                "conditions": [
+                  {
+                    "nodeId": "2C3D4E5F60718293A4B5C6D7E8F90A1B",
+                    "condition": "bHasKey",
+                    "mustBe": true
+                  }
+                ]
+              }
+            ],
+            "callerCount": 1,
+            "scope": "/Game",
+            "blueprintsRead": 14
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "slice_function"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "72d5b7aad18120968882357aa27180aab6b3460bdc7704d3c6018a985e16c525",
+        "content": "a91242b8a7532406d0364800d825980fef87f9f4d064cd91f4922477a6fb88d6"
+      }
+    },
+    {
       "id": "blueprint.slice_variable",
       "aliases": [],
       "legacyIds": [
@@ -45777,6 +45974,145 @@
       }
     },
     {
+      "id": "control_actor.learn_layout_style",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "learn_layout_style"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "relations",
+        "topics": [
+          "learn_layout_style",
+          "learn layout",
+          "learn how props are placed",
+          "learn from my levels",
+          "layout style",
+          "what goes with what"
+        ],
+        "summary": "Learn how the open level places props around each other, for suggest_companions: for each pair of static meshes, how often one stands on, beside (nextTo) or near (within 3 m) the other, how far apart, in which direction and turned how. Kept per level in Saved/EngineWire/LayoutStats.json; learning a level again replaces its entry, and other levels are learned by opening each in turn. Reads at most 400 actors (the largest first).",
+        "whenToUse": [
+          "Before dressing a new area in the style of this project's finished levels: open each finished level and learn it."
+        ],
+        "whenNotToUse": [
+          "How the open level is arranged now is wanted (describe_relations)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "level": {
+              "type": "string",
+              "description": "The level learned."
+            },
+            "actorsRead": {
+              "type": "number",
+              "description": "Actors read."
+            },
+            "actorsInLevel": {
+              "type": "number",
+              "description": "Present when the level holds more than were read."
+            },
+            "meshes": {
+              "type": "number",
+              "description": "Static meshes seen."
+            },
+            "pairs": {
+              "type": "number",
+              "description": "Mesh pairings counted (anchor, other, relation)."
+            },
+            "levelsLearned": {
+              "type": "number",
+              "description": "Levels kept in the file, this one included."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Learn how the open level places props around each other, for suggest_companions: for each pair of static meshes, how often one stands on, beside (nextTo) or near (within 3 m) the other, how far apart, in which direction and turned how. Kept per level in Saved/EngineWire/LayoutStats.json; learning a level again replaces its entry, and other levels are learned by opening each in turn. Reads at most 400 actors (the largest first).",
+          "input": {
+            "action": "learn_layout_style"
+          },
+          "output": {
+            "success": true,
+            "message": "Learned 42 mesh pairing(s) among 18 mesh(es) of /Game/Maps/Tavern; 2 level(s) learned in all.",
+            "level": "/Game/Maps/Tavern",
+            "actorsRead": 160,
+            "meshes": 18,
+            "pairs": 42,
+            "levelsLearned": 2
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "learn_layout_style"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "e4f307899aff3ea33f9ec26960c9944cb1d8e9a24174fc8faedc08da98a6e5fe",
+        "content": "6014b9de08fdd6982b82548a39615765e9fc6535e4f3a15b14695f5e96b7d861"
+      }
+    },
+    {
       "id": "control_actor.list",
       "aliases": [
         "control_actor.list_actors"
@@ -49012,6 +49348,177 @@
         "algorithm": "sha256",
         "schema": "2230637fc0a73f606a55dd975308254a7e3e125b15a06079e43bd6e16ce05ed2",
         "content": "4c1b91575d6e36937153f242ee614ad5d6d4444aa99346cecd356f3f10693a3f"
+      }
+    },
+    {
+      "id": "control_actor.suggest_companions",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "suggest_companions"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "relations",
+        "topics": [
+          "suggest_companions",
+          "what goes with this prop",
+          "dress around a prop",
+          "complete the scene",
+          "props that belong together",
+          "suggest props"
+        ],
+        "summary": "Suggest what goes with a placed prop (anchor), from the levels learned with learn_layout_style: the meshes most often found on, beside or near that mesh, best first, each with how many go with one copy (perAnchor), its usual distance, direction (bearing) and turn (yaw) relative to the anchor, and a nextCall that spawns one there (a control_actor spawn call). After spawning, arrange_by_relations settles it (Lamp on Table, Chair nextTo Table). NO_LAYOUT_STATS until a level was learned.",
+        "whenToUse": [
+          "A table, desk or shelf was placed and should get what this project usually puts with it."
+        ],
+        "whenNotToUse": [
+          "Nothing was learned yet (learn_layout_style first).",
+          "The props are already chosen: place them with spawn and arrange_by_relations."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "anchor": {
+              "type": "string",
+              "description": "The placed static mesh actor to dress around, by label or name."
+            },
+            "count": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "At most this many meshes (default 3)."
+            }
+          },
+          "required": [
+            "action",
+            "anchor"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "anchorMesh": {
+              "type": "string",
+              "description": "The anchor's static mesh."
+            },
+            "suggestions": {
+              "type": "array",
+              "description": "Best first: mesh, kind (on, nextTo, near), perAnchor, distance (cm), bearing and yaw (degrees from the anchor's facing), nextCall (spawns one there).",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              }
+            },
+            "levelsLearned": {
+              "type": "number",
+              "description": "Levels the suggestions come from."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Suggest what goes with a placed prop (anchor), from the levels learned with learn_layout_style: the meshes most often found on, beside or near that mesh, best first, each with how many go with one copy (perAnchor), its usual distance, direction (bearing) and turn (yaw) relative to the anchor, and a nextCall that spawns one there (a control_actor spawn call). After spawning, arrange_by_relations settles it (Lamp on Table, Chair nextTo Table). NO_LAYOUT_STATS until a level was learned.",
+          "input": {
+            "action": "suggest_companions",
+            "anchor": "Table_1",
+            "count": 2
+          },
+          "output": {
+            "success": true,
+            "message": "2 mesh(es) go with /Game/Props/SM_Table.SM_Table in the levels learned; each row's nextCall places one.",
+            "anchorMesh": "/Game/Props/SM_Table.SM_Table",
+            "levelsLearned": 2,
+            "suggestions": [
+              {
+                "mesh": "/Game/Props/SM_Chair.SM_Chair",
+                "kind": "nextTo",
+                "perAnchor": 3.5,
+                "distance": 100,
+                "bearing": 0,
+                "yaw": 180,
+                "nextCall": {
+                  "operation": "execute",
+                  "tool": "control_actor",
+                  "action": "spawn",
+                  "params": {
+                    "meshPath": "/Game/Props/SM_Chair.SM_Chair",
+                    "location": [
+                      600,
+                      200,
+                      0
+                    ],
+                    "rotation": [
+                      0,
+                      180,
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "suggest_companions"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "f9200787ef991e8d93eaf494684e0a8bae0bced28a29ce7fe9c2a07e3efe109b",
+        "content": "78a8ef84f20117138dd0988b573ce0c2839f21f49d97bcd5c6f81d14ab8fe859"
       }
     },
     {
@@ -61226,12 +61733,24 @@
           "class metadata",
           "reflection",
           "class properties",
-          "uclass"
+          "uclass",
+          "function signature",
+          "what parameters does a function take",
+          "find a function by name",
+          "subclasses of a class",
+          "struct fields",
+          "enum values",
+          "what fields does a struct have",
+          "what values does an enum have",
+          "engine struct layout"
         ],
         "summary": "Read reflection data, chosen by kind. class (className or classPath) gives the class path, parent and ancestors, module, flags (abstract, blueprintable, actor, component and more), every property it declares or inherits (name, type, category, where declared, editable, Blueprint-visible; at most 200 listed, propertyCount the total), the default value of each on its class default object, and its function count. cdo reads a Blueprint class default object without spawning anything (blueprintPath): its default values (propertyNames picks some) and its default components (componentName or componentNames narrows them). struct reads the members of a user struct (structPath): name, type, default and tooltip.",
         "whenToUse": [
           "kind=class: A class's hierarchy and defaults must be read.",
+          "kind=class: How to call an engine function (its parameters and their types) must be known, without reading engine source.",
           "kind=class: C++ code must include a class, call one of its functions, or depend on its module.",
+          "kind=struct: The fields of a struct a property or pin takes must be known before writing it.",
+          "kind=struct: An enum's value names must be known (a property, pin or modifier that takes one).",
           "kind=struct: A Blueprint Struct's member layout must be read.",
           "kind=cdo: A Blueprint's default properties and components must be read."
         ],
@@ -61268,7 +61787,7 @@
             },
             "structPath": {
               "type": "string",
-              "description": "UserDefinedStruct asset /Game path to introspect."
+              "description": "The struct or enum: a short name with or without its F or E (GameplayModifierInfo, EGameplayModOp), a /Script path, or a /Game asset path."
             },
             "blueprintPath": {
               "type": "string",
@@ -61303,7 +61822,7 @@
                 "struct",
                 "cdo"
               ],
-              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Read a struct's fields (name, type, default, tooltip) or an enum's values (name, display name, number), read-only: an engine or plugin struct or enum by its name (GameplayModifierInfo, FHitResult, EGameplayModOp, EMovementMode) or /Script path, or a Blueprint struct or enum asset; no engine source needed.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
               "default": "class"
             }
           },
@@ -61461,7 +61980,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount."
+              "description": "A struct: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount. An enum: enumName, enumPath, values[] (name, displayName, value), valueCount."
             },
             "blueprintPath": {
               "type": "string",
@@ -61602,8 +62121,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0d303fafe8b2b897e1a8768750ac47c062a263c8e8e133e1f3ba19ba43418f3b",
-        "content": "f7b72c9fb59227c71728506620b20a6f409aab19b469379ab34c8bb0e4f2695e"
+        "schema": "d50b0fae6ed0986bc46805d7d32f73df67761a1db299fbc1c72c14a8963f7f3d",
+        "content": "bfd5e406c46b8aa892e0ded3a0b3acdff3aad657a5f42d64a38a69806aedb3a0"
       }
     },
     {

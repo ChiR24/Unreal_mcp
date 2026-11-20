@@ -138,6 +138,15 @@ const testCases = [
   { scenario: 'ERROR: group_actors ungroups actors in no group', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE], op: 'ungroup' }, expected: 'error|NOT_GROUPED' },
   { scenario: 'ERROR: group_actors with one actor', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE] }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ERROR: group_actors names an actor that is not there', toolName: 'control_actor', arguments: { action: 'group_actors', actorNames: [TABLE, `MCP_NoSuchActor_${ts}`] }, expected: 'error|ACTOR_NOT_FOUND' },
+  // learn_layout_style and suggest_companions: the open level learned, then what goes with the table.
+  { scenario: 'UPDATE: learn_layout_style learns the open level', toolName: 'control_actor', arguments: { action: 'learn_layout_style' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.levelsLearned', gte: 1, label: 'this level is kept' },
+    { path: 'structuredContent.result.actorsRead', gte: 6, label: 'the room was read' },
+  ] },
+  { scenario: 'READ: suggest_companions answers for the table from the levels learned', toolName: 'control_actor', arguments: { action: 'suggest_companions', anchor: TABLE, count: 3 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.levelsLearned', gte: 1, label: 'from at least this level' },
+  ] },
+  { scenario: 'ERROR: suggest_companions names an anchor that is not there', toolName: 'control_actor', arguments: { action: 'suggest_companions', anchor: 'MCP_NoSuchAnchor_' + ts }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'DELETE: the room by its tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: TAG }, expected: 'success' },
 ];
 

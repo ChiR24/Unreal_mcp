@@ -31,6 +31,10 @@ TSharedPtr<FJsonObject> Slice(const UBlueprint* Owner, FName Variable, const TAr
 /** Owner, then the Blueprints under Folder, at most Cap in all; OutSkipped counts those past it. */
 TArray<UBlueprint*> ScopeFor(UBlueprint* Owner, const FString& Folder, int32 Cap, int32& OutSkipped);
 
+/** manage_blueprint slice_function (McpBPSliceCalls.cpp): every call of one function or custom event in Scope, each with
+ *  the variable slice's row (entries, Branches, callers); uncalled when none. */
+bool HandleSliceFunction(const McpBlueprintGraphHandlers::FActionContext& Context);
+
 /** manage_blueprint explain_variable (McpBPExplain.cpp): arm marks the slice's writers and the Branches before them to
  *  record the next Play; read says, writer by writer, whether it ran, else the first Branch that did not let it. */
 bool HandleExplain(const McpBlueprintGraphHandlers::FActionContext& Context);

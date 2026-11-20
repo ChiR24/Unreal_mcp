@@ -5289,6 +5289,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "When true, apply the material to all mesh components."
         },
+        "anchor": {
+          "type": "string",
+          "description": "The placed static mesh actor to dress around, by label or name."
+        },
         "arguments": {
           "description": "Function arguments (any type)."
         },
@@ -5410,6 +5414,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "contactCm": {
           "type": "number",
           "description": "With groundTrace: how far above its own lowest height a point still counts as planted (default 2 cm), so an ankle bone that never reaches the floor still counts as down when the foot is."
+        },
+        "count": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "At most this many meshes (default 3)."
         },
         "defaults": {
           "type": "object",
@@ -6190,6 +6200,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "snap_to_grid",
             "distribute_actors",
             "lock_actors",
+            "learn_layout_style",
+            "suggest_companions",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -6418,6 +6430,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Actors judged: visible actors with bounds in the area, lights, volumes and other bounds-only actors left out."
         },
+        "actorsInLevel": {
+          "type": "number",
+          "description": "Present when the level holds more than were read."
+        },
         "actorsInScope": {
           "type": "number",
           "description": "Present when maxActors cut the list: how many actors the area held."
@@ -6425,6 +6441,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorsMoved": {
           "type": "number",
           "description": "Actors moved (0 under dryRun)."
+        },
+        "actorsRead": {
+          "type": "number",
+          "description": "Actors read."
         },
         "affectedActors": {
           "oneOf": [
@@ -6465,6 +6485,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "The actors moved (not under dryRun); the receipt lists them as changes."
+        },
+        "anchorMesh": {
+          "type": "string",
+          "description": "The anchor's static mesh."
         },
         "axis": {
           "type": "string",
@@ -6783,6 +6807,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The label now."
         },
+        "level": {
+          "type": "string",
+          "description": "The level learned."
+        },
+        "levelsLearned": {
+          "type": "number",
+          "description": "Levels kept in the file, this one included."
+        },
         "line": {
           "type": "number",
           "description": "The coordinate the edges were lined up on."
@@ -6829,6 +6861,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "The actors grouped, in the order given."
+        },
+        "meshes": {
+          "type": "number",
+          "description": "Static meshes seen."
         },
         "message": {
           "type": "string",
@@ -6994,6 +7030,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true,
           "description": "The actors it intersects (up to 8): actorName, actorClass, penetrationDepth."
+        },
+        "pairs": {
+          "type": "number",
+          "description": "Mesh pairings counted (anchor, other, relation)."
         },
         "pairsFound": {
           "type": "number",
@@ -7294,6 +7334,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk."
+        },
+        "suggestions": {
+          "type": "array",
+          "description": "Best first: mesh, kind (on, nextTo, near), perAnchor, distance (cm), bearing and yaw (degrees from the anchor's facing), nextCall (spawns one there).",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          }
         },
         "tag": {
           "type": "string",
@@ -9097,7 +9146,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "struct",
             "cdo"
           ],
-          "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+          "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Read a struct's fields (name, type, default, tooltip) or an enum's values (name, display name, number), read-only: an engine or plugin struct or enum by its name (GameplayModifierInfo, FHitResult, EGameplayModOp, EMovementMode) or /Script path, or a Blueprint struct or enum asset; no engine source needed.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
           "default": "class"
         },
         "labels": {
@@ -9520,7 +9569,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "structPath": {
           "type": "string",
-          "description": "UserDefinedStruct asset /Game path to introspect."
+          "description": "The struct or enum: a short name with or without its F or E (GameplayModifierInfo, EGameplayModOp), a /Script path, or a /Game asset path."
         },
         "subject": {
           "type": "string",
@@ -10911,7 +10960,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount."
+          "description": "A struct: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount. An enum: enumName, enumPath, values[] (name, displayName, value), valueCount."
         },
         "rhiThreadMs": {
           "type": "number",
@@ -18509,6 +18558,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Output pin it leaves from; required, or send sourcePin."
         },
+        "function": {
+          "type": "string",
+          "description": "The function or custom event, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
+        },
         "functionName": {
           "type": "string",
           "description": "Function a CallFunction node calls (the same as memberName), e.g. PrintString."
@@ -19897,6 +19950,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_graph",
             "lint_blueprint",
             "slice_variable",
+            "slice_function",
             "explain_variable",
             "read_graph_as_code",
             "write_graph_from_code",
@@ -20222,6 +20276,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Every Button created; wire them with bind_widget on_clicked."
+        },
+        "callerCount": {
+          "type": "number",
+          "description": "Every call found, listed or not."
+        },
+        "callers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Each call (up to 100): blueprint, graph, node, nodeId, entries and conditions as slice_variable gives a writer."
         },
         "chain": {
           "type": "array",
@@ -20617,6 +20685,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "frameNumber": {
           "type": "number",
           "description": "Key position in MovieScene tick-resolution frames."
+        },
+        "function": {
+          "type": "string",
+          "description": "The function sliced."
         },
         "functionGraphs": {
           "oneOf": [
@@ -21496,6 +21568,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "truncated": {
           "type": "boolean",
           "description": "Present and true when nodes or links stopped at their limit."
+        },
+        "uncalled": {
+          "type": "boolean",
+          "description": "Present and true when nothing in scope calls it."
         },
         "undo": {
           "oneOf": [

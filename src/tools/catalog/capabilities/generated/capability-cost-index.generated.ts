@@ -344,6 +344,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::get_components": "instant|low",
   "control_actor::get_transform": "interactive|low",
   "control_actor::group_actors": "instant|low",
+  "control_actor::learn_layout_style": "interactive|low",
   "control_actor::list": "instant|low",
   "control_actor::lock_actors": "instant|low",
   "control_actor::randomize_transforms": "instant|low",
@@ -373,6 +374,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::spawn_actor": "interactive|medium",
   "control_actor::spawn_batch": "interactive|medium",
   "control_actor::spawn_blueprint": "interactive|medium",
+  "control_actor::suggest_companions": "instant|low",
   "control_actor::teleport_actor": "instant|low",
   "control_editor::call_editor_tool": "interactive|low",
   "control_editor::call_editor_tool_destructive": "interactive|low",
@@ -1041,6 +1043,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::set_widget_layout": "instant|low",
   "manage_blueprint::set_widget_parent_class": "interactive|low",
   "manage_blueprint::set_z_order": "instant|low",
+  "manage_blueprint::slice_function": "interactive|medium",
   "manage_blueprint::slice_variable": "interactive|medium",
   "manage_blueprint::write_graph_from_code": "interactive|medium",
   "manage_character::build_metahuman": "long-running|high",
@@ -1714,4 +1717,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1701;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1704;

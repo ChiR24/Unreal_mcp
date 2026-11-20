@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `828533b38532d912`
+Catalog revision: `c0e6d1510edb45c6`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 504 capabilities across
+The catalog declares 507 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -41,13 +41,13 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 34 | 7 | 25 | 2 | animation physics |
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
-| `control_actor` | 36 | 9 | 24 | 3 | actor |
+| `control_actor` | 38 | 10 | 25 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
 | `inspect` | 30 | 25 | 4 | 1 | inspect |
 | `manage_ai` | 19 | 5 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
-| `manage_blueprint` | 46 | 14 | 23 | 9 | blueprint, widget |
+| `manage_blueprint` | 47 | 15 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 504 capabilities require consent.
+77 of 507 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -253,6 +253,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.set_field_notify` | `manage_blueprint` | `set_field_notify` | write | write | none | `manage_blueprint.set_field_notify` |
 | `blueprint.set_font` | `manage_blueprint` | `set_font` | write | write | none | `manage_blueprint.set_font` `manage_blueprint.set_margin` |
 | `blueprint.set_widget_layout` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_widget_layout` `manage_blueprint.set_anchor` `manage_blueprint.set_position` `manage_blueprint.set_size` `manage_blueprint.set_alignment` `manage_blueprint.set_padding` `manage_blueprint.set_z_order` `manage_blueprint.set_visibility` `manage_blueprint.set_clipping` `manage_blueprint.set_render_transform` `manage_blueprint.set_style` |
+| `blueprint.slice_function` | `manage_blueprint` | `slice_function` | read | read | none | `manage_blueprint.slice_function` |
 | `blueprint.slice_variable` | `manage_blueprint` | `slice_variable` | read | read | none | `manage_blueprint.slice_variable` |
 | `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | destructive | explicit | `manage_blueprint.write_graph_from_code` |
 | `build_environment.add_foliage` | `build_environment` | `add_foliage` | write | write | none | `build_environment.add_foliage` `build_environment.add_foliage_instances` `build_environment.paint_foliage` |
@@ -321,6 +322,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.get_components` | `control_actor` | `get_components` | read | read | none | `control_actor.get_components` `control_actor.get_actor_bounds` `control_actor.get_actor_components` |
 | `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.sample_motion` `control_actor.get_actor_transform` |
 | `control_actor.group_actors` | `control_actor` | `group_actors` | write | write | none | `control_actor.group_actors` |
+| `control_actor.learn_layout_style` | `control_actor` | `learn_layout_style` | write | write | none | `control_actor.learn_layout_style` |
 | `control_actor.list` | `control_actor` | `list` | read | read | none | `control_actor.list` |
 | `control_actor.lock_actors` | `control_actor` | `lock_actors` | write | write | none | `control_actor.lock_actors` |
 | `control_actor.randomize_transforms` | `control_actor` | `randomize_transforms` | write | write | none | `control_actor.randomize_transforms` |
@@ -335,6 +337,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.settle_physics` | `control_actor` | `settle_physics` | write | write | none | `control_actor.settle_physics` |
 | `control_actor.snap_to_grid` | `control_actor` | `snap_to_grid` | write | write | none | `control_actor.snap_to_grid` |
 | `control_actor.spawn` | `control_actor` | `spawn` | write | write | none | `control_actor.spawn` `control_actor.spawn_blueprint` `control_actor.spawn_batch` `control_actor.spawn_actor` |
+| `control_actor.suggest_companions` | `control_actor` | `suggest_companions` | read | read | none | `control_actor.suggest_companions` |
 | `control_editor.call_editor_tool` | `control_editor` | `control_editor` | write | write | none | `control_editor.call_editor_tool` |
 | `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.call_editor_tool_destructive` |
 | `control_editor.close_asset` | `control_editor` | `close_asset` | write | write | none | `control_editor.close_asset` |

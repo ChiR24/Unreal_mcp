@@ -602,9 +602,9 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_class', dispatchAction: 'inspect_class', domain: D, family: 'class',
-    topics: ['class info', 'class metadata', 'reflection', 'class properties', 'uclass'],
+    topics: ['class info', 'class metadata', 'reflection', 'class properties', 'uclass', 'function signature', 'what parameters does a function take', 'find a function by name', 'subclasses of a class'],
     summary: 'Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function\'s signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.',
-    whenToUse: ['A class\'s hierarchy and defaults must be read.', 'C++ code must include a class, call one of its functions, or depend on its module.'],
+    whenToUse: ['A class\'s hierarchy and defaults must be read.', 'How to call an engine function (its parameters and their types) must be known, without reading engine source.', 'C++ code must include a class, call one of its functions, or depend on its module.'],
     whenNotToUse: ['A specific instance is in scope; use inspect_object.'],
     inputProps: {
       className: P.className, classPath: P.classPath,
@@ -675,10 +675,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_struct', dispatchAction: 'inspect_struct', domain: D, family: 'class',
-    summary: 'Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.',
-    whenToUse: ['A Blueprint Struct\'s member layout must be read.'],
-    whenNotToUse: ['Struct values must be read or written; use manage_asset struct actions.'],
-    inputProps: { structPath: P.structPath },
+    topics: ['struct fields', 'enum values', 'what fields does a struct have', 'what values does an enum have', 'engine struct layout'],
+    summary: 'Read a struct\'s fields (name, type, default, tooltip) or an enum\'s values (name, display name, number), read-only: an engine or plugin struct or enum by its name (GameplayModifierInfo, FHitResult, EGameplayModOp, EMovementMode) or /Script path, or a Blueprint struct or enum asset; no engine source needed.',
+    whenToUse: ['The fields of a struct a property or pin takes must be known before writing it.', 'An enum\'s value names must be known (a property, pin or modifier that takes one).', 'A Blueprint Struct\'s member layout must be read.'],
+    whenNotToUse: ['Struct values must be read or written; use manage_asset struct actions.', 'A class\'s functions or properties are wanted (inspect_class).'],
+    inputProps: { structPath: { type: 'string', description: 'The struct or enum: a short name with or without its F or E (GameplayModifierInfo, EGameplayModOp), a /Script path, or a /Game asset path.' } },
     required: ['structPath'],
     effect: 'read',
     // The native handler (McpInspectStruct.cpp) returns its
@@ -688,7 +689,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'inspect_struct', structPath: '/Game/Structs/S_Test' },
     exampleOutput: { success: true, message: 'Struct inspected', result: { structName: 'S_Test', memberCount: 3 } },
     outputProps: {
-      result: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount.' },
+      result: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'A struct: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount. An enum: enumName, enumPath, values[] (name, displayName, value), valueCount.' },
     },
     outputRequired: [],
   }),

@@ -62,6 +62,10 @@ bool Touches(const UEdGraphNode* Node, const UBlueprint* Owner, FName Variable, 
 
 bool HandleSlice(const McpBlueprintGraphHandlers::FActionContext& Context)
 {
+    if (Context.SubAction == TEXT("slice_function"))
+    {
+        return HandleSliceFunction(Context);
+    }
     if (Context.SubAction != TEXT("slice_variable"))
     {
         return false;
