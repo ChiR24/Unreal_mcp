@@ -12,6 +12,7 @@
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Foundation/BridgeHelpers/Properties/McpPropImportText.h"
 
 /**
  * The component whose StaticMesh this property is, or null for any other property. That mesh goes through
@@ -42,59 +43,6 @@ static inline USkeletalMeshComponent *McpSkeletalMeshOwner(const FProperty *Prop
              : nullptr;
 }
 
-/**
- * Fill a scratch value of Property and copy it over ValuePtr only when Fill returns true, so a refused write leaves
- * the property as it was. The scratch honours the property's REQUIRED alignment: TArray<uint8> only guarantees the
- * default allocator alignment, and FProperty::GetMinAlignment() exists because that is not always enough.
- * FTransform/FQuat/FVector4/FMatrix are alignas(16), and InitializeValue/ImportText on an under-aligned buffer for an
- * SSE type is undefined behaviour that UE's binned allocator would only surface as a rare crash.
- */
-template <typename FillFn>
-static inline bool McpWriteThroughScratch(void *ValuePtr, FProperty *Property, FillFn &&Fill) {
-  void *Scratch = FMemory::Malloc(Property->GetSize(), Property->GetMinAlignment());
-  if (!Scratch) {
-    return false;
-  }
-  Property->InitializeValue(Scratch);
-  ON_SCOPE_EXIT {
-    Property->DestroyValue(Scratch);
-    FMemory::Free(Scratch);
-  };
-  if (!Fill(Scratch)) {
-    return false;
-  }
-  Property->CopyCompleteValue(ValuePtr, Scratch);
-  return true;
-}
-
-/**
- * Import a UE export-text value into an already-resolved property value slot.
- *
- * Export text is the `(Key=Value,...)` form that ExportTextItem produces --
- * and it is exactly what `get_property` hands back to callers. Without an
- * import path for it, a caller could not feed our own output back into
- * `set_property`: reading `LayoutData` returned
- * `(Offsets=(Left=-48.000000,...))`, and passing that same string back failed
- * with PROPERTY_CONVERSION_FAILED. Accepting it closes that read/write
- * asymmetry.
- *
- * @param ValuePtr Pointer to the property's value (NOT the container).
- */
-static inline bool ImportExportTextIntoValue(void *ValuePtr, FProperty *Property,
-                                             const FString &Text) {
-  if (!ValuePtr || !Property || Text.IsEmpty()) {
-    return false;
-  }
-
-  // Parse into SCRATCH, not into the live property. ImportText writes struct members as it parses, so on
-  // malformed input it returns nullptr having ALREADY written whatever it managed to read:
-  // "(Offsets=(Left=10,Top=NOTANUMBER))" would leave Left=10 on the real object while the caller is told the
-  // conversion failed.
-  return McpWriteThroughScratch(ValuePtr, Property, [Property, &Text](void *Scratch) {
-    // The error device stays GWarn: a null one crashed the editor on text an enum or struct import refused.
-    return MCP_PROPERTY_IMPORT_TEXT(Property, *Text, Scratch, nullptr, PPF_None) != nullptr;
-  });
-}
 
 static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProperty *Property,
                                                   const TSharedPtr<FJsonValue> &ValueField,
@@ -255,6 +203,13 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
 			}
 		}
 
+		if (SP->Struct && (ValueField->Type == EJson::Array || ValueField->Type == EJson::String)) {
+			const int32 Listed = ImportStructAsItsOnlyList(SP, SP->ContainerPtrToValuePtr<void>(TargetContainer), ValueField, OutError);
+			if (Listed != 0) {
+				return Listed > 0;
+			}
+		}
+
 		// The example names THIS struct's own fields: a fixed {Left, Top} sent a small model after margin fields for a
 		// GameplayAttributeData. Up to three of them, numbers as 0, booleans as false, anything else as text.
 		TArray<FString> JsonFields, TextFields;
@@ -267,7 +222,8 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
 		OutError = FString::Printf(
 				TEXT("Could not convert value to struct property of type '%s'. Accepted forms: a JSON object of its fields "
 						 "({%s}), UE export text ((%s)) -- the form get_property returns -- or, for Vector/Rotator, a "
-						 "3-element JSON array ([0, 0, 90])."),
+						 "3-element JSON array ([0, 0, 90]); a struct that holds one list (a gameplay tag container) takes "
+						 "a JSON list of its values ([\"Ability.Fire\"])."),
 				TypeName.IsEmpty() ? TEXT("<unknown>") : *TypeName, *FString::Join(JsonFields, TEXT(", ")),
 				*FString::Join(TextFields, TEXT(",")));
     return false;

@@ -2,7 +2,10 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Components/SkyLightComponent.h"
+#include "Foundation/BridgeHelpers/Properties/McpPropImportText.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameplayTagContainer.h"
+#include "GameplayTagsManager.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/EnumProperty.h"
@@ -168,6 +171,52 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
         Movement->CustomMovementMode, static_cast<uint8>(255));
 
     delete EnumProperty;
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpStructAsItsOnlyListTest,
+    "EngineWire.Reflection.StructAsItsOnlyList",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+// A gameplay tag container (a struct holding one list) set from a JSON list or one string, on a GameplayTags class that
+// holds one; found by path, as it is not exported.
+bool FMcpStructAsItsOnlyListTest::RunTest(const FString &Parameters)
+{
+    (void)Parameters;
+    UClass *Class = FindObject<UClass>(nullptr, TEXT("/Script/GameplayTags.EditableGameplayTagQueryExpression_AnyTagsMatch"));
+    FStructProperty *Tags = Class ? FindFProperty<FStructProperty>(Class, TEXT("Tags")) : nullptr;
+    if (!TestNotNull(TEXT("a class holding a gameplay tag container"), Tags))
+    {
+        return false;
+    }
+    UObject *Holder = NewObject<UObject>(GetTransientPackage(), Class);
+    void *Value = Tags->ContainerPtrToValuePtr<void>(Holder);
+    const FGameplayTagContainer &Held = *static_cast<FGameplayTagContainer *>(Value);
+    const auto List = [](const TArray<FString> &Names)
+    {
+        TArray<TSharedPtr<FJsonValue>> Items;
+        for (const FString &Name : Names) Items.Add(MakeShared<FJsonValueString>(Name));
+        return MakeShared<FJsonValueArray>(Items);
+    };
+    FString Error;
+    AddExpectedError(TEXT("Mcp.NoSuch.Tag"), EAutomationExpectedErrorFlags::Contains, 0);
+    TestEqual(TEXT("an unregistered tag is refused"), ImportStructAsItsOnlyList(Tags, Value, List({TEXT("Mcp.NoSuch.Tag")}), Error), -1);
+    TestTrue(TEXT("the refusal says none was taken and why"), Error.Contains(TEXT("took 0 of the 1")) && Error.Contains(TEXT("registered")));
+    FGameplayTagContainer Known;
+    UGameplayTagsManager::Get().RequestAllGameplayTags(Known, true);
+    if (Known.Num() > 0)
+    {
+        const FGameplayTag First = Known.GetByIndex(0);
+        TestEqual(TEXT("a registered tag as a list"), ImportStructAsItsOnlyList(Tags, Value, List({First.ToString()}), Error), 1);
+        TestTrue(TEXT("the container holds it"), Held.HasTagExact(First));
+        TestEqual(TEXT("one string is a list of one"), ImportStructAsItsOnlyList(Tags, Value, MakeShared<FJsonValueString>(First.ToString()), Error), 1);
+    }
+    TestEqual(TEXT("an empty list clears it"), ImportStructAsItsOnlyList(Tags, Value, List({}), Error), 1);
+    TestEqual(TEXT("nothing is left"), Held.Num(), 0);
+    TestEqual(TEXT("a list of objects is not this shape"), ImportStructAsItsOnlyList(Tags, Value,
+        MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueObject>(MakeShared<FJsonObject>())}), Error), 0);
+    Holder->MarkAsGarbage();
     return true;
 }
 
