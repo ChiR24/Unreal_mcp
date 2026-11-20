@@ -29,6 +29,16 @@ void UEngineWireSettings::PostInitProperties()
     GConfig->GetSection(*GetClass()->GetPathName(), Lines, GGameIni);
     if (Lines.Num() > 0)
     {
+        // One key added under the new name hides the whole old section, its capability token included, so every
+        // client then fails with a token mismatch: say which section was dropped.
+        TArray<FString> Legacy;
+        GConfig->GetSection(LegacyConfigSection, Legacy, GGameIni);
+        if (Legacy.Num() > 0)
+        {
+            UE_LOG(LogEngineWireSubsystem, Warning,
+                TEXT("EngineWire ignores the old [%s] section (%d lines, any capability token there included) because [%s] has entries. Move its lines under the new section."),
+                LegacyConfigSection, Legacy.Num(), *GetClass()->GetPathName());
+        }
         return;
     }
     GConfig->GetSection(LegacyConfigSection, Lines, GGameIni);
