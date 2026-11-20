@@ -285,6 +285,9 @@ const testCases = [
     { scenario: 'ACTION: start_profiling', toolName: 'system_control', arguments: {"action": "start_profiling", "duration": 1}, expected: 'success' },
     // === PLAYBACK ===
     { scenario: 'PLAYBACK: stop_profiling', toolName: 'system_control', arguments: {"action": "stop_profiling"}, expected: 'success' },
+    { scenario: 'ACTION: start_profiling runs the CSV profiler', toolName: 'system_control', arguments: {"action": "start_profiling", "format": "csv"}, expected: 'success' },
+    { scenario: 'PLAYBACK: stop_profiling stops the CSV profiler', toolName: 'system_control', arguments: {"action": "stop_profiling", "format": "csv"}, expected: 'success' },
+    { scenario: 'ERROR: read_profile names a capture that is not there', toolName: 'system_control', arguments: {"action": "read_profile", "file": "no-such-capture.csv", "top": 3, "hitchMs": 50}, expected: 'error|PROFILE_NOT_FOUND' },
     // === ACTION ===
     { scenario: 'ACTION: run_benchmark', toolName: 'system_control', arguments: {"action": "run_benchmark", "duration": 1, "type": "CPU"}, expected: 'success' },
     { scenario: 'ERROR: run_benchmark refuses an unknown type', toolName: 'system_control', arguments: {"action": "run_benchmark", "duration": 1, "type": "memory"}, expected: 'error|not a benchmark type' },

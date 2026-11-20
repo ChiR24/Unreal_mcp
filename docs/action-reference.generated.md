@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `85da378b8c1ec0a3`
+Catalog revision: `487404493f4a2c64`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 493 capabilities across
+The catalog declares 494 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -61,11 +61,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 12 | 6 | 6 | 0 | tools |
-| `system_control` | 41 | 12 | 23 | 6 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
+| `system_control` | 42 | 13 | 23 | 6 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-77 of 493 capabilities require consent.
+77 of 494 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -627,6 +627,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.play_sound` | `system_control` | `play_sound_2d` | write | write | none | `system_control.play_sound` |
 | `system_control.profile_performance` | `system_control` | `start_profiling` | write | write | none | `system_control.profile_performance` `system_control.start_profiling` `system_control.stop_profiling` `system_control.run_benchmark` `system_control.generate_memory_report` `system_control.show_stats` |
 | `system_control.read_log` | `system_control` | `manage_logs` | read | read | none | `system_control.read_log` |
+| `system_control.read_profile` | `system_control` | `read_profile` | read | read | none | `system_control.read_profile` |
 | `system_control.remove_cpp_class` | `system_control` | `remove_cpp_class` | destructive | destructive | explicit | `system_control.remove_cpp_class` |
 | `system_control.remove_plugin` | `system_control` | `system_control` | destructive | destructive | explicit | `system_control.remove_plugin` |
 | `system_control.run_build` | `system_control` | `manage_tests` | write | write | none | `system_control.run_build` `system_control.run_tests` `system_control.run_ubt` |

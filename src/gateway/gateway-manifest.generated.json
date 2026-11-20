@@ -21910,6 +21910,7 @@
         "configure_display",
         "console_command",
         "profile_performance",
+        "read_profile",
         "configure_performance",
         "merge_actors",
         "fit_frame_budget",
@@ -21994,11 +21995,13 @@
         "filter",
         "forceLOD",
         "forceRecompile",
+        "format",
         "fov",
         "friendlyName",
         "globalIllumination",
         "hardwareRayTracing",
         "height",
+        "hitchMs",
         "host",
         "includeMetadata",
         "info",
@@ -22079,6 +22082,7 @@
         "template",
         "text",
         "timeoutSeconds",
+        "top",
         "traceFile",
         "type",
         "userIndex",
@@ -22224,7 +22228,7 @@
               "unsubscribe",
               "spawn_category"
             ],
-            "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; no MCP action reads it. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow, inspect get_stats with stats frame answers directly.\nstop: Stop the stats file capture control=start began (stat stopfile); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
+            "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; with format csv, the CSV profiler instead (one row per frame under Saved/Profiling/CSV), which read_profile summarizes. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow right now, inspect get_stats with stats frame answers directly.\nstop: Stop the capture control=start began (stat stopfile; with format csv, the CSV profiler, whose file read_profile then reads); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
           },
           "createdBy": {
             "type": "string",
@@ -22320,9 +22324,18 @@
             "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
           },
           "file": {
-            "type": "string",
-            "description": "Path to a .py file to execute.",
-            "maxLength": 4096
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "A capture's file name in Saved/Profiling/CSV (no folder); the newest one when left out."
+              },
+              {
+                "type": "string",
+                "description": "Path to a .py file to execute.",
+                "maxLength": 4096
+              }
+            ],
+            "description": "A capture's file name in Saved/Profiling/CSV (no folder); the newest one when left out."
           },
           "filename": {
             "type": "string",
@@ -22339,6 +22352,14 @@
           "forceRecompile": {
             "type": "boolean",
             "description": "Recompile every shader, overriding mode (default false); slow on a large project."
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "stats",
+              "csv"
+            ],
+            "description": "stats (default): a .uestats file for Unreal Insights; csv: the CSV profiler, which read_profile reads. Stop it with the same format."
           },
           "fov": {
             "oneOf": [
@@ -22377,6 +22398,11 @@
           "height": {
             "type": "number",
             "description": "Height in pixels."
+          },
+          "hitchMs": {
+            "type": "number",
+            "minimum": 1,
+            "description": "A frame longer than this many milliseconds is a hitch (default 33.3, under 30 fps)."
           },
           "host": {
             "type": "string",
@@ -22938,6 +22964,12 @@
             "type": "number",
             "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
           },
+          "top": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "How many stats and worst frames to list (default 5)."
+          },
           "traceFile": {
             "type": "string",
             "description": "File mode: .utrace file name, resolved inside Saved/Profiling (default a generated McpInsights_<time>.utrace)."
@@ -23002,6 +23034,7 @@
               "configure_display",
               "console_command",
               "profile_performance",
+              "read_profile",
               "configure_performance",
               "merge_actors",
               "fit_frame_budget",

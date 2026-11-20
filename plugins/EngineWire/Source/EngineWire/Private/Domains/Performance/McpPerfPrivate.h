@@ -49,6 +49,8 @@ inline void SendPerfCVarResult(const FPerformanceActionContext& Context, const F
 
 bool HandleMemoryReportAction(const FPerformanceActionContext& Context);
 bool HandleProfilingAction(const FPerformanceActionContext& Context);
+// read_profile: the summary of a CSV profiler capture under Saved/Profiling/CSV (Csv/McpPerfCsvRead.cpp).
+bool HandleReadCsvProfile(const FPerformanceActionContext& Context);
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context);
 bool HandleActorMergeAction(const FPerformanceActionContext& Context);
 bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context);

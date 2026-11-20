@@ -94,7 +94,7 @@ inline const TArray<FString>& AudioAuthoring()
 inline const TArray<FString>& Performance()
 {
 	static const TArray<FString> Actions = {
-		TEXT("start_profiling"), TEXT("stop_profiling"),
+		TEXT("start_profiling"), TEXT("stop_profiling"), TEXT("read_profile"),
 		TEXT("run_benchmark"), TEXT("show_fps"), TEXT("show_stats"),
 		TEXT("generate_memory_report"), TEXT("set_scalability"),
 		TEXT("set_resolution_scale"), TEXT("set_vsync"),

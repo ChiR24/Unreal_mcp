@@ -66,35 +66,46 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         return true;
     }
 
+    if (Context.Lower == TEXT("read_profile"))
+    {
+        return HandleReadCsvProfile(Context);
+    }
+    // format csv runs the CSV profiler (a plain table per frame under Saved/Profiling/CSV, which read_profile summarizes)
+    // instead of the stats file nothing here reads.
+    FString Format;
+    Context.Payload->TryGetStringField(TEXT("format"), Format);
+    const bool bCsv = Format.Equals(TEXT("csv"), ESearchCase::IgnoreCase);
+    const TCHAR* const StopCommand = bCsv ? TEXT("csvprofile stop") : TEXT("stat stopfile");
     if (Context.Lower == TEXT("start_profiling"))
     {
         double Duration = 0.0;
         Context.Payload->TryGetNumberField(TEXT("duration"), Duration);
-        GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat startfile"));
+        GEngine->Exec(GEditor->GetEditorWorldContext().World(), bCsv ? TEXT("csvprofile start") : TEXT("stat startfile"));
         if (Duration > 0.0)
         {
             // duration used to be ignored; stop the capture after it instead of leaving it running.
-            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
+            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([StopCommand](float)
             {
                 if (GEngine && GEditor && GEditor->GetEditorWorldContext().World())
                 {
-                    GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat stopfile"));
+                    GEngine->Exec(GEditor->GetEditorWorldContext().World(), StopCommand);
                 }
                 return false;
             }), static_cast<float>(Duration));
         }
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            Duration > 0.0 ? FString::Printf(TEXT("Profiling started; it stops after %.0fs"), Duration) : FString(TEXT("Profiling started; stop it with stop_profiling")), nullptr);
+            Duration > 0.0 ? FString::Printf(TEXT("Profiling started; it stops after %.0fs"), Duration)
+                           : FString(bCsv ? TEXT("CSV profile started; stop it with stop_profiling format csv") : TEXT("Profiling started; stop it with stop_profiling")), nullptr);
         return true;
     }
 
     if (Context.Lower == TEXT("stop_profiling"))
     {
-        GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat stopfile"));
+        GEngine->Exec(GEditor->GetEditorWorldContext().World(), StopCommand);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Profiling stopped"), nullptr);
+            bCsv ? TEXT("CSV profile stopped; read_profile summarizes it once the file is written") : TEXT("Profiling stopped"), nullptr);
         return true;
     }
 

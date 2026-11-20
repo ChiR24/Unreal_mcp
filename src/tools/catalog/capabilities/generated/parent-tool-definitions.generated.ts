@@ -31478,7 +31478,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "unsubscribe",
             "spawn_category"
           ],
-          "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; no MCP action reads it. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow, inspect get_stats with stats frame answers directly.\nstop: Stop the stats file capture control=start began (stat stopfile); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
+          "description": "Which profile performance variant to run.\nstart: Start recording every stat group to a .uestats file under Saved/Profiling (stat startfile), for Unreal Insights or the Session Frontend to open; with format csv, the CSV profiler instead (one row per frame under Saved/Profiling/CSV), which read_profile summarizes. duration stops it by itself after that many seconds, else it runs until control=stop. To find what makes a frame slow right now, inspect get_stats with stats frame answers directly.\nstop: Stop the capture control=start began (stat stopfile; with format csv, the CSV profiler, whose file read_profile then reads); the file stays under Saved/Profiling.\nbenchmark: Measure the editor as it runs now, over duration seconds (default 10), sampling every frame: frames, averageFps, and with type cpu or all (the default) averageFrameMs, worstFrameMs, bestFrameMs, gameThreadMs and renderThreadMs, with gpu or all gpuMs. A minimized or unfocused editor is throttled and measures slow: focus it, or run during Play to measure the game. A call longer than the client allows answers as a task to poll.\nmemory_report: Generate an engine memory report, optionally detailed.\nshow_stats: Show or hide a stat HUD overlay (e.g. Unit, GPU) in the active editor viewport; the call sets the state rather than toggling it."
         },
         "createdBy": {
           "type": "string",
@@ -31574,9 +31574,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
         },
         "file": {
-          "type": "string",
-          "description": "Path to a .py file to execute.",
-          "maxLength": 4096
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "A capture's file name in Saved/Profiling/CSV (no folder); the newest one when left out."
+            },
+            {
+              "type": "string",
+              "description": "Path to a .py file to execute.",
+              "maxLength": 4096
+            }
+          ],
+          "description": "A capture's file name in Saved/Profiling/CSV (no folder); the newest one when left out."
         },
         "filename": {
           "type": "string",
@@ -31593,6 +31602,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "forceRecompile": {
           "type": "boolean",
           "description": "Recompile every shader, overriding mode (default false); slow on a large project."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "stats",
+            "csv"
+          ],
+          "description": "stats (default): a .uestats file for Unreal Insights; csv: the CSV profiler, which read_profile reads. Stop it with the same format."
         },
         "fov": {
           "oneOf": [
@@ -31631,6 +31648,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "height": {
           "type": "number",
           "description": "Height in pixels."
+        },
+        "hitchMs": {
+          "type": "number",
+          "minimum": 1,
+          "description": "A frame longer than this many milliseconds is a hitch (default 33.3, under 30 fps)."
         },
         "host": {
           "type": "string",
@@ -32192,6 +32214,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Stop a test still running after this many seconds and count it failed (default 60, at most 600)."
         },
+        "top": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "How many stats and worst frames to list (default 5)."
+        },
         "traceFile": {
           "type": "string",
           "description": "File mode: .utrace file name, resolved inside Saved/Profiling (default a generated McpInsights_<time>.utrace)."
@@ -32256,6 +32284,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_display",
             "console_command",
             "profile_performance",
+            "read_profile",
             "configure_performance",
             "merge_actors",
             "fit_frame_budget",
@@ -32591,6 +32620,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "With paths: how many paths were not deleted."
         },
+        "file": {
+          "type": "string",
+          "description": "The capture read."
+        },
         "files": {
           "type": "array",
           "items": {
@@ -32607,6 +32640,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fps": {
           "type": "number",
           "description": "Editor frames a second during the run. Each measure lets 6 frames drain and reads 16, so a low rate leaves knobs unmeasured when the time runs out (they read measured false)."
+        },
+        "frameTime": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "meanMs, p50Ms, p95Ms, maxMs and meanFps."
+        },
+        "frames": {
+          "type": "number",
+          "description": "Frames in it."
         },
         "friendlyName": {
           "type": "string",
@@ -32657,6 +32700,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hint": {
           "type": "string",
           "description": "How to get a full section dump."
+        },
+        "hitchCount": {
+          "type": "number",
+          "description": "Frames over hitchMs."
         },
         "imageBase64": {
           "type": "string",
@@ -33135,6 +33182,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "One row per test run: name (its full path), passed, durationSeconds, errorCount and errors, warningCount and warnings (the first 10 of each), and a note when it timed out or was not run."
         },
+        "topByMean": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "The heaviest stats on average: stat, meanMs, peakMs."
+        },
+        "topByPeak": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "The stats with the highest single frame: stat, meanMs, peakMs."
+        },
         "total": {
           "type": "number",
           "description": "How many files match the root and extension filters, across all pages."
@@ -33191,6 +33256,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Width of the picture in pixels."
+        },
+        "worstFrames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "The worst hitches: frame (its index), frameMs and largest (its heaviest stats)."
         }
       },
       "additionalProperties": true
