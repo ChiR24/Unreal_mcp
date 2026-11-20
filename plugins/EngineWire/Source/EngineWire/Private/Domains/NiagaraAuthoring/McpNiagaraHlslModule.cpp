@@ -75,8 +75,19 @@ bool CreateNiagaraHlslModule(FActionContext& Context)
     }
     UEdGraphPin* OutputMap = Output ? McpNiagaraModuleOrder::MapInputPin(*Output) : nullptr;
     UEdGraphPin* Previous = OutputMap && OutputMap->LinkedTo.Num() > 0 ? OutputMap->LinkedTo[0] : nullptr;
+    // A module that failed is not left in memory, unsaved, for a later save of everything to keep.
+    auto Abandon = [Script, Package]()
+    {
+        if (Script)
+        {
+            Script->ClearFlags(RF_Public | RF_Standalone);
+            Script->MarkAsGarbage();
+        }
+        Package->SetDirtyFlag(false);
+    };
     if (!Previous)
     {
+        Abandon();
         Context.SendError(TEXT("The new module script has no parameter map leading to its output."), TEXT("CREATE_FAILED"));
         return true;
     }
@@ -94,13 +105,16 @@ bool CreateNiagaraHlslModule(FActionContext& Context)
         Usage->GetUnderlyingProperty()->SetIntPropertyValue(Usage->ContainerPtrToValuePtr<void>(Node),
                                                             static_cast<int64>(ENiagaraScriptUsage::Module));
     }
-    Node->ReconstructNode();
+    // A Niagara node does not override ReconstructNode (a no-op on UEdGraphNode), so the pins come from the signature
+    // only through AllocateDefaultPins, as the graph editor's node creator calls it on a node with no pins yet.
+    Node->AllocateDefaultPins();
     UEdGraphPin* MapIn = McpNiagaraModuleOrder::MapInputPin(*Node);
     UEdGraphPin* MapOut = McpNiagaraModuleOrder::MapInputPin(*Node, EGPD_Output);
     const UEdGraphSchema* Schema = Graph->GetSchema();
     Previous->BreakLinkTo(OutputMap);
     if (!MapIn || !MapOut || !Schema->TryCreateConnection(Previous, MapIn) || !Schema->TryCreateConnection(MapOut, OutputMap))
     {
+        Abandon();
         Context.SendError(TEXT("The Custom HLSL node could not be wired onto the module's parameter map."), TEXT("CREATE_FAILED"));
         return true;
     }
