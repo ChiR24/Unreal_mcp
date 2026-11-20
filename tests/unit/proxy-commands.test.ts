@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { PassThrough } from 'node:stream';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -13,7 +14,7 @@ import { doctorLines, nodeLine } from '../../src/proxy/doctor.js';
 import { chooseEndpoint, DEFAULT_UPSTREAM, editorState, notConnectedText, orderInflight, probePid,
   type EndpointFile } from '../../src/proxy/endpoint.js';
 import { launch, mergeJson, runInit, tomlBlock } from '../../src/proxy/init.js';
-import { sendsTokenTo } from '../../src/proxy/native-proxy.js';
+import { sendsTokenTo, startNativeProxy } from '../../src/proxy/native-proxy.js';
 
 let folder = '';
 beforeEach(() => { folder = mkdtempSync(join(tmpdir(), 'ew-init-')); });
@@ -244,5 +245,22 @@ describe('endpoint discovery', () => {
     expect(texts[1]).toContain('It was waiting on a.b');
     expect(texts[2]).toContain('The editor crashed (pid 7, Crash: line one\\u000aline two). It was running c.d');
     expect(texts[3]).toContain('listens on port 3123, but nothing answers there');
+  });
+});
+
+describe('cold cache', () => {
+  it('answers initialize at once with the proxy note when the editor is down and nothing is cached', async () => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    const cacheFile = join(folder, 'proxy-cold.json');
+    const proxy = startNativeProxy({ upstream: 'http://127.0.0.1:1/mcp', cacheFile, input, output, token: async () => undefined });
+    const started = Date.now();
+    const reply = new Promise<string>((done) => { output.once('data', (chunk: Buffer) => done(chunk.toString())); });
+    input.write(`${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {} } })}
+`);
+    const result = JSON.parse(await reply) as { result: { instructions: string } };
+    proxy.close();
+    expect(result.result.instructions).toContain('reached through the unreal-engine-mcp-server proxy');
+    expect(Date.now() - started).toBeLessThan(2500); // a refused connection does not wait out the 3 s
   });
 });

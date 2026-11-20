@@ -283,6 +283,12 @@ export function startNativeProxy(options: NativeProxyOptions = {}): { close: () 
     if (method === 'initialize') {
       const requested = message.params?.protocolVersion;
       clientProtocol = typeof requested === 'string' && NATIVE_PROTOCOLS.includes(requested) ? requested : NATIVE_PROTOCOLS[0];
+      // A cold cache (the first session on this port) asks the editor for its instructions first, for at most 3 s, so
+      // that session gets them too and not only the proxy's note. It is the warm-up notifications/initialized starts,
+      // started sooner; an editor that is down answers at once and the reply is as before.
+      if (!cache.instructions) {
+        await Promise.race([openSession().catch(() => undefined), new Promise<void>((done) => { setTimeout(done, 3000).unref(); })]);
+      }
       // Resource updates ride the upstream session's GET stream, which this proxy never opens (and a restart replaces
       // that session), so it does not offer resources/subscribe.
       const upstreamCapabilities = cache.capabilities ?? { resources: {}, prompts: {}, completions: {} };
