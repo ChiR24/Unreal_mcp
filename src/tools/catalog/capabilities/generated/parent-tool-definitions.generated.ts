@@ -23072,6 +23072,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Capsule half height (default the radius)."
         },
+        "hlsl": {
+          "type": "string",
+          "maxLength": 20000,
+          "description": "The module HLSL; Map is the parameter map (Map.Particles.Position, Map.Engine.DeltaTime)."
+        },
         "info": {
           "type": "string",
           "enum": [
@@ -23378,6 +23383,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "debug_shape",
             "spawn_niagara",
             "create_dynamic_light",
+            "create_niagara_hlsl_module",
             "activate",
             "advance_simulation",
             "add_niagara_module",
@@ -23457,6 +23463,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "moduleInputCopiesWritten": {
           "type": "number",
           "description": "Module input: how many copies of it (one per script that runs the module) took the value; static switch: how many module nodes took it."
+        },
+        "modulePath": {
+          "type": "string",
+          "description": "The module script: the modulePath add_niagara_module takes."
         },
         "nodeId": {
           "type": "string",

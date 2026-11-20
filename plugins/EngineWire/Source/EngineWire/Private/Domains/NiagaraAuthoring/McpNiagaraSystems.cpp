@@ -6,7 +6,7 @@ namespace McpNiagaraAuthoringHandlers
 {
 // The package a new system or emitter goes in: its name given, its path checked, nothing there yet. Null once the
 // refusal is sent.
-static UPackage* NewNiagaraAssetPackage(FActionContext& Context)
+UPackage* NewNiagaraAssetPackage(FActionContext& Context)
 {
     if (Context.Name.IsEmpty())
     {
@@ -261,6 +261,7 @@ bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction
 {
     if (SubAction == TEXT("create_niagara_system")) return CreateNiagaraSystem(Context);
     if (SubAction == TEXT("create_niagara_emitter")) return CreateNiagaraEmitter(Context);
+    if (SubAction == TEXT("create_niagara_hlsl_module")) return CreateNiagaraHlslModule(Context);
     if (SubAction == TEXT("add_emitter_to_system")) return AddEmitterToSystem(Context);
     if (SubAction == TEXT("set_emitter_properties")) return SetEmitterProperties(Context);
     return false;

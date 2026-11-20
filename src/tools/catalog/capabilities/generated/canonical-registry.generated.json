@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "1014ac4d56a45a2c",
-  "recordCount": 508,
+  "catalogRevision": "0d01b001888473e5",
+  "recordCount": 509,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -80472,6 +80472,140 @@
         "algorithm": "sha256",
         "schema": "8aad5f04d5dcd5ceb88edbeb8c4d19dd6bee52f2684396d05549999e891f59c4",
         "content": "f179e84e46bb9fab484dda1429c8bc2ffdf2fa83b881fe5fa872596668570698"
+      }
+    },
+    {
+      "id": "manage_effect.create_niagara_hlsl_module",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_effect",
+          "action": "create_niagara_hlsl_module"
+        }
+      ],
+      "discovery": {
+        "domain": "manage effect",
+        "family": "effect",
+        "topics": [
+          "create_niagara_hlsl_module",
+          "custom hlsl",
+          "niagara hlsl module",
+          "write a niagara module in code",
+          "custom particle behaviour"
+        ],
+        "summary": "Create a Niagara module script named name in path (default /Game) whose work is your HLSL: one Custom HLSL node on the module parameter map, so the code reads and writes particle attributes through Map (Map.Particles.Velocity += float3(0, 0, 100) * Map.Engine.DeltaTime;). Saved unless save is false; add it to an emitter with add_niagara_module (modulePath).",
+        "whenToUse": [
+          "A particle behaviour no stock module offers must be written as code."
+        ],
+        "whenNotToUse": [
+          "A stock module does it (add_force_module, add_velocity_module, add_niagara_module with an engine module)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name for the created asset or actor."
+            },
+            "path": {
+              "type": "string",
+              "description": "Canonical /Game output path for the created asset."
+            },
+            "hlsl": {
+              "type": "string",
+              "maxLength": 20000,
+              "description": "The module HLSL; Map is the parameter map (Map.Particles.Position, Map.Engine.DeltaTime)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the asset to disk (default true); false leaves the change in memory only."
+            }
+          },
+          "required": [
+            "name",
+            "hlsl"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "modulePath": {
+              "type": "string",
+              "description": "The module script: the modulePath add_niagara_module takes."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "The Custom HLSL node."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create a Niagara module script named name in path (default /Game) whose work is your HLSL: one Custom HLSL node on the module parameter map, so the code reads and writes particle attributes through Map (Map.Particles.Velocity += float3(0, 0, 100) * Map.Engine.DeltaTime;). Saved unless save is false; add it to an emitter with add_niagara_module (modulePath).",
+          "input": {
+            "action": "create_niagara_hlsl_module",
+            "name": "NM_Rise",
+            "hlsl": "Map.Particles.Velocity += float3(0, 0, 100) * Map.Engine.DeltaTime;"
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "Niagara"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_effect",
+        "dispatchAction": "create_niagara_hlsl_module"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "dd1410a847b674cc8c0f63913c5a1f47bf8241580814a10949815ea8b0c518bc",
+        "content": "c80eda5ef92345bcf38ffc0a9d7d663aff59a8d2a3c03316177756b300faec65"
       }
     },
     {

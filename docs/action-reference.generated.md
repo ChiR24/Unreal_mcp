@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `1014ac4d56a45a2c`
+Catalog revision: `0d01b001888473e5`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 508 capabilities across
+The catalog declares 509 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -50,7 +50,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_blueprint` | 47 | 15 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
-| `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
+| `manage_effect` | 14 | 2 | 10 | 2 | manage effect |
 | `manage_gas` | 7 | 2 | 5 | 0 | manage gas |
 | `manage_geometry` | 16 | 2 | 14 | 0 | world |
 | `manage_interaction` | 3 | 1 | 2 | 0 | manage interaction |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 508 capabilities require consent.
+77 of 509 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -468,6 +468,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_effect.cleanup` | `manage_effect` | `cleanup` | destructive | destructive | explicit | `manage_effect.cleanup` |
 | `manage_effect.create_dynamic_light` | `manage_effect` | `create_dynamic_light` | write | write | none | `manage_effect.create_dynamic_light` |
 | `manage_effect.create_effect` | `manage_effect` | `create_niagara_system` | write | write | none | `manage_effect.create_effect` `manage_effect.create_niagara_system` `manage_effect.create_niagara_emitter` `manage_effect.create_niagara_ribbon` `manage_effect.create_particle_trail` `manage_effect.create_impact_effect` `manage_effect.create_environment_effect` `manage_effect.create_volumetric_fog` `manage_effect.niagara` `manage_effect.particle` |
+| `manage_effect.create_niagara_hlsl_module` | `manage_effect` | `create_niagara_hlsl_module` | write | write | none | `manage_effect.create_niagara_hlsl_module` |
 | `manage_effect.debug_shape` | `manage_effect` | `debug_shape` | write | write | none | `manage_effect.debug_shape` `manage_effect.clear_debug_shapes` |
 | `manage_effect.edit_niagara_system` | `manage_effect` | `add_emitter_to_system` | write | write | none | `manage_effect.edit_niagara_system` `manage_effect.add_emitter_to_system` `manage_effect.add_user_parameter` `manage_effect.bind_parameter_to_source` `manage_effect.set_parameter_value` `manage_effect.set_niagara_parameter` `manage_effect.set_niagara_dynamic_input` `manage_effect.set_emitter_properties` `manage_effect.enable_gpu_simulation` `manage_effect.connect_niagara_pins` |
 | `manage_effect.get_niagara_info` | `manage_effect` | `get_niagara_info` | read | read | none | `manage_effect.get_niagara_info` `manage_effect.validate_niagara_system` |

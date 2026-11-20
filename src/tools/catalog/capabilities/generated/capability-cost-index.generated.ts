@@ -1128,6 +1128,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_effect::create_environment_effect": "interactive|medium",
   "manage_effect::create_impact_effect": "interactive|medium",
   "manage_effect::create_niagara_emitter": "interactive|medium",
+  "manage_effect::create_niagara_hlsl_module": "interactive|medium",
   "manage_effect::create_niagara_ribbon": "interactive|medium",
   "manage_effect::create_niagara_system": "interactive|medium",
   "manage_effect::create_particle_trail": "interactive|medium",
@@ -1718,4 +1719,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1705;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1706;

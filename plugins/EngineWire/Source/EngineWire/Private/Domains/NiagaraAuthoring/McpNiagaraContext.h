@@ -236,6 +236,10 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
 #endif
 
 bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction);
+// The package a new Niagara asset goes in (McpNiagaraSystems.cpp); null once the refusal is sent.
+UPackage* NewNiagaraAssetPackage(FActionContext& Context);
+// create_niagara_hlsl_module (McpNiagaraHlslModule.cpp).
+bool CreateNiagaraHlslModule(FActionContext& Context);
 bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);

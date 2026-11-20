@@ -9,6 +9,7 @@ bool IsNiagaraAuthoringSubAction(const FString& SubAction)
     static const TSet<FString> NiagaraAuthoringActions = {
         TEXT("create_niagara_system"),
         TEXT("create_niagara_emitter"),
+        TEXT("create_niagara_hlsl_module"),
         TEXT("add_emitter_to_system"),
         TEXT("set_emitter_properties"),
         TEXT("add_spawn_rate_module"),

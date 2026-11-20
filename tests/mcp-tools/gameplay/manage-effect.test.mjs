@@ -34,6 +34,7 @@ const testCases = [
   { scenario: 'ERROR: create_niagara_system refuses a name already taken', toolName: 'manage_effect', arguments: { action: 'create_niagara_system', name: SYSTEM_NAME, path: TEST_FOLDER, save: false }, expected: 'error|already exists' },
   { scenario: 'CREATE: create_niagara_system kept in memory with save false', toolName: 'manage_effect', arguments: { action: 'create_niagara_system', name: `${SYSTEM_NAME}_Unsaved`, path: TEST_FOLDER, save: false }, expected: 'success' },
   { scenario: 'CREATE: create_niagara_emitter', toolName: 'manage_effect', arguments: { action: 'create_niagara_emitter', name: EMITTER_ASSET_NAME, path: TEST_FOLDER, savePath: TEST_FOLDER, save: true }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_niagara_hlsl_module makes a module from HLSL', toolName: 'manage_effect', arguments: { action: 'create_niagara_hlsl_module', name: `NM_McpHlsl_${ts}`, path: TEST_FOLDER, hlsl: 'Map.Particles.Velocity += float3(0, 0, 100) * Map.Engine.DeltaTime;', save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.modulePath', exists: true, label: 'the module script is named' }] },
   { scenario: 'ADD: add_emitter_to_system', toolName: 'manage_effect', arguments: { action: 'add_emitter_to_system', systemPath: SYSTEM_PATH, emitterPath: EMITTER_PATH, emitterName: `MCPEmitter_${ts}`, save: false }, expected: 'success|already exists', captureResult: { key: 'niagaraEmitterName', fromField: 'result.emitterName' } },
 
   // === ACTION ===

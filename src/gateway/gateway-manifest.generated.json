@@ -14767,6 +14767,7 @@
         "debug_shape",
         "spawn_niagara",
         "create_dynamic_light",
+        "create_niagara_hlsl_module",
         "activate",
         "advance_simulation",
         "add_niagara_module",
@@ -14811,6 +14812,7 @@
         "fromNode",
         "fromPin",
         "halfHeight",
+        "hlsl",
         "info",
         "inputName",
         "intensity",
@@ -15098,6 +15100,11 @@
           "halfHeight": {
             "type": "number",
             "description": "Capsule half height (default the radius)."
+          },
+          "hlsl": {
+            "type": "string",
+            "maxLength": 20000,
+            "description": "The module HLSL; Map is the parameter map (Map.Particles.Position, Map.Engine.DeltaTime)."
           },
           "info": {
             "type": "string",
@@ -15405,6 +15412,7 @@
               "debug_shape",
               "spawn_niagara",
               "create_dynamic_light",
+              "create_niagara_hlsl_module",
               "activate",
               "advance_simulation",
               "add_niagara_module",
