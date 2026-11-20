@@ -148,6 +148,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A Border's child**: `set_widget_layout` padding and alignment on a Border's child reach the Border, which draws with its own copy, and a layout write compiles the Widget Blueprint, so Play shows it.
 - **MetaSound defaults**: a single `set_metasound_default` says whether it saved (`saved`), as the batch form does.
 - **Hidden parts in a widget audit**: `audit_widget` names the top of each hidden, collapsed or transparent part it did not judge (`hiddenWidgets`, `hiddenCount`); it skipped them without a word.
+- **Tick checks**: `lint_blueprint` `tick_heavy` warns of a level search (Get All Actors Of Class and its kin, Get Actor Of Class) or a spawn every frame, no longer of a component lookup on the actor itself.
 
 </details>
 

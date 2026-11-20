@@ -53,12 +53,12 @@ TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts)
     return Seen;
 }
 
-// Event Tick, and the pure nodes feeding what it runs, reaching a level search or a spawn: every frame.
+// Event Tick, and the pure nodes feeding what it runs, reaching a level search or a spawn: every frame. A component
+// lookup reads the actor's own few components, not the level: it was warned of as a search, and failed noWarnings.
 void TickHeavy(const UEdGraph* Graph, TArray<FFinding>& Out)
 {
     static const TSet<FName> Heavy = {TEXT("GetAllActorsOfClass"), TEXT("GetAllActorsWithTag"), TEXT("GetAllActorsWithInterface"),
-        TEXT("GetAllActorsOfClassWithTag"), TEXT("GetActorOfClass"), TEXT("GetComponentByClass"), TEXT("K2_GetComponentsByClass"),
-        TEXT("GetComponentsByTag")};
+        TEXT("GetAllActorsOfClassWithTag"), TEXT("GetActorOfClass")};
     static const FName TickEvent(TEXT("ReceiveTick"));
     for (const UEdGraphNode* Node : Graph->Nodes)
     {
