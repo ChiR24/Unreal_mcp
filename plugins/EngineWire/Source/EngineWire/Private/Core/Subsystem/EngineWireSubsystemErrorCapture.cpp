@@ -149,6 +149,43 @@ TArray<FString> UEngineWireSubsystem::EndErrorCapture()
     return AllMessages;
 }
 
+// Request id -> the warnings its earlier brackets captured (game thread). The crash notice a dispatch logs, or an engine
+// warning before a playtest or a test run answers, reached no reply: the latent reply opened a fresh capture.
+// ponytail: a call that never answers leaves its entry; past 64 the map starts over, add expiry if that ever matters.
+static TMap<FString, TArray<FString>> GHeldWarnings;
+
+void UEngineWireSubsystem::HoldCapturedWarnings(const FString& RequestId)
+{
+    FScopeLock Lock(&ErrorCaptureMutex);
+    if (RequestId.IsEmpty() || CurrentErrorCapture.WarningMessages.Num() == 0)
+    {
+        return;
+    }
+    if (GHeldWarnings.Num() >= 64 && !GHeldWarnings.Contains(RequestId))
+    {
+        GHeldWarnings.Reset();
+    }
+    GHeldWarnings.Add(RequestId, CurrentErrorCapture.WarningMessages);
+}
+
+void UEngineWireSubsystem::ReturnHeldWarnings(const FString& RequestId)
+{
+    TArray<FString> Held;
+    if (!GHeldWarnings.RemoveAndCopyValue(RequestId, Held))
+    {
+        return;
+    }
+    FScopeLock Lock(&ErrorCaptureMutex);
+    for (const FString& Line : Held)
+    {
+        if (CurrentErrorCapture.WarningMessages.Num() < MaxCapturedRequestMessages)
+        {
+            CurrentErrorCapture.WarningMessages.Add(Line);
+        }
+    }
+    CurrentErrorCapture.WarningCount += Held.Num();
+}
+
 bool UEngineWireSubsystem::HasCapturedErrors() const
 {
     FScopeLock Lock(&ErrorCaptureMutex);

@@ -136,6 +136,10 @@ public:
 
   void BeginErrorCapture();
   TArray<FString> EndErrorCapture();
+  // A call that has not answered when its dispatch (or a latent step) ends keeps the warnings captured so far, which a
+  // fresh capture would drop: HoldCapturedWarnings before the bracket ends, ReturnHeldWarnings after the next begins.
+  void HoldCapturedWarnings(const FString& RequestId);
+  void ReturnHeldWarnings(const FString& RequestId);
   bool HasCapturedErrors() const;
   int32 GetCapturedErrorCount() const;
   TArray<FString> GetCapturedErrorMessages() const;

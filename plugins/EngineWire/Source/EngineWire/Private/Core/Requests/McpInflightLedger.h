@@ -27,6 +27,9 @@ public:
     /** The call answered (any outcome): it leaves the file. */
     void Done(const FString& RequestId);
 
+    /** Whether the call is listed: dispatched and not answered yet. */
+    bool IsOpen(const FString& RequestId);
+
     /**
      * At startup, before the first call: entries another editor process left in inflight.json (it ended while running
      * them) move into last-crash.json with that process's id and, when the crash reporter wrote one, its report; then

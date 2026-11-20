@@ -136,4 +136,29 @@ bool FMcpInflightLedgerTestSubsystemTest::RunTest(const FString& Parameters)
     return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpInflightHeldWarningsTest,
+    "EngineWire.Core.InflightLedger.HeldWarnings",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpInflightHeldWarningsTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    // A call that answers later (a test run, a playtest) replies from a fresh capture: what its dispatch logged, such as
+    // the notice that the last editor died in this capability, is held for it and handed back once.
+    UEngineWireSubsystem* Subsystem = NewObject<UEngineWireSubsystem>();
+    auto Has = [](const TArray<FString>& Lines) { return Lines.ContainsByPredicate([](const FString& Line) { return Line.Contains(TEXT("held-warning-probe")); }); };
+    Subsystem->BeginErrorCapture();
+    UE_LOG(LogTemp, Warning, TEXT("held-warning-probe: logged before the call answers"));
+    Subsystem->HoldCapturedWarnings(TEXT("held-probe"));
+    TestTrue(TEXT("the dispatch bracket captured it"), Has(Subsystem->EndErrorCapture()));
+    Subsystem->BeginErrorCapture();
+    Subsystem->ReturnHeldWarnings(TEXT("held-probe"));
+    TestTrue(TEXT("the bracket that answers has it back"), Has(Subsystem->EndErrorCapture()));
+    Subsystem->BeginErrorCapture();
+    Subsystem->ReturnHeldWarnings(TEXT("held-probe"));
+    TestFalse(TEXT("once"), Has(Subsystem->EndErrorCapture()));
+    return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

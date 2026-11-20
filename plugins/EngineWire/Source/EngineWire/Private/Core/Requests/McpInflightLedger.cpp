@@ -119,6 +119,12 @@ void FMcpInflightLedger::Done(const FString& RequestId)
     }
 }
 
+bool FMcpInflightLedger::IsOpen(const FString& RequestId)
+{
+    FScopeLock Guard(&Mutex);
+    return Entries.ContainsByPredicate([&RequestId](const FEntry& Entry) { return Entry.RequestId == RequestId; });
+}
+
 int32 FMcpInflightLedger::Start()
 {
     FScopeLock Guard(&Mutex);

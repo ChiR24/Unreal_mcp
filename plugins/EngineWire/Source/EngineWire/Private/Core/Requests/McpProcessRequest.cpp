@@ -207,6 +207,7 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
       bool bHadEngineErrors = false;
       if (bErrorCaptureStarted)
       {
+        if (FMcpInflightLedger::Get().IsOpen(RequestId)) HoldCapturedWarnings(RequestId); // for the reply sent later
         CapturedErrors = EndErrorCapture();
         bHadEngineErrors = HasCapturedErrors();
       }
@@ -336,11 +337,13 @@ void UEngineWireSubsystem::RunLatentReply(const FString &RequestId, const FStrin
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
   bProcessingAutomationRequest = true;
   BeginErrorCapture();
+  ReturnHeldWarnings(RequestId);
   McpChangeWatch::Begin(RequestId);
   McpUndoLedger::Begin(RequestId);
   McpChangeJournal::BeginRequest(RequestId, Action);
   Work();
   McpUndoLedger::Flush();
+  if (FMcpInflightLedger::Get().IsOpen(RequestId)) HoldCapturedWarnings(RequestId); // still waiting: for a later step
   EndErrorCapture();
   McpChangeWatch::End();
   McpUndoLedger::End();
