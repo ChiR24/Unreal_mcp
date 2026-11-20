@@ -18,11 +18,9 @@
     "EngineWire/Private/Domains/PCG/McpPCGSpawnerSettings.cpp": 1,
     "EngineWire/Private/Domains/Skeleton/SkinWeights/McpSkeletonAutoSkinWeights.cpp": 1,
     "EngineWire/Private/Domains/Skeleton/SkinWeights/McpSkeletonSkinWeightSource.h": 1,
-    "EngineWire/Private/Domains/SystemControl/Plugins/McpGameFeatures.cpp": 1,
     "EngineWire/Private/Domains/Ui/McpUiScreenshot.cpp": 1,
     "EngineWire/Private/Foundation/BridgeHelpers/Security/McpProjectPaths.h": 1,
-    "EngineWire/Private/Foundation/Render/McpConsoleVariableWrite.h": 1,
-    "EngineWireGameFeatures/Private/EngineWireGameFeaturesModule.cpp": 3
+    "EngineWire/Private/Foundation/Render/McpConsoleVariableWrite.h": 1
   },
   "buildCs": {
     "EngineWire/EngineWire.Build.cs": 2

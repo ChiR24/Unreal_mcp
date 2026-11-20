@@ -9,9 +9,8 @@
 
 #include "Features/IModularFeatures.h"
 #include "Modules/ModuleManager.h"
-#include "Runtime/Launch/Resources/Version.h"
 
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_GAME_FEATURES_PUBLIC_STATE
 #include "AssetToolsModule.h"
 #include "GameFeatureData.h"
 #include "GameFeaturePluginOperationResult.h"
@@ -119,14 +118,14 @@ class FEngineWireGameFeaturesModule final : public IModuleInterface
 public:
 	virtual void StartupModule() override
 	{
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_GAME_FEATURES_PUBLIC_STATE
 		IModularFeatures::Get().RegisterModularFeature(IMcpGameFeaturesProvider::FeatureName(), &GProvider);
 #endif
 	}
 
 	virtual void ShutdownModule() override
 	{
-#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+#if MCP_HAS_GAME_FEATURES_PUBLIC_STATE
 		IModularFeatures::Get().UnregisterModularFeature(IMcpGameFeaturesProvider::FeatureName(), &GProvider);
 #endif
 	}

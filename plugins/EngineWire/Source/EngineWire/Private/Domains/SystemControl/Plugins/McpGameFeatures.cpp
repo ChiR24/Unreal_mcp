@@ -12,11 +12,11 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpGameFeaturesProvider.h"
 #include "Modules/ModuleManager.h"
-#include "Runtime/Launch/Resources/Version.h"
 #include "Core/Compatibility/McpCompiledFeatures.h"
 
-// Before 5.1 the engine keeps game feature plugins' state private, so their records read unavailable there.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 1
+// Where the engine keeps game feature plugins' state private (no public state list, as on 5.0), their records read
+// unavailable.
+#if !MCP_HAS_GAME_FEATURES_PUBLIC_STATE
 #define MCP_GAME_FEATURES_REACHABLE 0
 #else
 #define MCP_GAME_FEATURES_REACHABLE 1
