@@ -34,35 +34,6 @@ bool FRunner::Run(const TArray<FSExpr>& Forms)
     return Stmts(Forms, 0, FNames());
 }
 
-int64 FRunner::SizeOf(const TSharedPtr<FJsonValue>& Value)
-{
-    if (const int64* Known = Sizes.Find(Value))
-    {
-        return *Known;
-    }
-    int64 Nodes = 1;
-    const EJson Type = Value.IsValid() ? Value->Type : EJson::Null;
-    if (Type == EJson::Array)
-    {
-        for (const TSharedPtr<FJsonValue>& Item : Value->AsArray())
-        {
-            Nodes += SizeOf(Item);
-        }
-    }
-    else if (Type == EJson::Object)
-    {
-        for (const auto& Field : Value->AsObject()->Values)
-        {
-            Nodes += SizeOf(Field.Value);
-        }
-    }
-    if (Type == EJson::Array || Type == EJson::Object)
-    {
-        Sizes.Add(Value, Nodes);
-    }
-    return Nodes;
-}
-
 bool FRunner::Stmts(const TArray<FSExpr>& Body, int32 From, FNames Names)
 {
     for (int32 At = From; At < Body.Num() && !bReturned; ++At)
@@ -188,6 +159,36 @@ bool FRunner::Eval(const FSExpr& Expr, const FNames& Names, TSharedPtr<FJsonValu
     if (HeadIs(Expr, TEXT("if")))
     {
         return Eval(Expr.Items[1], Names, Out) && Eval(Expr.Items[IsTrue(Out) ? 2 : 3], Names, Out);
+    }
+    // (map item list value) collects a list: a loop's lets bind nothing outside it, so none could gather one.
+    if (HeadIs(Expr, TEXT("map")))
+    {
+        TSharedPtr<FJsonValue> Over;
+        if (!Eval(Expr.Items[2], Names, Over))
+        {
+            return false;
+        }
+        if (!Over.IsValid() || Over->Type != EJson::Array)
+        {
+            return Fail(Expr.Line, TEXT("SCRIPT_TYPE"), FString::Printf(TEXT("(map %s ...) goes over a list, and this value is not one."), *Expr.Items[1].Text));
+        }
+        TArray<TSharedPtr<FJsonValue>> Made;
+        int64 Nodes = 1;
+        for (const TSharedPtr<FJsonValue>& Item : Over->AsArray())
+        {
+            FNames Inner = Names;
+            Inner.Add(Expr.Items[1].Text, Item);
+            if (!Eval(Expr.Items[3], Inner, Made.AddDefaulted_GetRef()))
+            {
+                return false;
+            }
+            if ((Nodes += SizeOf(Made.Last())) > MaxValueNodes)
+            {
+                return Fail(Expr.Line, TEXT("SCRIPT_BUDGET"), FString::Printf(TEXT("the value would hold over %d items, a value used twice counting twice."), MaxValueNodes));
+            }
+        }
+        Out = MakeShared<FJsonValueArray>(Made);
+        return true;
     }
     TArray<TSharedPtr<FJsonValue>> Args;
     const bool bShortCircuit = HeadIs(Expr, TEXT("and")) || HeadIs(Expr, TEXT("or"));

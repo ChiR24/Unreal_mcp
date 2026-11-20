@@ -11,7 +11,7 @@ using McpGraphCode::FSExpr;
 namespace ScriptCheckParts
 {
 const TCHAR* const Expressions = TEXT("a call (capability.id :param value ...), (not a), (and a b), (or a b), (if cond a b), "
-                                      "a comparison (== a b) or (< a b), arithmetic (+ a b), (range n), (list ...), "
+                                      "a comparison (== a b) or (< a b), arithmetic (+ a b), (range n), (list ...), (map item list value), "
                                       "(obj :key value ...), a literal or a name");
 
 bool IsKey(const FSExpr& Item)
@@ -23,25 +23,6 @@ bool IsPlainName(const FSExpr& Item)
 {
     return Item.Type == FSExpr::EType::Symbol && !Item.Text.IsEmpty() && !Item.Text.Contains(TEXT(".")) &&
            !Item.Text.StartsWith(TEXT(":")) && Item.Text != TEXT("null");
-}
-
-TArray<FString> ParamNames(const TSharedPtr<FJsonObject>* Properties)
-{
-    TArray<FString> Names;
-    if (!Properties)
-    {
-        return Names;
-    }
-    for (const auto& Property : (*Properties)->Values)
-    {
-        const FString Name(*Property.Key); // keyed by FString before 5.8, a shared string from 5.8
-        if (Name != TEXT("action"))
-        {
-            Names.Add(Name);
-        }
-    }
-    Names.Sort();
-    return Names;
 }
 
 struct FChecker
@@ -167,6 +148,15 @@ bool FChecker::Expr(const FSExpr& Form, const TSet<FString>& Bound)
     if (IsCall(Form))
     {
         return CallForm(Form, Bound);
+    }
+    // (map item list value): the value once per item of the list, item bound there only.
+    if (HeadIs(Form, TEXT("map")))
+    {
+        TSet<FString> Inner = Bound;
+        const bool bShaped = Form.Items.Num() == 4 && IsPlainName(Form.Items[1]);
+        Inner.Add(bShaped ? Form.Items[1].Text : FString());
+        return bShaped ? Expr(Form.Items[2], Bound) && Expr(Form.Items[3], Inner)
+                       : Fail(Form.Line, TEXT("SCRIPT_INVALID"), TEXT("(map item list value) takes a plain name, a list and the value to make of each item."));
     }
     const int32 Args = Form.Items.Num() - 1;
     // Stmt takes the statement (if ...); in a value's place it is (if cond a b), the names in both values checked

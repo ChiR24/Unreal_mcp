@@ -57,6 +57,25 @@ bool EvalAtom(const McpGraphCode::FSExpr& Expr, const FNames& Names, TSharedPtr<
 TSharedPtr<FJsonValue> Apply(const FString& Op, const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B);
 /** Truth of a value: false, 0, "", null, an empty array or object are false. */
 bool IsTrue(const TSharedPtr<FJsonValue>& Value);
+// A contract's parameter names, sorted, action left out (an UNDECLARED_PARAMETER refusal lists them).
+inline TArray<FString> ParamNames(const TSharedPtr<FJsonObject>* Properties)
+{
+    TArray<FString> Names;
+    if (!Properties)
+    {
+        return Names;
+    }
+    for (const auto& Property : (*Properties)->Values)
+    {
+        const FString Name(*Property.Key); // keyed by FString before 5.8, a shared string from 5.8
+        if (Name != TEXT("action"))
+        {
+            Names.Add(Name);
+        }
+    }
+    Names.Sort();
+    return Names;
+}
 
 // McpScriptCheck.cpp
 /** The canonical id of a capability named by id or by a unique alias; empty when none. */

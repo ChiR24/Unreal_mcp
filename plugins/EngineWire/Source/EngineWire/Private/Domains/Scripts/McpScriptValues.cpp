@@ -218,4 +218,34 @@ bool IsTrue(const TSharedPtr<FJsonValue>& Value)
     default: return false;
     }
 }
+// Held here, beside the values it measures, to keep the runner under its line cap.
+int64 FRunner::SizeOf(const TSharedPtr<FJsonValue>& Value)
+{
+    if (const int64* Known = Sizes.Find(Value))
+    {
+        return *Known;
+    }
+    int64 Nodes = 1;
+    const EJson Type = Value.IsValid() ? Value->Type : EJson::Null;
+    if (Type == EJson::Array)
+    {
+        for (const TSharedPtr<FJsonValue>& Item : Value->AsArray())
+        {
+            Nodes += SizeOf(Item);
+        }
+    }
+    else if (Type == EJson::Object)
+    {
+        for (const auto& Field : Value->AsObject()->Values)
+        {
+            Nodes += SizeOf(Field.Value);
+        }
+    }
+    if (Type == EJson::Array || Type == EJson::Object)
+    {
+        Sizes.Add(Value, Nodes);
+    }
+    return Nodes;
+}
+
 } // namespace McpScript

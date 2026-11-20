@@ -48,6 +48,10 @@ bool FMcpScriptTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("names are checked in the value not picked too"), CodeOf(TEXT("(let x (if true 1 nobody))"), None),
               FString(TEXT("SCRIPT_UNBOUND_NAME")));
     TestEqual(TEXT("the statement if still needs no else"), CodeOf(TEXT("(if true (let x 1))"), None), FString(TEXT("ok")));
+    TestEqual(TEXT("(map item list value) is a value"), CodeOf(TEXT("(let xs (map a (range 3) (+ a 1)))\n(return xs)"), None), FString(TEXT("ok")));
+    TestEqual(TEXT("a map's item is not bound after it"), CodeOf(TEXT("(let xs (map a (range 3) a))\n(return a)"), None),
+              FString(TEXT("SCRIPT_UNBOUND_NAME")));
+    TestEqual(TEXT("a map takes a plain name"), CodeOf(TEXT("(let xs (map 1 (range 3) 2))"), None), FString(TEXT("SCRIPT_INVALID")));
     TArray<FSExpr> Lone;
     FString Why;
     FString WhyCode;
@@ -102,6 +106,9 @@ bool FMcpScriptTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("a false cond picks b, a never evaluated; an empty list is false, as for the statement if"),
               Picks(TEXT("(return (if (list) (/ 1 0) 50))")), 50.0);
     TestEqual(TEXT("a value if inside an operator"), Picks(TEXT("(let a 1)\n(return (+ (if (== a 1) 10 20) 1))")), 11.0);
+    // A loop's lets bind nothing outside it, so no list could be gathered in one; map makes one value per item.
+    TestEqual(TEXT("map collects one value per item"), Picks(TEXT("(let xs (map a (list 1 2 3) (* a 2)))\n(return (+ xs.0 xs.2))")), 8.0);
+    TestEqual(TEXT("a map over no list stops the script"), Picks(TEXT("(return (map a 5 a))")), -1.0);
 
     // A pass after a wait on a step goes again from the first form: run twice, the runner rebuilds its values and
     // returns what it did the first time.
