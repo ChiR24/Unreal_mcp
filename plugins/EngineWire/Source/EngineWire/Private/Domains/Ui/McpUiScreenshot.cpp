@@ -66,6 +66,14 @@ bool HandleScreenshotAction(
     bResponseSent = true;
     return true;
   }
+  if (McpScreenshotGoesNowhere(Payload)) {
+    Message = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere. Nothing was captured.");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message, Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
+  }
 
   FString ScreenshotPath;
   if (!ResolveScreenshotDirectoryForMcp(
@@ -279,12 +287,7 @@ bool HandleScreenshotAction(
   // As the editor captures: pixels drawn while shaders compile show the default material.
   McpAddShaderCompileState(Resp, Payload);
 
-  if (!bKeepFile && !bReturnBase64) {
-    bSuccess = false;
-    Message = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-    Resp->SetStringField(TEXT("error"), Message);
-  } else if (!bSaved && !bReturnBase64) {
+  if (!bSaved && !bReturnBase64) {
     bSuccess = false;
     Message =
         TEXT("Screenshot captured but failed to save, and returnBase64=false leaves no image output.");

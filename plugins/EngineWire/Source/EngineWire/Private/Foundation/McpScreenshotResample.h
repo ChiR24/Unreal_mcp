@@ -33,6 +33,10 @@ bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
  */
 bool McpScreenshotReturnsImage(const TSharedPtr<FJsonObject> &Payload);
 
+/** keepFile false and returnBase64 false: the picture would go nowhere. The screenshot handlers refuse it before a
+ *  window is restored or a frame drawn. */
+bool McpScreenshotGoesNowhere(const TSharedPtr<FJsonObject> &Payload);
+
 /** The box an inline image fits when no resolution was asked for: a native
  *  2580x1460 editor window is ~2 MB of PNG and can pass the 3 MB base64 cap
  *  once busy, while 1600x900 stays well under it. */

@@ -95,10 +95,8 @@ void SendScreenshotReceiptForMcp(UEngineWireSubsystem *Subsystem,
 
   FString Error;
   FString ErrorCode;
-  if (!bKeepFile && !bReturnBase64) {
-    Error = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-  } else if (!bSaved && !bReturnBase64) {
+  // keepFile false with returnBase64 false was refused before the capture (McpScreenshotGoesNowhere).
+  if (!bSaved && !bReturnBase64) {
     Error = FString::Printf(TEXT("%s captured but failed to save to %s, and returnBase64=false leaves no image output."),
                             What, *FullPath);
     ErrorCode = TEXT("SAVE_FAILED");

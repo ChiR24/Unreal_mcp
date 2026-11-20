@@ -4,6 +4,13 @@
 bool UEngineWireSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  // Refused before the shader wait, the window restore and the capture, which it once ran first.
+  if (McpScreenshotGoesNowhere(Payload)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere. Nothing was captured."),
+                              nullptr);
+    return true;
+  }
   // waitForShaders: capture once the shader queue drains. The wait polls on the core ticker, so the game thread
   // keeps running and the compiling can finish; the call resumes here with shaderWait in the payload.
   if (McpDeferForShaderCompile(

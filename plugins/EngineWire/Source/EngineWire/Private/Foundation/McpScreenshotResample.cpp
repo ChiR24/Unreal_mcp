@@ -31,6 +31,14 @@ bool McpScreenshotReturnsImage(const TSharedPtr<FJsonObject> &Payload) {
   return bReturnBase64;
 }
 
+bool McpScreenshotGoesNowhere(const TSharedPtr<FJsonObject> &Payload) {
+  bool bKeepFile = true;
+  if (Payload.IsValid()) {
+    Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+  }
+  return !bKeepFile && !McpScreenshotReturnsImage(Payload);
+}
+
 bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
                                        FIntPoint SourceSize, FIntPoint &OutSize,
                                        FString &OutError) {
