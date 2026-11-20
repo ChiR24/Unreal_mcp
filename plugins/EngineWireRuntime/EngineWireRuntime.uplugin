@@ -1,0 +1,30 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "EngineWire Runtime",
+  "Description": "Loopback MCP reads of a running Development or Test game (actors, transforms, frame cost, screenshots), started only with -EngineWireRuntime. Never part of a Shipping build.",
+  "Category": "Developer|Automation|AI",
+  "CreatedBy": "ChiR24",
+  "CreatedByURL": "https://github.com/ChiR24/Unreal_mcp",
+  "DocsURL": "https://github.com/ChiR24/Unreal_mcp#readme",
+  "MarketplaceURL": "",
+  "SupportURL": "https://github.com/ChiR24/Unreal_mcp/discussions",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": true,
+  "EnabledByDefault": false,
+  "SupportsUEBuildSystem": true,
+  "Modules": [
+    {
+      "Name": "EngineWireRuntime",
+      "Type": "DeveloperTool",
+      "LoadingPhase": "Default",
+      "PlatformAllowList": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    }
+  ]
+}
