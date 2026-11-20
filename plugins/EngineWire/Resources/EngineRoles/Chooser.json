@@ -1,0 +1,14 @@
+{
+  "domain": "Chooser",
+  "plugin": "Chooser",
+  "why": "Chooser tables, reached by reflection only (no link to the Chooser plugin): their columns and results are instanced structs, and a table is evaluated through the plugin's own Blueprint function.",
+  "roles": [
+    { "id": "Chooser.Table", "kind": "class", "path": "/Script/Chooser.ChooserTable" },
+    { "id": "Chooser.Library", "kind": "class", "path": "/Script/Chooser.ChooserFunctionLibrary" },
+    { "id": "Chooser.Columns", "kind": "property", "owner": "Chooser.Table", "name": "ColumnsStructs",
+      "type": { "array": { "cpp": "FInstancedStruct" } }, "words": ["columns", "structs"] },
+    { "id": "Chooser.Results", "kind": "property", "owner": "Chooser.Table", "name": "ResultsStructs",
+      "type": { "array": { "cpp": "FInstancedStruct" } }, "words": ["results", "structs"] },
+    { "id": "Chooser.Evaluate", "kind": "function", "owner": "Chooser.Library", "name": "EvaluateChooser" }
+  ]
+}

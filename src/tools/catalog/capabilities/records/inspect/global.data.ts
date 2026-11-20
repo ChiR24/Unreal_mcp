@@ -250,6 +250,44 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       },
     },
   }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'audit_style', dispatchAction: 'audit_style', domain: D, family: 'global',
+    topics: ['style outliers', 'scale outlier', 'inconsistent scale', 'mis-scaled prop', 'level consistency'],
+    summary: 'Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level\'s own median (a crate at 3x among forty at 1x).',
+    whenToUse: [
+      'A dressed level should be checked for props scaled unlike their siblings before review.',
+      'You placed many copies of a mesh and want the ones that drifted named.',
+    ],
+    whenNotToUse: ['Actors overlap, float or sink; use control_actor audit_placement.'],
+    inputProps: {
+      threshold: { type: 'number', minimum: 2, maximum: 10, description: 'How far from the median a copy must sit to be named, in robust standard deviations (median absolute deviation); 3.5 when omitted.' },
+      minCopies: { type: 'integer', minimum: 3, maximum: 100, description: 'Meshes with fewer placed copies than this are not judged; 5 when omitted.' },
+    },
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'audit_style', threshold: 3.5, minCopies: 5 },
+    exampleOutput: {
+      success: true, message: 'Copies scaled unlike the others of their mesh: 1 (largest score first).', outlierCount: 1, actorsRead: 46,
+      outliers: [{ actor: 'Crate_12', mesh: '/Game/Props/SM_Crate.SM_Crate', scale: 3, typicalScale: 1, score: 20 }],
+    },
+    outputProps: {
+      outliers: {
+        type: 'array',
+        description: 'Up to 50 copies, largest score first.',
+        items: {
+          type: 'object', additionalProperties: false, properties: {
+            actor: { type: 'string', description: 'The actor label.' },
+            mesh: { type: 'string', description: 'The static mesh it places.' },
+            scale: { type: 'number', description: 'Its largest scale axis.' },
+            typicalScale: { type: 'number', description: 'The median of that mesh\'s copies.' },
+            score: { type: 'number', description: 'Distance from the median in robust standard deviations.' },
+          },
+        },
+      },
+      outlierCount: { type: 'number', description: 'Copies named, before the 50-row cap.' },
+      actorsRead: { type: 'number', description: 'Static mesh actors read in the open level.' },
+    },
+  }),
 ];
 
 export const EDITOR_SETTINGS_RECORD: CapabilityRecordSource = buildCoreRecord({

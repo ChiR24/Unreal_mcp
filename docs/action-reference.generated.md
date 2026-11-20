@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `966d6b3060012606`
+Catalog revision: `828533b38532d912`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 502 capabilities across
+The catalog declares 504 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,11 +39,11 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 33 | 6 | 25 | 2 | animation physics |
+| `animation_physics` | 34 | 7 | 25 | 2 | animation physics |
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
-| `inspect` | 29 | 24 | 4 | 1 | inspect |
+| `inspect` | 30 | 25 | 4 | 1 | inspect |
 | `manage_ai` | 19 | 5 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 502 capabilities require consent.
+77 of 504 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -173,6 +173,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.edit_skeleton` | `animation_physics` | `add_bone` | write | write | none | `animation_physics.edit_skeleton` `animation_physics.add_bone` `animation_physics.rename_bone` `animation_physics.set_bone_parent` `animation_physics.set_bone_transform` `animation_physics.create_virtual_bone` |
 | `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` `animation_physics.copy_weights` `animation_physics.mirror_weights` `animation_physics.prune_weights` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
+| `animation_physics.get_chooser_table` | `animation_physics` | `get_chooser_table` | read | read | none | `animation_physics.get_chooser_table` |
 | `animation_physics.get_control_rig` | `animation_physics` | `get_control_rig` | read | read | none | `animation_physics.get_control_rig` |
 | `animation_physics.get_pose_search_database` | `animation_physics` | `get_pose_search_database` | read | read | none | `animation_physics.get_pose_search_database` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
@@ -375,6 +376,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.add_tag` | `inspect` | `control_actor` | write | write | none | `inspect.add_tag` |
 | `inspect.analyze_view` | `inspect` | `analyze_view` | read | read | none | `inspect.analyze_view` |
 | `inspect.audit_materials` | `inspect` | `audit_materials` | read | read | none | `inspect.audit_materials` |
+| `inspect.audit_style` | `inspect` | `audit_style` | read | read | none | `inspect.audit_style` |
 | `inspect.capture_passes` | `inspect` | `capture_passes` | read | read | none | `inspect.capture_passes` |
 | `inspect.changes_since` | `inspect` | `changes_since` | read | read | none | `inspect.changes_since` |
 | `inspect.check_mesh` | `inspect` | `check_mesh` | read | read | none | `inspect.check_mesh` |

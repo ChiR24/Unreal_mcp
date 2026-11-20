@@ -1,4 +1,28 @@
 {
+  "Chooser.Table": {
+    "5.0": null,
+    "5.1": "e:UChooserTable",
+    "5.2": "e:UChooserTable",
+    "5.3": "e:UChooserTable",
+    "5.4": "e:UChooserTable",
+    "5.5": "e:UChooserTable",
+    "5.6": "e:UChooserTable",
+    "5.7": "e:UChooserTable",
+    "5.8": "e:UChooserTable",
+    "5.9": "e:UChooserTable"
+  },
+  "Chooser.Library": {
+    "5.0": null,
+    "5.1": null,
+    "5.2": "e:UChooserFunctionLibrary",
+    "5.3": "e:UChooserFunctionLibrary",
+    "5.4": "e:UChooserFunctionLibrary",
+    "5.5": "e:UChooserFunctionLibrary",
+    "5.6": "e:UChooserFunctionLibrary",
+    "5.7": "e:UChooserFunctionLibrary",
+    "5.8": "e:UChooserFunctionLibrary",
+    "5.9": "e:UChooserFunctionLibrary"
+  },
   "MVVM.BlueprintView": {
     "5.0": null,
     "5.1": "e:UMVVMBlueprintView",
@@ -130,6 +154,42 @@
     "5.7": "e:UPoseSearchSchema",
     "5.8": "e:UPoseSearchSchema",
     "5.9": "e:UPoseSearchSchema"
+  },
+  "Chooser.Columns": {
+    "5.0": null,
+    "5.1": null,
+    "5.2": "e:ColumnsStructs",
+    "5.3": "e:ColumnsStructs",
+    "5.4": "e:ColumnsStructs",
+    "5.5": "e:ColumnsStructs",
+    "5.6": "e:ColumnsStructs",
+    "5.7": "e:ColumnsStructs",
+    "5.8": "e:ColumnsStructs",
+    "5.9": "e:ColumnsStructs"
+  },
+  "Chooser.Results": {
+    "5.0": null,
+    "5.1": null,
+    "5.2": "e:ResultsStructs",
+    "5.3": "e:ResultsStructs",
+    "5.4": "e:ResultsStructs",
+    "5.5": "e:ResultsStructs",
+    "5.6": "e:ResultsStructs",
+    "5.7": "e:ResultsStructs",
+    "5.8": "e:ResultsStructs",
+    "5.9": "e:ResultsStructs"
+  },
+  "Chooser.Evaluate": {
+    "5.0": null,
+    "5.1": null,
+    "5.2": "e:EvaluateChooser",
+    "5.3": "e:EvaluateChooser",
+    "5.4": "e:EvaluateChooser",
+    "5.5": "e:EvaluateChooser",
+    "5.6": "e:EvaluateChooser",
+    "5.7": "e:EvaluateChooser",
+    "5.8": "e:EvaluateChooser",
+    "5.9": "e:EvaluateChooser"
   },
   "MVVM.View.ViewModels": {
     "5.0": null,

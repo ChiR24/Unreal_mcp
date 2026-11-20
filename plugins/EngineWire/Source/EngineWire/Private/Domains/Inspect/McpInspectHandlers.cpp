@@ -1,4 +1,5 @@
 #include "Domains/Inspect/McpInspectShared.h"
+#include "Domains/Inspect/Style/McpStyleOutliers.h"
 #include "Core/Journal/McpChangeJournal.h"
 #include "Domains/ConsoleCommand/McpConsolePrivate.h"
 #include "Domains/Debug/Explain/McpExplain.h"
@@ -68,6 +69,10 @@ bool UEngineWireSubsystem::HandleInspectAction(
                                                static_cast<int32>(Roles->GetNumberField(TEXT("count")))),
                                Roles, FString());
         return true;
+    }
+    if (LowerSubAction.Equals(TEXT("audit_style")))
+    {
+        return McpStyleOutliers::HandleAuditStyle(this, RequestId, Payload, RequestingSocket);
     }
     if (LowerSubAction.Equals(TEXT("get_blueprint_details")))
     {

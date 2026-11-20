@@ -129,6 +129,7 @@ const testCases = [
 // === ACTION (Skin a static mesh onto a skeleton so it deforms with the body) ===
 // A database that is not there is NOT_FOUND (the suite runs where the PoseSearch plugin is on).
 { scenario: 'ERROR: get_pose_search_database names a database that is not there', toolName: 'animation_physics', arguments: { action: 'get_pose_search_database', databasePath: '/Game/MCPTest/NoSuchDatabase_MCP' }, expected: 'error|NOT_FOUND' },
+{ scenario: 'ERROR: get_chooser_table names a table that is not there', toolName: 'animation_physics', arguments: { action: 'get_chooser_table', chooserPath: '/Game/MCPTest/NoSuchChooser_MCP', contextObject: '/Game/MCPTest/NoSuchChooser_MCP', objectClass: '/Script/Engine.AnimSequence' }, expected: 'error|NOT_FOUND' },
 { scenario: 'ACTION: skin_mesh_to_skeleton', toolName: 'animation_physics', arguments: {"action": "skin_mesh_to_skeleton", "staticMeshPath": "/Engine/BasicShapes/Cube", "skeletonPath": TEST_SKELETON_PATH, "outputPath": `${TEST_FOLDER}/SKM_SkinTest`, "sourceSkeletalMesh": TEST_SKELETAL_MESH_PATH, "save": true}, expected: 'success|already exists|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===

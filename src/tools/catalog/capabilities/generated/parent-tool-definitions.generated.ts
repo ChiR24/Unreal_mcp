@@ -229,6 +229,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Physics body centre offset relative to its bone as [x, y, z]."
         },
+        "chooserPath": {
+          "type": "string",
+          "description": "The Chooser table asset (/Game/...)."
+        },
         "clothAssetName": {
           "type": "string",
           "description": "Name of a clothing asset already registered on the mesh."
@@ -288,6 +292,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "How near its lowest point a foot counts as set down, in cm (default 5)."
+        },
+        "contextObject": {
+          "type": "string",
+          "description": "An object path (an actor or asset) to evaluate the table for; the table is only read when omitted."
         },
         "controlType": {
           "type": "string",
@@ -799,6 +807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numFrames": {
           "type": "number",
           "description": "Length in frames (default 30)."
+        },
+        "objectClass": {
+          "type": "string",
+          "description": "The class the chosen result must be, as a class path; /Script/CoreUObject.Object when omitted."
         },
         "outputPath": {
           "type": "string",
@@ -1395,6 +1407,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_physical_material",
             "edit_blend_space",
             "get_pose_search_database",
+            "get_chooser_table",
             "setup_retargeting",
             "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
@@ -1623,6 +1636,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether any mapping changed."
         },
+        "chooserPath": {
+          "type": "string",
+          "description": "The table read."
+        },
+        "chosen": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With contextObject: EvaluateChooser's return value."
+        },
         "clips": {
           "type": "array",
           "description": "One row per clip, in the order given.",
@@ -1678,6 +1701,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each column: index, kind (its struct)."
         },
         "compileErrors": {
           "type": "array",
@@ -2137,6 +2169,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Morph targets the mesh already had and were replaced."
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each result: index, kind (its struct), asset (what it returns, when it names one)."
         },
         "rootMotion": {
           "type": "object",
@@ -9160,6 +9201,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
         },
+        "minCopies": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 100,
+          "description": "Meshes with fewer placed copies than this are not judged; 5 when omitted."
+        },
         "name": {
           "type": "string",
           "description": "Actor name identifier (alias of actorName)."
@@ -9491,6 +9538,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The actor the light should reach; omitted, only the light itself is checked."
         },
+        "threshold": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 10,
+          "description": "How far from the median a copy must sit to be named, in robust standard deviations (median absolute deviation); 3.5 when omitted."
+        },
         "tileSize": {
           "type": "number",
           "minimum": 128,
@@ -9597,6 +9650,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "changes_since",
             "get_console_variables",
             "describe_engine_roles",
+            "audit_style",
             "get_stats",
             "explain",
             "read_logpoints"
@@ -9740,6 +9794,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Largest share first: name (actor label), class, coverage (percent of the frame), box [left, top, right, bottom] in percent of the frame's width and height, brightness (0-1, as drawn) and distance (cm from the camera to its bounds); with actors, coveredBy [{name, share}] lists the nearer actors drawn over at least 5% of its box. Editor icons and shapes hidden in game are left out."
+        },
+        "actorsRead": {
+          "type": "number",
+          "description": "Static mesh actors read in the open level."
         },
         "affectedActors": {
           "type": "array",
@@ -10661,6 +10719,40 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "other": {
           "type": "number",
           "description": "Percent drawn by what only the editor shows (icons, gizmos, shapes hidden in game) or no actor owns (BSP)."
+        },
+        "outlierCount": {
+          "type": "number",
+          "description": "Copies named, before the 50-row cap."
+        },
+        "outliers": {
+          "type": "array",
+          "description": "Up to 50 copies, largest score first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actor": {
+                "type": "string",
+                "description": "The actor label."
+              },
+              "mesh": {
+                "type": "string",
+                "description": "The static mesh it places."
+              },
+              "scale": {
+                "type": "number",
+                "description": "Its largest scale axis."
+              },
+              "typicalScale": {
+                "type": "number",
+                "description": "The median of that mesh's copies."
+              },
+              "score": {
+                "type": "number",
+                "description": "Distance from the median in robust standard deviations."
+              }
+            }
+          }
         },
         "packageName": {
           "type": "string",

@@ -83,6 +83,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::force_rebuild_blend_space": "long-running|medium",
   "animation_physics::get_animation_info": "instant|low",
   "animation_physics::get_bone_transform": "instant|low",
+  "animation_physics::get_chooser_table": "instant|low",
   "animation_physics::get_control_rig": "instant|low",
   "animation_physics::get_physics_asset_info": "instant|low",
   "animation_physics::get_pose_search_database": "instant|low",
@@ -437,6 +438,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "inspect::add_tag": "instant|low",
   "inspect::analyze_view": "interactive|low",
   "inspect::audit_materials": "interactive|low",
+  "inspect::audit_style": "instant|low",
   "inspect::blueprint_get": "instant|low",
   "inspect::capture_passes": "interactive|low",
   "inspect::changes_since": "instant|low",
@@ -1712,4 +1714,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1699;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1701;

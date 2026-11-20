@@ -38,6 +38,7 @@ bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,
 bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleGetPoseSearchDatabase(FActionContext &Context, const TSharedPtr<FJsonObject> &Payload); // Assets/McpAnimPoseSearchRead.cpp
+bool HandleGetChooserTable(FActionContext &Context, const TSharedPtr<FJsonObject> &Payload);       // Assets/McpAnimPoseSearchRead.cpp
 bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 } // namespace McpAnimationHandlers

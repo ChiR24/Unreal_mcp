@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "966d6b3060012606",
-  "recordCount": 502,
+  "catalogRevision": "828533b38532d912",
+  "recordCount": 504,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -6650,6 +6650,170 @@
         "algorithm": "sha256",
         "schema": "437bc5cbb0506de2d4c3cd4a44ad6d32fe778290c26bbf49734713c0f999ef35",
         "content": "6810e26cf55a64a8f25f9d3da37f85fe99cf5a5d088818abbe208524b57b2363"
+      }
+    },
+    {
+      "id": "animation_physics.get_chooser_table",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "get_chooser_table"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "motion-matching",
+        "topics": [
+          "get_chooser_table",
+          "chooser table",
+          "which animation does the chooser pick",
+          "chooser columns and results",
+          "evaluate chooser"
+        ],
+        "summary": "Read a Chooser table: each column and each result by its struct (kind) and the asset a result names, in order (index); with contextObject, also what the table chooses for that object (chosen), through the Chooser plugin's own EvaluateChooser. Reflection only, on every engine that has Chooser.",
+        "whenToUse": [
+          "A Chooser setup must be checked: which columns it tests, which results it can return, or what it picks for one object."
+        ],
+        "whenNotToUse": [
+          "A Pose Search database is wanted (get_pose_search_database)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "chooserPath": {
+              "type": "string",
+              "description": "The Chooser table asset (/Game/...)."
+            },
+            "contextObject": {
+              "type": "string",
+              "description": "An object path (an actor or asset) to evaluate the table for; the table is only read when omitted."
+            },
+            "objectClass": {
+              "type": "string",
+              "description": "The class the chosen result must be, as a class path; /Script/CoreUObject.Object when omitted."
+            }
+          },
+          "required": [
+            "chooserPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "chooserPath": {
+              "type": "string",
+              "description": "The table read."
+            },
+            "columns": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each column: index, kind (its struct)."
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each result: index, kind (its struct), asset (what it returns, when it names one)."
+            },
+            "chosen": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With contextObject: EvaluateChooser's return value."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a Chooser table: each column and each result by its struct (kind) and the asset a result names, in order (index); with contextObject, also what the table chooses for that object (chosen), through the Chooser plugin's own EvaluateChooser. Reflection only, on every engine that has Chooser.",
+          "input": {
+            "action": "get_chooser_table",
+            "chooserPath": "/Game/Locomotion/CHT_Idle"
+          },
+          "output": {
+            "success": true,
+            "message": "CHT_Idle: 1 column(s), 2 result(s)",
+            "columns": [
+              {
+                "index": 0,
+                "kind": "BoolColumn"
+              }
+            ],
+            "results": [
+              {
+                "index": 0,
+                "kind": "AssetChooser",
+                "asset": "/Game/Locomotion/A_Idle"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "Chooser"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "roles": [
+          "Chooser"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "get_chooser_table"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "3eb413c4cb47b4e17f0ffbbb671bc0121e164759503f149cad7ab45738e3fa93",
+        "content": "b8d7581d5548baebc12f65f70dd9df8c251e6e1d00871c1a015619e576faf55a"
       }
     },
     {
@@ -56845,6 +57009,180 @@
         "algorithm": "sha256",
         "schema": "cd8aa8ce5efa26b85e0c0cd3834642221f4af6314e5bf1341f5d75caab329ce6",
         "content": "adb8a31b99182a1ce39f1e1323e1589e877dd00385984f9be9a31c527744e9ac"
+      }
+    },
+    {
+      "id": "inspect.audit_style",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "audit_style"
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "global",
+        "topics": [
+          "audit_style",
+          "style outliers",
+          "scale outlier",
+          "inconsistent scale",
+          "mis-scaled prop",
+          "level consistency"
+        ],
+        "summary": "Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level's own median (a crate at 3x among forty at 1x).",
+        "whenToUse": [
+          "A dressed level should be checked for props scaled unlike their siblings before review.",
+          "You placed many copies of a mesh and want the ones that drifted named."
+        ],
+        "whenNotToUse": [
+          "Actors overlap, float or sink; use control_actor audit_placement."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "threshold": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 10,
+              "description": "How far from the median a copy must sit to be named, in robust standard deviations (median absolute deviation); 3.5 when omitted."
+            },
+            "minCopies": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 100,
+              "description": "Meshes with fewer placed copies than this are not judged; 5 when omitted."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "outliers": {
+              "type": "array",
+              "description": "Up to 50 copies, largest score first.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "actor": {
+                    "type": "string",
+                    "description": "The actor label."
+                  },
+                  "mesh": {
+                    "type": "string",
+                    "description": "The static mesh it places."
+                  },
+                  "scale": {
+                    "type": "number",
+                    "description": "Its largest scale axis."
+                  },
+                  "typicalScale": {
+                    "type": "number",
+                    "description": "The median of that mesh's copies."
+                  },
+                  "score": {
+                    "type": "number",
+                    "description": "Distance from the median in robust standard deviations."
+                  }
+                }
+              }
+            },
+            "outlierCount": {
+              "type": "number",
+              "description": "Copies named, before the 50-row cap."
+            },
+            "actorsRead": {
+              "type": "number",
+              "description": "Static mesh actors read in the open level."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level's own median (a crate at 3x among forty at 1x).",
+          "input": {
+            "action": "audit_style",
+            "threshold": 3.5,
+            "minCopies": 5
+          },
+          "output": {
+            "success": true,
+            "message": "Copies scaled unlike the others of their mesh: 1 (largest score first).",
+            "outlierCount": 1,
+            "actorsRead": 46,
+            "outliers": [
+              {
+                "actor": "Crate_12",
+                "mesh": "/Game/Props/SM_Crate.SM_Crate",
+                "scale": 3,
+                "typicalScale": 1,
+                "score": 20
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "audit_style"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "a7db6e9d3c081422ae4f28bc13e0e3bbc09b796fdf7a18fc3c449d76ae95dad6",
+        "content": "7e5d45a5815e3ee7cdc8119558a14dfe98d59356ac959fcacefbf1b80f9c7105"
       }
     },
     {
