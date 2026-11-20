@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c0e6d1510edb45c6",
+  "catalogRevision": "07571ebb3d1fcf46",
   "recordCount": 507,
   "records": [
     {
@@ -61822,7 +61822,7 @@
                 "struct",
                 "cdo"
               ],
-              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Read a struct's fields (name, type, default, tooltip) or an enum's values (name, display name, number), read-only: an engine or plugin struct or enum by its name (GameplayModifierInfo, FHitResult, EGameplayModOp, EMovementMode) or /Script path, or a Blueprint struct or enum asset; no engine source needed.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it; with function or derived the reply leaves out the property list and the class defaults (propertyCount stays).\nstruct: Read a struct's fields (name, type, default, tooltip) or an enum's values (name, display name, number), read-only: an engine or plugin struct or enum by its name (GameplayModifierInfo, FHitResult, EGameplayModOp, EMovementMode) or /Script path, or a Blueprint struct or enum asset; no engine source needed.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
               "default": "class"
             }
           },
@@ -62121,8 +62121,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d50b0fae6ed0986bc46805d7d32f73df67761a1db299fbc1c72c14a8963f7f3d",
-        "content": "bfd5e406c46b8aa892e0ded3a0b3acdff3aad657a5f42d64a38a69806aedb3a0"
+        "schema": "d0a800969c95517bbb84d3c166114bc7b3396d3b58c3fdda3fb29c0639a0fa9f",
+        "content": "1bb0b980c7ed67155a3e56828d0c043ad721d0a2248aee03ddd7a0ebae68372d"
       }
     },
     {

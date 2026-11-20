@@ -192,8 +192,12 @@ bool TryCreateVariableNode(
         }
         else
         {
+            // A small model asked an ability for CharacterMovement: say how another class's member is read.
             Reason = FString::Printf(
-                TEXT("Variable '%s' not found in Blueprint or any parent class (memberClass='%s')"),
+                TEXT("Variable '%s' not found in Blueprint or any parent class (memberClass='%s'). A member of another "
+                     "class is read with memberClass naming the class that declares it (for a Character's movement "
+                     "component, /Script/Engine.Character), its Target pin wired to an object of that class (from a "
+                     "Cast)."),
                 *VariableName, *MemberClassName);
         }
         Context.SendError(Reason, TEXT("VARIABLE_NOT_FOUND"));

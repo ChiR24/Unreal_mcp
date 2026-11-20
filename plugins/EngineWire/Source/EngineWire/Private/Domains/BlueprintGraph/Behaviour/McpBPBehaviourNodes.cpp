@@ -100,9 +100,16 @@ bool CreateAsyncTaskNode(FActionContext& Context, float X, float Y)
     UFunction* Factory = FindBehaviourFunction(Owner, /*bAsync=*/true, Member);
     if (!Factory)
     {
+        // The class's own static factories: a small model guessed RepeatAbilityTask, then Repeat, for RepeatAction.
+        TArray<FString> Factories;
+        for (TFieldIterator<UFunction> It(Owner, EFieldIteratorFlags::ExcludeSuper); It && Factories.Num() < 12; ++It)
+        {
+            if (It->HasAnyFunctionFlags(FUNC_Static)) Factories.Add(It->GetName());
+        }
         Context.SendError(FString::Printf(TEXT("AsyncTask needs memberClass (the task or async-action class, e.g. "
                                                "AbilityTask_WaitDelay) and memberName (its static factory, e.g. "
-                                               "WaitDelay); '%s' on '%s' is not one."), *Member, *MemberClass),
+                                               "WaitDelay); '%s' on '%s' is not one.%s"), *Member, *MemberClass,
+                                          Factories.Num() ? *(TEXT(" Its factories: ") + FString::Join(Factories, TEXT(", ")) + TEXT(".")) : TEXT("")),
                           TEXT("FUNCTION_NOT_FOUND"));
         return true;
     }

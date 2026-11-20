@@ -35,6 +35,13 @@ bool HandleInspectSearchAction(
                     // McpInspectClass.cpp.
                     McpDescribeClass(TargetClass, Resp);
                     McpDescribeClassCode(TargetClass, Payload, Resp);
+                    // A question about one function or the subclasses gets that answer, not 200 properties and every
+                    // default beside it (about 10 KB for Character); propertyCount stays.
+                    if (Payload->HasField(TEXT("function")) || Payload->HasField(TEXT("derived")))
+                    {
+                        Resp->RemoveField(TEXT("properties"));
+                        Resp->RemoveField(TEXT("defaultProperties"));
+                    }
                     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                            TEXT("Class inspected"), Resp, FString());
                 }
