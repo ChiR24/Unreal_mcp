@@ -22011,6 +22011,7 @@
         "kind",
         "knobs",
         "launchViewer",
+        "layers",
         "level",
         "limit",
         "lines",
@@ -22456,6 +22457,10 @@
           "launchViewer": {
             "type": "boolean",
             "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
+          },
+          "layers": {
+            "type": "boolean",
+            "description": "With key: list each config file that sets it (engine Base files, the platform's, the project's Default and platform files, the editor's saved user file), lowest first, with the value after each, and setBy the one that wins. attributionCertain is false when the engine holds a value no file here explains (a plugin's own config layer)."
           },
           "level": {
             "type": "number",

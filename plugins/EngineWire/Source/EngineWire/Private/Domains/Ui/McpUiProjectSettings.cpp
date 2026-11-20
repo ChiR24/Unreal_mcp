@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Ui/McpUiPrivate.h"
+#include "Domains/Ui/McpUiConfigLayers.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
@@ -80,7 +81,8 @@ TSharedPtr<FJsonObject> ExportConfigProperties(UClass *Class, int32 &OutCount) {
     }
     FString Text;
     Property->ExportText_InContainer(0, Text, CDO, CDO, CDO, PPF_None);
-    Values->SetStringField(Property->GetName(), Text);
+    // A secret, password, token or key setting is withheld from every reply.
+    Values->SetStringField(Property->GetName(), McpConfigLayers::IsSecretKey(Property->GetName()) ? FString(TEXT("<redacted>")) : Text);
     ++OutCount;
   }
   return Values;
@@ -144,7 +146,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
               TEXT("Default%s.ini"), *Class->ClassConfigName.ToString());
           if (GConfig->GetString(*Section, *Key, Value, *ConfigFile)) {
             Resp->SetStringField(TEXT("key"), Key);
-            Resp->SetStringField(TEXT("value"), Value);
+            Resp->SetStringField(TEXT("value"), McpConfigLayers::IsSecretKey(Key) ? FString(TEXT("<redacted>")) : Value);
             Resp->SetStringField(TEXT("source"), TEXT("ini"));
             Resp->SetStringField(
                 TEXT("note"),
@@ -155,6 +157,11 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
         } else {
           Resp->SetStringField(TEXT("key"), Key);
           Resp->SetStringField(TEXT("value"), Value);
+        }
+        // layers: which config file set it (McpUiConfigLayers.h).
+        bool bLayers = false;
+        if (Payload->TryGetBoolField(TEXT("layers"), bLayers) && bLayers) {
+          McpConfigLayers::AddTo(Class->GetPathName(), Key, Class->ClassConfigName.ToString(), Class->GetConfigName(), *Resp);
         }
       }
       Resp->SetStringField(TEXT("section"), Class->GetPathName());

@@ -215,6 +215,7 @@ const testCases = [
   { scenario: 'OPTIONAL: set_cvar via cvar alias', toolName: 'system_control', arguments: { action: 'set_cvar', cvar: 'r.ScreenPercentage', value: '100' }, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_project_settings', toolName: 'system_control', arguments: { action: 'get_project_settings', section: '/Script/Engine.Engine' }, expected: 'success' },
+  { scenario: 'INFO: get_project_settings layers names the file that set a key', toolName: 'system_control', arguments: { action: 'get_project_settings', category: 'maps', key: 'GameDefaultMap', layers: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.layers', minLength: 1, label: 'at least the engine Base file sets it' }, { path: 'structuredContent.result.setBy', exists: true, label: 'the winning file is named' }, { path: 'structuredContent.result.attributionCertain', exists: true, label: 'the reply says whether the files add up' }] },
   // === ACTION ===
   { scenario: 'ACTION: validate_assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: [VALIDATION_MATERIAL] }, expected: 'success' },
   { scenario: 'ACTION: validate_assets assetPath', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL }, expected: 'success' },

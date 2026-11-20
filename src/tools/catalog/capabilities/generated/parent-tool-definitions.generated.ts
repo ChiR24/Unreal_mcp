@@ -31707,6 +31707,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
         },
+        "layers": {
+          "type": "boolean",
+          "description": "With key: list each config file that sets it (engine Base files, the platform's, the project's Default and platform files, the editor's saved user file), lowest first, with the value after each, and setBy the one that wins. attributionCertain is false when the engine holds a value no file here explains (a plugin's own config layer)."
+        },
         "level": {
           "type": "number",
           "description": "Level 0 (low) to 4 (cinematic), clamped. Required."
@@ -32351,6 +32355,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Resolved absolute archive directory."
         },
+        "attributionCertain": {
+          "type": "boolean",
+          "description": "With layers: false when the files read here do not add up to the value the engine holds (a layer this does not read set it)."
+        },
         "baselineMs": {
           "type": "number",
           "description": "The view's GPU frame time as it was: the mean of the baselines measured at the start and the end."
@@ -32742,6 +32750,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Every knob found, as {kind (shadows, draw_distance), what, actors (up to 8 names), gainMs, changed (% of the picture changed beyond noise), chosen}; one not reached before the time ran out reads measured false."
         },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With layers: each config file that sets the key, lowest first: file (relative to the project, or Engine/...) and values (the key's values after that file)."
+        },
         "lines": {
           "type": "array",
           "items": {
@@ -33089,6 +33106,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sessionGuid": {
           "type": "string",
           "description": "Session guid (when connected)."
+        },
+        "setBy": {
+          "type": "string",
+          "description": "With layers: the file that set the value the editor holds, or the class default when no file sets it."
         },
         "settingCount": {
           "type": "number",

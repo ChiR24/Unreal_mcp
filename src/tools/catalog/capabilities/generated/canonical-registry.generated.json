@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "487404493f4a2c64",
+  "catalogRevision": "e36ca0c40c6bf576",
   "recordCount": 494,
   "records": [
     {
@@ -118934,9 +118934,10 @@
           "default map",
           "ini key"
         ],
-        "summary": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value.",
+        "summary": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value, and with layers which config file set it. A secret, password, token or key setting reads <redacted>.",
         "whenToUse": [
-          "Project settings must be read for a section."
+          "Project settings must be read for a section.",
+          "A setting does not take the value the project file says: layers shows each config file that sets it, lowest first, and which one wins."
         ],
         "whenNotToUse": [
           "A single setting must be written (use set_project_setting)."
@@ -118954,6 +118955,10 @@
             "key": {
               "type": "string",
               "description": "Single config property to read from the section; the reply then carries key and value."
+            },
+            "layers": {
+              "type": "boolean",
+              "description": "With key: list each config file that sets it (engine Base files, the platform's, the project's Default and platform files, the editor's saved user file), lowest first, with the value after each, and setBy the one that wins. attributionCertain is false when the engine holds a value no file here explains (a plugin's own config layer)."
             },
             "section": {
               "type": "string",
@@ -119011,6 +119016,23 @@
               "type": "string",
               "description": "Value of the requested key."
             },
+            "layers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With layers: each config file that sets the key, lowest first: file (relative to the project, or Engine/...) and values (the key's values after that file)."
+            },
+            "setBy": {
+              "type": "string",
+              "description": "With layers: the file that set the value the editor holds, or the class default when no file sets it."
+            },
+            "attributionCertain": {
+              "type": "boolean",
+              "description": "With layers: false when the files read here do not add up to the value the engine holds (a layer this does not read set it)."
+            },
             "hint": {
               "type": "string",
               "description": "How to get a full section dump."
@@ -119024,7 +119046,7 @@
       },
       "examples": [
         {
-          "title": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value.",
+          "title": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value, and with layers which config file set it. A secret, password, token or key setting reads <redacted>.",
           "input": {
             "action": "get_project_settings",
             "section": "/Script/EngineSettings.GeneralProjectSettings"
@@ -119061,8 +119083,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6cb14ac9462f48eda3d48623d19a94a16e6341f97a8177310207dee59a53c2d5",
-        "content": "e9c7c635d07db466884fa72e8a97f49c3da0e45ac8f6d5d3ab23275ea48d18c2"
+        "schema": "c66d727bd706a57d2ce348b81f35f81c773a63af769ace1d75fd4304a416520e",
+        "content": "3638ab66a86876e395ae0a2f63823246dc9d8a0aa6037f79db48549a6525cfd6"
       }
     },
     {
