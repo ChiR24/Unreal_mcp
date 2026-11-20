@@ -29,11 +29,11 @@ UWidgetBlueprint* LoadWidgetBlueprintOrReply(UEngineWireSubsystem& Subsystem, co
 bool McpDrawWidget(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError,
                    TFunctionRef<void(UUserWidget& Widget, float Scale)> Inspect);
 // A pixel of that picture over the preview's dark backdrop (24, 24, 28), by its alpha: white text on nothing still reads.
-inline FColor McpOverPreviewBackdrop(const FColor& Pixel)
+inline FColor McpOverPreviewBackdrop(const FColor& Pixel, const FColor& Backdrop = FColor(24, 24, 28))
 {
     const float Alpha = Pixel.A / 255.f;
-    return FColor(FMath::RoundToInt(Pixel.R * Alpha + 24 * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + 24 * (1.f - Alpha)),
-                  FMath::RoundToInt(Pixel.B * Alpha + 28 * (1.f - Alpha)), 255);
+    return FColor(FMath::RoundToInt(Pixel.R * Alpha + Backdrop.R * (1.f - Alpha)), FMath::RoundToInt(Pixel.G * Alpha + Backdrop.G * (1.f - Alpha)),
+                  FMath::RoundToInt(Pixel.B * Alpha + Backdrop.B * (1.f - Alpha)), 255);
 }
 // The canonical /Game package path of a Widget Blueprint (/Game/UI/WBP_Menu), which is what every
 // widgetPath a reply carries must name. UObject::GetPathName() answers the object path

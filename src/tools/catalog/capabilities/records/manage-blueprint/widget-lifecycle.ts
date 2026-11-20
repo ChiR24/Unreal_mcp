@@ -72,6 +72,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       widgetPath: P.widgetPath,
       resolution: { type: 'string', description: 'Screen size the widget is drawn for, "WxH" (default "1280x720"); the project DPI scaling for that size applies, as in the game.' },
       openEditor: { type: 'boolean', description: 'Also open it in the Widget Blueprint editor, which takes focus (default false).' },
+      background: { type: 'array', items: { type: 'number', minimum: 0, maximum: 1 }, minItems: 3, maxItems: 3, description: 'The colour the widget is drawn over, [r, g, b] each 0-1 (default near-black, [0.09, 0.09, 0.11]): a light one ([0.8, 0.8, 0.8]) shows a dark panel or shadow.' },
       // The editor compiles a material's UI shaders the first time it is drawn: the first preview after the editor
       // starts, or after a material edit, drew panels and button faces blank.
       waitForShaders: { type: 'boolean', description: 'true: when the drawing left shaders compiling (the editor compiles a material\'s UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling.' },

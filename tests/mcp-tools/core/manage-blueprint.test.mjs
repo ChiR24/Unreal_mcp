@@ -1205,6 +1205,8 @@ const testCases = [
     { scenario: 'INFO: get_widget_animation reads the keys each widget got', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_animation', { animationName: ANIMATION_NAME }), expected: 'success', assertions: [{ path: 'structuredContent.result.widgets', minLength: 2, label: 'TitleText and PlayButton are both driven' }] },
     { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
     { scenario: 'ACTION: preview_widget drawn for a small screen, editor opened', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { resolution: '640x360', openEditor: true }), expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'drawn at the asked width' }] },
+    // A dark panel could not be judged on the near-black backdrop: background picks another.
+    { scenario: 'ACTION: preview_widget drawn over a light background', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { background: [0.8, 0.8, 0.8] }), expected: 'success', assertions: [{ path: 'structuredContent.result.imageBase64', exists: true, label: 'the picture' }] },
     { scenario: 'ACTION: preview_widget drawn once shaders finish', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
 
     // === CLEANUP ===

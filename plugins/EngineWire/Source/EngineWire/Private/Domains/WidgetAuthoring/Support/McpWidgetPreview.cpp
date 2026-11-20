@@ -123,9 +123,18 @@ bool HandleWidgetAuthoringPreview(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PREVIEW_FAILED"));
         return true;
     }
+    // background [r, g, b] (0-1, sRGB as the picture shows it) is what the widget is drawn over: a dark panel or a
+    // shadow could not be judged on the near-black default.
+    FColor Backdrop(24, 24, 28);
+    const TArray<TSharedPtr<FJsonValue>>* Background = nullptr;
+    if (Payload->TryGetArrayField(TEXT("background"), Background) && Background->Num() == 3)
+    {
+        const auto Channel = [&Background](int32 Index) { return static_cast<uint8>(FMath::RoundToInt(FMath::Clamp((*Background)[Index]->AsNumber(), 0.0, 1.0) * 255.0)); };
+        Backdrop = FColor(Channel(0), Channel(1), Channel(2));
+    }
     for (FColor& Pixel : Pixels)
     {
-        Pixel = McpOverPreviewBackdrop(Pixel);
+        Pixel = McpOverPreviewBackdrop(Pixel, Backdrop);
     }
     // The editor compiles a material's Slate shaders when it is first drawn, so the first preview after the editor
     // starts (or after a material edit) drew panels and button faces blank. waitForShaders waits for that compile and

@@ -149,6 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MetaSound defaults**: a single `set_metasound_default` says whether it saved (`saved`), as the batch form does.
 - **Hidden parts in a widget audit**: `audit_widget` names the top of each hidden, collapsed or transparent part it did not judge (`hiddenWidgets`, `hiddenCount`); it skipped them without a word.
 - **Tick checks**: `lint_blueprint` `tick_heavy` warns of a level search (Get All Actors Of Class and its kin, Get Actor Of Class) or a spawn every frame, no longer of a component lookup on the actor itself.
+- **Widget previews over any colour**: `preview_widget` takes `background` ([r, g, b], 0-1), the colour it draws the widget over; a dark panel could not be judged on the near-black default.
 
 </details>
 

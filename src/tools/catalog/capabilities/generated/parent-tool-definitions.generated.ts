@@ -18175,6 +18175,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Enable text auto-wrap."
         },
+        "background": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "The colour the widget is drawn over, [r, g, b] each 0-1 (default near-black, [0.09, 0.09, 0.11]): a light one ([0.8, 0.8, 0.8]) shows a dark panel or shadow."
+        },
         "barName": {
           "type": "string",
           "description": "The ProgressBar in the widget that shows the health (default HealthBar_Bar, the bar of the health bar piece). A bar named here must already be in the widget."

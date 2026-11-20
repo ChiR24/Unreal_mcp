@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3aa564494b037b51",
+  "catalogRevision": "242b8c4548961c3c",
   "recordCount": 512,
   "records": [
     {
@@ -27071,6 +27071,17 @@
               "type": "boolean",
               "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
             },
+            "background": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "The colour the widget is drawn over, [r, g, b] each 0-1 (default near-black, [0.09, 0.09, 0.11]): a light one ([0.8, 0.8, 0.8]) shows a dark panel or shadow."
+            },
             "waitForShaders": {
               "type": "boolean",
               "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
@@ -27192,8 +27203,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9f8f7958c414788d25e582d8c833fb2fb1fe1b5dfdca6bdd24ef90b42a3c67d9",
-        "content": "1d6237a43fa74e96e1c1e432426d9580d94924a92b9f67ff4dec0ba4e50e57ce"
+        "schema": "579a0d2d401e818dff61e9555d4b8f87dabd8d3ebd69a97b1dd5455c73968151",
+        "content": "40bcf996badd2769e88ee8495b545115820c94354d5bddf8014193631092128a"
       }
     },
     {
