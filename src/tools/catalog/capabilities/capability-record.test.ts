@@ -57,6 +57,18 @@ describe('CapabilityRecord validation boundary', () => {
     expect(sourceRejectionPointers(raised({ assetPath: 'write' }))).toContain('/policy/raisedBy/assetPath');
   });
 
+  it('takes a policy.consentRaisedBy only when it names a declared parameter and tightens the consent', () => {
+    // Given a record whose one declared input is assetPath, at its own consent
+    const source = validCapabilitySource();
+    const raised = (consentRaisedBy: Record<string, string>) =>
+      ({ ...source, policy: { ...source.policy, consent: 'explicit', consentRaisedBy } });
+
+    // Then a stricter consent on a declared parameter parses, an undeclared one or one no stricter does not
+    expect(sourceRejectionPointers(raised({ assetPath: 'elevated' }))).toEqual([]);
+    expect(sourceRejectionPointers(raised({ missing: 'elevated' }))).toContain('/policy/consentRaisedBy/missing');
+    expect(sourceRejectionPointers(raised({ assetPath: 'explicit' }))).toContain('/policy/consentRaisedBy/assetPath');
+  });
+
   it('rejects unknown record fields at the exact JSON pointer', () => {
     // Given
     const source = { ...validCapabilitySource(), surprise: true };

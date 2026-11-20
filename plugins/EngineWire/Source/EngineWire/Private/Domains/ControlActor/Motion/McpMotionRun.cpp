@@ -97,6 +97,9 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   if (Run.Inputs.Num() > 0) {
     Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
   }
+  if (Run.Calls.Num() > 0) {
+    Data->SetArrayField(TEXT("callsApplied"), McpMotionCallsJson(Run.Calls));
+  }
   if (Run.Waited >= 0.0) {
     Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
   }

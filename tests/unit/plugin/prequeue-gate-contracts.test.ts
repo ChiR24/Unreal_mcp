@@ -113,7 +113,8 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
   it('a parameter listed in policy.raisedBy raises the demand, by capability id and by old action name', () => {
     const transform = CANONICAL_CAPABILITY_RECORDS.find((record) => record.id === 'control_actor.get_transform');
     expect(transform?.policy.requiredScope).toBe('read');
-    expect(transform?.policy.raisedBy).toEqual({ inputs: 'write' });
+    expect(transform?.policy.raisedBy).toEqual({ inputs: 'write', calls: 'destructive' });
+    expect(transform?.policy.consentRaisedBy, 'calls run functions as call_actor_function does').toEqual({ calls: 'elevated' });
     expect(transform?.behavior.safeToRetry, 'a retry presses the keys again').toBe(false);
     const source = gateDemand();
     // The payload is asked for each raisedBy key itself: the loop's key as an FString (before 5.8), through *Key
@@ -122,6 +123,9 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
     expect(source).toMatch(/ReadPolicy\(Record, OutDemand\.RequiredScope, OutDemand\.ConsentMode\);\s*RaiseForPayload\(Record, Payload, OutDemand\.AlsoRequiredScopes\);/u);
     expect(source).toMatch(/ReadPolicy\(\*Record, Scope, Consent\);\s*RaiseForPayload\(\*Record, Request\.Payload, Demand\.AlsoRequiredScopes\);/u);
     expect(source).toContain('FindById(Request.CapabilityId, Request.Payload, Store, Demand);');
+    // A parameter under policy.consentRaisedBy raises the consent the same two ways.
+    expect(source).toMatch(/RaiseForPayload\(Record, Payload, OutDemand\.AlsoRequiredScopes\);\s*RaiseConsentForPayload\(Record, Payload, OutDemand\.ConsentMode, OutDemand\.ConsentRaisedBy\);/u);
+    expect(source).toMatch(/RaiseConsentForPayload\(\*Record, Request\.Payload, Consent, ConsentRaisedBy\);/u);
   });
 
   // Membership is exact-set: replacing read with the raised write let a write-only token read motion samples.

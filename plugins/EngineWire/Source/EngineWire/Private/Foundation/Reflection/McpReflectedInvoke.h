@@ -57,3 +57,12 @@ bool McpBindJsonArgsToParams(UFunction *Function,
 TSharedPtr<FJsonObject> McpReadParamOutputs(UFunction *Function,
                                             const uint8 *ParamBlock);
 
+/**
+ * Call Function on Target with Args bound by name (call_actor_function, sample_motion's calls). The editor's script
+ * guard is on for the call: AActor::ProcessEvent drops every call on an actor whose world has not begun play unless
+ * it is, so a Blueprint event "ran" and changed nothing. OutOutputs gets the out and return parameters, OutUnset the
+ * inputs the caller left out. False with OutError when an argument does not convert; nothing is called then.
+ */
+bool McpInvokeWithArgs(UObject *Target, UFunction *Function, const TSharedPtr<FJsonObject> &Args,
+                       TSharedPtr<FJsonObject> &OutOutputs, TArray<TSharedPtr<FJsonValue>> &OutUnset, FString &OutError);
+

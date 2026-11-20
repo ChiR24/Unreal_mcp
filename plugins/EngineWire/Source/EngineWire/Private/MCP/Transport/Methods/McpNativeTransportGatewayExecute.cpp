@@ -213,9 +213,10 @@ void FMcpNativeTransport::HandleGatewayExecute(
 				*Decision.ErrorCode, *Context.CorrelationId);
 			// Not after the user said no: describe's
 			// grant would run what they just refused.
+			// A consent a parameter raised (sample_motion's calls) is minted by describing that parameter.
 			TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
-			Guidance->SetObjectField(TEXT("nextCall"),
-				GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction, FString()));
+			Guidance->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), Plan.ParentTool, Plan.LegacyAction,
+				Decision.ErrorCode == McpAuthorizationCodes::ConsentRequired ? McpPrequeueGate::ResolveDemand(AuthRequest).ConsentRaisedBy : FString()));
 			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context,
 				Asked.Declined.IsEmpty() ? Guidance : TSharedPtr<FJsonObject>()));
 			return;

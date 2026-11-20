@@ -116,6 +116,22 @@ void RaiseForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonO
 	}
 }
 
+// A parameter the record lists under policy.consentRaisedBy raises the consent the call needs: sample_motion's calls
+// run functions as call_actor_function does, so they need its elevated grant. An entry that is no mode demands elevated.
+void RaiseConsentForPayload(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Payload, FString& InOutConsent,
+                            FString& OutRaisedBy)
+{
+	const TSharedPtr<FJsonObject>* RaisedBy = nullptr;
+	if (!Payload.IsValid() || !Record.Policy.IsValid() || !Record.Policy->TryGetObjectField(TEXT("consentRaisedBy"), RaisedBy) || !RaisedBy) return;
+	for (const auto& Pair : (*RaisedBy)->Values)
+	{
+		FString Mode;
+		if (!Payload->HasField(FString(*Pair.Key))) continue;
+		if (!Pair.Value.IsValid() || Pair.Value->Type != EJson::String || !Pair.Value->TryGetString(Mode)) Mode = TEXT("elevated");
+		if (ConsentStrictness(Mode) > ConsentStrictness(InOutConsent)) { InOutConsent = Mode; OutRaisedBy = FString(*Pair.Key); }
+	}
+}
+
 // Does this capability declare somewhere to write? Answered from the canonical
 // record's own input schema, using the SAME key predicate payload collection
 // uses, so "path parameter" cannot mean two different things on the two sides of
@@ -144,11 +160,7 @@ bool DeclaresPathParameter(const FMcpCapabilityRecord& Record)
 FString ActionSuffix(const FString& CapabilityId)
 {
 	int32 DotIndex = INDEX_NONE;
-	if (CapabilityId.FindLastChar(TEXT('.'), DotIndex))
-	{
-		return CapabilityId.RightChop(DotIndex + 1);
-	}
-	return CapabilityId;
+	return CapabilityId.FindLastChar(TEXT('.'), DotIndex) ? CapabilityId.RightChop(DotIndex + 1) : CapabilityId;
 }
 
 // Exactly the sub-action the domain handler will resolve for this request.
@@ -175,6 +187,7 @@ bool FindById(const FString& Id, const TSharedPtr<FJsonObject>& Payload, const F
 		{
 			ReadPolicy(Record, OutDemand.RequiredScope, OutDemand.ConsentMode);
 			RaiseForPayload(Record, Payload, OutDemand.AlsoRequiredScopes);
+			RaiseConsentForPayload(Record, Payload, OutDemand.ConsentMode, OutDemand.ConsentRaisedBy);
 			OutDemand.CapabilityId = Record.Id;
 			CollectConsentNames(Record, OutDemand.ConsentNames);
 			OutDemand.bDeclaresPathParameter = DeclaresPathParameter(Record);
@@ -267,6 +280,8 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 		FString Consent;
 		ReadPolicy(*Record, Scope, Consent);
 		RaiseForPayload(*Record, Request.Payload, Demand.AlsoRequiredScopes);
+		FString ConsentRaisedBy;
+		RaiseConsentForPayload(*Record, Request.Payload, Consent, ConsentRaisedBy);
 		if (ScopeStrictness(Scope) > BestScope)
 		{
 			BestScope = ScopeStrictness(Scope);
@@ -276,6 +291,7 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 		{
 			BestConsent = ConsentStrictness(Consent);
 			Demand.ConsentMode = Consent;
+			Demand.ConsentRaisedBy = ConsentRaisedBy;
 			Demand.CapabilityId = Record->Id;
 			CollectConsentNames(*Record, Demand.ConsentNames);
 		}

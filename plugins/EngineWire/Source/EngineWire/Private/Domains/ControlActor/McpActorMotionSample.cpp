@@ -52,6 +52,7 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   Run.Frames += 1;
   McpTrackMotionOverlaps(Run.Overlaps, Actor); // every frame: a touch can begin and end between two samples
   McpApplyMotionInputs(Run.Inputs, Now - Run.StartGame, false);
+  McpApplyMotionCalls(Run.Calls, Now - Run.StartGame);
   // A frame that did not advance game time repeats the last sample: a paused run at interval 0 kept
   // 74 copies of t=0.
   const bool bAdvanced = Run.Samples.Num() == 0 || Now > Run.LastSampleGame;
@@ -132,7 +133,11 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   }
   if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError) ||
       !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError) || !McpMotionJudge::Take(Payload, Run->Judge, TimelineError) ||
-      !McpParseMotionWatch(Payload, [this](const FString &Name) { return FindActorByName(Name); }, *Run, TimelineError)) {
+      !McpParseMotionWatch(Payload, [this](const FString &Name) { return FindActorByName(Name); }, *Run, TimelineError) ||
+      !McpParseMotionCalls(Payload, [this](const FString &Name) -> UObject * {
+        AActor *Actor = FindActorByName(Name);
+        return Actor ? static_cast<UObject *>(Actor) : McpHandlerUtils::ResolveRuntimeRole(Name);
+      }, Run->Calls, TimelineError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), TimelineError);
     return true;
   }

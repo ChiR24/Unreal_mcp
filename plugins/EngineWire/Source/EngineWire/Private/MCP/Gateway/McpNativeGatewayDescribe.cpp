@@ -119,12 +119,16 @@ void SetMigratedFrom(const TSharedPtr<FJsonObject>& Out, const FMcpDiscoveryQuer
 
 // The exact `consent` sibling execute demands for this capability, so a grant is
 // discoverable BEFORE the first refusal — the gateway tool description points
-// clients at `describe.consentGrant`. Absent when policy.consent is "none".
-TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
+// clients at `describe.consentGrant`. Absent when policy.consent is "none". Asked about a parameter that raises the
+// consent (policy.consentRaisedBy: sample_motion's calls), the grant is at that raised level, so the call that sends
+// it can run.
+TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record, const FString& Param = FString())
 {
 	FString Consent;
+	const TSharedPtr<FJsonObject>* RaisedBy = nullptr;
 	if (!Record.Policy.IsValid()) return nullptr;
 	if (!Record.Policy->TryGetStringField(TEXT("consent"), Consent)) return nullptr;
+	if (!Param.IsEmpty() && Record.Policy->TryGetObjectField(TEXT("consentRaisedBy"), RaisedBy) && RaisedBy) (*RaisedBy)->TryGetStringField(Param, Consent);
 	if (Consent.Equals(TEXT("none"), ESearchCase::IgnoreCase)) return nullptr;
 	const bool bElevated = Consent.Equals(TEXT("elevated"), ESearchCase::IgnoreCase);
 	auto Grant = MakeShared<FJsonObject>();
@@ -278,7 +282,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		// Same capability, same consent requirement. Omitting the grant here made
 		// the compact per-parameter describe useless for any consented write: the
 		// caller still had to pay for a full-size describe just to mint a nonce.
-		if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(*Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
+		if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(*Record, Input.Param)) Out->SetObjectField(TEXT("consentGrant"), Grant);
 		Out->SetStringField(TEXT("message"), TEXT("Single parameter schema for this capability. Pass it with the exact casing shown."));
 		Out->SetStringField(TEXT("operation"), TEXT("describe"));
 		Out->SetStringField(TEXT("param"), Input.Param);

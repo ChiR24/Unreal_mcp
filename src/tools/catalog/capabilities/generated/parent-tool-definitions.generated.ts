@@ -5242,6 +5242,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Give every row its world bounding box (bounds {min, max}): the extents of a level's floors, walls and props in one call, where scale alone says nothing of a mesh's own size."
         },
+        "calls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "properties": {
+              "atSeconds": {
+                "type": "number",
+                "description": "Game seconds after the run starts to make the call (default 0)."
+              },
+              "actorName": {
+                "type": "string",
+                "description": "The actor in the running game, or GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD, as call_actor_function takes it."
+              },
+              "componentName": {
+                "type": "string",
+                "description": "Call it on this component of the actor instead."
+              },
+              "functionName": {
+                "type": "string",
+                "description": "The function to call, as call_actor_function takes it."
+              },
+              "arguments": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Its arguments by parameter name, as call_actor_function takes them."
+              }
+            },
+            "required": [
+              "actorName",
+              "functionName"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Functions called at exact game times inside the run (at most 16), as inputs press keys: an event no key reaches (activate an ability by tag, tell a door to open) lands on the same timeline the samples and judge read. Each call is call_actor_function's, so a call that sends calls needs its elevated consent grant and destructive scope: describe with param calls gives the grant. callsApplied says when each ran and what it returned. Every actor, component and function is checked before the run starts."
+        },
         "center": {
           "type": "object",
           "properties": {
@@ -6443,6 +6481,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false
           },
           "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
+        },
+        "callsApplied": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With calls: one entry per call: functionName, atSeconds, calledAt (game seconds since the start; null when the run ended first) and its outputs, or error."
         },
         "changed": {
           "type": "number",

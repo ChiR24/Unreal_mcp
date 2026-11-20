@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "139274f330698fe9",
+  "catalogRevision": "85da378b8c1ec0a3",
   "recordCount": 493,
   "records": [
     {
@@ -44447,6 +44447,44 @@
               "additionalProperties": false,
               "description": "Hold the run (samples and inputs) until another actor's property takes a value, so the timeline starts on a game event instead of whenever the call arrived."
             },
+            "calls": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "atSeconds": {
+                    "type": "number",
+                    "description": "Game seconds after the run starts to make the call (default 0)."
+                  },
+                  "actorName": {
+                    "type": "string",
+                    "description": "The actor in the running game, or GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD, as call_actor_function takes it."
+                  },
+                  "componentName": {
+                    "type": "string",
+                    "description": "Call it on this component of the actor instead."
+                  },
+                  "functionName": {
+                    "type": "string",
+                    "description": "The function to call, as call_actor_function takes it."
+                  },
+                  "arguments": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Its arguments by parameter name, as call_actor_function takes them."
+                  }
+                },
+                "required": [
+                  "actorName",
+                  "functionName"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Functions called at exact game times inside the run (at most 16), as inputs press keys: an event no key reaches (activate an ability by tag, tell a door to open) lands on the same timeline the samples and judge read. Each call is call_actor_function's, so a call that sends calls needs its elevated consent grant and destructive scope: describe with param calls gives the grant. callsApplied says when each ran and what it returned. Every actor, component and function is checked before the run starts."
+            },
             "watch": {
               "type": "array",
               "minItems": 1,
@@ -44705,6 +44743,15 @@
               },
               "description": "With judge: one verdict per clause, in order: clause (its index), verdict (ok, failed or unknown), atSeconds (the sample that decided it), read (the values that sample held) and why (for an unknown, or an after that never held)."
             },
+            "callsApplied": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With calls: one entry per call: functionName, atSeconds, calledAt (game seconds since the start; null when the run ended first) and its outputs, or error."
+            },
             "judgeVerdict": {
               "type": "string",
               "enum": [
@@ -44769,7 +44816,11 @@
         "consent": "none",
         "dataAccess": "project-read",
         "raisedBy": {
-          "inputs": "write"
+          "inputs": "write",
+          "calls": "destructive"
+        },
+        "consentRaisedBy": {
+          "calls": "elevated"
         }
       },
       "cost": {
@@ -44825,6 +44876,9 @@
             "startWhen": [
               "motion"
             ],
+            "calls": [
+              "motion"
+            ],
             "watch": [
               "motion"
             ],
@@ -44848,8 +44902,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "80c3812880b5b5c2da4837c789b20759560a6e2e4eb79fe07693fc59aa9db6ea",
-        "content": "c692d3a75ec2ae997077ed31044c04256ac08611d5396dfea00d08c177fdf3e6"
+        "schema": "353f8a32f1e8b22fc1f39d2aa810ec816e32ca954dcdf9f2828d7f9aa256a3ba",
+        "content": "a06d8084505939ff43f7938496bcc562859620167f3d6db4a501b124a84fa2d5"
       }
     },
     {

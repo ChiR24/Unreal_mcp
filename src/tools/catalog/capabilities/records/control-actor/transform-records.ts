@@ -268,6 +268,24 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           additionalProperties: false,
           description: 'Hold the run (samples and inputs) until another actor\'s property takes a value, so the timeline starts on a game event instead of whenever the call arrived.',
         },
+        calls: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 16,
+          items: {
+            type: 'object',
+            properties: {
+              atSeconds: { type: 'number', description: 'Game seconds after the run starts to make the call (default 0).' },
+              actorName: { type: 'string', description: 'The actor in the running game, or GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD, as call_actor_function takes it.' },
+              componentName: { type: 'string', description: 'Call it on this component of the actor instead.' },
+              functionName: { type: 'string', description: 'The function to call, as call_actor_function takes it.' },
+              arguments: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Its arguments by parameter name, as call_actor_function takes them.' },
+            },
+            required: ['actorName', 'functionName'],
+            additionalProperties: false,
+          },
+          description: 'Functions called at exact game times inside the run (at most 16), as inputs press keys: an event no key reaches (activate an ability by tag, tell a door to open) lands on the same timeline the samples and judge read. Each call is call_actor_function\'s, so a call that sends calls needs its elevated consent grant and destructive scope: describe with param calls gives the grant. callsApplied says when each ran and what it returned. Every actor, component and function is checked before the run starts.',
+        },
         watch: {
           type: 'array',
           minItems: 1,
@@ -348,12 +366,17 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
           description: 'With judge: one verdict per clause, in order: clause (its index), verdict (ok, failed or unknown), atSeconds (the sample that decided it), read (the values that sample held) and why (for an unknown, or an after that never held).',
         },
+        callsApplied: {
+          type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+          description: 'With calls: one entry per call: functionName, atSeconds, calledAt (game seconds since the start; null when the run ended first) and its outputs, or error.',
+        },
         judgeVerdict: { type: 'string', enum: ['ok', 'failed', 'unknown'], description: 'With judge: ok when every clause is ok, failed when any failed, else unknown. Unknown is never a pass.' },
       },
       outputRequired: [],
       effect: 'read',
-      // Watching is a read; pressing keys acts on the game, and a retry presses them again.
-      policyOverride: { raisedBy: { inputs: 'write' } },
+      // Watching is a read; pressing keys acts on the game, and a retry presses them again. A call runs a function as
+      // call_actor_function does, so it carries that capability's destructive scope and elevated consent.
+      policyOverride: { raisedBy: { inputs: 'write', calls: 'destructive' }, consentRaisedBy: { calls: 'elevated' } },
       behavior: { idempotency: 'non-idempotent', safeToRetry: false },
       costLatency: 'interactive',
       exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },

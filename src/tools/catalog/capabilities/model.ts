@@ -126,6 +126,10 @@ export type CapabilityPolicy = {
   /** Input parameters that, when a call sends them, demand a stricter scope as well as requiredScope (never
    *  instead: membership is exact-set): sample_motion's inputs press keys in the game, so they also need write. */
   readonly raisedBy?: Readonly<Record<string, (typeof POLICY_SCOPES)[number]>>;
+  /** Input parameters that, when a call sends them, demand a stricter consent than the record's own: sample_motion's
+   *  calls run functions as call_actor_function does, so they need its elevated grant (describe with that param mints
+   *  one). */
+  readonly consentRaisedBy?: Readonly<Record<string, (typeof CONSENT_MODES)[number]>>;
 };
 
 export type CapabilityCost = {

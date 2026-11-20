@@ -27,19 +27,33 @@ const RESOURCE_RANK: Readonly<Record<string, number>> = { low: 0, medium: 1, hig
 
 type Scope = CapabilityRecordSource['policy']['requiredScope'];
 const SCOPE_RANK: Readonly<Record<Scope, number>> = { read: 0, write: 1, destructive: 2, admin: 3 };
-const rank = (scope: Scope): number => SCOPE_RANK[scope];
 
 const namespaceOf = (id: string): string => id.slice(0, id.lastIndexOf('.'));
 
-// Members share scope, consent and data access (assertFoldable). A parameter one member raises the scope for raises
-// it for the family too, since that member is the one declaring it; the strictest wins if two raise the same one.
-function foldPolicy(first: CapabilityRecordSource, members: readonly CapabilityRecordSource[]): CapabilityRecordSource['policy'] {
-  const raisedBy: Record<string, Scope> = {};
-  for (const [name, scope] of members.flatMap((member) => Object.entries(member.policy.raisedBy ?? {}))) {
-    const held = raisedBy[name];
-    if (held === undefined || rank(scope) > rank(held)) raisedBy[name] = scope;
+type Consent = CapabilityRecordSource['policy']['consent'];
+const CONSENT_RANK: Readonly<Record<Consent, number>> = { none: 0, explicit: 1, elevated: 2 };
+
+// The strictest value per parameter across the members' maps.
+function strictest<T extends string>(maps: readonly (Readonly<Record<string, T>> | undefined)[], ranks: Readonly<Record<T, number>>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [name, value] of maps.flatMap((map) => Object.entries(map ?? {}) as [string, T][])) {
+    const held = out[name];
+    if (held === undefined || ranks[value] > ranks[held]) out[name] = value;
   }
-  return Object.keys(raisedBy).length === 0 ? first.policy : { ...first.policy, raisedBy };
+  return out;
+}
+
+// Members share scope, consent and data access (assertFoldable). A parameter one member raises the scope or the
+// consent for raises it for the family too, since that member is the one declaring it; the strictest wins if two raise
+// the same one.
+function foldPolicy(first: CapabilityRecordSource, members: readonly CapabilityRecordSource[]): CapabilityRecordSource['policy'] {
+  const raisedBy = strictest(members.map((member) => member.policy.raisedBy), SCOPE_RANK);
+  const consentRaisedBy = strictest(members.map((member) => member.policy.consentRaisedBy), CONSENT_RANK);
+  return {
+    ...first.policy,
+    ...(Object.keys(raisedBy).length > 0 ? { raisedBy } : {}),
+    ...(Object.keys(consentRaisedBy).length > 0 ? { consentRaisedBy } : {})
+  };
 }
 const actionProp = (): JsonObject => ({ type: 'string', description: 'The action to execute on the parent tool.' });
 

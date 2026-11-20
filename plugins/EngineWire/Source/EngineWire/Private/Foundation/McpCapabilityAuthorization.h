@@ -23,6 +23,8 @@ struct FMcpCapabilityDemand
 	TArray<EMcpCapabilityScope> AlsoRequiredScopes;
 	// "none" | "explicit" | "elevated", the CONSENT_MODES of the capability records.
 	FString ConsentMode = TEXT("none");
+	// The parameter the call sent that raised ConsentMode above the record's own (policy.consentRaisedBy); empty if none.
+	FString ConsentRaisedBy;
 	FString CapabilityId;
 	// Every other name a grant may use for this capability: its declared aliases
 	// and its {tool}.{action} legacy pairs (a folded family's old names included).

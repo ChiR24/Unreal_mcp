@@ -92,7 +92,12 @@ Consent arrives as an **execute-envelope sibling — never a handler parameter**
 ```
 
 A grant is honored **only when it names that capability**. Consent is
-re-validated plugin-side. A request refused before its handler starts (an unmet
+re-validated plugin-side. A record can name parameters that raise its demand
+when a call sends them: `policy.raisedBy` adds a scope, and
+`policy.consentRaisedBy` a stricter consent. `sample_motion` is a read, but its
+`calls` run functions as `call_actor_function` does, so a call that sends
+`calls` needs destructive scope and an elevated grant; describe with
+`param: "calls"` mints that grant, and the refusal's `nextCall` says so. A request refused before its handler starts (an unmet
 `options.require`, a dialog in the way) gives its nonce back; once the handler
 starts, the nonce is spent whatever the reply says, since a handler can write a
 file or run a script that no change journal records.

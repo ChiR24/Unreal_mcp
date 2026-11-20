@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Domains/ControlActor/McpActorSupport.h"
+#include "Domains/ControlActor/Motion/McpMotionCalls.h"
 #include "Domains/ControlActor/Motion/McpMotionFeel.h"
 #include "Domains/ControlActor/Motion/McpMotionPoints.h"
 #include "Domains/Log/McpLogHistory.h"
@@ -33,6 +34,7 @@ struct FMcpMotionRun {
   FMcpMotionTrigger Trigger;
   TArray<TSharedPtr<FJsonValue>> Judge; // judge's clauses, judged on the samples once the run ends (McpMotionJudge.h)
   TArray<FMcpMotionWatched> Watched;
+  TArray<FMcpMotionCall> Calls; // calls: functions run at game times inside the run (McpMotionCalls.h)
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
   bool bWaiting = false;
