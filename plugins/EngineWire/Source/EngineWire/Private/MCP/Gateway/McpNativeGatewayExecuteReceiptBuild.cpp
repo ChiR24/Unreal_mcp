@@ -228,6 +228,11 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId))
 	{
 		McpExecuteVerify::Stamp(Record->Behavior, Context.Shape, Context.Params, Whole, Receipt); // Request/McpExecuteVerify.h
+		// S12: a Blueprint graph write compiles and still need not work in Play (the bench's runtime failures did not).
+		if (Record->Domain == TEXT("blueprint") && (Record->Family == TEXT("graph") || Record->Family == TEXT("code") || Record->Family == TEXT("behaviour")))
+		{
+			Receipt->SetStringField(TEXT("behaviour"), TEXT("unchecked: no Play run has judged this graph (control_actor sample_motion with judge does)"));
+		}
 	}
 	if (PageBlock.IsValid())
 	{
