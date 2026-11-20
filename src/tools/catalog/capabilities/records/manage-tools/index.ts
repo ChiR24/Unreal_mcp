@@ -303,6 +303,63 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
       outcome: { success: true, message: 'Render finished' },
     },
   },
+  // Consent windows (Project Settings > EngineWire > Allow Consent Windows, off by default): only the user opens one, by
+  // the second answer of the client's consent form; these two read and close them.
+  {
+    action: 'list_consent_windows',
+    family: 'tool-consent',
+    topics: ['consent window', 'allowed without asking', 'standing consent', 'open consent windows'],
+    summary: 'List the consent windows the user opened. Each lets one capability run without a describe grant while every path it names is under one folder, for a few calls or minutes; the receipt of a call it covered names it (consentWindow). Only the user opens one, from the client\'s consent form, when Project Settings > EngineWire > Allow Consent Windows is on.',
+    whenToUse: ['Checking which capabilities run without a consent grant right now, and for how long.'],
+    whenNotToUse: ['Getting a consent grant for a call (describe its capability instead).'],
+    inputProps: {},
+    required: [],
+    outputProps: {
+      windows: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The id revoke_consent_window closes it by.' },
+            capability: { type: 'string', description: 'The one capability it covers.' },
+            folder: { type: 'string', description: 'Every path a covered call names is under this folder.' },
+            usesLeft: { type: 'number', description: 'Calls it still covers.' },
+            secondsLeft: { type: 'number', description: 'Seconds until it closes.' },
+            pending: { type: 'boolean', description: 'Waiting for the user to press Allow in the editor: it covers nothing yet.' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    outputRequired: ['windows'],
+    effect: 'read',
+    exampleInput: { action: 'list_consent_windows' },
+    exampleOutput: {
+      success: true,
+      message: '1 consent window(s) open.',
+      windows: [{ id: 'Q0w2b3NhbmRib3g', capability: 'manage_asset.delete', folder: '/Game/Sandbox/', usesLeft: 18, secondsLeft: 540, pending: false }],
+    },
+  },
+  {
+    action: 'revoke_consent_window',
+    family: 'tool-consent',
+    topics: ['revoke consent window', 'close consent window', 'stop allowing', 'end standing consent'],
+    summary: 'Close a consent window the user opened (by the id list_consent_windows gives), or every one when id is left out. The capability it covered needs a describe grant per call again. An unknown id is WINDOW_NOT_FOUND.',
+    whenToUse: ['A consent window should end before its calls or minutes run out.'],
+    whenNotToUse: ['Listing the open windows (use list_consent_windows).'],
+    inputProps: {
+      id: { type: 'string', description: 'The window to close; left out, every window closes.' },
+    },
+    required: [],
+    outputProps: {
+      closed: { type: 'number', description: 'How many windows closed.' },
+    },
+    outputRequired: ['closed'],
+    effect: 'write',
+    behavior: { idempotency: 'idempotent', safeToRetry: true },
+    exampleInput: { action: 'revoke_consent_window' },
+    exampleOutput: { success: true, message: '0 consent window(s) closed.', closed: 0 },
+  },
   {
     action: 'reset',
     family: 'tool-visibility',

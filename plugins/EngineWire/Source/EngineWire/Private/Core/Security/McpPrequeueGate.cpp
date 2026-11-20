@@ -1,6 +1,7 @@
 #include "Core/Security/McpPrequeueGate.h"
 
 #include "Core/Security/McpConsentLedger.h"
+#include "Core/Security/McpConsentWindows.h"
 #include "Domains/ConsoleCommand/McpConsolePrivate.h"
 #include "Foundation/McpPrincipalQuota.h"
 #include "Misc/App.h"
@@ -19,10 +20,7 @@ constexpr int32 MaxScanNodes = McpMaxPayloadScanNodes;
 FMcpAuthorizationGrant ReadGrant(const TSharedPtr<FJsonObject>& Consent)
 {
 	FMcpAuthorizationGrant Grant;
-	if (!Consent.IsValid())
-	{
-		return Grant;
-	}
+	if (!Consent.IsValid()) return Grant;
 	Grant.bConsentPresent = true;
 	Consent->TryGetStringField(TEXT("capability"), Grant.ConsentCapability);
 	Consent->TryGetStringField(TEXT("acknowledge"), Grant.ConsentAcknowledge);
@@ -199,7 +197,10 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 	if (!Decision.bAllowed) return Decision;
 
 	const FMcpAuthorizationGrant Grant = ReadGrant(Request.Consent);
-	Decision = McpCapabilityAuthorization::CheckConsent(Demand, Grant);
+	// A consent window the user opened stands in for an explicit-consent call's grant (McpConsentWindows.h).
+	const FMcpConsentWindowUse Window = Grant.bConsentPresent ? FMcpConsentWindowUse()
+		: FMcpConsentWindows::Get().TakeFor(Principal, Demand, Request.Payload, Request.bRequireIssuedNonce);
+	Decision = Window.Id.IsEmpty() ? McpCapabilityAuthorization::CheckConsent(Demand, Grant) : FMcpAuthorizationDecision::Allow();
 	if (!Decision.bAllowed) return Decision;
 
 	Decision = McpCapabilityAuthorization::CheckProject(Principal, FApp::GetProjectName());
@@ -261,7 +262,7 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 		return Quota;
 	}
 	RememberRequestPrincipal(Request.RequestId, Principal);
-	return FMcpAuthorizationDecision::Allow();
+	return FMcpAuthorizationDecision::Allow(Window.Id, Window.UsesLeft);
 }
 
 FMcpAuthorizationDecision RequirePrincipal(const FMcpPrequeueRequest& Request)

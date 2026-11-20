@@ -12,9 +12,12 @@ const TCHAR* const QuotaExceeded = TEXT("QUOTA_EXCEEDED");
 const TCHAR* const CommandBlocked = TEXT("COMMAND_BLOCKED");
 } // namespace McpAuthorizationCodes
 
-FMcpAuthorizationDecision FMcpAuthorizationDecision::Allow()
+FMcpAuthorizationDecision FMcpAuthorizationDecision::Allow(const FString& InConsentWindow, int32 InUsesLeft)
 {
-	return FMcpAuthorizationDecision{};
+	FMcpAuthorizationDecision Decision;
+	Decision.ConsentWindow = InConsentWindow;
+	Decision.ConsentWindowUsesLeft = InUsesLeft;
+	return Decision;
 }
 
 FMcpAuthorizationDecision FMcpAuthorizationDecision::Deny(const TCHAR* Code, const FString& InMessage)

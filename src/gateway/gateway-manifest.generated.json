@@ -21703,10 +21703,13 @@
         "get_status",
         "get_playbook",
         "get_task_result",
+        "list_consent_windows",
+        "revoke_consent_window",
         "reset"
       ],
       "parameterNames": [
         "category",
+        "id",
         "name",
         "taskId",
         "tools"
@@ -21724,6 +21727,10 @@
               "all"
             ],
             "description": "Category name to enable/disable."
+          },
+          "id": {
+            "type": "string",
+            "description": "The window to close; left out, every window closes."
           },
           "name": {
             "type": "string",
@@ -21763,6 +21770,8 @@
               "get_status",
               "get_playbook",
               "get_task_result",
+              "list_consent_windows",
+              "revoke_consent_window",
               "reset"
             ],
             "description": "Action to invoke on manage_tools."

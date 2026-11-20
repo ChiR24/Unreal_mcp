@@ -96,7 +96,11 @@ struct FMcpAuthorizationDecision
 	FString ConsentScope;
 	bool bRetryable = false;
 
-	static FMcpAuthorizationDecision Allow();
+	// Set when a consent window the user opened stood in for this call's grant (Core/Security/McpConsentWindows.h).
+	FString ConsentWindow;
+	int32 ConsentWindowUsesLeft = 0;
+
+	static FMcpAuthorizationDecision Allow(const FString& InConsentWindow = FString(), int32 InUsesLeft = 0);
 	static FMcpAuthorizationDecision Deny(const TCHAR* Code, const FString& InMessage);
 };
 

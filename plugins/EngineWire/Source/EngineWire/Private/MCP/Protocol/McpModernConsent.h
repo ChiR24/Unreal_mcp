@@ -24,7 +24,9 @@ struct FOutcome
 // The JSON-RPC error a request with an unverifiable requestState answers, worded as the TypeScript SDK words it.
 FString InvalidStateError(const TSharedPtr<FJsonValue>& Id);
 
-// Nothing set when the request is not a modern one or the client cannot be asked: refuse as before.
+// Nothing set when the request is not a modern one or the client cannot be asked: refuse as before. WindowFolder, when
+// not empty (FMcpConsentWindows::OfferFor), adds a second answer to the form: also allow this capability under that
+// folder for a few calls or minutes. The folder is signed into the requestState, so an answer cannot widen it.
 FOutcome Resolve(const FString& Principal, const FString& CapabilityId, const FString& ConsentMode,
-                 const FString& Target, const TSharedPtr<FJsonObject>& Arguments);
+                 const FString& Target, const TSharedPtr<FJsonObject>& Arguments, const FString& WindowFolder = FString());
 } // namespace McpModernConsent

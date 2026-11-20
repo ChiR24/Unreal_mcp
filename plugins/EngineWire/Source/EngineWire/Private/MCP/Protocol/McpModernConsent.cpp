@@ -9,6 +9,7 @@
 #include "Misc/Base64.h"
 #include "Misc/DateTime.h"
 #include "Core/Security/McpConsentLedger.h"
+#include "Core/Security/McpConsentWindows.h"
 #include "Misc/SecureHash.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -64,11 +65,15 @@ FString DescribeArguments(const TSharedPtr<FJsonObject>& Arguments)
 
 TSharedPtr<FJsonObject> MakeAsk(const FString& Principal, const FString& Digest, const FString& CapabilityId,
                                 const FString& ConsentMode, const FString& Target,
-                                const TSharedPtr<FJsonObject>& Arguments)
+                                const TSharedPtr<FJsonObject>& Arguments, const FString& WindowFolder)
 {
     TSharedPtr<FJsonObject> State = MakeShared<FJsonObject>();
     State->SetStringField(TEXT("capability"), CapabilityId);
     State->SetStringField(TEXT("acknowledge"), ConsentMode);
+    if (!WindowFolder.IsEmpty())
+    {
+        State->SetStringField(TEXT("window"), WindowFolder);
+    }
     State->SetNumberField(TEXT("expires"), static_cast<double>(FDateTime::UtcNow().ToUnixTimestamp() + AskLifetimeSeconds));
     // Minted in the consent ledger like describe's, so the yes this ask turns into a grant passes the native gate.
     State->SetStringField(TEXT("nonce"), FMcpConsentLedger::Get().Mint(CapabilityId));
@@ -81,6 +86,14 @@ TSharedPtr<FJsonObject> MakeAsk(const FString& Principal, const FString& Digest,
     Confirm->SetBoolField(TEXT("default"), false);
     TSharedPtr<FJsonObject> Properties = MakeShared<FJsonObject>();
     Properties->SetObjectField(TEXT("confirm"), Confirm);
+    if (!WindowFolder.IsEmpty())
+    {
+        TSharedPtr<FJsonObject> Window = MakeShared<FJsonObject>();
+        Window->SetStringField(TEXT("type"), TEXT("boolean"));
+        Window->SetStringField(TEXT("title"), FString::Printf(TEXT("Also allow %s under %s for a while without asking"), *Target, *WindowFolder));
+        Window->SetBoolField(TEXT("default"), false);
+        Properties->SetObjectField(TEXT("window"), Window);
+    }
     TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
     Schema->SetStringField(TEXT("type"), TEXT("object"));
     Schema->SetObjectField(TEXT("properties"), Properties);
@@ -109,7 +122,7 @@ TSharedPtr<FJsonObject> MakeAsk(const FString& Principal, const FString& Digest,
 // exact call, and has not expired. Anything else (another call's or principal's state, an edited or stale one)
 // is false.
 bool Verify(const FString& RequestState, const FString& Principal, const FString& Digest,
-            const FString& CapabilityId, FString& OutMode, FString& OutNonce)
+            const FString& CapabilityId, FString& OutMode, FString& OutNonce, FString& OutWindow)
 {
     FString Payload;
     FString Signature;
@@ -124,8 +137,12 @@ bool Verify(const FString& RequestState, const FString& Principal, const FString
     TSharedPtr<FJsonObject> State;
     FString Capability;
     double Expires = 0.0;
-    return FJsonSerializer::Deserialize(Reader, State) && State.IsValid() &&
-        State->TryGetStringField(TEXT("capability"), Capability) &&
+    if (!FJsonSerializer::Deserialize(Reader, State) || !State.IsValid())
+    {
+        return false;
+    }
+    State->TryGetStringField(TEXT("window"), OutWindow); // the folder a window may be opened over, when the form offered one
+    return State->TryGetStringField(TEXT("capability"), Capability) &&
         Capability.Equals(CapabilityId, ESearchCase::CaseSensitive) &&
         State->TryGetNumberField(TEXT("expires"), Expires) &&
         Expires >= static_cast<double>(FDateTime::UtcNow().ToUnixTimestamp()) &&
@@ -135,7 +152,7 @@ bool Verify(const FString& RequestState, const FString& Principal, const FString
 } // namespace
 
 FOutcome Resolve(const FString& Principal, const FString& CapabilityId, const FString& ConsentMode,
-                 const FString& Target, const TSharedPtr<FJsonObject>& Arguments)
+                 const FString& Target, const TSharedPtr<FJsonObject>& Arguments, const FString& WindowFolder)
 {
     FOutcome Out;
     const McpModern::FCall& Call = McpModern::Current();
@@ -146,8 +163,9 @@ FOutcome Resolve(const FString& Principal, const FString& CapabilityId, const FS
     const FString Digest = McpCanonicalFingerprint(CapabilityId, Arguments);
     FString Mode;
     FString Nonce;
+    FString SignedWindow;
     // Another call's, principal's or editor run's state, or an edited or stale one, refuses the request outright.
-    if (!Call.RequestState.IsEmpty() && !Verify(Call.RequestState, Principal, Digest, CapabilityId, Mode, Nonce))
+    if (!Call.RequestState.IsEmpty() && !Verify(Call.RequestState, Principal, Digest, CapabilityId, Mode, Nonce, SignedWindow))
     {
         Out.bInvalidState = true;
         return Out;
@@ -167,6 +185,12 @@ FOutcome Resolve(const FString& Principal, const FString& CapabilityId, const FS
             Out.Grant->SetStringField(TEXT("capability"), CapabilityId);
             Out.Grant->SetStringField(TEXT("acknowledge"), Mode);
             Out.Grant->SetStringField(TEXT("nonce"), Nonce);
+            // The window covers the folder this editor signed into the form, never one the answer names.
+            bool bWindow = false;
+            if (!SignedWindow.IsEmpty() && (*Content)->TryGetBoolField(TEXT("window"), bWindow) && bWindow)
+            {
+                FMcpConsentWindows::Get().OpenFromForm(Principal, CapabilityId, SignedWindow);
+            }
             return Out;
         }
         Out.Declined = FString::Printf(
@@ -177,7 +201,7 @@ FOutcome Resolve(const FString& Principal, const FString& CapabilityId, const FS
     // No answer yet: ask (again) when the client can be asked.
     if (Call.bElicitationForm)
     {
-        Out.Ask = MakeAsk(Principal, Digest, CapabilityId, ConsentMode, Target, Arguments);
+        Out.Ask = MakeAsk(Principal, Digest, CapabilityId, ConsentMode, Target, Arguments, WindowFolder);
     }
     return Out;
 }

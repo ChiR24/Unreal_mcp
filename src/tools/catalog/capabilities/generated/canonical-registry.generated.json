@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "68d90b055478272d",
-  "recordCount": 491,
+  "catalogRevision": "10495faf17119404",
+  "recordCount": 493,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -103283,6 +103283,161 @@
       }
     },
     {
+      "id": "manage_tools.list_consent_windows",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_tools",
+          "action": "list_consent_windows"
+        }
+      ],
+      "discovery": {
+        "domain": "tools",
+        "family": "tool-consent",
+        "topics": [
+          "list_consent_windows",
+          "consent window",
+          "allowed without asking",
+          "standing consent",
+          "open consent windows"
+        ],
+        "summary": "List the consent windows the user opened. Each lets one capability run without a describe grant while every path it names is under one folder, for a few calls or minutes; the receipt of a call it covered names it (consentWindow). Only the user opens one, from the client's consent form, when Project Settings > EngineWire > Allow Consent Windows is on.",
+        "whenToUse": [
+          "Checking which capabilities run without a consent grant right now, and for how long."
+        ],
+        "whenNotToUse": [
+          "Getting a consent grant for a call (describe its capability instead)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "windows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The id revoke_consent_window closes it by."
+                  },
+                  "capability": {
+                    "type": "string",
+                    "description": "The one capability it covers."
+                  },
+                  "folder": {
+                    "type": "string",
+                    "description": "Every path a covered call names is under this folder."
+                  },
+                  "usesLeft": {
+                    "type": "number",
+                    "description": "Calls it still covers."
+                  },
+                  "secondsLeft": {
+                    "type": "number",
+                    "description": "Seconds until it closes."
+                  },
+                  "pending": {
+                    "type": "boolean",
+                    "description": "Waiting for the user to press Allow in the editor: it covers nothing yet."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "success",
+            "windows"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the consent windows the user opened. Each lets one capability run without a describe grant while every path it names is under one folder, for a few calls or minutes; the receipt of a call it covered names it (consentWindow). Only the user opens one, from the client's consent form, when Project Settings > EngineWire > Allow Consent Windows is on.",
+          "input": {
+            "action": "list_consent_windows"
+          },
+          "output": {
+            "success": true,
+            "message": "1 consent window(s) open.",
+            "windows": [
+              {
+                "id": "Q0w2b3NhbmRib3g",
+                "capability": "manage_asset.delete",
+                "folder": "/Game/Sandbox/",
+                "usesLeft": 18,
+                "secondsLeft": 540,
+                "pending": false
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_tools",
+        "dispatchAction": "list_consent_windows"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "7f2555133b861633406d36c20a09c23d4d25036a154b622fc8f933109ab9a31d",
+        "content": "8c72620a9752b93ce460eaa77ac10ad65205c17959ceea9933df1469be9f6e9e"
+      }
+    },
+    {
       "id": "manage_tools.list_tools",
       "aliases": [],
       "legacyIds": [
@@ -103546,6 +103701,127 @@
         "algorithm": "sha256",
         "schema": "7fa450f4749de1294acf9e794acbf0d0f528c9ce8916fba4e9cd5b776e11f0f2",
         "content": "eaded066764a238dd321a6b770e2c3c190a04f7716fe8fad2ba185dd897d4021"
+      }
+    },
+    {
+      "id": "manage_tools.revoke_consent_window",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_tools",
+          "action": "revoke_consent_window"
+        }
+      ],
+      "discovery": {
+        "domain": "tools",
+        "family": "tool-consent",
+        "topics": [
+          "revoke_consent_window",
+          "revoke consent window",
+          "close consent window",
+          "stop allowing",
+          "end standing consent"
+        ],
+        "summary": "Close a consent window the user opened (by the id list_consent_windows gives), or every one when id is left out. The capability it covered needs a describe grant per call again. An unknown id is WINDOW_NOT_FOUND.",
+        "whenToUse": [
+          "A consent window should end before its calls or minutes run out."
+        ],
+        "whenNotToUse": [
+          "Listing the open windows (use list_consent_windows)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "id": {
+              "type": "string",
+              "description": "The window to close; left out, every window closes."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "closed": {
+              "type": "number",
+              "description": "How many windows closed."
+            }
+          },
+          "required": [
+            "success",
+            "closed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Close a consent window the user opened (by the id list_consent_windows gives), or every one when id is left out. The capability it covered needs a describe grant per call again. An unknown id is WINDOW_NOT_FOUND.",
+          "input": {
+            "action": "revoke_consent_window"
+          },
+          "output": {
+            "success": true,
+            "message": "0 consent window(s) closed.",
+            "closed": 0
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_tools",
+        "dispatchAction": "revoke_consent_window"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "02f729760f5de6052aab356de46495faf6208e845cea0d29bb9c4c5d42b26b2d",
+        "content": "bae86bc8bf89551131c2eb1907852e2859686df4adc6a4ad41a228fe9cd20e15"
       }
     },
     {

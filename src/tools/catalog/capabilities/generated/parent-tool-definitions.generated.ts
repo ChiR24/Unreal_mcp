@@ -30939,6 +30939,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Category name to enable/disable."
         },
+        "id": {
+          "type": "string",
+          "description": "The window to close; left out, every window closes."
+        },
         "name": {
           "type": "string",
           "enum": [
@@ -30977,6 +30981,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_status",
             "get_playbook",
             "get_task_result",
+            "list_consent_windows",
+            "revoke_consent_window",
             "reset"
           ],
           "description": "Action to invoke on manage_tools."
@@ -31013,6 +31019,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "category": {
           "type": "string"
+        },
+        "closed": {
+          "type": "number",
+          "description": "How many windows closed."
         },
         "description": {
           "type": "string"
@@ -31152,6 +31162,39 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "What goes wrong in this domain and how to see it."
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The id revoke_consent_window closes it by."
+              },
+              "capability": {
+                "type": "string",
+                "description": "The one capability it covers."
+              },
+              "folder": {
+                "type": "string",
+                "description": "Every path a covered call names is under this folder."
+              },
+              "usesLeft": {
+                "type": "number",
+                "description": "Calls it still covers."
+              },
+              "secondsLeft": {
+                "type": "number",
+                "description": "Seconds until it closes."
+              },
+              "pending": {
+                "type": "boolean",
+                "description": "Waiting for the user to press Allow in the editor: it covers nothing yet."
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": true

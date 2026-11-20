@@ -1,4 +1,5 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "Core/Security/McpConsentWindows.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Registry/McpToolRegistry.h"
@@ -87,6 +88,10 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 	if (Action == TEXT("get_playbook"))
 	{
 		return McpPlaybookReply(Args.IsValid() ? GetJsonStringField(Args, TEXT("name")) : FString());
+	}
+	if (Action == TEXT("list_consent_windows") || Action == TEXT("revoke_consent_window"))
+	{
+		return McpConsentWindowsReply(Action, Args);
 	}
 
 	if (Action != TEXT("reset") && !Args.IsValid())

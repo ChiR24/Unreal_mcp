@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `68d90b055478272d`
+Catalog revision: `10495faf17119404`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 491 capabilities across
+The catalog declares 493 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -60,12 +60,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
-| `manage_tools` | 10 | 5 | 5 | 0 | tools |
+| `manage_tools` | 12 | 6 | 6 | 0 | tools |
 | `system_control` | 41 | 12 | 23 | 6 | audio, build, console, insights, logs, performance, project, python, render, system, viewport, widget |
 
 ## Capabilities requiring consent
 
-77 of 491 capabilities require consent.
+77 of 493 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -556,8 +556,10 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_tools.get_status` | `manage_tools` | `get_status` | read | read | none | `manage_tools.get_status` |
 | `manage_tools.get_task_result` | `manage_tools` | `get_task_result` | read | read | none | `manage_tools.get_task_result` |
 | `manage_tools.list_categories` | `manage_tools` | `list_categories` | read | read | none | `manage_tools.list_categories` |
+| `manage_tools.list_consent_windows` | `manage_tools` | `list_consent_windows` | read | read | none | `manage_tools.list_consent_windows` |
 | `manage_tools.list_tools` | `manage_tools` | `list_tools` | read | read | none | `manage_tools.list_tools` |
 | `manage_tools.reset` | `manage_tools` | `reset` | write | write | none | `manage_tools.reset` |
+| `manage_tools.revoke_consent_window` | `manage_tools` | `revoke_consent_window` | write | write | none | `manage_tools.revoke_consent_window` |
 | `material.add_function_io` | `manage_asset` | `add_function_input` | write | write | explicit | `manage_asset.add_function_io` `manage_asset.add_function_input` `manage_asset.add_function_output` |
 | `material.add_material_node` | `manage_asset` | `add_material_node` | write | write | explicit | `manage_asset.add_material_node` `manage_asset.add_custom_expression` `manage_asset.add_fresnel` `manage_asset.add_if` `manage_asset.add_math_node` `manage_asset.add_noise` `manage_asset.add_panner` `manage_asset.add_pixel_depth` `manage_asset.add_reflection_vector` `manage_asset.add_rotator` `manage_asset.add_scalar_parameter` `manage_asset.add_static_switch_parameter` `manage_asset.add_switch` `manage_asset.add_texture_coordinate` `manage_asset.add_texture_sample` `manage_asset.add_vector_parameter` `manage_asset.add_vertex_normal` `manage_asset.add_voronoi` `manage_asset.add_world_position` `manage_asset.use_material_function` `manage_asset.add_landscape_layer` `manage_asset.build_material_graph` |
 | `material.compile_material` | `manage_asset` | `compile_material` | write | write | explicit | `manage_asset.compile_material` `manage_asset.rebuild_material` |

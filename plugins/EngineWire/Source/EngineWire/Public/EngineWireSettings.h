@@ -215,6 +215,25 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Debug", meta = (ClampMin = "0.0"))
     float TickerIntervalSeconds;
 
+    /** Lets the client's consent form offer, beside "allow this call", "allow this capability under this call's folder
+     *  for the next few calls or minutes". Only you can open one, by that answer; never for elevated consent or Admin
+     *  scope; an editor restart closes every one, and unreal configure lists and revokes them. Off by default. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (DisplayName = "Allow Consent Windows"))
+    bool bAllowConsentWindows = false;
+
+    /** Calls one window covers at most. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (ClampMin = "1", ClampMax = "50"))
+    int32 ConsentWindowMaxCalls = 20;
+
+    /** Minutes one window lasts at most. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (ClampMin = "1", ClampMax = "30"))
+    int32 ConsentWindowMinutes = 10;
+
+    /** A window opens only after you press Allow on a notification in the editor as well, so a client that answers its
+     *  own consent forms cannot open one alone. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (DisplayName = "Confirm Consent Windows In Editor"))
+    bool bConfirmConsentWindowsInEditor = true;
+
     // ── Native MCP Streamable HTTP ──────────────────────────────────────
 
     /** Enable native MCP Streamable HTTP endpoint (POST /mcp), on by default.

@@ -22,6 +22,9 @@ const testCases = [
   { scenario: 'INFO: get_status', toolName: 'manage_tools', arguments: { action: 'get_status' }, expected: 'success', assertions: [{ path: 'structuredContent.categories', includesObject: { name: 'gameplay', enabled: false }, label: 'get_status reflects disabled gameplay category' }] },
   { scenario: 'INFO: get_task_result names a task no call answered as still running', toolName: 'manage_tools', arguments: { action: 'get_task_result', taskId: 'no-such-task' }, expected: 'error|TASK_NOT_FOUND' },
   { scenario: 'INFO: get_playbook reads the Blueprint logic playbook', toolName: 'manage_tools', arguments: { action: 'get_playbook', name: 'blueprint-logic' }, expected: 'success', assertions: [{ path: 'structuredContent.steps', includesObject: { capability: 'blueprint.read_graph_as_code' }, label: 'the playbook names its capabilities' }] },
+  { scenario: 'INFO: list_consent_windows lists the open consent windows', toolName: 'manage_tools', arguments: { action: 'list_consent_windows' }, expected: 'success', assertions: [{ path: 'structuredContent.windows', minLength: 0, label: 'the windows come back as a list' }] },
+  // An id no window has, so a test run never closes a window the user opened.
+  { scenario: 'ACTION: revoke_consent_window names a window that is not open', toolName: 'manage_tools', arguments: { action: 'revoke_consent_window', id: 'no-such-window' }, expected: 'error|WINDOW_NOT_FOUND' },
   // === ACTION ===
   { scenario: 'ACTION: reset', toolName: 'manage_tools', arguments: { action: 'reset' }, expected: 'success' },
 

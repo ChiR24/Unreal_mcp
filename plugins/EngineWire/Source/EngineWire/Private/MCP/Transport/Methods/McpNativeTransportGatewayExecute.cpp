@@ -16,6 +16,7 @@
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Protocol/McpModernConsent.h"
+#include "Core/Security/McpConsentWindows.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpIdempotencyLedger.h"
 #include "HAL/PlatformTime.h"
@@ -184,9 +185,9 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		McpModernConsent::FOutcome Asked;
 		if (!Decision.bAllowed && Decision.ErrorCode == McpAuthorizationCodes::ConsentRequired && !AuthRequest.Consent.IsValid())
 		{
-			Asked = McpModernConsent::Resolve(Principal.Identity, Plan.CapabilityId,
-				McpPrequeueGate::ResolveDemand(AuthRequest).ConsentMode, Plan.ParentTool + TEXT(".") + Plan.LegacyAction,
-				Plan.Arguments);
+			const FMcpCapabilityDemand Demand = McpPrequeueGate::ResolveDemand(AuthRequest);
+			Asked = McpModernConsent::Resolve(Principal.Identity, Plan.CapabilityId, Demand.ConsentMode,
+				Plan.ParentTool + TEXT(".") + Plan.LegacyAction, Plan.Arguments, FMcpConsentWindows::OfferFor(Demand, Plan.Arguments));
 			if (Asked.Ask.IsValid() || Asked.bInvalidState)
 			{
 				SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Asked.bInvalidState
@@ -218,6 +219,15 @@ void FMcpNativeTransport::HandleGatewayExecute(
 			SendReceipt(McpBuildErrorReceipt(Plan.CapabilityId, McpAuthorizationSemanticError(Decision), Context,
 				Asked.Declined.IsEmpty() ? Guidance : TSharedPtr<FJsonObject>()));
 			return;
+		}
+		// The receipt names the window that let this call run without a grant, and what it has left.
+		if (!Decision.ConsentWindow.IsEmpty())
+		{
+			if (!Context.Provenance.IsValid()) Context.Provenance = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> Window = MakeShared<FJsonObject>();
+			Window->SetStringField(TEXT("id"), Decision.ConsentWindow);
+			Window->SetNumberField(TEXT("usesLeft"), Decision.ConsentWindowUsesLeft);
+			Context.Provenance->SetObjectField(TEXT("consentWindow"), Window);
 		}
 	}
 

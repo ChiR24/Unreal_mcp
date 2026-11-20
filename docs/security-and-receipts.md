@@ -100,6 +100,35 @@ file or run a script that no change journal records.
 > Never infer consent from loopback, from a prior call, from an idempotency
 > key, or from a preview. None of those are consent.
 
+### Consent windows (opt-in, off by default)
+
+With **Project Settings > EngineWire > Allow Consent Windows** on, the consent
+form a 2026-07-28 client shows the user offers a second answer beside "allow
+this call": also allow this capability while every path it names is under the
+call's folder, for its next few calls or minutes, whichever ends first
+(Consent Window Max Calls, at most 50; Consent Window Minutes, at most 30).
+A window is explicit, bounded user consent, never inferred:
+
+- Only the user opens one, by that answer. The folder is the narrowest one
+  holding every path the call named, never a content root such as `/Game/`, and
+  it is signed into the form's `requestState`, so an answer cannot widen it.
+- **Confirm Consent Windows In Editor** (on by default) keeps a new window
+  pending until the user also presses Allow on a notification in the editor.
+  A client can answer its own forms (an auto-approving elicitation hook does);
+  this setting is what keeps such a client from opening a window alone.
+- It covers one capability, one caller (the token's principal) and the native
+  `/mcp` door only; never elevated consent (`run_script`, `execute_python`,
+  `call_actor_function`) and never an Admin-scope capability. A covered call's
+  payload must pass the strict path scan complete, with at least one path,
+  every one canonical and inside the folder.
+- The receipt of a call a window covered names it: `consentWindow {id,
+  usesLeft}`. `manage_tools list_consent_windows` lists the open ones and
+  `revoke_consent_window {id?}` closes one, or all. An editor restart closes
+  every window (they live in memory only).
+- Limit: a window checks the paths a call **names**. A capability that writes
+  to a default folder when an optional path is left out is covered by the paths
+  it does name.
+
 ## Path gating
 
 The permitted asset roots are `/Game`, `/Engine`, `/Script`, `/Temp`,
