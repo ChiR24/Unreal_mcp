@@ -93,7 +93,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 								.String(TEXT("groupBy"), TEXT("A field of the list's items to count by, such as class or type. label, name and "
 									"actorName count by their stem: Wall_12 and Wall_3 count as Wall; a row with no label counts by its name, "
 									"one with no class by its classPath or className."), 1, 64)
-								.Integer(TEXT("sample"), TEXT("Items named per group (or in all, without groupBy): 0-10, default 3."), 0, 10);
+								.Integer(TEXT("sample"), TEXT("Items named per group (or in all, without groupBy): 0-10, default 3."), 0, 10)
+								.Integer(TEXT("groupOffset"), TEXT("With groupBy: skip this many groups, most common first; a reply with more than 50 groups names the next offset (nextGroupOffset)."), 0, 100000);
 						})
 						.StringArray(TEXT("select"),
 							TEXT("Keep only these fields of the reply's data: dotted paths that cross lists (actors.label)."), 1, 32, 128)

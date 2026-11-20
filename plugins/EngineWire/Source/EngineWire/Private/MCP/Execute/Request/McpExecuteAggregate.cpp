@@ -150,21 +150,20 @@ bool Validate(const TSharedPtr<FJsonObject>& Options, FMcpSemanticError& OutErro
     const TSharedPtr<FJsonObject>* Spec = nullptr;
     if (!Value->TryGetObject(Spec) || !Spec)
     {
-        OutError = AggregateOptionError(TEXT("options.aggregate must be an object: {field?, groupBy?, sample?}."), TEXT("/options/aggregate"));
+        OutError = AggregateOptionError(TEXT("options.aggregate must be an object: {field?, groupBy?, sample?, groupOffset?}."), TEXT("/options/aggregate"));
         return false;
     }
     for (const auto& Entry : (*Spec)->Values)
     {
         const FString Key(*Entry.Key);
-        const bool bText = (Key == TEXT("field") || Key == TEXT("groupBy")) && Entry.Value->Type == EJson::String &&
-            !Entry.Value->AsString().IsEmpty() && Entry.Value->AsString().Len() <= 64;
-        const double Sample = Entry.Value->Type == EJson::Number ? Entry.Value->AsNumber() : -1.0;
-        const bool bSample = Key == TEXT("sample") && Sample >= 0.0 && Sample <= McpAggregateMaxSample && Sample == FMath::TruncToDouble(Sample);
-        if (!bText && !bSample)
+        const bool bText = (Key == TEXT("field") || Key == TEXT("groupBy")) && Entry.Value->Type == EJson::String && !Entry.Value->AsString().IsEmpty() && Entry.Value->AsString().Len() <= 64;
+        const double Number = Entry.Value->Type == EJson::Number ? Entry.Value->AsNumber() : -1.0;
+        const bool bWhole = Number >= 0.0 && Number == FMath::TruncToDouble(Number);
+        // groupOffset pages the groups: the 50 after it, most common first, as the previous reply's nextGroupOffset says.
+        const bool bNumber = bWhole && ((Key == TEXT("sample") && Number <= McpAggregateMaxSample) || (Key == TEXT("groupOffset") && Number <= 100000));
+        if (!bText && !bNumber)
         {
-            OutError = AggregateOptionError(FString::Printf(
-                TEXT("options.aggregate.%s is not valid: field and groupBy are names of 1-64 characters, sample a whole number 0-10."), *Key),
-                TEXT("/options/aggregate/") + Key);
+            OutError = AggregateOptionError(FString::Printf(TEXT("options.aggregate.%s is not valid: field and groupBy are names of 1-64 characters, sample a whole number 0-10, groupOffset a whole number from 0."), *Key), TEXT("/options/aggregate/") + Key);
             return false;
         }
     }
@@ -179,11 +178,12 @@ FString FingerprintPart(const TSharedPtr<FJsonObject>& Options)
         return FString();
     }
     FString Field, GroupBy;
-    double Sample = McpAggregateDefaultSample;
+    double Sample = McpAggregateDefaultSample, Offset = 0.0;
     (*Spec)->TryGetStringField(TEXT("field"), Field);
     (*Spec)->TryGetStringField(TEXT("groupBy"), GroupBy);
     (*Spec)->TryGetNumberField(TEXT("sample"), Sample);
-    return FString::Printf(TEXT(" aggregate%d:%s%d:%s:%d"), Field.Len(), *Field, GroupBy.Len(), *GroupBy, static_cast<int32>(Sample));
+    (*Spec)->TryGetNumberField(TEXT("groupOffset"), Offset);
+    return FString::Printf(TEXT(" aggregate%d:%s%d:%s:%d:%d"), Field.Len(), *Field, GroupBy.Len(), *GroupBy, static_cast<int32>(Sample), static_cast<int32>(Offset));
 }
 
 TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TSharedPtr<FJsonObject>& OutputSchema, TSharedPtr<FJsonObject>& InOutResult)
@@ -258,7 +258,8 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
                 (Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" An item's fields to count by: %s (a nested one by its dotted path, location.z)."), *Fields)));
         }
         TArray<TSharedPtr<FJsonValue>> Rows;
-        for (int32 Index = 0; Index < Order.Num() && Index < McpAggregateMaxGroups; ++Index)
+        const int32 Offset = Spec->HasTypedField<EJson::Number>(TEXT("groupOffset")) ? static_cast<int32>(Spec->GetNumberField(TEXT("groupOffset"))) : 0;
+        for (int32 Index = Offset; Index < Order.Num() && Index < Offset + McpAggregateMaxGroups; ++Index)
         {
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
             Row->SetStringField(TEXT("value"), Groups[Order[Index]].Key);
@@ -267,9 +268,10 @@ TSharedPtr<FJsonObject> Apply(const TSharedPtr<FJsonObject>& Spec, const TShared
             Rows.Add(MakeShared<FJsonValueObject>(Row));
         }
         Block->SetArrayField(TEXT("groups"), Rows);
-        if (Order.Num() > McpAggregateMaxGroups)
+        if (Order.Num() > Offset + McpAggregateMaxGroups)
         {
-            Block->SetNumberField(TEXT("otherGroups"), Order.Num() - McpAggregateMaxGroups);
+            Block->SetNumberField(TEXT("otherGroups"), Order.Num() - Offset - McpAggregateMaxGroups);
+            Block->SetNumberField(TEXT("nextGroupOffset"), Offset + McpAggregateMaxGroups);
         }
     }
     Holder->SetArrayField(Leaf, TArray<TSharedPtr<FJsonValue>>()); // InOutResult is already a copy (CopyToList)
