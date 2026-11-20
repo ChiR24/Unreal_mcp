@@ -18550,6 +18550,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
         },
+        "maxBlueprints": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Most Blueprints read (1-1000, default 200); truncated says when more were left out."
+        },
         "maxDesiredHeight": {
           "type": "number",
           "description": "Maximum desired height of a size box."
@@ -19133,6 +19139,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "scope": {
+          "type": "string",
+          "description": "The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath's own Blueprint is always read."
+        },
         "screen": {
           "type": "string",
           "enum": [
@@ -19455,6 +19465,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "A plain number for an opacity or angle key, in place of propertyValue."
         },
+        "variable": {
+          "type": "string",
+          "description": "The member variable, as its Blueprint names it (inherited ones too). One the Blueprint does not have is VARIABLE_NOT_FOUND, listing its own."
+        },
         "variableName": {
           "type": "string",
           "description": "Variable name to add, remove, rename, or modify."
@@ -19598,6 +19612,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "delete_node",
             "inspect_graph",
             "lint_blueprint",
+            "slice_variable",
             "read_graph_as_code",
             "write_graph_from_code",
             "add_function",
@@ -19897,6 +19912,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Blueprint viewmodels under folder."
         },
+        "blueprintsRead": {
+          "type": "number",
+          "description": "Blueprints read, its own included."
+        },
         "bottom": {
           "type": "number",
           "description": "Bottom margin in slate units."
@@ -20059,6 +20078,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "createdTrack": {
           "type": "boolean",
           "description": "Whether the property track was created by this call."
+        },
+        "deadWrite": {
+          "type": "boolean",
+          "description": "Present and true when it is set but read in no graph. A widget property binding or an Anim Blueprint property access reads it without a graph node, so check those before removing it."
         },
         "defaults": {
           "type": "object",
@@ -20920,6 +20943,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Blueprint handle is reachable."
         },
+        "readerCount": {
+          "type": "number",
+          "description": "Every Get found, listed or not."
+        },
+        "readers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Each Get of it (up to 100): blueprint, graph, node, nodeId."
+        },
         "relations": {
           "type": "array",
           "description": "Each relation as checked at the sizes.",
@@ -21036,6 +21073,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "scanned": {
           "type": "number",
           "description": "With path: how many Blueprints were opened."
+        },
+        "scope": {
+          "type": "string",
+          "description": "The folder read."
         },
         "scsVerification": {
           "type": "object",
@@ -21209,9 +21250,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Present when some events or functions have more paths than the value rules follow (20,000 node visits each): how many. Their values are not judged, so the value rules say nothing of them; the other rules still read them."
         },
         "variable": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The variable as the Blueprint holds it after the call: name, type, replicated, public (instance editable), exposeToCinematics, category and metadata. A variable that already existed is read back unchanged."
+            },
+            {
+              "type": "string",
+              "description": "The variable sliced."
+            }
+          ],
           "description": "The variable as the Blueprint holds it after the call: name, type, replicated, public (instance editable), exposeToCinematics, category and metadata. A variable that already existed is read back unchanged."
         },
         "variableName": {
@@ -21464,6 +21514,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "wouldCreate": {
           "type": "number",
           "description": "dryRun: the nodes the batch would create."
+        },
+        "writerCount": {
+          "type": "number",
+          "description": "Every Set found, listed or not."
+        },
+        "writers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Each Set of it (up to 100): blueprint, graph, node, nodeId, entries (blueprint, graph, node, nodeId, kind: event, custom event, function or entry; calledFrom for a function or custom event), and conditions when a Branch decides whether it runs (nodeId, condition: the variable or output it reads, mustBe: the value that leads here), outermost first."
         },
         "x": {
           "type": "number",

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e36ca0c40c6bf576`
+Catalog revision: `f90e33e956344aac`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 494 capabilities across
+The catalog declares 495 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -47,7 +47,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
-| `manage_blueprint` | 44 | 12 | 23 | 9 | blueprint, widget |
+| `manage_blueprint` | 45 | 13 | 23 | 9 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 6 | 1 | 5 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 9 | 2 | manage effect |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 494 capabilities require consent.
+77 of 495 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -250,6 +250,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.set_field_notify` | `manage_blueprint` | `set_field_notify` | write | write | none | `manage_blueprint.set_field_notify` |
 | `blueprint.set_font` | `manage_blueprint` | `set_font` | write | write | none | `manage_blueprint.set_font` `manage_blueprint.set_margin` |
 | `blueprint.set_widget_layout` | `manage_blueprint` | `set_anchor` | write | write | none | `manage_blueprint.set_widget_layout` `manage_blueprint.set_anchor` `manage_blueprint.set_position` `manage_blueprint.set_size` `manage_blueprint.set_alignment` `manage_blueprint.set_padding` `manage_blueprint.set_z_order` `manage_blueprint.set_visibility` `manage_blueprint.set_clipping` `manage_blueprint.set_render_transform` `manage_blueprint.set_style` |
+| `blueprint.slice_variable` | `manage_blueprint` | `slice_variable` | read | read | none | `manage_blueprint.slice_variable` |
 | `blueprint.write_graph_from_code` | `manage_blueprint` | `write_graph_from_code` | destructive | destructive | explicit | `manage_blueprint.write_graph_from_code` |
 | `build_environment.add_foliage` | `build_environment` | `add_foliage` | write | write | none | `build_environment.add_foliage` `build_environment.add_foliage_instances` `build_environment.paint_foliage` |
 | `build_environment.assemble_modules` | `build_environment` | `assemble_modules` | write | write | none | `build_environment.assemble_modules` |

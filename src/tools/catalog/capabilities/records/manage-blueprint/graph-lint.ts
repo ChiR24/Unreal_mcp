@@ -1,7 +1,8 @@
 /**
  * lint_blueprint: the mistakes a read of a Blueprint's graphs finds before Play does (plugin
  * Domains/BlueprintGraph/Lint). Its own record: folded into a family, its action name's words would
- * join the family primary's aliases.
+ * join the family primary's aliases. slice_variable: who sets and reads one variable across the
+ * project's Blueprints (Domains/BlueprintGraph/Slice).
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
@@ -60,6 +61,57 @@ export const GRAPH_LINT_RECORDS: readonly CapabilityRecordSource[] = [
       findingCount: 1,
       truncated: false,
       graphsChecked: 2,
+    },
+  }),
+  buildRecord({
+    id: 'blueprint.slice_variable',
+    action: 'slice_variable',
+    family: 'slice',
+    domain: 'blueprint',
+    topics: ['why is this variable never set', 'who sets this variable', 'where is a variable read', 'variable never read', 'dead variable', 'why did this not happen', 'find every set of a variable'],
+    summary: 'Find every node in the project\'s Blueprints that sets or reads one member variable: its own Blueprint\'s graphs, a child Blueprint\'s, and other Blueprints\' gets and sets on an object of its class. Each writer lists the events and functions that reach it (entries), each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), and, for a function or custom event, the calls to it (calledFrom). A variable set but read in no graph is a dead write (deadWrite). Answers "why is X never true": its writers and what must hold for each to run. Nothing compiles or changes.',
+    whenToUse: [
+      'A variable never takes the value it should, and the places that set it, and what must hold for them to run, are wanted.',
+      'A variable may be set and never read (a dead write), or read and never set.',
+    ],
+    whenNotToUse: [
+      'The mistakes inside one Blueprint\'s graphs are wanted (lint_blueprint).',
+      'A text, name or asset reference anywhere in the project is wanted (manage_asset query_asset with lookup text).',
+    ],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      variable: { type: 'string', description: 'The member variable, as its Blueprint names it (inherited ones too). One the Blueprint does not have is VARIABLE_NOT_FOUND, listing its own.' },
+      scope: { type: 'string', description: 'The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath\'s own Blueprint is always read.' },
+      maxBlueprints: { type: 'number', minimum: 1, maximum: 1000, description: 'Most Blueprints read (1-1000, default 200); truncated says when more were left out.' },
+    },
+    required: ['blueprintPath', 'variable'],
+    outputProps: {
+      variable: { type: 'string', description: 'The variable sliced.' },
+      writers: { type: 'array', items: ROW, 'x-unreal-reflection-boundary': true, description: 'Each Set of it (up to 100): blueprint, graph, node, nodeId, entries (blueprint, graph, node, nodeId, kind: event, custom event, function or entry; calledFrom for a function or custom event), and conditions when a Branch decides whether it runs (nodeId, condition: the variable or output it reads, mustBe: the value that leads here), outermost first.' },
+      readers: { type: 'array', items: ROW, 'x-unreal-reflection-boundary': true, description: 'Each Get of it (up to 100): blueprint, graph, node, nodeId.' },
+      writerCount: { type: 'number', description: 'Every Set found, listed or not.' },
+      readerCount: { type: 'number', description: 'Every Get found, listed or not.' },
+      deadWrite: { type: 'boolean', description: 'Present and true when it is set but read in no graph. A widget property binding or an Anim Blueprint property access reads it without a graph node, so check those before removing it.' },
+      scope: { type: 'string', description: 'The folder read.' },
+      blueprintsRead: { type: 'number', description: 'Blueprints read, its own included.' },
+      truncated: { type: 'boolean', description: 'Present and true when the folder holds more Blueprints than maxBlueprints: the rest were not read.' },
+    },
+    outputRequired: [],
+    effect: 'read',
+    latency: 'interactive',
+    resources: 'medium',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'slice_variable', blueprintPath: '/Game/Blueprints/BP_Door', variable: 'bIsOpen' },
+    exampleOutput: {
+      success: true,
+      message: 'BP_Door.bIsOpen: 1 writer(s), 2 reader(s) in 14 Blueprint(s) under /Game.',
+      variable: 'bIsOpen',
+      writers: [{ blueprint: '/Game/Blueprints/BP_Door', graph: 'EventGraph', node: 'Set bIsOpen', nodeId: '5A0C3E1B9D2F4A6B8C7D1E2F3A4B5C6D', entries: [{ blueprint: '/Game/Blueprints/BP_Door', graph: 'EventGraph', node: 'OnUnlock', nodeId: '1B2C3D4E5F60718293A4B5C6D7E8F901', kind: 'custom event', calledFrom: [{ blueprint: '/Game/Blueprints/BP_Key', graph: 'EventGraph', node: 'OnUnlock', nodeId: '9F8E7D6C5B4A39281706F5E4D3C2B1A0' }] }], conditions: [{ nodeId: '2C3D4E5F60718293A4B5C6D7E8F90A1B', condition: 'bHasKey', mustBe: true }] }],
+      readers: [{ blueprint: '/Game/Blueprints/BP_Door', graph: 'EventGraph', node: 'Get bIsOpen', nodeId: '3D4E5F60718293A4B5C6D7E8F90A1B2C' }],
+      writerCount: 1,
+      readerCount: 2,
+      scope: '/Game',
+      blueprintsRead: 14,
     },
   }),
 ];

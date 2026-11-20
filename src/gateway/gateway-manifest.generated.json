@@ -11660,6 +11660,7 @@
         "delete_node",
         "inspect_graph",
         "lint_blueprint",
+        "slice_variable",
         "read_graph_as_code",
         "write_graph_from_code",
         "add_function",
@@ -11834,6 +11835,7 @@
         "mappingContextPath",
         "materialPath",
         "maxAlive",
+        "maxBlueprints",
         "maxDesiredHeight",
         "maxDesiredWidth",
         "maxFindings",
@@ -11919,6 +11921,7 @@
         "saveAfterCompile",
         "savePath",
         "scale",
+        "scope",
         "screen",
         "scrollBarVisibility",
         "seconds",
@@ -11974,6 +11977,7 @@
         "usePathfinding",
         "userSpecifiedScale",
         "value",
+        "variable",
         "variableName",
         "variableNames",
         "variableType",
@@ -12819,6 +12823,12 @@
             "type": "number",
             "description": "Most of its spawned actors alive at once (default 5); a destroyed one frees its place."
           },
+          "maxBlueprints": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Most Blueprints read (1-1000, default 200); truncated says when more were left out."
+          },
           "maxDesiredHeight": {
             "type": "number",
             "description": "Maximum desired height of a size box."
@@ -13402,6 +13412,10 @@
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
+          "scope": {
+            "type": "string",
+            "description": "The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath's own Blueprint is always read."
+          },
           "screen": {
             "type": "string",
             "enum": [
@@ -13724,6 +13738,10 @@
             ],
             "description": "A plain number for an opacity or angle key, in place of propertyValue."
           },
+          "variable": {
+            "type": "string",
+            "description": "The member variable, as its Blueprint names it (inherited ones too). One the Blueprint does not have is VARIABLE_NOT_FOUND, listing its own."
+          },
           "variableName": {
             "type": "string",
             "description": "Variable name to add, remove, rename, or modify."
@@ -13867,6 +13885,7 @@
               "delete_node",
               "inspect_graph",
               "lint_blueprint",
+              "slice_variable",
               "read_graph_as_code",
               "write_graph_from_code",
               "add_function",
