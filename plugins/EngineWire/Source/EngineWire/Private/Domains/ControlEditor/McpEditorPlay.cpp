@@ -19,19 +19,7 @@ bool UEngineWireSubsystem::HandleControlEditorPlay(
     return true;
   }
 
-  FRequestPlaySessionParams PlayParams;
-  PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
-  PlayParams.EditorPlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
-  if (FLevelEditorModule *LevelEditorModule =
-          FModuleManager::GetModulePtr<FLevelEditorModule>(
-              TEXT("LevelEditor"))) {
-    TSharedPtr<IAssetViewport> DestinationViewport =
-        LevelEditorModule->GetFirstActiveViewport();
-    if (DestinationViewport.IsValid())
-      PlayParams.DestinationSlateViewport = DestinationViewport;
-  }
-
-  GEditor->RequestPlaySession(PlayParams);
+  McpPlaySession::RequestPlay();
   // The session only starts on a later editor tick, so answering here let the very next call
   // (set_game_speed, simulate_input) find no play world. Reply once it has begun play.
   TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);

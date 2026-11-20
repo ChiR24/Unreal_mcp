@@ -4400,6 +4400,7 @@
         "spawnWaitSeconds",
         "speed",
         "start",
+        "startPlay",
         "startWhen",
         "summary",
         "tag",
@@ -5422,6 +5423,10 @@
             "type": "integer",
             "minimum": 0,
             "description": "The first number with actorNames (default 1)."
+          },
+          "startPlay": {
+            "type": "boolean",
+            "description": "With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
           },
           "startWhen": {
             "type": "object",

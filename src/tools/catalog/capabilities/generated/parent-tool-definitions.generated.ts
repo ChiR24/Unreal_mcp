@@ -6049,6 +6049,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minimum": 0,
           "description": "The first number with actorNames (default 1)."
         },
+        "startPlay": {
+          "type": "boolean",
+          "description": "With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
+        },
         "startWhen": {
           "type": "object",
           "properties": {
@@ -7087,6 +7091,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "placementWarnings": {
           "type": "number",
           "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors, with nothing below, or with a face flickering against another actor's in the same plane); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
+        },
+        "playEnded": {
+          "type": "boolean",
+          "description": "With startPlay: whether that Play had ended when the reply was sent (false after 20 s)."
+        },
+        "playStarted": {
+          "type": "boolean",
+          "description": "With startPlay: true when this call started the Play it ran in (it then ended it)."
         },
         "pointStats": {
           "type": "object",

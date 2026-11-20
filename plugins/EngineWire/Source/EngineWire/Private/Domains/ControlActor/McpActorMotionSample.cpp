@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/Motion/McpMotionRun.h"
 #include "Domains/ControlActor/Motion/McpMotionJudge.h"
+#include "Domains/ControlActor/Motion/McpMotionPlay.h"
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
 
@@ -76,6 +77,14 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
 bool UEngineWireSubsystem::HandleControlActorSampleMotion(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  // startPlay with no Play running: start one, enter here again once it has begun, end it after the run.
+  if (GetJsonBoolField(Payload, TEXT("startPlay")) && GEditor && !GEditor->PlayWorld) {
+    TWeakObjectPtr<UEngineWireSubsystem> Weak(this);
+    McpSampleMotionInOwnPlay(this, RequestId, Socket, [Weak, RequestId, Payload, Socket]() {
+      if (Weak.IsValid()) Weak->HandleControlActorSampleMotion(RequestId, Payload, Socket);
+    });
+    return true;
+  }
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   // spawnOf: the actor does not exist yet; the first one of that class the game spawns is watched.
@@ -102,8 +111,8 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   if (World->WorldType != EWorldType::PIE && World->WorldType != EWorldType::Game) {
     SendStandardErrorResponse(
         this, Socket, RequestId, TEXT("NOT_SIMULATING"),
-        TEXT("sample_motion watches a Play-In-Editor world: start PIE (control_editor.play) "
-             "first. The editor world does not simulate, so every sample would repeat."));
+        TEXT("sample_motion watches a Play-In-Editor world: pass startPlay true (this call starts Play and ends it "
+             "after), or start PIE (control_editor.play) first. The editor world does not simulate, so every sample would repeat."));
     return true;
   }
 
@@ -158,6 +167,7 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   if (Payload->TryGetNumberField(TEXT("fps"), Fps) && Fps > 0.0) {
     HoldFixedStepForMcp(Run->Hold, Fps);
   }
+  Run->bEndPlay = McpMotionTakeOwnPlay(RequestId);
 
   const FString ActorName = McpActorRef(Found);
   TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);
@@ -198,7 +208,18 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
         if (Run->Hold.bFixedStep) {
           Data->SetNumberField(TEXT("fixedFps"), Run->Hold.FixedFps);
         }
-        SendStandardSuccessResponse(Self, Socket, RequestId, Message, Data, Warnings);
+        if (!Run->bEndPlay) {
+          SendStandardSuccessResponse(Self, Socket, RequestId, Message, Data, Warnings);
+          return false;
+        }
+        // startPlay: this call's Play ends before the reply, so the next call finds the editor as it was.
+        Data->SetBoolField(TEXT("playStarted"), true);
+        McpEndOwnPlayThen([WeakThis, Socket, RequestId, Message, Data, Warnings](bool bEnded) mutable {
+          Data->SetBoolField(TEXT("playEnded"), bEnded);
+          if (UEngineWireSubsystem *Bridge = WeakThis.Get()) {
+            SendStandardSuccessResponse(Bridge, Socket, RequestId, Message, Data, Warnings);
+          }
+        });
         return false;
       }),
       0.0f);

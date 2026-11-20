@@ -224,13 +224,14 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         'An actor that does not exist yet must be watched from its first frame (a projectile, a thrown or dropped object, an enemy of a wave): spawnOf names its class, and the first one the game spawns after the call is watched.',
         'A behaviour must be proven, not just watched: judge states what has to hold over the run (it rises 100-200 cm within 0.6 s of the key; it never falls through the floor) and judgeVerdict says whether it did.',
       ],
-      whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
+      whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing and startPlay is not set: the editor world does not simulate (pass startPlay true, or start PIE with control_editor.play).'],
       inputProps: {
         actorName: P.pieActorName,
         spawnOf: { type: 'string', description: 'In place of actorName, for an actor the game has not spawned yet: its class (a Blueprint as BP_Thing or its _C path, a native class by its short name; a subclass counts too). The call waits for the first one spawned after it and watches it from its first frame; actorName in the reply names it.' },
         spawnWaitSeconds: { type: 'number', description: 'With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it.' },
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap).' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
+        startPlay: { type: 'boolean', description: 'With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded.' },
         fps: { type: 'number', minimum: 10, maximum: 240, description: 'A fixed step for the run: the engine advances exactly 1/fps game seconds a frame until the run ends, then goes back to how it ran, so the same inputs give the same samples on any machine (60 for most games; 20 shows what a slow frame rate does to the mechanic).' },
         propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 25, at most 50): the run stops here and reports how much game time it covered, so a long run or an editor throttled to 3 fps still answers before a client that gives up at 30 s. Raise it only for a client that waits longer.' },
@@ -373,12 +374,15 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         },
         judgeVerdict: { type: 'string', enum: ['ok', 'failed', 'unknown'], description: 'With judge: ok when every clause is ok, failed when any failed, else unknown. Unknown is never a pass.' },
         fixedFps: { type: 'number', description: 'With fps: the fixed step the run used (fps held to 10-240).' },
+        playStarted: { type: 'boolean', description: 'With startPlay: true when this call started the Play it ran in (it then ended it).' },
+        playEnded: { type: 'boolean', description: 'With startPlay: whether that Play had ended when the reply was sent (false after 20 s).' },
       },
       outputRequired: [],
       effect: 'read',
       // Watching is a read; pressing keys acts on the game, and a retry presses them again. A call runs a function as
       // call_actor_function does, so it carries that capability's destructive scope and elevated consent.
-      policyOverride: { raisedBy: { inputs: 'write', calls: 'destructive' }, consentRaisedBy: { calls: 'elevated' } },
+      // startPlay starts and ends a Play, as control_editor play does with write scope.
+      policyOverride: { raisedBy: { inputs: 'write', calls: 'destructive', startPlay: 'write' }, consentRaisedBy: { calls: 'elevated' } },
       behavior: { idempotency: 'non-idempotent', safeToRetry: false },
       costLatency: 'interactive',
       exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },

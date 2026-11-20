@@ -38,6 +38,7 @@ struct FMcpMotionRun {
   int32 Frames = 0;
   FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
   bool bWaiting = false;
+  bool bEndPlay = false; // startPlay: this run's call started Play, and the run ends it (McpMotionPlay.h)
 };
 
 /** One sample of the run's actor (and of each watched one) at GameTime. */

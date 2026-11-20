@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8d95fefc376ad607",
+  "catalogRevision": "62c746c01bcbe206",
   "recordCount": 511,
   "records": [
     {
@@ -45549,7 +45549,7 @@
         ],
         "whenNotToUse": [
           "readMode=transform: The transform should be changed (use set_transform).",
-          "readMode=motion: Nothing is playing: the editor world does not simulate (start PIE with control_editor.play)."
+          "readMode=motion: Nothing is playing and startPlay is not set: the editor world does not simulate (pass startPlay true, or start PIE with control_editor.play)."
         ]
       },
       "schemas": {
@@ -45580,6 +45580,10 @@
             "intervalSeconds": {
               "type": "number",
               "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
+            },
+            "startPlay": {
+              "type": "boolean",
+              "description": "With no Play In Editor running, start one for this run and end it after, so one call plays, samples (and judges) and stops; a Play already running is used and left running. The reply says playStarted and playEnded."
             },
             "fps": {
               "type": "number",
@@ -45995,6 +45999,14 @@
             "fixedFps": {
               "type": "number",
               "description": "With fps: the fixed step the run used (fps held to 10-240)."
+            },
+            "playStarted": {
+              "type": "boolean",
+              "description": "With startPlay: true when this call started the Play it ran in (it then ended it)."
+            },
+            "playEnded": {
+              "type": "boolean",
+              "description": "With startPlay: whether that Play had ended when the reply was sent (false after 20 s)."
             }
           },
           "required": [
@@ -46052,7 +46064,8 @@
         "dataAccess": "project-read",
         "raisedBy": {
           "inputs": "write",
-          "calls": "destructive"
+          "calls": "destructive",
+          "startPlay": "write"
         },
         "consentRaisedBy": {
           "calls": "elevated"
@@ -46082,6 +46095,9 @@
               "motion"
             ],
             "intervalSeconds": [
+              "motion"
+            ],
+            "startPlay": [
               "motion"
             ],
             "fps": [
@@ -46140,8 +46156,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5ed9a4d082e586d99fe74faf10c7c57cf107181bfd7c75c82039ee6e5a25c426",
-        "content": "91e4efe4d3ced95a1ed79d41d477a15db0906b44a089d0a95f4e480f654b0380"
+        "schema": "4a228a68e643e5b654e6ada9d8af2db8587cc395522ea7430575f01c1c823685",
+        "content": "c6abc69a9493bdc620eae9b84e66b473b302325feb45e71f6afa6004615d8d0b"
       }
     },
     {

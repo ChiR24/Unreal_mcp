@@ -15,6 +15,9 @@ struct FNode;
 // level change inside the session still counts; weak, so a session that ended matches nothing.
 namespace McpPlaySession
 {
+// Ask for a Play In Editor session in the first level viewport, as control_editor play does. It begins on a later
+// editor tick: wait for GEditor->PlayWorld to have begun play.
+void RequestPlay();
 void NoteStarted(UWorld* PlayWorld);
 bool StartedByMcp(const UWorld* PlayWorld);
 // The pawn Name names in World (label, name or path), else the first player's pawn; null when there is none.

@@ -1,7 +1,12 @@
 #include "Domains/Play/McpPlaySession.h"
 
+#include "Editor.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "IAssetViewport.h"
+#include "LevelEditor.h"
+#include "Modules/ModuleManager.h"
+#include "Settings/LevelEditorPlaySettings.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Solvers/McpPratt.h"
 #include "GameFramework/Pawn.h"
@@ -14,6 +19,22 @@ namespace
 // The session's game instance, not its world: a level change inside the session (a restart, an OpenLevel) makes a new
 // world, while the game instance lives from Play's start to its end.
 TWeakObjectPtr<UGameInstance> GStarted;
+}
+
+void RequestPlay()
+{
+    FRequestPlaySessionParams Params;
+    Params.WorldType = EPlaySessionWorldType::PlayInEditor;
+    Params.EditorPlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
+    if (FLevelEditorModule* LevelEditor = FModuleManager::GetModulePtr<FLevelEditorModule>(TEXT("LevelEditor")))
+    {
+        const TSharedPtr<IAssetViewport> Viewport = LevelEditor->GetFirstActiveViewport();
+        if (Viewport.IsValid())
+        {
+            Params.DestinationSlateViewport = Viewport;
+        }
+    }
+    GEditor->RequestPlaySession(Params);
 }
 
 void NoteStarted(UWorld* PlayWorld)

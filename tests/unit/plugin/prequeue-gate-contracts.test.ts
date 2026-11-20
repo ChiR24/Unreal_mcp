@@ -113,7 +113,8 @@ describe('Task 40 Blocker 1 — the gate and the dispatcher resolve the SAME act
   it('a parameter listed in policy.raisedBy raises the demand, by capability id and by old action name', () => {
     const transform = CANONICAL_CAPABILITY_RECORDS.find((record) => record.id === 'control_actor.get_transform');
     expect(transform?.policy.requiredScope).toBe('read');
-    expect(transform?.policy.raisedBy).toEqual({ inputs: 'write', calls: 'destructive' });
+    // startPlay starts and ends a Play, as control_editor play does with write scope.
+    expect(transform?.policy.raisedBy).toEqual({ inputs: 'write', calls: 'destructive', startPlay: 'write' });
     expect(transform?.policy.consentRaisedBy, 'calls run functions as call_actor_function does').toEqual({ calls: 'elevated' });
     expect(transform?.behavior.safeToRetry, 'a retry presses the keys again').toBe(false);
     const source = gateDemand();
