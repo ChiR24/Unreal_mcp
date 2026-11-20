@@ -345,6 +345,19 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'The functions, best match first.',
       },
       hasMore: { type: 'boolean', description: 'More matches lie past the ones returned.' },
+      nodeHints: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            nodeType: { type: 'string', description: 'The create_node nodeType.' },
+            how: { type: 'string', description: 'Its pins, or the parameter it takes.' },
+          },
+          required: ['nodeType', 'how'],
+        },
+        description: 'Present when the words name a node rather than a function (Spawn Actor from Class, a loop, a branch, a cast): the create_node nodeType of each.',
+      },
     },
     outputRequired: ['functions', 'hasMore'],
     effect: 'read',

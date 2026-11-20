@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7525ecff623902bf",
+  "catalogRevision": "7d94f96226a621ba",
   "recordCount": 511,
   "records": [
     {
@@ -26246,6 +26246,28 @@
                 ]
               },
               "description": "The functions, best match first."
+            },
+            "nodeHints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "nodeType": {
+                    "type": "string",
+                    "description": "The create_node nodeType."
+                  },
+                  "how": {
+                    "type": "string",
+                    "description": "Its pins, or the parameter it takes."
+                  }
+                },
+                "required": [
+                  "nodeType",
+                  "how"
+                ]
+              },
+              "description": "Present when the words name a node rather than a function (Spawn Actor from Class, a loop, a branch, a cast): the create_node nodeType of each."
             }
           },
           "required": [
@@ -26392,8 +26414,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6d5de3fac41eaec597a392d90bee945ec6c4d8494e7c8d67423cbafb97ac9af0",
-        "content": "2f6154df34a8f001ddef0c42749668628ab975cd9aa9fabf354774f44fe9db93"
+        "schema": "47e54cfcd23b0a1c722448eac5472160d8cf6e2cf497ae4d7d5001b0fd9d4645",
+        "content": "3462afdffc809339641495073d05c2b2c2a3b9076e39b3e78c8876e3a505d190"
       }
     },
     {

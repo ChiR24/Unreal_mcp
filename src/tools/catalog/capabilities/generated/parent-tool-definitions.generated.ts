@@ -21153,6 +21153,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Node guid: the function's entry node, or the event node. A built-in event that already exists in the graph may be bound without one."
         },
+        "nodeHints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "nodeType": {
+                "type": "string",
+                "description": "The create_node nodeType."
+              },
+              "how": {
+                "type": "string",
+                "description": "Its pins, or the parameter it takes."
+              }
+            },
+            "required": [
+              "nodeType",
+              "how"
+            ]
+          },
+          "description": "Present when the words name a node rather than a function (Spawn Actor from Class, a loop, a branch, a cast): the create_node nodeType of each."
+        },
         "nodeId": {
           "type": "string",
           "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."

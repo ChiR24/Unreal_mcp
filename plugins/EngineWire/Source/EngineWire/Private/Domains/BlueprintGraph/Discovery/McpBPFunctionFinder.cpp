@@ -4,6 +4,7 @@
 // that share no letters with the name (game time for GetGameTimeInSeconds) found nothing.
 #include "Domains/BlueprintGraph/McpBPGraphPrivate.h"
 
+#include "Domains/BlueprintGraph/Discovery/McpBPFinderNodes.h"
 #include "EdGraphSchema_K2.h"
 #include "Foundation/BridgeHelpers/Reflection/McpClassResolve.h"
 #include "UObject/UObjectIterator.h"
@@ -19,6 +20,7 @@ struct FFoundFunction
     int32 Matched = 0;
     int32 Score = 0;
     int32 NameWords = 0;
+    bool bExact = false; // its own name says the wanted words and no others
 };
 
 // Lower-case words of a name or a sentence; a capital after a lower-case letter starts one (GameTime: game, time).
@@ -87,6 +89,10 @@ void ScoreFoundFunction(FFoundFunction& Found, const TArray<FString>& Wanted)
     const UFunction& Function = *Found.Function;
     TArray<FString> Name, Keywords, Category, Tip;
     SplitFinderWords(Function.GetName(), Name);
+    // make vector: MakeVector before MakeVector_NetQuantize, whose name says more; a K2_ prefix says nothing.
+    TArray<FString> Own = Name;
+    Own.RemoveAll([](const FString& Word) { return Word == TEXT("k2") || IsFinderStopWord(Word); });
+    Found.bExact = Own.Num() == Wanted.Num() && !Own.ContainsByPredicate([&Wanted](const FString& W) { return !Wanted.Contains(W); });
     SplitFinderWords(Function.GetDisplayNameText().ToString(), Name);
     Found.NameWords = Name.Num();
     SplitFinderWords(Function.GetMetaData(TEXT("Keywords")), Keywords);
@@ -244,6 +250,7 @@ bool HandleFindFunctions(FActionContext& Context)
     }
     Found.Sort([](const FFoundFunction& A, const FFoundFunction& B)
     {
+        if (A.bExact != B.bExact) return A.bExact;
         if (A.Matched != B.Matched) return A.Matched > B.Matched;
         if (A.Score != B.Score) return A.Score > B.Score;
         if (A.NameWords != B.NameWords) return A.NameWords < B.NameWords;
@@ -258,10 +265,13 @@ bool HandleFindFunctions(FActionContext& Context)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("functions"), Functions);
     Result->SetBoolField(TEXT("hasMore"), Found.Num() > Count);
-    Context.SendResponse(Count == 0
+    FString NodeNote;
+    const TArray<TSharedPtr<FJsonValue>> NodeTypes = FinderNodeTypes(Wanted, NodeNote);
+    if (NodeTypes.Num() > 0) Result->SetArrayField(TEXT("nodeHints"), NodeTypes);
+    Context.SendResponse(NodeNote + (Count == 0
         ? FString::Printf(TEXT("No Blueprint function matched '%s'. Use other words for what the node does, or fewer."), *Request)
         : FString::Printf(TEXT("%d Blueprint functions for '%s', best first: %s on %s."), Count, *Request,
-                          *Found[0].Function->GetDisplayNameText().ToString(), *Found[0].Function->GetOwnerClass()->GetName()),
+                          *Found[0].Function->GetDisplayNameText().ToString(), *Found[0].Function->GetOwnerClass()->GetName())),
         Result);
     return true;
 }
