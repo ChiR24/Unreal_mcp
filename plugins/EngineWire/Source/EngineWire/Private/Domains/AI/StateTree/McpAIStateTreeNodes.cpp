@@ -29,7 +29,7 @@ const UScriptStruct* FindNodeType(const FString& Type, const UScriptStruct* Base
 {
     const FString Bare = Type.StartsWith(TEXT("F")) && Type.Len() > 1 && FChar::IsUpper(Type[1]) ? Type.Mid(1) : Type;
     const UScriptStruct* Found = Type.StartsWith(TEXT("/")) ? FindObject<UScriptStruct>(nullptr, *Type) : nullptr;
-    TArray<FString> Near;
+    TArray<FString> Near, Any;
     for (TObjectIterator<UScriptStruct> It; It && !Found; ++It)
     {
         if (!It->IsChildOf(Base) || *It == Base)
@@ -44,11 +44,16 @@ const UScriptStruct* FindNodeType(const FString& Type, const UScriptStruct* Base
         {
             Near.Add(It->GetName());
         }
+        else if (Any.Num() < 12)
+        {
+            Any.Add(It->GetName());
+        }
     }
     if (!Found || !Found->IsChildOf(Base))
     {
-        OutError = FString::Printf(TEXT("'%s' is no %s struct. %s"), *Type, *Base->GetName(),
-            Near.Num() > 0 ? *(TEXT("Near: ") + FString::Join(Near, TEXT(", "))) : TEXT("nodeType names one by its struct name, such as StateTreeCompareIntCondition."));
+        // The near names when there are some, else what this list does take: an example of another list's kind misleads.
+        OutError = FString::Printf(TEXT("'%s' is no %s struct. %s: %s"), *Type, *Base->GetName(),
+            Near.Num() > 0 ? TEXT("Near") : TEXT("This list takes, among others"), *FString::Join(Near.Num() > 0 ? Near : Any, TEXT(", ")));
         return nullptr;
     }
     return Found;

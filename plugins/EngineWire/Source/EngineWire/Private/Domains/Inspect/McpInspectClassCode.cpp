@@ -110,16 +110,21 @@ void McpDescribeClassCode(UClass* Class, const TSharedPtr<FJsonObject>& Payload,
         TArray<UClass*> Derived;
         GetDerivedClasses(Class, Derived, true);
         TArray<TSharedPtr<FJsonValue>> Names;
+        int32 Count = 0;
         for (const UClass* Each : Derived)
         {
             // Skeleton and reinstanced classes are the editor's working copies, not classes of the project.
-            if (Names.Num() < 100 && !Each->GetName().StartsWith(TEXT("SKEL_")) && !Each->GetName().StartsWith(TEXT("REINST_")))
+            if (Each->GetName().StartsWith(TEXT("SKEL_")) || Each->GetName().StartsWith(TEXT("REINST_")))
+            {
+                continue;
+            }
+            if (++Count <= 100)
             {
                 Names.Add(MakeShared<FJsonValueString>(Each->GetPathName()));
             }
         }
         Resp->SetArrayField(TEXT("derivedClasses"), Names);
-        Resp->SetNumberField(TEXT("derivedCount"), Derived.Num());
+        Resp->SetNumberField(TEXT("derivedCount"), Count);
     }
 }
 } // namespace McpInspectHandlers
