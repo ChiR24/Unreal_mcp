@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "1619c635fb4dba71",
-  "recordCount": 490,
+  "catalogRevision": "9194974533c5c938",
+  "recordCount": 491,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -18328,7 +18328,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -18352,7 +18354,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f5787cb45d3525b1f9d56615d52d0295c3d10a38a3d7453da6c0b86e0f50238d",
-        "content": "7c1a03c3fd08fa8e4c307b2161f9d0e075e4aa0b86017f63177fbb4162db8978"
+        "content": "0a2b9fd1cb4be423b02d3f78ac9529e7eb81ec404f8833fdaa22134cc60e5f0f"
       }
     },
     {
@@ -19562,7 +19564,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -19586,7 +19590,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d8dc989e446581ab5bd73a59fd8a1bc9c2b12457d1128faafa701d8a07f4e7b2",
-        "content": "8f99d619124d32da2ba35d91a061c97a1bd10ff936f1d944983b9f8a710569d9"
+        "content": "3d86d1e0cf4860e4fb7b4047eeb880e386dceb5c09d32424ad37b7ce1c319c70"
       }
     },
     {
@@ -26030,7 +26034,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -26054,7 +26060,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "207cf2d0defa02e0e1de7c680f169e97fa78464b1c4dfea5f5affdaf3b935b85",
-        "content": "d3309a194e2205578a31cbe5e45582b553e75698cd35e8fb5d320eba63555721"
+        "content": "234946406cc0c21d6abac223023dcb79a9c83db57dda813043962e9395560aaf"
       }
     },
     {
@@ -26728,7 +26734,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "read",
@@ -26752,7 +26760,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e1e86d1cb38b224bc9ab8c94747bc1db8d8269ca57b57f373f877c18208f047a",
-        "content": "cfccd7d451c656f9e8c583aee9feee96f178371cb0952170995dce461d7a74a1"
+        "content": "e03569d36ca5adc7d8b0b9a7f98068bbc1f3c3d7904318af2d320abd907355d1"
       }
     },
     {
@@ -27501,7 +27509,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "destructive",
@@ -27525,7 +27535,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f1a60c2e340c6466c4251a750136450c88d1d3a7a72bea3ab8ccb10af0070a62",
-        "content": "89a307393bfe8c15b69fd962e0238d65881cd1bcfb26816c1463b023ee75cc27"
+        "content": "817a1aafd2f1c04174063c27d37eb7c48d191c8363a871aaa26365f790a3ef21"
       }
     },
     {
@@ -27672,7 +27682,9 @@
         "editorStates": [
           "edit"
         ],
-        "minEngineVersion": "5.4"
+        "roles": [
+          "MVVM"
+        ]
       },
       "behavior": {
         "effect": "write",
@@ -27696,7 +27708,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1c1ec2b418433210230439eb9755beddacc01a5c59441e8f38b412edb75faac2",
-        "content": "9da6371b59d5282cd52eaba7672874295f07966ccb7a004214d08313439e4d4e"
+        "content": "8954651f1cb82e9e357a7a24cc70e4f3b6368a6f5b4ff37f3b033f999de82ad2"
       }
     },
     {
@@ -57398,6 +57410,178 @@
         "algorithm": "sha256",
         "schema": "fa3097c7cf2801360ac26cdecc925ff956c833a7330471ca474d3dbfdc0d26c7",
         "content": "4b4178df69f19eb9be6ab0d37ba7ede13900f5328ab5a285956e8e0800238b62"
+      }
+    },
+    {
+      "id": "inspect.describe_engine_roles",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "describe_engine_roles"
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "global",
+        "topics": [
+          "describe_engine_roles",
+          "engine roles",
+          "engine adapter",
+          "reflected names",
+          "engine version differences",
+          "why unavailable"
+        ],
+        "summary": "List the engine roles this server reaches by reflection (one class, struct, property or function each) and what plays each on this engine, or why nothing does.",
+        "whenToUse": [
+          "A capability reads unavailable for a missing engine role and you need which role and why.",
+          "You want to see what this engine calls a class or property that other engines name differently."
+        ],
+        "whenNotToUse": [
+          "You want the members of one class; use inspect_class."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "domain": {
+              "type": "string",
+              "description": "Only this domain's roles (MVVM, PoseSearch); every role when omitted."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "count": {
+              "type": "number",
+              "description": "Roles listed."
+            },
+            "resolved": {
+              "type": "number",
+              "description": "How many of them something plays on this engine."
+            },
+            "roles": {
+              "type": "array",
+              "description": "One row per role, by id.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string"
+                  },
+                  "plugin": {
+                    "type": "string",
+                    "description": "The plugin the role belongs to; it resolves only while that plugin is on."
+                  },
+                  "resolved": {
+                    "type": "boolean"
+                  },
+                  "stage": {
+                    "type": "string",
+                    "description": "How it was found: exact (its name), redirect (the engine renamed it), shape (the one member whose type fits) or words (the closest name, by a margin)."
+                  },
+                  "found": {
+                    "type": "string",
+                    "description": "What plays it here: the class or struct path, or the member name."
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "description": "What was found, or what was searched and why nothing fit (AMBIGUOUS names the candidates)."
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the engine roles this server reaches by reflection (one class, struct, property or function each) and what plays each on this engine, or why nothing does.",
+          "input": {
+            "action": "describe_engine_roles",
+            "domain": "PoseSearch"
+          },
+          "output": {
+            "success": true,
+            "message": "4 of 4 engine roles resolve on this engine",
+            "count": 4,
+            "resolved": 4,
+            "roles": [
+              {
+                "role": "PoseSearch.DatabaseEntries",
+                "domain": "PoseSearch",
+                "plugin": "PoseSearch",
+                "resolved": true,
+                "stage": "exact",
+                "found": "DatabaseAnimationAssets",
+                "evidence": "DatabaseAnimationAssets"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "describe_engine_roles"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "43e8cdd1407e51f61681e90a48d3fdbc612a25b037e0a9ca8ea64bf30e958ec8",
+        "content": "0881b7a30e243b6475ca40196c4cc1f77482680e6647d924499062258730a3f3"
       }
     },
     {

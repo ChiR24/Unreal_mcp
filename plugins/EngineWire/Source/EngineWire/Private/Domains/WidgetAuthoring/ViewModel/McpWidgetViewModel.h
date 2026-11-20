@@ -2,8 +2,9 @@
 // bind_widget_viewmodel, remove_widget_viewmodel, set_field_notify), done by reflection: ModelViewViewModel is a Beta
 // plugin in every 5.x, so nothing here links it (a module linking it would also leave the Fab build, which drops Beta
 // and Experimental plugins). The editor's own UMVVMEditorSubsystem UFUNCTIONs make the view and add viewmodels and
-// bindings; a binding's paths are written field by field as FMVVMBlueprintFieldPath's constructor writes them. The
-// names read here are the same from 5.4 (the records' minEngineVersion) to 5.8.
+// bindings; a binding's paths are written field by field as FMVVMBlueprintFieldPath's constructor writes them. Each
+// engine name read here is a role's first guess in Resources/EngineRoles/MVVM.json: FieldOf, ViewArray and Call find what
+// plays that role on the running engine (McpEngineRoles), and the records are available where every role resolves.
 
 #pragma once
 

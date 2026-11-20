@@ -8,6 +8,7 @@
 #include "Editor.h"
 #include "EditorSubsystem.h"
 #include "EngineWireSubsystem.h"
+#include "Foundation/Reflect/McpEngineRoles.h"
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 #include "UObject/UnrealType.h"
 #include "WidgetBlueprint.h"
@@ -56,7 +57,7 @@ UObject* Subsystem()
 bool Call(const TCHAR* FunctionName, TArrayView<const FArg> Args, TFunctionRef<void(const FProperty&, const void*)> Read)
 {
 	UObject* Target = Subsystem();
-	UFunction* Function = Target ? Target->FindFunction(FName(FunctionName)) : nullptr;
+	UFunction* Function = Target ? McpEngineRoles::FunctionByName(Target->GetClass(), FName(FunctionName)) : nullptr;
 	if (!Function)
 	{
 		return false;
@@ -129,7 +130,7 @@ uint8* FViewArray::At(int32 Index) const
 FViewArray ViewArray(UObject* View, const TCHAR* Name)
 {
 	FViewArray Out;
-	FArrayProperty* Array = View ? FindFProperty<FArrayProperty>(View->GetClass(), Name) : nullptr;
+	FArrayProperty* Array = View ? CastField<FArrayProperty>(McpEngineRoles::PropertyByName(View->GetClass(), FName(Name))) : nullptr;
 	const FStructProperty* Inner = Array ? CastField<FStructProperty>(Array->Inner) : nullptr;
 	if (Inner)
 	{
@@ -142,7 +143,7 @@ FViewArray ViewArray(UObject* View, const TCHAR* Name)
 
 FProperty* FieldOf(const UStruct* Struct, const TCHAR* Name)
 {
-	return Struct ? Struct->FindPropertyByName(FName(Name)) : nullptr;
+	return McpEngineRoles::PropertyByName(Struct, FName(Name));
 }
 
 void* ValuePtr(const UStruct* Struct, void* Value, const TCHAR* Name)

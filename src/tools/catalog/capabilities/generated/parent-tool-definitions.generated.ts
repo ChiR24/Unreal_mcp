@@ -8803,6 +8803,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
         },
+        "domain": {
+          "type": "string",
+          "description": "Only this domain's roles (MVVM, PoseSearch); every role when omitted."
+        },
         "editorState": {
           "type": "string",
           "enum": [
@@ -9412,6 +9416,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_editor_state",
             "changes_since",
             "get_console_variables",
+            "describe_engine_roles",
             "get_stats",
             "explain",
             "read_logpoints"
@@ -10602,6 +10607,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Render thread time in milliseconds."
         },
+        "resolved": {
+          "type": "number",
+          "description": "How many of them something plays on this engine."
+        },
         "result": {
           "type": "object",
           "additionalProperties": true,
@@ -10611,6 +10620,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "rhiThreadMs": {
           "type": "number",
           "description": "RHI thread time in milliseconds."
+        },
+        "roles": {
+          "type": "array",
+          "description": "One row per role, by id.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "plugin": {
+                "type": "string",
+                "description": "The plugin the role belongs to; it resolves only while that plugin is on."
+              },
+              "resolved": {
+                "type": "boolean"
+              },
+              "stage": {
+                "type": "string",
+                "description": "How it was found: exact (its name), redirect (the engine renamed it), shape (the one member whose type fits) or words (the closest name, by a margin)."
+              },
+              "found": {
+                "type": "string",
+                "description": "What plays it here: the class or struct path, or the member name."
+              },
+              "evidence": {
+                "type": "string",
+                "description": "What was found, or what was searched and why nothing fit (AMBIGUOUS names the candidates)."
+              }
+            }
+          }
         },
         "rotation": {
           "type": "object",

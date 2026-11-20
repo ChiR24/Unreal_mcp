@@ -4,6 +4,7 @@
 #include "Domains/Debug/Explain/McpExplain.h"
 #include "Domains/Debug/Logpoints/McpLogpoints.h"
 #include "Domains/Perception/McpPerception.h"
+#include "Foundation/Reflect/McpEngineRoles.h"
 
 using namespace McpInspectHandlers;
 
@@ -55,6 +56,18 @@ bool UEngineWireSubsystem::HandleInspectAction(
     if (LowerSubAction.Equals(TEXT("get_level_details")))
     {
         return HandleInspectLevelDetailsAction(*this, RequestId, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("describe_engine_roles")))
+    {
+        FString Domain;
+        Payload->TryGetStringField(TEXT("domain"), Domain);
+        const TSharedRef<FJsonObject> Roles = McpEngineRoles::Describe(Domain);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+                               FString::Printf(TEXT("%d of %d engine roles resolve on this engine"),
+                                               static_cast<int32>(Roles->GetNumberField(TEXT("resolved"))),
+                                               static_cast<int32>(Roles->GetNumberField(TEXT("count")))),
+                               Roles, FString());
+        return true;
     }
     if (LowerSubAction.Equals(TEXT("get_blueprint_details")))
     {

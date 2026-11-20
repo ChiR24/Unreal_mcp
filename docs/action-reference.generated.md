@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `1619c635fb4dba71`
+Catalog revision: `9194974533c5c938`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 490 capabilities across
+The catalog declares 491 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
-| `inspect` | 28 | 23 | 4 | 1 | inspect |
+| `inspect` | 29 | 24 | 4 | 1 | inspect |
 | `manage_ai` | 17 | 3 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 490 capabilities require consent.
+77 of 491 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -378,6 +378,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.contact_sheet` | `inspect` | `contact_sheet` | read | read | none | `inspect.contact_sheet` |
 | `inspect.create_snapshot` | `inspect` | `control_actor` | write | write | none | `inspect.create_snapshot` `inspect.restore_snapshot` |
 | `inspect.delete_object` | `inspect` | `control_actor` | destructive | destructive | explicit | `inspect.delete_object` |
+| `inspect.describe_engine_roles` | `inspect` | `describe_engine_roles` | read | read | none | `inspect.describe_engine_roles` |
 | `inspect.describe_view` | `inspect` | `describe_view` | read | read | none | `inspect.describe_view` |
 | `inspect.explain` | `inspect` | `explain_collision` | read | read | none | `inspect.explain` `inspect.explain_collision` `inspect.explain_visible` `inspect.explain_input` `inspect.explain_widget` `inspect.explain_audible` `inspect.explain_lit` |
 | `inspect.find_by_class` | `inspect` | `find_by_class` | read | read | none | `inspect.find_by_class` |

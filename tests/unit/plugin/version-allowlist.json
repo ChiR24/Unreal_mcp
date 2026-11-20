@@ -25,12 +25,5 @@
   "buildCs": {
     "EngineWire/EngineWire.Build.cs": 2
   },
-  "minEngineVersionRecords": [
-    "blueprint.add_widget_viewmodel",
-    "blueprint.bind_widget_viewmodel",
-    "blueprint.list_viewmodels",
-    "blueprint.read_widget_viewmodels",
-    "blueprint.remove_widget_viewmodel",
-    "blueprint.set_field_notify"
-  ]
+  "minEngineVersionRecords": []
 }

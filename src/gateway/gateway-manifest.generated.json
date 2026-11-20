@@ -6249,6 +6249,7 @@
         "get_editor_state",
         "changes_since",
         "get_console_variables",
+        "describe_engine_roles",
         "get_stats",
         "explain",
         "read_logpoints"
@@ -6271,6 +6272,7 @@
         "componentName",
         "componentNames",
         "detailed",
+        "domain",
         "editorState",
         "event",
         "filter",
@@ -6446,6 +6448,10 @@
           "detailed": {
             "type": "boolean",
             "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Only this domain's roles (MVVM, PoseSearch); every role when omitted."
           },
           "editorState": {
             "type": "string",
@@ -7056,6 +7062,7 @@
               "get_editor_state",
               "changes_since",
               "get_console_variables",
+              "describe_engine_roles",
               "get_stats",
               "explain",
               "read_logpoints"

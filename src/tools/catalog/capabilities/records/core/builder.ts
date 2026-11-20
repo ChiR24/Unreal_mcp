@@ -50,8 +50,8 @@ export type CoreRecordSpec = {
   readonly costResources?: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
   readonly editorStates?: readonly EditorState[];
-  /** The first engine ("5.4") whose build has the handler, when older 5.x builds compile it out. */
-  readonly minEngineVersion?: string;
+  /** Engine roles (Resources/EngineRoles ids) the handler reaches by reflection; unavailable where one resolves to nothing. */
+  readonly roles?: readonly string[];
   /** Features the handler needs this build to have compiled (MCP_COMPILED_FEATURE names). */
   readonly compiled?: readonly string[];
   readonly aliases?: readonly string[];
@@ -64,13 +64,13 @@ export type CoreRecordSpec = {
 function availability(
   requiredPlugins: readonly string[] = [],
   editorStates: readonly EditorState[] = ['edit'],
-  minEngineVersion?: string,
+  roles?: readonly string[],
   compiled?: readonly string[],
 ): CapabilityAvailability {
   return {
     requiredPlugins: [...requiredPlugins],
     editorStates: [...editorStates],
-    ...(minEngineVersion === undefined ? {} : { minEngineVersion }),
+    ...(roles === undefined ? {} : { roles: [...roles] }),
     ...(compiled === undefined ? {} : { compiled: [...compiled] }),
   };
 }
@@ -118,7 +118,7 @@ export function buildCoreRecord(
     },
     schemas: { input, output },
     examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput ?? { success: true } }],
-    availability: availability(spec.plugins, spec.editorStates, spec.minEngineVersion, spec.compiled),
+    availability: availability(spec.plugins, spec.editorStates, spec.roles, spec.compiled),
     behavior: behavior(spec.effect, spec.behavior),
     policy: { ...policy(spec.effect), ...(spec.policyOverride ?? {}) },
     cost: { latency: spec.costLatency ?? 'instant', resources: spec.costResources ?? 'low' },

@@ -180,6 +180,9 @@ const testCases = [
   // === GLOBAL INSPECTION ===
   { scenario: 'INFO: get_project_settings', toolName: 'inspect', arguments: { action: 'get_project_settings' }, expected: 'success' },
   { scenario: 'INFO: get_world_settings', toolName: 'inspect', arguments: { action: 'get_world_settings' }, expected: 'success' },
+  { scenario: 'INFO: describe_engine_roles', toolName: 'inspect', arguments: { action: 'describe_engine_roles' }, expected: 'success' },
+  { scenario: 'INFO: describe_engine_roles of one domain', toolName: 'inspect', arguments: { action: 'describe_engine_roles', domain: 'MVVM' }, expected: 'success',
+    assertions: [{ path: 'structuredContent.result.count', gte: 1 }] },
   { scenario: 'INFO: get_viewport_info', toolName: 'inspect', arguments: { action: 'get_viewport_info' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'the viewport read says how many shader jobs are still compiling' }] },
   { scenario: 'INFO: get_selected_actors', toolName: 'inspect', arguments: { action: 'get_selected_actors' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'every editor-state read carries the shader count' }] },
   { scenario: 'INFO: get_editor_focus reads what the user is working on', toolName: 'inspect', arguments: { action: 'get_editor_focus' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'every editor-state read carries the shader count' }, { path: 'structuredContent.result.openEditors', exists: true, label: 'the open editors are listed' }] },

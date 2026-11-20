@@ -83,12 +83,12 @@ export type CapabilityAvailability = {
   readonly requiredPlugins: readonly string[];
   readonly editorStates: readonly (typeof EDITOR_STATES)[number][];
   /**
-   * The first engine ("5.4") whose build of the plugin has this capability's handler, when an older 5.x compiles it
-   * out. The plugin compares it with the engine it runs in: search and describe read the capability unavailable
-   * there and execute refuses it ENGINE_VERSION_UNSUPPORTED. Absent when every supported 5.x has it. Being replaced by
-   * compiled (and, for reflection-only handlers, by roles): no new record takes it.
+   * Engine roles (Resources/EngineRoles/*.json ids, or a table's domain for every role in it that is not optional) the
+   * handler reaches by reflection. Where one of them resolves to
+   * nothing on the running engine (its plugin is off, or this engine has no such class or member), search and describe
+   * read the capability unavailable and execute refuses it FEATURE_UNAVAILABLE, naming the role and why.
    */
-  readonly minEngineVersion?: string;
+  readonly roles?: readonly string[];
   /**
    * Features this build of the plugin must have compiled for the handler to exist, by the names its sources register
    * with MCP_COMPILED_FEATURE inside each feature's own compile guard. A build that left one out (an engine or package

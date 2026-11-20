@@ -3,8 +3,10 @@
  * remove_widget_viewmodel, set_field_notify.
  *
  * The native handler (Domains/WidgetAuthoring/ViewModel) works by reflection on the ModelViewViewModel plugin, a Beta
- * plugin a project may leave off, so nothing links it; the names it reads are the same from UE 5.4 to 5.8. Every
- * record answers MVVM_DISABLED where the plugin is off.
+ * plugin a project may leave off, so nothing links it. What it reaches is the MVVM engine role table
+ * (plugins/EngineWire/Resources/EngineRoles/MVVM.json): the records are available where every role there resolves on the
+ * running engine (the header check finds them all from 5.4; on 5.1-5.3 a binding's source and destination paths are not
+ * yet told apart, and 5.3's property path has no source kind). Every record answers MVVM_DISABLED where the plugin is off.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
@@ -13,7 +15,7 @@ import { P } from './properties.js';
 const FAMILY = 'viewmodel';
 const DOMAIN = 'widget';
 const PLUGINS = [...WIDGET_PLUGINS, 'ModelViewViewModel'];
-const SINCE = '5.4';
+const ROLES = ['MVVM'];
 
 const FIELD = {
   type: 'object', additionalProperties: false, properties: {
@@ -67,7 +69,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
       blueprints: { type: 'array', items: CLASS_ROW, description: 'Blueprint viewmodels under folder.' },
       native: { type: 'array', items: CLASS_ROW, description: 'Native viewmodel classes, any module.' },
     },
-    effect: 'read', latency: 'interactive', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'read', latency: 'interactive', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'list_viewmodels', folder: '/Game/UI' },
     exampleOutput: { success: true, blueprints: [{ class: '/Game/UI/VM_Health.VM_Health_C', assetPath: '/Game/UI/VM_Health', fields: [{ name: 'Health', type: 'float' }] }], native: [] },
   }),
@@ -84,7 +86,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
       viewModels: { type: 'array', items: VIEWMODEL_ROW },
       bindings: { type: 'array', items: BINDING_ROW },
     },
-    effect: 'read', latency: 'instant', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'read', latency: 'instant', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'read_widget_viewmodels', widgetPath: '/Game/UI/WBP_HUD' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD', viewModels: [{ name: 'VM_Health', class: '/Game/UI/VM_Health.VM_Health_C', id: '6F9C1B2A-0000-0000-0000-000000000001', creation: 'CreateInstance' }], bindings: [] },
   }),
@@ -102,7 +104,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['widgetPath', 'viewModelClass'],
     outputProps: { widgetPath: P.widgetPath, viewModel: VIEWMODEL_ROW, ...WRITTEN },
-    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'add_widget_viewmodel', widgetPath: '/Game/UI/WBP_HUD', viewModelClass: '/Game/UI/VM_Health', name: 'Health' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD', viewModel: { name: 'Health', class: '/Game/UI/VM_Health.VM_Health_C', id: '6F9C1B2A-0000-0000-0000-000000000001', creation: 'CreateInstance' }, compiled: true, saved: true },
   }),
@@ -120,7 +122,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['widgetPath', 'source', 'destination'],
     outputProps: { widgetPath: P.widgetPath, binding: BINDING_ROW, ...WRITTEN },
-    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'bind_widget_viewmodel', widgetPath: '/Game/UI/WBP_HUD', source: 'Health.Health', destination: 'HealthBar.Percent' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD', binding: { id: '0D3F2E1C-0000-0000-0000-000000000002', source: 'Health.Health', destination: 'HealthBar.Percent', mode: 'one_way', enabled: true, conversion: false }, compiled: true, saved: true },
   }),
@@ -142,7 +144,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
       removed: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'The binding or viewmodel removed, as read_widget_viewmodels showed it.' },
       ...WRITTEN,
     },
-    effect: 'destructive', latency: 'interactive', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'destructive', latency: 'interactive', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'remove_widget_viewmodel', widgetPath: '/Game/UI/WBP_HUD', bindingId: '0D3F2E1C-0000-0000-0000-000000000002' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD', removed: { id: '0D3F2E1C-0000-0000-0000-000000000002' }, compiled: true, saved: true },
   }),
@@ -164,7 +166,7 @@ export const WIDGET_VIEWMODEL_RECORDS: readonly CapabilityRecordSource[] = [
       fieldNotify: { type: 'boolean', description: 'What the variables are now.' },
       ...WRITTEN,
     },
-    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, minEngineVersion: SINCE,
+    effect: 'write', latency: 'interactive', resources: 'low', plugins: PLUGINS, roles: ROLES,
     exampleInput: { action: 'set_field_notify', blueprintPath: '/Game/UI/VM_Health', variableNames: ['Health'] },
     exampleOutput: { success: true, blueprintPath: '/Game/UI/VM_Health', variableNames: ['Health'], fieldNotify: true, compiled: true, saved: true },
   }),

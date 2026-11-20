@@ -78,9 +78,13 @@ call, and `perActionSchemas` is `false` only on the `{ tool }` summary:
 capability whose handler this build compiles out (a feature its
 `availability.compiled` lists that the build left out) reads
 `status: "unavailable"` with reason `not_compiled`, `missingFeature` and
-`runnable: false`, and `execute` refuses it with `FEATURE_UNAVAILABLE`; the
-few records still gated by `availability.minEngineVersion` read reason
-`engine_version` and are refused `ENGINE_VERSION_UNSUPPORTED`. Every
+`runnable: false`, and `execute` refuses it with `FEATURE_UNAVAILABLE`. A
+handler that reaches the engine only by reflection lists the engine roles it
+needs (`availability.roles`: ids from `Resources/EngineRoles/*.json`, or a
+table's domain); where nothing plays one on the running engine it reads reason
+`engine_role` with `missingRole` and `missingRoleWhy`, and `execute` refuses it
+`FEATURE_UNAVAILABLE` too. `inspect` `describe_engine_roles` lists every role
+and what plays it here. No record names an engine version. Every
 invalid `search` or `describe` call returns a structured, **guided error**:
 closest-match `suggestions` plus an executable `nextCall` payload. Discovery is
 served from the generated capability store

@@ -1,0 +1,14 @@
+{
+  "domain": "PoseSearch",
+  "plugin": "PoseSearch",
+  "why": "Pose Search databases, reached by reflection only (no link to the plugin). The entry array changed name and element type between engines, so it is found by shape.",
+  "roles": [
+    { "id": "PoseSearch.Database", "kind": "class", "path": "/Script/PoseSearch.PoseSearchDatabase" },
+    { "id": "PoseSearch.Schema", "kind": "class", "path": "/Script/PoseSearch.PoseSearchSchema" },
+    { "id": "PoseSearch.DatabaseEntries", "kind": "property", "owner": "PoseSearch.Database", "name": "DatabaseAnimationAssets",
+      "type": { "array": { "anyOf": [ { "cpp": "FInstancedStruct" }, { "structWords": ["animation", "asset"] } ] } },
+      "words": ["animation", "assets"] },
+    { "id": "PoseSearch.DatabaseSchema", "kind": "property", "owner": "PoseSearch.Database", "name": "Schema",
+      "type": { "anyOf": [ { "role": "PoseSearch.Schema" }, { "cpp": "UPoseSearchSchema" } ] }, "words": ["schema"] }
+  ]
+}

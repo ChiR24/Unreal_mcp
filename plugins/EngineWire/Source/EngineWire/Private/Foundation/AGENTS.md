@@ -9,6 +9,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Subdir | Count | Gives you |
 |--------|-------|-----------|
 | `Reflection/` | 12 files | UE property <-> JSON serialization boundary (`McpPropertyReflection*`), calls by reflection (`McpReflectedInvoke`), `McpInstancedStructView.h` |
+| `Reflect/` | 6 files | the engine adapter (`McpEngineRoles`): what plays each role of `Resources/EngineRoles/*.json` on the running engine (exact name, engine rename, the one member whose type fits, closest name by a margin); `.compat/check-roles.mjs` runs the same stages over the 5.0-5.9 header trees into `resolved.generated.json` |
 | `HandlerUtils/` | 7 .h, 5 .cpp | action normalization, JSON/path/response/transform helpers, actor lookup by name, project config reads |
 | `Blueprint/` | 4 .cpp, 1 .h | BP pin/type introspection and struct nodes, declared in `McpBlueprintUtils.h` |
 | `Diagnostics/` | 8 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers, `McpWorldTickTimer` |
@@ -55,6 +56,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{McpNestedPropPath,McpComponentLookup,McpPropApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
 | Refuse a number outside a property's ClampMin/ClampMax | `Reflection/McpPropertyReflection.h` `CheckRange` |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpClassResolve.h` |
+| A class, struct, property or function whose name differs between engines (or a plugin reached only by reflection) | add a role to `Resources/EngineRoles/<Domain>.json`, read it with `Reflect/McpEngineRoles.h` (`TypeOf` / `PropertyOf` / `FunctionOf`), then run `.compat/check-roles.mjs --write` |
 | An enumerator's short name for a reply | `BridgeHelpers/Reflection/McpEnumName.h` `McpEnumName(Value)` |
 | An enumerator from a caller's word (its full or short name or its display label, case, spaces, `_` and `-` aside) | `BridgeHelpers/Reflection/McpEnumName.h` `McpParseEnum<TEnum>`, `McpParseEnumToken` for a `UEnum` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{McpResponses,McpResponseVerify,McpOutputCapture,McpJsonFields}.h` |

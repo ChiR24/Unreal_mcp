@@ -1,8 +1,9 @@
 // A capability whose handler some builds compile out lists the features it needs (availability.compiled); each one is
 // registered with MCP_COMPILED_FEATURE inside the compile guard the handler builds under, so a build that left it out
 // (an older engine, or a package without the plugin it is built on) reads it unavailable in search and describe, and
-// execute refuses it FEATURE_UNAVAILABLE (EngineWire.Gateway.CompiledGate runs that in the editor). minEngineVersion,
-// the version gate it replaces, is left only on reflection-only handlers until the engine adapter's roles take them.
+// execute refuses it FEATURE_UNAVAILABLE (EngineWire.Gateway.CompiledGate runs that in the editor). A handler that
+// reaches the engine only by reflection lists the engine roles it needs instead (availability.roles), judged the same
+// way where nothing plays one on the running engine (EngineWire.Gateway.RoleGate). No record names an engine version.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -52,17 +53,39 @@ describe('availability.compiled', () => {
   });
 });
 
-describe('minEngineVersion', () => {
-  it('names a later 5.x, never 5.0 (every supported engine) or a malformed version', () => {
-    const withVersion = (minEngineVersion: string): boolean =>
-      sourceShape.availability.safeParse({ requiredPlugins: [], editorStates: ['edit'], minEngineVersion }).success;
-    expect(withVersion('5.4')).toBe(true);
-    expect(withVersion('5.0')).toBe(false);
-    expect(withVersion('5.4.1')).toBe(false);
-    expect(withVersion('5')).toBe(false);
+describe('availability.roles', () => {
+  const ROLES = join('plugins', 'EngineWire', 'Resources', 'EngineRoles');
+  const tables = readdirSync(ROLES).filter((file) => file.endsWith('.json') && !file.includes('.generated'))
+    .map((file) => JSON.parse(readFileSync(join(ROLES, file), 'utf8')) as { domain: string; roles: { id: string; optional?: boolean }[] });
+
+  it('takes role ids or a role table\'s domain, and never an engine version', () => {
+    const withRoles = (roles: unknown): boolean =>
+      sourceShape.availability.safeParse({ requiredPlugins: [], editorStates: ['edit'], roles }).success;
+    expect(withRoles(['MVVM'])).toBe(true);
+    expect(withRoles(['MVVM.Binding.Source'])).toBe(true);
+    expect(withRoles(['5.4'])).toBe(false);
+    expect(withRoles([])).toBe(false);
+    expect(sourceShape.availability.safeParse({ requiredPlugins: [], editorStates: ['edit'], minEngineVersion: '5.4' }).success).toBe(false);
+  });
+
+  it('names only roles and domains the role tables define', () => {
+    const known = new Set(tables.flatMap((table) => [table.domain, ...table.roles.map((role) => role.id)]));
+    const named = capabilityIndex().records.flatMap((record) => record.availability.roles ?? []);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((name) => !known.has(name))).toEqual([]);
+  });
+
+  it('gates the viewmodel records on the MVVM table, which the header check finds whole from 5.4', () => {
+    const viewmodels = capabilityIndex().records.filter((record) => record.discovery.family === 'viewmodel');
+    expect(viewmodels.map((record) => record.availability.roles)).toEqual(viewmodels.map(() => ['MVVM']));
+    const resolved = JSON.parse(readFileSync(join(ROLES, 'resolved.generated.json'), 'utf8')) as Record<string, Record<string, string | null>>;
+    const mvvm = tables.find((table) => table.domain === 'MVVM')?.roles.filter((role) => !role.optional) ?? [];
+    const whole = (engine: string): boolean => mvvm.every((role) => (resolved[role.id]?.[engine] ?? '?').match(/^[esw]:/u) !== null);
+    expect(['5.3', '5.4', '5.8', '5.9'].map(whole)).toEqual([false, true, true, true]);
   });
 
   it('is judged by every surface that says whether a capability runs', () => {
+    expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('return McpMissingCompiledFeature(Record).IsEmpty() && McpMissingEngineRole(Record).IsEmpty();');
     expect(read('Execute', 'McpNativeGatewayValidation.cpp')).toContain('McpCheckAvailabilityGate(*Request.Record, GateCode, GateMessage)');
     expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('Row->SetBoolField(TEXT("runnable"), bEnabled && McpRunsOnThisEngine(Record));');
     expect(read('Gateway', 'McpNativeGatewaySearch.cpp')).toContain('McpRunsOnThisEngine(*Scored[0].Record);');

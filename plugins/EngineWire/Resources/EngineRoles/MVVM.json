@@ -1,0 +1,67 @@
+{
+  "domain": "MVVM",
+  "plugin": "ModelViewViewModel",
+  "why": "The viewmodel handlers (Domains/WidgetAuthoring/ViewModel) read and write the MVVM plugin only by reflection. Each role is one class, struct, property or function they reach; name is the first guess, type and owner what any match must have.",
+  "roles": [
+    { "id": "MVVM.BlueprintView", "kind": "class", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintView" },
+    { "id": "MVVM.ViewModelContext", "kind": "struct", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintViewModelContext" },
+    { "id": "MVVM.Binding", "kind": "struct", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintViewBinding" },
+    { "id": "MVVM.ConversionPath", "kind": "struct", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintViewConversionPath" },
+    { "id": "MVVM.PropertyPath", "kind": "struct", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintPropertyPath" },
+    { "id": "MVVM.FieldPath", "kind": "struct", "path": "/Script/ModelViewViewModelBlueprint.MVVMBlueprintFieldPath" },
+    { "id": "MVVM.ViewModelBase", "kind": "class", "path": "/Script/ModelViewViewModel.MVVMViewModelBase" },
+    { "id": "MVVM.EditorSubsystem", "kind": "class", "path": "/Script/ModelViewViewModelEditor.MVVMEditorSubsystem" },
+    { "id": "FieldNotify.Interface", "kind": "class", "path": "/Script/FieldNotification.NotifyFieldValueChanged" },
+
+    { "id": "MVVM.View.ViewModels", "kind": "property", "owner": "MVVM.BlueprintView", "name": "AvailableViewModels",
+      "type": { "array": { "role": "MVVM.ViewModelContext" } }, "words": ["available", "view", "models"] },
+    { "id": "MVVM.View.Bindings", "kind": "property", "owner": "MVVM.BlueprintView", "name": "Bindings",
+      "type": { "array": { "role": "MVVM.Binding" } }, "words": ["bindings"] },
+
+    { "id": "MVVM.Context.Id", "kind": "property", "owner": "MVVM.ViewModelContext", "name": "ViewModelContextId",
+      "type": { "cpp": "FGuid" }, "words": ["context", "id"] },
+    { "id": "MVVM.Context.Name", "kind": "property", "owner": "MVVM.ViewModelContext", "name": "ViewModelName",
+      "type": { "cpp": "FName" }, "words": ["view", "model", "name"] },
+    { "id": "MVVM.Context.Class", "kind": "property", "owner": "MVVM.ViewModelContext", "name": "NotifyFieldValueClass",
+      "type": { "cpp": "UClass" }, "words": ["notify", "field", "class"] },
+    { "id": "MVVM.Context.CreationType", "kind": "property", "owner": "MVVM.ViewModelContext", "name": "CreationType",
+      "type": { "enumWords": ["creation", "type"] }, "words": ["creation", "type"] },
+
+    { "id": "MVVM.Binding.Id", "kind": "property", "owner": "MVVM.Binding", "name": "BindingId",
+      "type": { "cpp": "FGuid" }, "words": ["binding", "id"] },
+    { "id": "MVVM.Binding.Source", "kind": "property", "owner": "MVVM.Binding", "name": "SourcePath",
+      "type": { "role": "MVVM.PropertyPath" }, "words": ["source", "path"] },
+    { "id": "MVVM.Binding.Destination", "kind": "property", "owner": "MVVM.Binding", "name": "DestinationPath",
+      "type": { "role": "MVVM.PropertyPath" }, "words": ["destination", "path"] },
+    { "id": "MVVM.Binding.Mode", "kind": "property", "owner": "MVVM.Binding", "name": "BindingType",
+      "type": { "enumWords": ["binding", "mode"] }, "words": ["binding", "type"] },
+    { "id": "MVVM.Binding.Conversion", "kind": "property", "owner": "MVVM.Binding", "name": "Conversion",
+      "type": { "role": "MVVM.ConversionPath" }, "words": ["conversion"] },
+
+    { "id": "MVVM.Conversion.ToDestination", "kind": "property", "owner": "MVVM.ConversionPath", "name": "SourceToDestinationConversion",
+      "words": ["source", "to", "destination", "conversion"] },
+    { "id": "MVVM.Conversion.ToSource", "kind": "property", "owner": "MVVM.ConversionPath", "name": "DestinationToSourceConversion",
+      "words": ["destination", "to", "source", "conversion"] },
+
+    { "id": "MVVM.Path.Fields", "kind": "property", "owner": "MVVM.PropertyPath", "name": "Paths",
+      "type": { "array": { "role": "MVVM.FieldPath" } }, "words": ["paths"] },
+    { "id": "MVVM.Path.WidgetName", "kind": "property", "owner": "MVVM.PropertyPath", "name": "WidgetName",
+      "type": { "cpp": "FName" }, "words": ["widget", "name"] },
+    { "id": "MVVM.Path.ContextId", "kind": "property", "owner": "MVVM.PropertyPath", "name": "ContextId",
+      "type": { "cpp": "FGuid" }, "words": ["context", "id"] },
+    { "id": "MVVM.Path.Source", "kind": "property", "owner": "MVVM.PropertyPath", "name": "Source",
+      "type": { "enumWords": ["field", "path", "source"] }, "words": ["source"] },
+    { "id": "MVVM.Path.DeprecatedSource", "kind": "property", "owner": "MVVM.PropertyPath", "name": "bDeprecatedSource",
+      "type": { "cpp": "bool" }, "words": ["deprecated", "source"], "optional": true },
+
+    { "id": "MVVM.Field.Reference", "kind": "property", "owner": "MVVM.FieldPath", "name": "BindingReference",
+      "type": { "cpp": "FMemberReference" }, "words": ["binding", "reference"] },
+
+    { "id": "MVVM.Editor.RequestView", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "RequestView" },
+    { "id": "MVVM.Editor.GetView", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "GetView" },
+    { "id": "MVVM.Editor.AddViewModel", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "AddViewModel" },
+    { "id": "MVVM.Editor.RemoveViewModel", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "RemoveViewModel" },
+    { "id": "MVVM.Editor.RenameViewModel", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "RenameViewModel" },
+    { "id": "MVVM.Editor.AddBinding", "kind": "function", "owner": "MVVM.EditorSubsystem", "name": "AddBinding" }
+  ]
+}

@@ -1,6 +1,6 @@
 /**
- * Global inspection records (8 actions): project/world/editor settings, console variables,
- * viewport info, editor selection.
+ * Global inspection records (9 actions): project/world/editor settings, console variables,
+ * viewport info, editor selection, and the engine roles the server reaches by reflection.
  *
  * get_project_settings is the primary canonical occurrence of
  * cap:shared:get_project_settings (class A, shared with system_control).
@@ -208,6 +208,46 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'One row per variable found, in the order asked: name, value (as the console prints it; absent when withheld), withheld (true when its name reads like a credential), type, setBy and help.',
       },
       notFound: { type: 'array', items: { type: 'string' }, description: 'Names asked for that match no console variable (a console command is not one).' },
+    },
+  }),
+  buildCoreRecord({
+    parentTool: 'inspect', action: 'describe_engine_roles', dispatchAction: 'describe_engine_roles', domain: D, family: 'global',
+    topics: ['engine roles', 'engine adapter', 'reflected names', 'engine version differences', 'why unavailable'],
+    summary: 'List the engine roles this server reaches by reflection (one class, struct, property or function each) and what plays each on this engine, or why nothing does.',
+    whenToUse: [
+      'A capability reads unavailable for a missing engine role and you need which role and why.',
+      'You want to see what this engine calls a class or property that other engines name differently.',
+    ],
+    whenNotToUse: ['You want the members of one class; use inspect_class.'],
+    inputProps: { domain: { type: 'string', description: 'Only this domain\'s roles (MVVM, PoseSearch); every role when omitted.' } },
+    required: [],
+    effect: 'read',
+    exampleInput: { action: 'describe_engine_roles', domain: 'PoseSearch' },
+    exampleOutput: {
+      success: true, message: '4 of 4 engine roles resolve on this engine', count: 4, resolved: 4,
+      roles: [{
+        role: 'PoseSearch.DatabaseEntries', domain: 'PoseSearch', plugin: 'PoseSearch', resolved: true, stage: 'exact',
+        found: 'DatabaseAnimationAssets', evidence: 'DatabaseAnimationAssets',
+      }],
+    },
+    outputProps: {
+      count: { type: 'number', description: 'Roles listed.' },
+      resolved: { type: 'number', description: 'How many of them something plays on this engine.' },
+      roles: {
+        type: 'array',
+        description: 'One row per role, by id.',
+        items: {
+          type: 'object', additionalProperties: false, properties: {
+            role: { type: 'string' },
+            domain: { type: 'string' },
+            plugin: { type: 'string', description: 'The plugin the role belongs to; it resolves only while that plugin is on.' },
+            resolved: { type: 'boolean' },
+            stage: { type: 'string', description: 'How it was found: exact (its name), redirect (the engine renamed it), shape (the one member whose type fits) or words (the closest name, by a margin).' },
+            found: { type: 'string', description: 'What plays it here: the class or struct path, or the member name.' },
+            evidence: { type: 'string', description: 'What was found, or what was searched and why nothing fit (AMBIGUOUS names the candidates).' },
+          },
+        },
+      },
     },
   }),
 ];

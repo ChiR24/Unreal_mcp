@@ -19,6 +19,7 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
+#include "Foundation/Reflect/McpEngineRoles.h"
 #include "Framework/Application/SlateApplication.h"
 
 void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -86,6 +87,9 @@ void UEngineWireSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     InitializeHandlers();
     ConnectionManager->Start();
     StartNativeTransport();
+    // What plays each engine role here, resolved on the first tick (the editor has started by then) for search and
+    // describe, which read availability off the game thread.
+    McpEngineRoles::ScheduleRefresh();
 
     TickHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UEngineWireSubsystem::Tick),

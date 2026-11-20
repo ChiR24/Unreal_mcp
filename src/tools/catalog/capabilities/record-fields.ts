@@ -46,8 +46,9 @@ const exampleSchema = z.strictObject({
 const availabilitySchema = z.strictObject({
   requiredPlugins: z.array(z.string()),
   editorStates: z.array(z.enum(EDITOR_STATES)),
-  // 5.0 is every supported engine: a record that runs there declares nothing.
-  minEngineVersion: z.string().regex(/^5\.[1-9]$/u).optional(),
+  // Role ids (MVVM.Binding.Source) or a role table's domain (MVVM: every role in it that is not optional); a version is
+  // never a requirement.
+  roles: z.array(z.string().regex(/^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$/u)).min(1).optional(),
   compiled: z.array(z.string().regex(/^[A-Z][A-Z0-9_]*$/u)).min(1).optional()
 });
 
