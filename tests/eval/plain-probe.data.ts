@@ -470,6 +470,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'loop over an array', accepted: ['blueprint.edit_graph'] },
   { query: 'cast to player', accepted: ['blueprint.edit_graph'] },
   { query: 'event dispatcher', accepted: ['blueprint.edit_graph'] },
+  { query: 'activate gameplay ability', accepted: ['control_actor.call_actor_function'] },
   { query: 'compile c++', accepted: ['system_control.console_command'] },
   { query: 'recompile code', accepted: ['system_control.console_command'] },
   { query: 'hot reload', accepted: ['system_control.console_command'] },

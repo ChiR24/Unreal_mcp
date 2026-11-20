@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "984abada588106ed",
+  "catalogRevision": "8d95fefc376ad607",
   "recordCount": 511,
   "records": [
     {
@@ -42549,13 +42549,17 @@
         "domain": "actor",
         "family": "function",
         "topics": [
-          "call_actor_function"
+          "call_actor_function",
+          "activate gameplay ability",
+          "try activate ability",
+          "call function on component"
         ],
         "summary": "Call a named function on an actor, or while Play In Editor runs on the game's GameInstance, GameMode or another framework object, with optional arguments; normalizes to call_function.",
         "whenToUse": [
           "A Blueprint or native function on an actor must be invoked.",
           "A function of the running game's GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.",
-          "A function of one of the actor's components must be called (a body's GetCenterOfMass, a movement component's StopMovementImmediately): componentName."
+          "A function of one of the actor's components must be called (a body's GetCenterOfMass, a movement component's StopMovementImmediately): componentName.",
+          "A gameplay ability must be activated during Play: componentName the actor's ability system component (as get_components lists it), functionName TryActivateAbilitiesByTag or TryActivateAbilityByClass."
         ],
         "whenNotToUse": [
           "The function has side effects that cannot be undone."
@@ -42665,7 +42669,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "56f575ff55cd15837c8cc7d086d7d6b94565dcc3d93f50ae852cf30049fd69fb",
-        "content": "1ee5035668b7b8e3e2a6e5b0d073d3010da75d301e3e04ff192b5fca2991d33d"
+        "content": "5366d7e41112fa85124d56563d133953e6b00b090779b1b39e5ac56d2f5cd7e8"
       }
     },
     {

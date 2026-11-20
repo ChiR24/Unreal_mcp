@@ -134,6 +134,8 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_actor',
     action: 'call_actor_function',
     aliases: ['control_actor.call_function'],
+    // Recorded runs searched "activate gameplay ability" four times and got the GAS asset editors.
+    topics: ['activate gameplay ability', 'try activate ability', 'call function on component'],
     editorStates: ANY_EDITOR_STATE,
     domain: DOMAIN,
     family: FAMILY_FUNCTION,
@@ -143,6 +145,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
       'A Blueprint or native function on an actor must be invoked.',
       'A function of the running game\'s GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.',
       'A function of one of the actor\'s components must be called (a body\'s GetCenterOfMass, a movement component\'s StopMovementImmediately): componentName.',
+      'A gameplay ability must be activated during Play: componentName the actor\'s ability system component (as get_components lists it), functionName TryActivateAbilitiesByTag or TryActivateAbilityByClass.',
     ],
     whenNotToUse: ['The function has side effects that cannot be undone.'],
     inputProps: {
