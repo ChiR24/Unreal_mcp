@@ -87,7 +87,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
     primary: 'edit_state_tree', selector: 'edit',
     summary: 'Create a State Tree or edit it, chosen by edit, each compiled and saved: create makes the asset with a Root state and a schema (component or ai, from the GameplayStateTree plugin), add_state adds a named state, add_transition links two states on a trigger, configure_task sets the properties of a task or the selection behavior of a state. compiled says whether the tree compiled (an uncompiled tree does not run), with compileMessages.',
     topics: ['state tree', 'state tree state', 'state tree transition', 'state tree task', 'make a state tree'],
-    members: { create: 'create_state_tree', add_state: 'add_state_tree_state', add_transition: 'add_state_tree_transition', configure_task: 'configure_state_tree_task' },
+    members: { create: 'create_state_tree', add_state: 'add_state_tree_state', add_transition: 'add_state_tree_transition', configure_task: 'configure_state_tree_task', add_node: 'add_state_tree_node' },
   },
   {
     primary: 'get_ai_info', selector: 'info',

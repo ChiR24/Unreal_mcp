@@ -509,6 +509,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_ai::add_service": "interactive|medium",
   "manage_ai::add_smart_object_component": "interactive|medium",
   "manage_ai::add_smart_object_slot": "interactive|medium",
+  "manage_ai::add_state_tree_node": "interactive|medium",
   "manage_ai::add_state_tree_state": "interactive|medium",
   "manage_ai::add_state_tree_transition": "interactive|medium",
   "manage_ai::add_subnode": "interactive|medium",
@@ -1708,4 +1709,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1695;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1696;

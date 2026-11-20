@@ -57,6 +57,7 @@ bool UEngineWireSubsystem::HandleManageAIAction(
         {TEXT("add_state_tree_state"),           &McpAIHandlers::HandleAddStateTreeState},
         {TEXT("add_state_tree_transition"),      &McpAIHandlers::HandleAddStateTreeTransition},
         {TEXT("configure_state_tree_task"),      &McpAIHandlers::HandleConfigureStateTreeTask},
+        {TEXT("add_state_tree_node"),            &McpAIHandlers::HandleAddStateTreeNode},
         {TEXT("create_smart_object_definition"), &McpAIHandlers::HandleCreateSmartObjectDefinition},
         {TEXT("add_smart_object_slot"),          &McpAIHandlers::HandleAddSmartObjectSlot},
         {TEXT("configure_slot_behavior"),        &McpAIHandlers::HandleConfigureSmartObjectSlotBehavior},

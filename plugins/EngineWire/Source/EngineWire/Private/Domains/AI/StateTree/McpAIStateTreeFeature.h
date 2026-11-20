@@ -209,6 +209,14 @@ inline bool McpCompileStateTree(UStateTree* Tree, TArray<FString>& OutMessages)
 #endif
 }
 
+namespace McpAIHandlers
+{
+// Properties onto a node: its Blueprint instance object, its instance data, then the node struct, wherever the name is
+// (McpAIStateTreeTasks.cpp). Available gets every property name seen.
+int32 ApplyStateTreeTaskProperties(FStateTreeEditorNode& Task, const TSharedPtr<FJsonObject>& Properties,
+    TArray<FString>& Applied, TArray<FString>& Failed, TArray<FString>& Available);
+}
+
 // compiled, and compileMessages when the compiler had something to say.
 inline void McpCompileStateTreeInto(UStateTree* Tree, const TSharedPtr<FJsonObject>& Result)
 {

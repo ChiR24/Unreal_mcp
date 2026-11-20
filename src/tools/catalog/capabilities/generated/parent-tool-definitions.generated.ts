@@ -11750,6 +11750,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "simple (the point link of the proxy) or smart (its smart link, which can switch on and off)."
         },
+        "list": {
+          "type": "string",
+          "enum": [
+            "enter_condition",
+            "task",
+            "consideration",
+            "transition_condition",
+            "evaluator",
+            "global_task"
+          ],
+          "description": "Where the node goes: a state's (stateName) enter_condition, task, consideration or transition_condition, or the tree's evaluator or global_task."
+        },
         "location": {
           "oneOf": [
             {
@@ -12257,6 +12269,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "traitIndex": {
           "type": "number",
           "description": "Zero-based trait index (alternative to traitClass)."
+        },
+        "transitionIndex": {
+          "type": "number",
+          "description": "With transition_condition: which of the state's transitions, from 0 (default 0)."
         },
         "triggerType": {
           "type": "string",

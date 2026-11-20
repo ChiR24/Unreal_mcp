@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1d2798e3d0a033a7",
+  "catalogRevision": "3f5cfd715e955947",
   "recordCount": 499,
   "records": [
     {
@@ -66418,7 +66418,8 @@
         "manage_ai.create_state_tree",
         "manage_ai.add_state_tree_state",
         "manage_ai.add_state_tree_transition",
-        "manage_ai.configure_state_tree_task"
+        "manage_ai.configure_state_tree_task",
+        "manage_ai.add_state_tree_node"
       ],
       "legacyIds": [
         {
@@ -66452,6 +66453,13 @@
           "folded": {
             "edit": "configure_task"
           }
+        },
+        {
+          "tool": "manage_ai",
+          "action": "add_state_tree_node",
+          "folded": {
+            "edit": "add_node"
+          }
         }
       ],
       "discovery": {
@@ -66463,14 +66471,20 @@
           "state tree state",
           "state tree transition",
           "state tree task",
-          "make a state tree"
+          "make a state tree",
+          "state tree condition",
+          "state tree evaluator",
+          "state tree global task",
+          "add state tree task",
+          "state tree consideration"
         ],
         "summary": "Create a State Tree or edit it, chosen by edit, each compiled and saved: create makes the asset with a Root state and a schema (component or ai, from the GameplayStateTree plugin), add_state adds a named state, add_transition links two states on a trigger, configure_task sets the properties of a task or the selection behavior of a state. compiled says whether the tree compiled (an uncompiled tree does not run), with compileMessages.",
         "whenToUse": [
           "edit=create: An AI needs a StateTree instead of a Behavior Tree.",
           "edit=add_state: A StateTree needs another state under a parent.",
           "edit=add_transition: Two StateTree states need a trigger-driven link.",
-          "edit=configure_task: A StateTree state needs its task settings changed."
+          "edit=configure_task: A StateTree state needs its task settings changed.",
+          "edit=add_node: A State Tree state needs a condition to enter, a task, a utility consideration, or the tree an evaluator or global task."
         ],
         "whenNotToUse": [
           "edit=create: Use create_behavior_tree for Behavior Tree logic."
@@ -66538,15 +66552,36 @@
               "x-unreal-reflection-boundary": true,
               "description": "Task property values keyed by UPROPERTY name, imported by reflection onto the task instance."
             },
+            "list": {
+              "type": "string",
+              "enum": [
+                "enter_condition",
+                "task",
+                "consideration",
+                "transition_condition",
+                "evaluator",
+                "global_task"
+              ],
+              "description": "Where the node goes: a state's (stateName) enter_condition, task, consideration or transition_condition, or the tree's evaluator or global_task."
+            },
+            "nodeType": {
+              "type": "string",
+              "description": "The node struct by name (with or without its F) or /Script path, of the list's kind: a condition, task, evaluator or consideration struct."
+            },
+            "transitionIndex": {
+              "type": "number",
+              "description": "With transition_condition: which of the state's transitions, from 0 (default 0)."
+            },
             "edit": {
               "type": "string",
               "enum": [
                 "create",
                 "add_state",
                 "add_transition",
-                "configure_task"
+                "configure_task",
+                "add_node"
               ],
-              "description": "Which edit state tree variant to run.\ncreate: Create a State Tree asset named name in path (default /Game/AI/StateTrees) with a Root state and a schema, compiled and saved: schema component (default; a StateTreeComponent on any actor runs it), ai (a StateTreeAIComponent on an AI controller, UE 5.4+) or the class path of another schema. component and ai come from the GameplayStateTree plugin and are refused while it is off (SCHEMA_NOT_AVAILABLE); an asset already at the path is refused (ASSET_ALREADY_EXISTS). compiled says whether the tree compiled, with compileMessages.\nadd_state: Add a state named stateName under parentStateName (default Root) of a State Tree, compiled and saved: stateType State (default), Group, Linked, LinkedAsset (UE 5.4+) or Subtree. States are found by name, so a name the tree already has is refused (NAME_TAKEN), as is an unknown stateType. A state made here has no tasks yet. compiled false with compileMessages when the tree does not compile.\nadd_transition: Add a go-to-state transition from fromState to toState, compiled and saved: triggerType OnStateCompleted (default), OnStateSucceeded, OnStateFailed, OnTick, OnEvent (needs an event tag) or OnDelegate (newer engines). An unknown trigger or a state that is not found is refused; transitionId identifies it.\nconfigure_task: Change a task of a State Tree state (taskName, else taskIndex, default the first) by its properties (UPROPERTY names on the task, its instance data or its Blueprint instance) and/or the state selectionBehavior (TryEnterState, TrySelectChildrenInOrder, TrySelectChildrenAtRandom, TryFollowTransitions), compiled and saved. A call with neither, a task that is not found, or properties no part of the task takes are refused; applied and failed name the fields."
+              "description": "Which edit state tree variant to run.\ncreate: Create a State Tree asset named name in path (default /Game/AI/StateTrees) with a Root state and a schema, compiled and saved: schema component (default; a StateTreeComponent on any actor runs it), ai (a StateTreeAIComponent on an AI controller, UE 5.4+) or the class path of another schema. component and ai come from the GameplayStateTree plugin and are refused while it is off (SCHEMA_NOT_AVAILABLE); an asset already at the path is refused (ASSET_ALREADY_EXISTS). compiled says whether the tree compiled, with compileMessages.\nadd_state: Add a state named stateName under parentStateName (default Root) of a State Tree, compiled and saved: stateType State (default), Group, Linked, LinkedAsset (UE 5.4+) or Subtree. States are found by name, so a name the tree already has is refused (NAME_TAKEN), as is an unknown stateType. A state made here has no tasks yet. compiled false with compileMessages when the tree does not compile.\nadd_transition: Add a go-to-state transition from fromState to toState, compiled and saved: triggerType OnStateCompleted (default), OnStateSucceeded, OnStateFailed, OnTick, OnEvent (needs an event tag) or OnDelegate (newer engines). An unknown trigger or a state that is not found is refused; transitionId identifies it.\nconfigure_task: Change a task of a State Tree state (taskName, else taskIndex, default the first) by its properties (UPROPERTY names on the task, its instance data or its Blueprint instance) and/or the state selectionBehavior (TryEnterState, TrySelectChildrenInOrder, TrySelectChildrenAtRandom, TryFollowTransitions), compiled and saved. A call with neither, a task that is not found, or properties no part of the task takes are refused; applied and failed name the fields.\nadd_node: Add a node to a State Tree by its node struct (nodeType, such as StateTreeCompareIntCondition or StateTreeDelayTask), in list: a state's enter_condition, task or consideration, a transition's transition_condition (transitionIndex), or the tree's evaluator or global_task; properties sets its fields as edit=configure_task does. Compiled and saved; the reply names the node (nodeId) and how many the list holds. A nodeType that is not a struct of that list's kind is refused naming near ones. Needs UE 5.5 or later (FEATURE_UNAVAILABLE before)."
             }
           },
           "required": [
@@ -66629,7 +66664,8 @@
             "create": "create_state_tree",
             "add_state": "add_state_tree_state",
             "add_transition": "add_state_tree_transition",
-            "configure_task": "configure_state_tree_task"
+            "configure_task": "configure_state_tree_task",
+            "add_node": "add_state_tree_node"
           },
           "declaredBy": {
             "name": [
@@ -66644,11 +66680,13 @@
             "stateTreePath": [
               "add_state",
               "add_transition",
-              "configure_task"
+              "configure_task",
+              "add_node"
             ],
             "stateName": [
               "add_state",
-              "configure_task"
+              "configure_task",
+              "add_node"
             ],
             "parentStateName": [
               "add_state"
@@ -66675,7 +66713,17 @@
               "configure_task"
             ],
             "properties": [
-              "configure_task"
+              "configure_task",
+              "add_node"
+            ],
+            "list": [
+              "add_node"
+            ],
+            "nodeType": [
+              "add_node"
+            ],
+            "transitionIndex": [
+              "add_node"
             ]
           },
           "requires": {
@@ -66702,14 +66750,21 @@
                 "stateTreePath",
                 "stateName"
               ]
+            },
+            "add_state_tree_node": {
+              "required": [
+                "stateTreePath",
+                "list",
+                "nodeType"
+              ]
             }
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d18f289ae2b83d4432b9c0c52918d4288e9a21289470938ad03f029e12f28716",
-        "content": "cb18ac51048a37c668837471edf6ba473ce55dc4f1e09b8632d78cb98a6952b0"
+        "schema": "2a7f6d62a69ca29c6366c1a8a67cc48a1111ee18f238de9126177bd1c81d5f1f",
+        "content": "861b7da1081d32ee619a8afef9baecbb5f375b5dadca41f5defca5cff069e3c8"
       }
     },
     {

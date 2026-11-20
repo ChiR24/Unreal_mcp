@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `1d2798e3d0a033a7`
+Catalog revision: `3f5cfd715e955947`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -409,7 +409,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.edit_eqs_query` | `manage_ai` | `create_eqs_query` | write | write | none | `manage_ai.edit_eqs_query` `manage_ai.create_eqs_query` `manage_ai.add_eqs_generator` `manage_ai.add_eqs_test` `manage_ai.add_eqs_context` `manage_ai.configure_test_scoring` |
 | `manage_ai.edit_mass_entity` | `manage_ai` | `create_mass_entity_config` | write | write | none | `manage_ai.edit_mass_entity` `manage_ai.create_mass_entity_config` `manage_ai.configure_mass_entity` `manage_ai.add_mass_spawner` |
 | `manage_ai.edit_smart_object` | `manage_ai` | `create_smart_object_definition` | write | write | none | `manage_ai.edit_smart_object` `manage_ai.create_smart_object_definition` `manage_ai.add_smart_object_slot` `manage_ai.configure_slot_behavior` `manage_ai.add_smart_object_component` |
-| `manage_ai.edit_state_tree` | `manage_ai` | `create_state_tree` | write | write | none | `manage_ai.edit_state_tree` `manage_ai.create_state_tree` `manage_ai.add_state_tree_state` `manage_ai.add_state_tree_transition` `manage_ai.configure_state_tree_task` |
+| `manage_ai.edit_state_tree` | `manage_ai` | `create_state_tree` | write | write | none | `manage_ai.edit_state_tree` `manage_ai.create_state_tree` `manage_ai.add_state_tree_state` `manage_ai.add_state_tree_transition` `manage_ai.configure_state_tree_task` `manage_ai.add_state_tree_node` |
 | `manage_ai.get_ai_info` | `manage_ai` | `get_ai_info` | read | read | none | `manage_ai.get_ai_info` `manage_ai.get_navigation_info` `manage_ai.get_navigation_path` |
 | `manage_ai.get_live_ai_state` | `manage_ai` | `get_live_ai_state` | read | read | none | `manage_ai.get_live_ai_state` |
 | `manage_ai.get_tree` | `manage_ai` | `get_tree` | read | read | none | `manage_ai.get_tree` `manage_ai.get_blackboard_value` |

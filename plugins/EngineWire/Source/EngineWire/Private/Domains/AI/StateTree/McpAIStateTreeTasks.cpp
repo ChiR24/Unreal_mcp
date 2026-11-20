@@ -30,6 +30,7 @@ FString StateTreeTaskName(const FStateTreeEditorNode& Task)
     }
     return Node.IsValid() ? Node.Type->GetName() : FString(TEXT("None"));
 }
+} // namespace
 
 // Properties land on the task's Blueprint instance object, its instance-data
 // struct and finally the node struct itself, so a name is matched wherever the
@@ -54,7 +55,6 @@ int32 ApplyStateTreeTaskProperties(FStateTreeEditorNode& Task, const TSharedPtr<
         }
     }
     return Count;
-}
 }
 #endif
 

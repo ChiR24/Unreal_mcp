@@ -189,6 +189,22 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { stateTreePath: '/Game/AI/ST_Enemy', stateName: 'Patrol', selectionBehavior: 'TrySelectChildrenInOrder' }, result: 'StateTree task configured',
   }),
   aiRecord({
+    topics: ['state tree condition', 'state tree evaluator', 'state tree global task', 'add state tree task', 'state tree consideration'],
+    action: 'add_state_tree_node', summary: 'Add a node to a State Tree by its node struct (nodeType, such as StateTreeCompareIntCondition or StateTreeDelayTask), in list: a state\'s enter_condition, task or consideration, a transition\'s transition_condition (transitionIndex), or the tree\'s evaluator or global_task; properties sets its fields as configure_state_tree_task does. Compiled and saved; the reply names the node (nodeId) and how many the list holds. A nodeType that is not a struct of that list\'s kind is refused naming near ones. Needs UE 5.5 or later (FEATURE_UNAVAILABLE before).',
+    use: 'A State Tree state needs a condition to enter, a task, a utility consideration, or the tree an evaluator or global task.',
+    avoid: 'Use configure_state_tree_task to change a task that is there.',
+    props: {
+      stateTreePath: A.stateTreePath, stateName: A.stateName,
+      list: { type: 'string', enum: ['enter_condition', 'task', 'consideration', 'transition_condition', 'evaluator', 'global_task'], description: 'Where the node goes: a state\'s (stateName) enter_condition, task, consideration or transition_condition, or the tree\'s evaluator or global_task.' },
+      nodeType: { type: 'string', description: 'The node struct by name (with or without its F) or /Script path, of the list\'s kind: a condition, task, evaluator or consideration struct.' },
+      transitionIndex: { type: 'number', description: 'With transition_condition: which of the state\'s transitions, from 0 (default 0).' },
+      properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Node property values keyed by UPROPERTY name, on the node, its instance data or its Blueprint instance.' },
+    },
+    required: ['stateTreePath', 'list', 'nodeType'], plugins: STATE_TREE,
+    out: { assetPath: A.assetPath },
+    example: { stateTreePath: '/Game/AI/ST_Enemy', stateName: 'Patrol', list: 'task', nodeType: 'StateTreeDelayTask', properties: { Duration: 2 } }, result: 'Added StateTreeDelayTask to task',
+  }),
+  aiRecord({
     action: 'configure_test_scoring', summary: 'Set how a test of an Environment Query (testIndex, counted across options) filters and scores, and save: scoringEquation (Linear, Square, InverseLinear, SquareRoot or Constant), clampMin and clampMax, filterType (Minimum, Maximum, Range or Match) with floatMin and floatMax (a float range filters by Range unless filterType says otherwise), in testSettings or at the top level. The test becomes Filter and Score; unknown names and a call that sets nothing are refused.',
     use: 'An existing Environment Query test needs scoring or filter tuning.',
     avoid: 'Use add_eqs_test to create the test.',
