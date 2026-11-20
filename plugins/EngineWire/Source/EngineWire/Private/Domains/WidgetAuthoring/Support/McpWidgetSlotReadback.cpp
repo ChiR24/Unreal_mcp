@@ -8,6 +8,7 @@
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "EngineWireSubsystem.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "WidgetBlueprint.h"
 
 // The layout setters (set_anchor, set_padding, set_visibility, ...) answered "X set" with
@@ -141,7 +142,10 @@ TSharedPtr<FJsonObject> McpDescribeWidgetLayout(const UWidget* Widget)
 void ReplyWidgetLayout(UEngineWireSubsystem& Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
                        TSharedPtr<FJsonObject> ResultJson, UWidgetBlueprint* WidgetBP, UWidget* Widget, const FString& Message)
 {
-    ResultJson->SetBoolField(TEXT("saved"), MarkWidgetBlueprintModifiedAndSave(WidgetBP));
+    // Compiled before the save: Play draws the generated class's copy of the tree, which only a compile updates, and
+    // Play does not compile a Widget Blueprint without logic of its own, so a layout write kept the old look there.
+    FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+    CompileAndSaveWidgetBlueprint(WidgetBP, ResultJson);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), Widget->GetName());
     ResultJson->SetObjectField(TEXT("applied"), McpDescribeWidgetLayout(Widget));

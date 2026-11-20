@@ -1,6 +1,7 @@
 #include "Domains/WidgetAuthoring/McpWidgetActions.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetBPLoading.h"
 #include "Domains/WidgetAuthoring/McpWidgetPayload.h"
+#include "Domains/WidgetAuthoring/Layout/McpWidgetSlotAlignment.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
@@ -74,6 +75,7 @@ bool HandleWidgetAuthoringSlotAppearance(
         TargetSlot->Modify();
         *Padding = FMargin(GetJsonNumberField(PaddingObj, TEXT("left"), Padding->Left), GetJsonNumberField(PaddingObj, TEXT("top"), Padding->Top),
                            GetJsonNumberField(PaddingObj, TEXT("right"), Padding->Right), GetJsonNumberField(PaddingObj, TEXT("bottom"), Padding->Bottom));
+        McpWidgetSlotAlignment::NotifySlotChanged(TargetSlot, TEXT("Padding"));
         TargetSlot->SynchronizeProperties();
         ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Padding set"));
         return true;

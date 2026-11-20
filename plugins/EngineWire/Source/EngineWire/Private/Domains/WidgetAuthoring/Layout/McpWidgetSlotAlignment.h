@@ -7,6 +7,7 @@
 #include "Components/Widget.h"
 #include "Dom/JsonObject.h"
 #include "Layout/Margin.h"
+#include "UObject/UnrealType.h"
 
 // set_alignment used to handle UCanvasPanelSlot and nothing else: every other
 // slot class fell through the `if` and the handler still answered "Alignment
@@ -99,6 +100,17 @@ inline bool ReadPivotAxis(const TSharedPtr<FJsonValue> &Value, double &InOut, FS
   return true;
 }
 
+// Tells a slot one of its properties changed, as the details panel does. A Border's or a Background Blur's slot then
+// hands the value on to that panel, which draws with its own copy once the widget is built: the slot's value alone
+// answered success while a Border's child kept its old padding and alignment in Play.
+inline void NotifySlotChanged(UPanelSlot *Slot, const TCHAR *PropertyName) {
+  FProperty *Property = Slot && Slot->Parent ? FindFProperty<FProperty>(Slot->GetClass(), PropertyName) : nullptr;
+  if (Property) {
+    FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);
+    Slot->PostEditChangeProperty(Changed);
+  }
+}
+
 inline bool WriteAlignmentProperty(UPanelSlot *Slot, const TCHAR *PropertyName,
                                    uint8 AlignValue) {
   FByteProperty *Property =
@@ -107,6 +119,7 @@ inline bool WriteAlignmentProperty(UPanelSlot *Slot, const TCHAR *PropertyName,
     return false;
   }
   Property->SetPropertyValue_InContainer(Slot, AlignValue);
+  NotifySlotChanged(Slot, PropertyName);
   return true;
 }
 
