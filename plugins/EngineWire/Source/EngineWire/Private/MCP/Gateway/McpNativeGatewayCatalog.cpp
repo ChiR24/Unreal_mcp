@@ -181,6 +181,21 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
 	return View;
 }
 
+FString McpOneLineSummary(const FString& Summary)
+{
+	// The first sentence: a ". " that ends one, not one inside an abbreviation (e.g., i.e., etc.).
+	for (int32 At = Summary.Find(TEXT(". ")); At != INDEX_NONE; At = Summary.Find(TEXT(". "), ESearchCase::CaseSensitive, ESearchDir::FromStart, At + 2))
+	{
+		const FString Before = Summary.Left(At).Right(4);
+		if (!Before.EndsWith(TEXT("e.g")) && !Before.EndsWith(TEXT("i.e")) && !Before.EndsWith(TEXT("etc")) && !Before.EndsWith(TEXT(" vs"))) return Summary.Left(At + 1);
+	}
+	return Summary;
+}
+
+// A search row says what a model needs to choose: the capability, a one-line summary, its effect and how to go on.
+// The rest describe answers (the output contract, the policy, the declared requirements), so a row carries the
+// availability block only when the capability does not run here, and the policy only when the call needs a grant: on
+// most rows they read "available" and "none", and with every output name a 12-row page was about 14.5 KB.
 TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bEnabled)
 {
 	auto Row = MakeShared<FJsonObject>();
@@ -189,18 +204,16 @@ TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bE
 	Row->SetStringField(TEXT("action"), McpCapabilityPublicAction(Record));
 	Row->SetStringField(TEXT("domain"), Record.Domain);
 	Row->SetStringField(TEXT("family"), Record.Family);
-	Row->SetStringField(TEXT("summary"), Record.Summary);
+	Row->SetStringField(TEXT("summary"), McpOneLineSummary(Record.Summary));
 	Row->SetStringField(TEXT("effect"), Record.Effect);
-	Row->SetObjectField(TEXT("availability"), McpCapabilityAvailabilityView(Record, bEnabled));
-	Row->SetObjectField(TEXT("policy"), Record.Policy.IsValid() ? Record.Policy : MakeShared<FJsonObject>());
-	TArray<FString> Outputs;
-	const TSharedPtr<FJsonObject>* Properties = nullptr;
-	if (Record.OutputSchema.IsValid() && Record.OutputSchema->TryGetObjectField(TEXT("properties"), Properties) && Properties)
+	const bool bRunnable = bEnabled && McpRunsOnThisEngine(Record);
+	if (!bRunnable) Row->SetObjectField(TEXT("availability"), McpCapabilityAvailabilityView(Record, bEnabled));
+	FString Consent;
+	if (Record.Policy.IsValid() && Record.Policy->TryGetStringField(TEXT("consent"), Consent) && !Consent.Equals(TEXT("none"), ESearchCase::IgnoreCase))
 	{
-		for (const auto& Field : (*Properties)->Values) Outputs.Emplace(*Field.Key);  // 5.8 keys are not FString
+		Row->SetObjectField(TEXT("policy"), Record.Policy);
 	}
-	Row->SetArrayField(TEXT("outputs"), McpHandlerUtils::ToJsonStringArray(Outputs));
-	Row->SetBoolField(TEXT("runnable"), bEnabled && McpRunsOnThisEngine(Record));
+	Row->SetBoolField(TEXT("runnable"), bRunnable);
 	TSharedPtr<FJsonObject> Next;
 	if (bEnabled)
 	{
@@ -213,6 +226,15 @@ TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bE
 	}
 	Row->SetObjectField(TEXT("nextCall"), Next);
 	return Row;
+}
+
+void McpSearchEmptyAdvice(FJsonObject& Out, const FString& Query)
+{
+	// An empty page is where a caller starts inventing names: say what to change and hand over the one call that always works.
+	Out.SetStringField(TEXT("message"), Query.IsEmpty()
+		? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse domains."))
+		: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Query));
+	Out.SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
 }
 
 TSharedPtr<FJsonObject> McpSearchFilters(const FMcpDiscoveryQuery& Input)

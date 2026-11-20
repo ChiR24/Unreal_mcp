@@ -87,7 +87,8 @@ describe('availability.roles', () => {
   it('is judged by every surface that says whether a capability runs', () => {
     expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('return McpMissingCompiledFeature(Record).IsEmpty() && McpMissingEngineRole(Record).IsEmpty();');
     expect(read('Execute', 'McpNativeGatewayValidation.cpp')).toContain('McpCheckAvailabilityGate(*Request.Record, GateCode, GateMessage)');
-    expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('Row->SetBoolField(TEXT("runnable"), bEnabled && McpRunsOnThisEngine(Record));');
+    expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('const bool bRunnable = bEnabled && McpRunsOnThisEngine(Record);');
+    expect(read('Gateway', 'McpNativeGatewayCatalog.cpp')).toContain('Row->SetBoolField(TEXT("runnable"), bRunnable);');
     expect(read('Gateway', 'McpNativeGatewaySearch.cpp')).toContain('McpRunsOnThisEngine(*Scored[0].Record);');
     expect(read('Gateway', 'McpNativeGatewayDescribe.cpp')).toContain('bAvailable && McpRunsOnThisEngine(Record)');
     expect(read('Gateway', 'McpNativeGatewayDescribeOverview.cpp')).toContain('McpRunsOnThisEngine(*Record)');

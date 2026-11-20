@@ -37,6 +37,12 @@ TSharedPtr<FJsonObject> McpCapabilityAvailabilityView(const FMcpCapabilityRecord
  */
 TSharedPtr<FJsonObject> McpSearchRow(const FMcpCapabilityRecord& Record, bool bEnabled);
 
+/** A record's summary to its first sentence, as a search row shows it (a row with a signature keeps it whole). */
+FString McpOneLineSummary(const FString& Summary);
+
+/** The message and nextCall of a search that matched nothing. */
+void McpSearchEmptyAdvice(FJsonObject& Out, const FString& Query);
+
 /** The filters a search applied, as sent. */
 TSharedPtr<FJsonObject> McpSearchFilters(const FMcpDiscoveryQuery& Input);
 

@@ -221,12 +221,18 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	bool bTruncated = false;
 	bool bBudgetExceeded = false;
 	bool bSigned = false;
+	bool bRelevance = false;
 	for (int32 Index = Offset; Index < Total && Results.Num() < Limit; ++Index)
 	{
+		// A first page of a query ends where a row scores under McpSearchKeepRatioPercent of the top one (3 rows at least);
+		// nextCursor reads on, so nothing is lost: past the top few, rows sit at a fifth to a third of it.
+		bRelevance = !Query.IsEmpty() && Offset == 0 && Results.Num() >= 3 && Scored[Index].Score * 100 < Scored[0].Score * McpSearchKeepRatioPercent;
+		if (bRelevance) break;
 		const FMcpCapabilityRecord& Record = *Scored[Index].Record;
 		const TSharedPtr<FJsonObject> View = McpSearchRow(Record, IsToolEnabled(Record.Parent));
 		if (Index == 0 && bConfident)
 		{
+			View->SetStringField(TEXT("summary"), Record.Summary); // the row a model may execute from keeps its whole summary
 			View->SetObjectField(TEXT("signature"), McpSearchSignature(Record));
 			// The execute call describe hands over (CapabilityContract in McpNativeGatewayDescribe.cpp).
 			const TSharedPtr<FJsonObject> Execute = GatewayBuildNextCall(
@@ -274,7 +280,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	Out->SetNumberField(TEXT("maxBytes"), Budget);
 	Out->SetBoolField(TEXT("hasMore"), bHasMore);
 	Out->SetStringField(TEXT("truncationReason"),
-		bTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
+		bTruncated ? TEXT("byte-budget") : bRelevance ? TEXT("relevance") : (bHasMore ? TEXT("limit") : TEXT("none")));
 	Out->SetStringField(TEXT("message"), bSigned
 		? TEXT("The first result carries signature and executeCall: fill params from the signature and send executeCall, or describe it first for the full contract.")
 		: TEXT("Results are compact. Call describe with an exact capability before execute."));
@@ -286,15 +292,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		Out->SetStringField(TEXT("message"), FString::Printf(
 			TEXT("No result fits maxBytes=%d. Raise maxBytes and retry; this page cannot advance at the current budget."), Budget));
 	}
-	// An empty page is where a caller starts inventing names: say what to change
-	// and hand over the one call that always works.
-	if (Results.Num() == 0 && Total == 0)
-	{
-		Out->SetStringField(TEXT("message"), Input.Query.IsEmpty()
-			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse domains."))
-			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains. Game logic no capability makes in one call is built as a Blueprint graph: search 'blueprint logic'."), *Input.Query));
-		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
-	}
+	if (Results.Num() == 0 && Total == 0) McpSearchEmptyAdvice(*Out, Input.Query);
 	// Saved recipes (system_control save_recipe) the request names, on an unfiltered first page (McpRecipesSearch.cpp).
 	// They are project data, so only for a caller list_recipes would answer (Read scope or Admin).
 	const bool bFiltered = bExact || Input.bHasDomain || Input.bHasFamily || Input.bHasTool || Input.bHasAction || Input.bHasEffect;

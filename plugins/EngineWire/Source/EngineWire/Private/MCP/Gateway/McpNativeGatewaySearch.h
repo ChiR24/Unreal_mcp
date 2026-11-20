@@ -97,6 +97,8 @@ constexpr int32 McpSearchDeleteIntentBonus = 40;
  * tests/eval/confident-hit.test.ts).
  */
 constexpr int32 McpSearchConfidentRatioPercent = 90;
+// A first page stops at the first row scoring under this share of the top one (after 3 rows); the rest pages on.
+constexpr int32 McpSearchKeepRatioPercent = 50;
 /** A describe page's ceiling, and a browse level's page when no limit is sent (MAX_DESCRIBE_LIMIT, DEFAULT_BROWSE_LIMIT). */
 constexpr int32 McpDescribeMaxLimit = 50;
 // Search result byte budget (24 KB); a page that would pass it is cut short and
