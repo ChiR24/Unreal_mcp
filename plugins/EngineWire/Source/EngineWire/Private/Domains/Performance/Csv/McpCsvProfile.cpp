@@ -21,6 +21,13 @@ double Percentile(TArray<double> Values, double Share)
 
 double Round(double Value) { return FMath::RoundToDouble(Value * 100.0) / 100.0; }
 
+// A column in milliseconds: the Exclusive/ scopes and the thread and GPU times. The writer's other columns are counts and
+// megabytes (draw calls, GPUMem/LocalUsedMB), which outranked every timing by their size.
+bool IsTiming(const FString& Name)
+{
+    return Name.StartsWith(TEXT("Exclusive/")) || (Name.EndsWith(TEXT("Time")) && !Name.Contains(TEXT("FrameTime")));
+}
+
 TSharedPtr<FJsonObject> StatRow(const FString& Name, double Mean, double Peak)
 {
     const TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
@@ -51,8 +58,9 @@ TSharedPtr<FJsonObject> Summarize(const FString& Csv, int32 Top, double HitchMs,
     {
         TArray<FString> Cells;
         Lines[Line].ParseIntoArray(Cells, TEXT(","), false);
-        // The writer ends with metadata rows ([HasHeaderRowAtEnd], EVENTS, the header again): the frames stop there.
-        if (Cells.Num() == 0 || !Cells[0].TrimStartAndEnd().IsNumeric()) break;
+        // The writer's first column is EVENTS, empty on most frames and text on a frame something happened ("Cmd:
+        // csvprofile stop"); after the frames it writes the header again, then metadata rows ([HasHeaderRowAtEnd]).
+        if (Cells.Num() == 0 || Cells[0].TrimStartAndEnd() == Header[0] || Cells[0].TrimStart().StartsWith(TEXT("["))) break;
         for (int32 Col = 0; Col < Header.Num(); ++Col)
         {
             Columns[Col].Add(Cells.IsValidIndex(Col) && Cells[Col].TrimStartAndEnd().IsNumeric() ? FCString::Atod(*Cells[Col].TrimStartAndEnd()) : 0.0);
@@ -80,12 +88,12 @@ TSharedPtr<FJsonObject> Summarize(const FString& Csv, int32 Top, double HitchMs,
     Frame->SetNumberField(TEXT("meanFps"), Round(Sum > 0.0 ? 1000.0 * Frames / Sum : 0.0));
     Out->SetObjectField(TEXT("frameTime"), Frame);
 
-    // Every other column by its mean and peak.
+    // Every timing column by its mean and peak.
     TArray<TPair<int32, double>> ByMean;
     TArray<TPair<int32, double>> ByPeak;
     for (int32 Col = 0; Col < Header.Num(); ++Col)
     {
-        if (Col == FrameCol || Header[Col].IsEmpty()) continue;
+        if (!IsTiming(Header[Col])) continue;
         double ColSum = 0.0;
         for (const double Value : Columns[Col]) ColSum += Value;
         ByMean.Emplace(Col, ColSum / Frames);
@@ -122,7 +130,7 @@ TSharedPtr<FJsonObject> Summarize(const FString& Csv, int32 Top, double HitchMs,
         TArray<TPair<int32, double>> Cells;
         for (int32 Col = 0; Col < Header.Num(); ++Col)
         {
-            if (Col != FrameCol && !Header[Col].IsEmpty()) Cells.Emplace(Col, Columns[Col][Row]);
+            if (IsTiming(Header[Col])) Cells.Emplace(Col, Columns[Col][Row]);
         }
         Cells.Sort([](const TPair<int32, double>& A, const TPair<int32, double>& B) { return A.Value > B.Value; });
         TArray<TSharedPtr<FJsonValue>> Stats;

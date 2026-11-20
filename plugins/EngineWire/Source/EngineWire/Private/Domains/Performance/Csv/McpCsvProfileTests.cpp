@@ -1,5 +1,5 @@
-// McpCsvProfileTests.cpp — the CSV profile summary (McpCsvProfile.h) on a small table shaped like the engine writer's,
-// metadata rows after the frames included.
+// McpCsvProfileTests.cpp — the CSV profile summary (McpCsvProfile.h) on a small table shaped like the engine writer's:
+// the EVENTS column first, a megabytes column that is no timing, and the header and metadata rows after the frames.
 
 #include "Domains/Performance/Csv/McpCsvProfile.h"
 
@@ -15,14 +15,16 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpCsvProfileTest::RunTest(const FString& Parameters)
 {
     (void)Parameters;
+    // As a 5.8 capture writes it: an EVENTS column first, text on the frame an event happened, the header again after
+    // the frames, then the metadata row.
     const FString Csv = TEXT(
-        "FrameTime,GameThreadTime,RenderThreadTime,GPUTime\n"
-        "16.0,8.0,9.0,12.0\n"
-        "16.0,8.5,9.0,12.5\n"
-        "50.0,45.0,10.0,13.0\n"
-        "17.0,9.0,9.5,30.0\n"
-        "[HasHeaderRowAtEnd],1\n"
-        "FrameTime,GameThreadTime,RenderThreadTime,GPUTime\n");
+        "EVENTS,FrameTime,GameThreadTime,RenderThreadTime,GPUTime,GPUMem/LocalUsedMB\n"
+        ",16.0,8.0,9.0,12.0,4000\n"
+        ",16.0,8.5,9.0,12.5,4000\n"
+        ",50.0,45.0,10.0,13.0,4100\n"
+        "Cmd: csvprofile stop##3.99,17.0,9.0,9.5,30.0,4000\n"
+        "EVENTS,FrameTime,GameThreadTime,RenderThreadTime,GPUTime,GPUMem/LocalUsedMB\n"
+        "[HasHeaderRowAtEnd],1\n");
     FString Error;
     const TSharedPtr<FJsonObject> Summary = McpCsvProfile::Summarize(Csv, 2, 33.3, Error);
     if (!TestTrue(TEXT("a writer-shaped table reads"), Summary.IsValid()))
