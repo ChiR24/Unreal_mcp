@@ -103,11 +103,14 @@ FMcpAuthorizationDecision CheckConsent(
 			bKnown ? *Demand.CapabilityId : TEXT("this action"), *Mode);
 		if (bKnown)
 		{
+			// A consent a parameter raised is minted by describing that parameter: a plain describe gives none.
+			const FString Describe = Demand.ConsentRaisedBy.IsEmpty() ? FString::Printf(TEXT("'%s'"), *Demand.CapabilityId)
+				: FString::Printf(TEXT("'%s' with param %s (sending %s raises its consent)"), *Demand.CapabilityId, *Demand.ConsentRaisedBy, *Demand.ConsentRaisedBy);
 			Message += FString::Printf(
-				TEXT(" Run describe for '%s' and re-send this same call with its consentGrant ")
+				TEXT(" Run describe for %s and re-send this same call with its consentGrant ")
 				TEXT("({\"capability\":\"%s\",\"acknowledge\":\"%s\",\"nonce\":...}, the nonce single-use) ")
 				TEXT("as the top-level consent sibling of params, not inside params."),
-				*Demand.CapabilityId, *Demand.CapabilityId, *Mode);
+				*Describe, *Demand.CapabilityId, *Mode);
 		}
 		FMcpAuthorizationDecision Decision = FMcpAuthorizationDecision::Deny(
 			McpAuthorizationCodes::ConsentRequired, Message);

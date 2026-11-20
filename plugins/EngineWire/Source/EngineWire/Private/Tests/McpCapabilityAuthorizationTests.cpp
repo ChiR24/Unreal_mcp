@@ -103,6 +103,11 @@ bool FMcpCapabilityAuthorizationScopeConsentTest::RunTest(const FString& Paramet
 	TestTrue(TEXT("refusal spells out the grant to re-send"),
 		CheckConsent(ConsentExplicit, None).Message.Contains(
 			TEXT("{\"capability\":\"control_actor.delete\",\"acknowledge\":\"explicit\",\"nonce\":")));
+	// A consent a parameter raised is minted only by describing that parameter, so the refusal names it.
+	FMcpCapabilityDemand Raised = ConsentElevated;
+	Raised.ConsentRaisedBy = TEXT("calls");
+	TestTrue(TEXT("a raised consent's refusal names the parameter to describe"),
+		CheckConsent(Raised, None).Message.Contains(TEXT("with param calls")));
 
 	return true;
 }
