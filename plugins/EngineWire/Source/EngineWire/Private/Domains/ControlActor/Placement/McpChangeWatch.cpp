@@ -191,6 +191,7 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     TSet<const AActor*> Doubled; // named as another's twin: one warning covers the pair
     TArray<AActor*> Checked; // and given the engine's own Map Check, so its findings on what changed are said too
     int32 Changed = 0;
+    TArray<FString> Unchecked; // the first few past the cap, by name, so a check of them can name them
     // Where it stands is judged when it moved, what it shows when that changed: a new material alone repeats no placement.
     const auto Consider = [&](AActor* Actor, const FWatchBefore& Before) {
         uint32 Where = 0, Drawn = 0;
@@ -201,9 +202,14 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
         McpContentAudit::Fingerprint(Actor, Where, Drawn);
         const bool bMoved = Before.bNew || Where != Before.Where;
         const bool bRedrawn = Before.bNew || Drawn != Before.Drawn;
-        if ((!bMoved && !bRedrawn) || ++Changed > WatchMaxChecked)
+        if (!bMoved && !bRedrawn)
         {
             return; // renamed, tagged, foldered: nothing it shows or where it stands moved
+        }
+        if (++Changed > WatchMaxChecked)
+        {
+            if (Unchecked.Num() < 8) Unchecked.Add(McpActorRef(Actor));
+            return;
         }
         Checked.Add(Actor);
         // A copy on its original intersects it and shares every face with it; the duplicate warning says all of that.
@@ -268,7 +274,8 @@ void AddWarnings(const FString& RequestId, const TSharedPtr<FJsonObject>& Result
     }
     if (Changed > WatchMaxChecked)
     {
-        Unsaid.Add(FString::Printf(TEXT("%d of the %d actors it changed were not checked"), Changed - WatchMaxChecked, Changed));
+        Unsaid.Add(FString::Printf(TEXT("%d of the %d actors it changed were not checked (%s%s)"), Changed - WatchMaxChecked, Changed,
+            *FString::Join(Unchecked, TEXT(", ")), Changed - WatchMaxChecked > Unchecked.Num() ? TEXT(", ...") : TEXT("")));
     }
     if (Unsaid.Num() > 0)
     {
