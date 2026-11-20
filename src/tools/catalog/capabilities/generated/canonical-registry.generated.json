@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ac06f6491c90d524",
+  "catalogRevision": "7525ecff623902bf",
   "recordCount": 511,
   "records": [
     {
@@ -22189,6 +22189,9 @@
               "type": "string",
               "description": "Pin name on a graph node."
             },
+            "value": {
+              "description": "set_pin_default_value: the same as propertyValue, under the name most callers try first; propertyValue wins when both are sent."
+            },
             "nodeIds": {
               "type": "array",
               "items": {
@@ -22803,6 +22806,9 @@
             "pinName": [
               "set_pin_default_value"
             ],
+            "value": [
+              "set_pin_default_value"
+            ],
             "nodeIds": [
               "arrange_nodes"
             ],
@@ -22868,8 +22874,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d9e05d5dc231e9c4d519320b2f97e5a92fd1b32199e778329a2409893264edcb",
-        "content": "5a21b065cec750035145c2b5e147171d3aa69d8f97c7ef5fa6d776efc48e3d57"
+        "schema": "9f8601b87ceed242dd7352e3a52f131747af0ae6f044e9a8918950e4db12d45e",
+        "content": "c5ad5ce521b5776dd7c4106685d1631ad38b9c087dc6f950f85f44011b911d65"
       }
     },
     {

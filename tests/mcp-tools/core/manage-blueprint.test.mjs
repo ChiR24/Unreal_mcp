@@ -444,6 +444,8 @@ const testCases = [
   // === VERIFY: pin default persisted on PrintString node ===
   { scenario: 'VERIFY: pin default persisted', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'InString', defaultValue: 'test' }, label: 'PrintString InString pin default is persisted' }] },
 
+  { scenario: 'CONFIG: set_pin_default_value takes value as well as propertyValue', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', value: 'ValueAlias', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.value', equals: 'ValueAlias', label: 'value set the pin' }] },
+
   // === INFO: the graph filter also reads what a node's pins hold (a literal default, or a default object's path) ===
   { scenario: 'CONFIG: set_pin_default_value a literal the graph filter can find', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', propertyValue: 'PinFilterNeedle', graphName: 'EventGraph' }, expected: 'success' },
   { scenario: 'INFO: get_graph_details filter matches a pin default value, case-insensitively', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', filter: 'pinfilterneedle' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 1, label: 'the node holding the literal is found by it' }] },

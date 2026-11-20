@@ -19824,6 +19824,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
             },
             {
+              "description": "set_pin_default_value: the same as propertyValue, under the name most callers try first; propertyValue wins when both are sent."
+            },
+            {
               "type": "number",
               "description": "A plain number for an opacity or angle key, in place of propertyValue."
             },
