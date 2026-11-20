@@ -54,6 +54,10 @@ bool McpApplyFoldedPins(
  */
 void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params);
 
+/** The selector values whose variants declare every sent parameter the variants do not all share; empty when the
+ *  params name none of those. Two or more mean the params fit several variants: the refusal names them. */
+TArray<FString> McpFoldSelectorCandidates(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params);
+
 /**
  * The bridge action to dispatch once params are validated: an old name
  * dispatches itself, the primary maps its selector through dispatchBy, and

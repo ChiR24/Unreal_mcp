@@ -3,16 +3,13 @@
 #include "Dom/JsonObject.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 
-// A call that omits the selector runs the variant its parameters point to:
-// every sent parameter the variants do not all share must be declared by one
-// and the same variant.
-void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
+TArray<FString> McpFoldSelectorCandidates(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
 {
-	if (Record.DispatchBySelector.IsEmpty() || !Params.IsValid() || Params->HasField(Record.DispatchBySelector))
-	{
-		return;
-	}
 	TOptional<TArray<FString>> Candidates;
+	if (!Params.IsValid())
+	{
+		return {};
+	}
 	for (const auto& Param : Params->Values)
 	{
 		if (const TArray<FString>* Owners = Record.DispatchByDeclaredBy.Find(FString(*Param.Key)))
@@ -24,9 +21,22 @@ void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<F
 			Candidates->RemoveAll([Owners](const FString& Value) { return !Owners->Contains(Value); });
 		}
 	}
-	if (Candidates.IsSet() && Candidates->Num() == 1)
+	return Candidates.Get(TArray<FString>());
+}
+
+// A call that omits the selector runs the variant its parameters point to:
+// every sent parameter the variants do not all share must be declared by one
+// and the same variant.
+void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
+{
+	if (Record.DispatchBySelector.IsEmpty() || !Params.IsValid() || Params->HasField(Record.DispatchBySelector))
 	{
-		Params->SetStringField(Record.DispatchBySelector, (*Candidates)[0]);
+		return;
+	}
+	const TArray<FString> Candidates = McpFoldSelectorCandidates(Record, Params);
+	if (Candidates.Num() == 1)
+	{
+		Params->SetStringField(Record.DispatchBySelector, Candidates[0]);
 		return;
 	}
 	// A family whose primary is none of its members runs the variant its selector's schema default names when the call

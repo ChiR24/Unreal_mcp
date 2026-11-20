@@ -148,8 +148,13 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		|| !McpCheckInputStringLengths(ToValidate, InputSchema, Violation))
 	{
 		const FString Code = McpSchemaViolationCode(Violation.Reason);
+		// A missing selector whose sent params fit several variants names those (a struct node's params fit two edits).
+		const TArray<FString> Fits = Violation.Pointer == TEXT("/") + Request.Record->DispatchBySelector
+			? McpFoldSelectorCandidates(*Request.Record, Request.Params) : TArray<FString>();
 		// The violation, the capability it is for, and where the contract is.
-		const FString Message = FString::Printf(TEXT("%s for %s. Call describe before execution."), *Violation.Message, *Request.CapabilityId);
+		const FString Message = FString::Printf(TEXT("%s%s for %s. Call describe before execution."), *Violation.Message,
+			Fits.Num() > 1 ? *FString::Printf(TEXT(" (the params sent fit %s)"), *FString::Join(Fits, TEXT(" or "))) : TEXT(""),
+			*Request.CapabilityId);
 		FMcpSemanticError SchemaError = Violation.Reason == EMcpSchemaViolation::Range
 			? McpRangeError(Violation.Pointer, Message)
 			: McpValidationError(Code, Message, Violation.Pointer);
