@@ -288,7 +288,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 		Error->SetStringField(TEXT("expectedDataType"), TypeName);
 		return Error;
 	}
-	SaveAudioAsset(MetaSound, GetJsonBoolField(Params, TEXT("save"), true));
+	// Says whether it was saved, as the batch form and the other graph edits do.
+	const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+	Response->SetBoolField(TEXT("saved"), SaveAudioAsset(MetaSound, bSave) && bSave);
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound %s '%s' set"), NodeInput ? TEXT("node input") : TEXT("default for"), *InputName));
 	Response->SetStringField(TEXT("dataType"), TypeName);

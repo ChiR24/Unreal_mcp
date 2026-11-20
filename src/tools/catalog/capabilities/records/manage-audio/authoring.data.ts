@@ -64,7 +64,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   withInputProps(a('add_metasound_input', 'Add an input to a MetaSound graph.', ['assetPath', 'inputName', 'inputType', 'defaultValue', 'save'], ['assetPath', 'inputName', 'inputType'], [], [], META), { defaultValue: META_LITERAL }),
   a('add_metasound_node', 'Add a node to a MetaSound graph.', ['assetPath', 'nodeClassName', 'nodeType', 'save'], ['assetPath'], ['nodeId'], ['nodeId'], META, ['nodeClassName', 'nodeType']),
   a('add_metasound_output', 'Add an output to a MetaSound graph.', ['assetPath', 'outputName', 'outputType', 'save'], ['assetPath', 'outputName', 'outputType'], [], [], META),
-  withInputProps(a('set_metasound_default', 'Set the default of a MetaSound graph input, or with nodeId the literal on a node input (an oscillator frequency, an envelope time, a note array).', ['assetPath', 'inputName', 'defaultValue', 'save'], ['assetPath', 'inputName', 'defaultValue'], [], [], META), {
+  withInputProps(a('set_metasound_default', 'Set the default of a MetaSound graph input, or with nodeId the literal on a node input (an oscillator frequency, an envelope time, a note array).', ['assetPath', 'inputName', 'defaultValue', 'save'], ['assetPath', 'inputName', 'defaultValue'], ['saved'], [], META), {
     defaultValue: META_LITERAL,
     nodeId: { type: 'string', description: 'Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input.' },
   }),
