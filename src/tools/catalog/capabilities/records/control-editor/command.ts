@@ -105,7 +105,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'list_editor_toolsets', dispatchAction: 'control_editor',
     domain: D, family: F,
     topics: ['epic toolsets', 'toolset registry', 'epic mcp tools', 'state tree', 'control rig', 'pcg', 'gameplay abilities', 'niagara toolset', 'mvvm'],
-    summary: 'List the tools of Epic\'s editor toolsets (the Toolset Registry that ships with Unreal Engine 5.8: StateTree, PCG, GAS, Niagara, UMG, MVVM, physics and more, as their plugins are enabled), each with a description and an effect (read, write, destructive) judged from its name; query narrows them, and toolName returns one tool\'s input schema for call_editor_tool.',
+    summary: 'List the tools of Epic\'s editor toolsets (the Toolset Registry that ships with Unreal Engine 5.8: StateTree, PCG, GAS, Niagara, UMG, MVVM, physics and more, as their plugins are enabled), each with a description and an effect (read, write, destructive): the access mode its registry states (UE 5.9: execute reads as destructive), else judged from its name; query narrows them, and toolName returns one tool\'s input schema for call_editor_tool.',
     whenToUse: [
       'No native capability covers the work and Epic ships a toolset for it on Unreal Engine 5.8.',
       'The input schema of an Epic toolset tool is needed before call_editor_tool.',
@@ -138,7 +138,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'call_editor_tool', dispatchAction: 'control_editor',
     domain: D, family: F,
     topics: ['run epic tool', 'epic toolset call', 'toolset registry'],
-    summary: 'Run one tool of Epic\'s editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code, and every ConfigSettingsToolset tool (it reaches this plugin\'s own settings; use system_control project settings), is never called (EDITOR_TOOL_BLOCKED).',
+    summary: 'Run one tool of Epic\'s editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose registry marks it execute (UE 5.9), or, where the registry states no access mode, whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...), is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code, and every ConfigSettingsToolset tool (it reaches this plugin\'s own settings; use system_control project settings), is never called (EDITOR_TOOL_BLOCKED).',
     whenToUse: ['list_editor_toolsets found an Epic tool for work no native capability covers.'],
     whenNotToUse: [
       'A native capability covers the operation: prefer it.',
@@ -150,7 +150,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputProps: {
       toolName: { type: 'string', description: 'Tool that ran.' },
-      effect: { type: 'string', description: 'read or write, as judged from the tool\'s name.' },
+      effect: { type: 'string', description: 'read or write: the access mode the registry states, else as judged from the tool\'s name.' },
       output: { 'x-unreal-reflection-boundary': true, description: 'The tool\'s own result: its JSON output parsed, or the raw text when it is not JSON.' },
     },
     required: ['toolName'],
@@ -164,7 +164,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'call_editor_tool_destructive', dispatchAction: 'control_editor',
     domain: D, family: F,
     topics: ['delete with epic tool', 'remove with epic toolset'],
-    summary: 'Run one tool of Epic\'s editor toolsets that deletes or resets editor state (its name starts with Delete, Remove, Destroy, Clear, Reset or a similar verb), under the destructive scope and elevated consent; any other tool runs here too. A tool that would run scripts or console code is never called.',
+    summary: 'Run one tool of Epic\'s editor toolsets that deletes or resets editor state (its registry marks it execute, UE 5.9, or its name starts with Delete, Remove, Destroy, Clear, Reset or a similar verb), under the destructive scope and elevated consent; any other tool runs here too. A tool that would run scripts or console code is never called.',
     whenToUse: ['call_editor_tool refused a tool with DESTRUCTIVE_EDITOR_TOOL and the deletion is intended.'],
     whenNotToUse: ['The tool only reads or adds: use call_editor_tool, which needs no consent.'],
     inputProps: {
@@ -173,7 +173,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputProps: {
       toolName: { type: 'string', description: 'Tool that ran.' },
-      effect: { type: 'string', description: 'destructive, read or write, as judged from the tool\'s name.' },
+      effect: { type: 'string', description: 'destructive, read or write: the access mode the registry states, else as judged from the tool\'s name.' },
       output: { 'x-unreal-reflection-boundary': true, description: 'The tool\'s own result: its JSON output parsed, or the raw text when it is not JSON.' },
     },
     required: ['toolName'],

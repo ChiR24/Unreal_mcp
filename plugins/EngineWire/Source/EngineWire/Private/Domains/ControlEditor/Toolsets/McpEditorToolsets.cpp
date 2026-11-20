@@ -46,7 +46,41 @@ bool MatchesQuery(const FString& Name, const FString& Description, const TArray<
 }
 } // namespace
 
-EToolClass ClassifyTool(const FString& FullToolName)
+// The access mode a registry bakes into a tool's schema (annotations.accessMode, from UE 5.9), empty when it has none.
+FString AccessMode(const TSharedPtr<FJsonObject>& Schema)
+{
+    const TSharedPtr<FJsonObject>* Annotations = nullptr;
+    FString Mode;
+    if (Schema.IsValid() && Schema->TryGetObjectField(TEXT("annotations"), Annotations))
+    {
+        (*Annotations)->TryGetStringField(TEXT("accessMode"), Mode);
+    }
+    return Mode;
+}
+
+bool AnyAnnotated(const TArray<TSharedPtr<FJsonValue>>& Toolsets)
+{
+    for (const TSharedPtr<FJsonValue>& Value : Toolsets)
+    {
+        const TSharedPtr<FJsonObject>* Toolset = nullptr;
+        const TArray<TSharedPtr<FJsonValue>>* Tools = nullptr;
+        if (!Value.IsValid() || !Value->TryGetObject(Toolset) || !(*Toolset)->TryGetArrayField(TEXT("tools"), Tools))
+        {
+            continue;
+        }
+        for (const TSharedPtr<FJsonValue>& Tool : *Tools)
+        {
+            const TSharedPtr<FJsonObject>* Object = nullptr;
+            if (Tool.IsValid() && Tool->TryGetObject(Object) && !AccessMode(*Object).IsEmpty())
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+EToolClass ClassifyTool(const FString& FullToolName, const TSharedPtr<FJsonObject>& Schema, bool bRegistryAnnotates)
 {
     FString Toolset;
     FString Tool;
@@ -64,6 +98,13 @@ EToolClass ClassifyTool(const FString& FullToolName)
     if (Lower.StartsWith(TEXT("configsettingstoolset.")))
     {
         return EToolClass::Blocked;
+    }
+    // A registry that states each tool's access mode is believed over the verb: read and write as stated, anything
+    // else (execute) as destructive. Where it states modes, a tool without one is execute, as the registry treats it.
+    const FString Mode = AccessMode(Schema);
+    if (!Mode.IsEmpty() || bRegistryAnnotates)
+    {
+        return Mode == TEXT("read") ? EToolClass::Read : Mode == TEXT("write") ? EToolClass::Write : EToolClass::Destructive;
     }
     if (StartsWithVerb(Tool, {TEXT("Delete"), TEXT("Remove"), TEXT("Destroy"), TEXT("Clear"), TEXT("Reset"),
                               TEXT("Purge"), TEXT("Discard"), TEXT("Revert"), TEXT("Wipe"), TEXT("Erase"), TEXT("Kill"),
@@ -167,7 +208,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
         }
         TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
         Entry->Values = Tool->Values;
-        Entry->SetStringField(TEXT("effect"), ToolClassName(ClassifyTool(ToolName)));
+        Entry->SetStringField(TEXT("effect"), ToolClassName(ClassifyTool(ToolName, Tool, AnyAnnotated(Toolsets))));
         Result->SetObjectField(TEXT("tool"), Entry);
         Self->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("Schema of %s"), *ToolName), Result);
         return true;
@@ -175,6 +216,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
 
     TArray<FString> Words;
     Query.ParseIntoArrayWS(Words);
+    const bool bAnnotated = AnyAnnotated(Toolsets);
     TArray<TSharedPtr<FJsonValue>> ToolsetRows;
     TArray<TSharedPtr<FJsonValue>> ToolRows;
     int32 Matched = 0;
@@ -215,7 +257,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
             TSharedPtr<FJsonObject> ToolRow = MakeShared<FJsonObject>();
             ToolRow->SetStringField(TEXT("name"), ToolFull);
             ToolRow->SetStringField(TEXT("description"), Description.Left(240));
-            ToolRow->SetStringField(TEXT("effect"), ToolClassName(ClassifyTool(ToolFull)));
+            ToolRow->SetStringField(TEXT("effect"), ToolClassName(ClassifyTool(ToolFull, *Tool, bAnnotated)));
             ToolRows.Add(MakeShared<FJsonValueObject>(ToolRow));
         }
     }

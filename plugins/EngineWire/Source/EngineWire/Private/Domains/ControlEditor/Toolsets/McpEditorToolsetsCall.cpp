@@ -122,7 +122,7 @@ bool HandleCallTool(UEngineWireSubsystem* Self, const FString& RequestId,
             "list_editor_toolsets lists them (query narrows the list)."), *Requested), TEXT("EDITOR_TOOL_NOT_FOUND"));
         return true;
     }
-    const EToolClass Class = ClassifyTool(ToolName);
+    const EToolClass Class = ClassifyTool(ToolName, Schema, AnyAnnotated(Toolsets));
     if (Class == EToolClass::Blocked)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is not called: it would run code outside this "
@@ -131,9 +131,10 @@ bool HandleCallTool(UEngineWireSubsystem* Self, const FString& RequestId,
     }
     if (Class == EToolClass::Destructive && !bDestructiveAllowed)
     {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s deletes or resets editor state (its name starts "
-            "with a destructive verb). Run it with control_editor.call_editor_tool_destructive, which needs elevated consent."),
-            *ToolName), TEXT("DESTRUCTIVE_EDITOR_TOOL"));
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s may delete or reset editor state (%s). Run it "
+            "with control_editor.call_editor_tool_destructive, which needs elevated consent."), *ToolName,
+            AnyAnnotated(Toolsets) ? TEXT("its registry marks it execute, not read or write") : TEXT("its name starts with a destructive verb")),
+            TEXT("DESTRUCTIVE_EDITOR_TOOL"));
         return true;
     }
 

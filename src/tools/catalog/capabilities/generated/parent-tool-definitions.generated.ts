@@ -8267,7 +8267,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "effect": {
           "type": "string",
-          "description": "destructive, read or write, as judged from the tool's name."
+          "description": "destructive, read or write: the access mode the registry states, else as judged from the tool's name."
         },
         "ejected": {
           "type": "boolean",

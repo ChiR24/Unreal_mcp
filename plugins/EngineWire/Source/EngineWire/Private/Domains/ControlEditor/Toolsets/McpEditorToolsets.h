@@ -13,11 +13,15 @@ class FMcpBridgeWebSocket;
 
 namespace McpEditorToolsets
 {
-// What a tool does, judged by the verb its name starts with: Epic's schemas carry no read-only or destructive
-// hints. A Blocked tool would run code outside this plugin's console policy and is never called.
+// What a tool does: the access mode its schema states (annotations.accessMode, from UE 5.9), else the verb its name
+// starts with (5.8's schemas carry no hint). A Blocked tool would run code outside this plugin's console policy and is
+// never called, whatever it states.
 enum class EToolClass : uint8 { Read, Write, Destructive, Blocked };
 
-EToolClass ClassifyTool(const FString& FullToolName);
+/** bRegistryAnnotates: some tool of the registry states a mode, so one that states none is execute. */
+EToolClass ClassifyTool(const FString& FullToolName, const TSharedPtr<FJsonObject>& Schema = nullptr, bool bRegistryAnnotates = false);
+/** Whether any registered tool states an access mode. */
+bool AnyAnnotated(const TArray<TSharedPtr<FJsonValue>>& Toolsets);
 const TCHAR* ToolClassName(EToolClass Class);
 
 // Every registered toolset's schema: [{name, version, description, tools: [{name, description, inputSchema}]}].
