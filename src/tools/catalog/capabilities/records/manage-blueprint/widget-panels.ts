@@ -13,7 +13,7 @@ import { P } from './properties.js';
 
 const FAMILY = 'widget-panels';
 const DOMAIN = 'widget';
-const SLOT_OUT = { slotName: P.slotName };
+const SLOT_OUT = { slotName: P.slotName, index: { type: 'integer', description: 'Where it sits among the children of its parent, 0 first.' } };
 
 function panel(action: string, id: string, summary: string, extraProps: Record<string, unknown> = {}): CapabilityRecordSource {
   return buildRecord({
@@ -24,7 +24,7 @@ function panel(action: string, id: string, summary: string, extraProps: Record<s
     summary,
     whenToUse: [`A new ${action.replace(/^add_/, '').replace(/_/g, ' ')} must be added to a Widget Blueprint.`],
     whenNotToUse: ['A content widget (button, text, etc.) is needed instead.'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, index: P.childIndex, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
     required: ['widgetPath'],
     outputProps: SLOT_OUT,
     outputRequired: ['slotName'],
@@ -57,9 +57,9 @@ export const WIDGET_PANELS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a Spacer to a Widget Blueprint to reserve fixed empty space inside a layout.',
     whenToUse: ['Fixed empty space must separate sibling widgets in a box or panel.'],
     whenNotToUse: ['The gap should belong to an existing widget (set its padding instead).'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY },
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, index: P.childIndex, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY },
     required: ['widgetPath'],
-    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, sizeX: P.sizeX, sizeY: P.sizeY },
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, index: { type: 'integer', description: 'Where it sits among the children of its parent, 0 first.' }, sizeX: P.sizeX, sizeY: P.sizeY },
     outputRequired: ['widgetPath', 'slotName', 'sizeX', 'sizeY'],
     effect: 'write',
     latency: 'interactive',
@@ -76,9 +76,9 @@ export const WIDGET_PANELS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a Safe Zone to a Widget Blueprint so child content respects the platform title-safe area.',
     whenToUse: ['HUD content must stay inside the title-safe area on console or TV output.'],
     whenNotToUse: ['The layout is desktop-only and no safe-area inset applies.'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot },
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, index: P.childIndex },
     required: ['widgetPath'],
-    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName },
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, index: { type: 'integer', description: 'Where it sits among the children of its parent, 0 first.' } },
     outputRequired: ['widgetPath', 'slotName'],
     effect: 'write',
     latency: 'interactive',
@@ -153,9 +153,9 @@ export const WIDGET_PANELS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a Widget Switcher to a Widget Blueprint to show one child at a time by index.',
     whenToUse: ['Several pages or tabs must occupy one region with only one visible at a time.'],
     whenNotToUse: ['All children should be visible together (use an overlay or a box).'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, activeIndex: P.activeIndex },
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, index: P.childIndex, activeIndex: P.activeIndex },
     required: ['widgetPath'],
-    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, activeIndex: P.activeIndex },
+    outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, index: { type: 'integer', description: 'Where it sits among the children of its parent, 0 first.' }, activeIndex: P.activeIndex },
     outputRequired: ['widgetPath', 'slotName', 'activeIndex'],
     effect: 'write',
     latency: 'interactive',

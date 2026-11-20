@@ -3,6 +3,7 @@
 #include "Domains/WidgetAuthoring/Support/McpWidgetTreeMutation.h"
 #include "Domains/WidgetAuthoring/Support/McpWidgetValidate.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Components/PanelWidget.h"
 
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -70,6 +71,13 @@ bool AddConfiguredWidget(
         return true;
     }
 
+    // index places it among its parent's children (0 first), as reparent_widget's does; left out, it goes last. A
+    // widget meant for the top of a box took an add and a reparent.
+    UPanelWidget* Parent = Widget->GetParent();
+    if (Parent && Payload->HasField(TEXT("index")))
+    {
+        Parent->ShiftChild(FMath::Clamp(static_cast<int32>(GetJsonNumberField(Payload, TEXT("index"), 0)), 0, Parent->GetChildrenCount() - 1), Widget);
+    }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
 
     FString ValidationError;
@@ -91,6 +99,10 @@ bool AddConfiguredWidget(
     ResultJson->SetStringField(TEXT("message"), Message);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetAuthoringHelpers::WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
+    if (Parent)
+    {
+        ResultJson->SetNumberField(TEXT("index"), Parent->GetChildIndex(Widget));
+    }
     McpHandlerUtils::AddVerification(ResultJson, WidgetBP);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, Message, ResultJson);
     return true;

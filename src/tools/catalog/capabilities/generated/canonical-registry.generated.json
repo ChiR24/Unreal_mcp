@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c6e1381ac58d28c9",
+  "catalogRevision": "d1796c1abdeaf57c",
   "recordCount": 512,
   "records": [
     {
@@ -17013,6 +17013,11 @@
               "type": "string",
               "description": "Parent slot to add the widget to."
             },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Where it goes among the children of its parent, 0 first (a box lays them out in that order); left out, it goes last."
+            },
             "positionX": {
               "type": "number",
               "description": "Canvas slot X position, applied only when the parent is a canvas panel."
@@ -17184,6 +17189,10 @@
               "type": "string",
               "description": "Slot name for a child widget inside its parent."
             },
+            "index": {
+              "type": "integer",
+              "description": "Where it sits among the children of its parent, 0 first."
+            },
             "widgetPath": {
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
@@ -17267,6 +17276,20 @@
             "component": "add_widget_component"
           },
           "declaredBy": {
+            "index": [
+              "text_block",
+              "rich_text_block",
+              "image",
+              "button",
+              "check_box",
+              "combo_box",
+              "slider",
+              "spin_box",
+              "progress_bar",
+              "text_input",
+              "list_view",
+              "tree_view"
+            ],
             "text": [
               "text_block",
               "rich_text_block",
@@ -17366,8 +17389,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4e257e3e1f6e31b19d182d72483841f925ea2fd9d18b87cb2d7ebdad0bed202b",
-        "content": "0c7703cc094ed197b1ad3d543ee66b502e57c49c65c7573d8d4d15bd304ec485"
+        "schema": "81a1c175b5a0a53df5837ab55d3d4bfb369c50965f923801f445ef74f66c9e2f",
+        "content": "59c258c98b35c5a303124dabd7cd8b2d8623e9b82227cfc177fdd98c162436be"
       }
     },
     {
@@ -18278,6 +18301,11 @@
               "type": "string",
               "description": "Parent slot to add the widget to."
             },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Where it goes among the children of its parent, 0 first (a box lays them out in that order); left out, it goes last."
+            },
             "positionX": {
               "type": "number",
               "description": "Canvas slot X position, applied only when the parent is a canvas panel."
@@ -18483,6 +18511,10 @@
               "type": "string",
               "description": "Slot name for a child widget inside its parent."
             },
+            "index": {
+              "type": "integer",
+              "description": "Where it sits among the children of its parent, 0 first."
+            },
             "widgetPath": {
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
@@ -18589,6 +18621,22 @@
           },
           "declaredBy": {
             "slotName": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer",
+              "safe_zone",
+              "widget_switcher"
+            ],
+            "index": [
               "canvas_panel",
               "overlay",
               "vertical_box",
@@ -18754,8 +18802,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2fbe38235e16c0a893bb91bd8bcaaf936423ee31b2ebeaaa5e460d4dd0f3a893",
-        "content": "b6017df50524091e331d6571275ceb48623d35e651d6e6088f349059048ef012"
+        "schema": "015bfddb62fde9204d4c808c062cdfa11093d68f37669e6cecbccde1f47ab62c",
+        "content": "44756d8f1ae121151fa3c724fa2b10125c23006ee403c9ec1460c1231ce83076"
       }
     },
     {

@@ -135,6 +135,7 @@ export const P = {
   folder: S('Destination /Game folder for a Widget Blueprint.'),
   slotName: S('Slot name for a child widget inside its parent.'),
   parentSlot: S('Parent slot to add the widget to.'),
+  childIndex: { type: 'integer', minimum: 0, description: 'Where it goes among the children of its parent, 0 first (a box lays them out in that order); left out, it goes last.' },
   // Widget layout
   anchorMin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Minimum anchor point (0-1).' },
   anchorMax: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Maximum anchor point (0-1).' },

@@ -12,7 +12,7 @@ import { P } from './properties.js';
 
 const FAMILY = 'widget-content';
 const DOMAIN = 'widget';
-const SLOT_OUT = { slotName: P.slotName };
+const SLOT_OUT = { slotName: P.slotName, index: { type: 'integer', description: 'Where it sits among the children of its parent, 0 first.' } };
 
 function content(action: string, id: string, summary: string, extraProps: Record<string, unknown> = {}, extraRequired: readonly string[] = []): CapabilityRecordSource {
   return buildRecord({
@@ -23,7 +23,7 @@ function content(action: string, id: string, summary: string, extraProps: Record
     summary,
     whenToUse: [`A new ${action.replace(/^add_/, '').replace(/_/g, ' ')} widget must be added to a Widget Blueprint.`],
     whenNotToUse: ['A panel container is needed instead (see widget-panels family).'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, index: P.childIndex, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
     required: ['widgetPath', ...extraRequired],
     outputProps: SLOT_OUT,
     outputRequired: ['slotName'],

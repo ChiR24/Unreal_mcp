@@ -18684,6 +18684,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "integer",
               "minimum": 0,
               "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Where it goes among the children of its parent, 0 first (a box lays them out in that order); left out, it goes last."
             }
           ],
           "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
@@ -21007,7 +21012,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "index": {
           "type": "integer",
-          "description": "Where the copy sits among the children of that panel (0 = first)."
+          "description": "Where it sits among the children of its parent, 0 first."
         },
         "inheritedComponentCount": {
           "type": "number",
