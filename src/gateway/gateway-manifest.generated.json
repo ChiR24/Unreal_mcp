@@ -11736,6 +11736,7 @@
         "inspect_graph",
         "lint_blueprint",
         "slice_variable",
+        "explain_variable",
         "read_graph_as_code",
         "write_graph_from_code",
         "add_function",
@@ -11945,6 +11946,7 @@
         "onHoveredFunction",
         "onUnhoveredFunction",
         "once",
+        "op",
         "openEditor",
         "operations",
         "options",
@@ -13072,6 +13074,14 @@
             "type": "boolean",
             "description": "Play only the first time a player walks in: the sound of sound_trigger (default false: every time), the cutscene of sequence_trigger (default true)."
           },
+          "op": {
+            "type": "string",
+            "enum": [
+              "arm",
+              "read"
+            ],
+            "description": "arm (default): mark the nodes before Play; read: after Play, say why."
+          },
           "openEditor": {
             "type": "boolean",
             "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
@@ -13489,7 +13499,7 @@
           },
           "scope": {
             "type": "string",
-            "description": "The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath's own Blueprint is always read."
+            "description": "The folder whose Blueprints are read for writers, as slice_variable takes it (default /Game)."
           },
           "screen": {
             "type": "string",
@@ -13961,6 +13971,7 @@
               "inspect_graph",
               "lint_blueprint",
               "slice_variable",
+              "explain_variable",
               "read_graph_as_code",
               "write_graph_from_code",
               "add_function",

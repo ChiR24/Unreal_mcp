@@ -27,4 +27,11 @@ bool Touches(const UEdGraphNode* Node, const UBlueprint* Owner, FName Variable, 
 
 /** The slice over the Blueprints in Scope: writers (with entries, conditions, callers), readers, their counts, deadWrite. */
 TSharedPtr<FJsonObject> Slice(const UBlueprint* Owner, FName Variable, const TArray<UBlueprint*>& Scope);
+
+/** Owner, then the Blueprints under Folder, at most Cap in all; OutSkipped counts those past it. */
+TArray<UBlueprint*> ScopeFor(UBlueprint* Owner, const FString& Folder, int32 Cap, int32& OutSkipped);
+
+/** manage_blueprint explain_variable (McpBPExplain.cpp): arm marks the slice's writers and the Branches before them to
+ *  record the next Play; read says, writer by writer, whether it ran, else the first Branch that did not let it. */
+bool HandleExplain(const McpBlueprintGraphHandlers::FActionContext& Context);
 } // namespace McpBPSlice

@@ -18908,6 +18908,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Play only the first time a player walks in: the sound of sound_trigger (default false: every time), the cutscene of sequence_trigger (default true)."
         },
+        "op": {
+          "type": "string",
+          "enum": [
+            "arm",
+            "read"
+          ],
+          "description": "arm (default): mark the nodes before Play; read: after Play, say why."
+        },
         "openEditor": {
           "type": "boolean",
           "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
@@ -19325,7 +19333,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "scope": {
           "type": "string",
-          "description": "The folder whose Blueprints are read, subfolders included (default /Game). blueprintPath's own Blueprint is always read."
+          "description": "The folder whose Blueprints are read for writers, as slice_variable takes it (default /Game)."
         },
         "screen": {
           "type": "string",
@@ -19797,6 +19805,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_graph",
             "lint_blueprint",
             "slice_variable",
+            "explain_variable",
             "read_graph_as_code",
             "write_graph_from_code",
             "add_function",
@@ -20822,6 +20831,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether it loops."
         },
+        "marked": {
+          "type": "number",
+          "description": "With arm: nodes marked."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -21443,6 +21456,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
+              "description": "The variable explained."
+            },
+            {
+              "type": "string",
               "description": "The variable sliced."
             }
           ],
@@ -21704,13 +21721,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Every Set found, listed or not."
         },
         "writers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Each Set of it (up to 100): blueprint, graph, node, nodeId, entries (blueprint, graph, node, nodeId, kind: event, custom event, function or entry; calledFrom for a function or custom event), and conditions when a Branch decides whether it runs (nodeId, condition: the variable or output it reads, mustBe: the value that leads here), outermost first."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With read: each writer and its verdict."
+            }
+          ],
           "description": "Each Set of it (up to 100): blueprint, graph, node, nodeId, entries (blueprint, graph, node, nodeId, kind: event, custom event, function or entry; calledFrom for a function or custom event), and conditions when a Branch decides whether it runs (nodeId, condition: the variable or output it reads, mustBe: the value that leads here), outermost first."
         },
         "x": {

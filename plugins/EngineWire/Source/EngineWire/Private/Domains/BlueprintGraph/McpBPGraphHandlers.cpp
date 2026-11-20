@@ -169,7 +169,7 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
 
     // A lint (and a slice) reads every graph, so a Blueprint without an event graph (a function library) is linted too; so does
     // read_graph_as_code unless it names one graph, and write_graph_from_code, whose (fn) forms need none.
-    const bool bLint = Context.SubAction == TEXT("lint_blueprint") || Context.SubAction == TEXT("slice_variable");
+    const bool bLint = Context.SubAction == TEXT("lint_blueprint") || Context.SubAction == TEXT("slice_variable") || Context.SubAction == TEXT("explain_variable");
     const bool bCode = Context.SubAction == TEXT("read_graph_as_code") || Context.SubAction == TEXT("write_graph_from_code");
     if (!McpBlueprintGraphHandlers::PrepareBlueprintAndGraph(Context, /*bRequireGraph=*/bCode ? Payload->HasField(TEXT("graphName")) : !bLint))
     {
@@ -178,7 +178,7 @@ bool UEngineWireSubsystem::HandleBlueprintGraphAction(
     if (bLint || bCode)
     {
         Context.bDeferCompile = true; // a read never compiles; write_graph_from_code compiles once itself
-        return bLint ? McpBPLint::HandleLint(Context) || McpBPSlice::HandleSlice(Context) : McpGraphCode::HandleReadGraphAsCode(Context) || McpGraphCode::HandleWriteGraphFromCode(Context);
+        return bLint ? McpBPLint::HandleLint(Context) || McpBPSlice::HandleSlice(Context) || McpBPSlice::HandleExplain(Context) : McpGraphCode::HandleReadGraphAsCode(Context) || McpGraphCode::HandleWriteGraphFromCode(Context);
     }
 
     if (McpBlueprintGraphHandlers::HandleGraphBatchAction(Context) ||

@@ -109,6 +109,11 @@ bool HandleSlice(const McpBlueprintGraphHandlers::FActionContext& Context)
     return true;
 }
 
+TArray<UBlueprint*> ScopeFor(UBlueprint* Owner, const FString& Folder, int32 Cap, int32& OutSkipped)
+{
+    return ScopeBlueprints(Owner, Folder, Cap, OutSkipped);
+}
+
 TSharedPtr<FJsonObject> Slice(const UBlueprint* Owner, FName Variable, const TArray<UBlueprint*>& Scope)
 {
     TArray<TSharedPtr<FJsonValue>> Writers, Readers;

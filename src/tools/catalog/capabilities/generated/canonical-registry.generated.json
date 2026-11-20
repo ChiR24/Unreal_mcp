@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "31de2da381df598c",
-  "recordCount": 501,
+  "catalogRevision": "b59118e7c7facb76",
+  "recordCount": 502,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -24149,6 +24149,172 @@
         "algorithm": "sha256",
         "schema": "45084a0d46b105adc47e506997aeb23e33910efd71fb6f8478c65310164ba898",
         "content": "25b8772480d81c59c3426e028283a621f788dd085fc59cf53dfb78b399c0eae2"
+      }
+    },
+    {
+      "id": "blueprint.explain_variable",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "explain_variable"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "slice",
+        "topics": [
+          "explain_variable",
+          "why was this never set",
+          "why did the door not open",
+          "why is this variable still false",
+          "explain why",
+          "which branch blocked it"
+        ],
+        "summary": "Find out in Play why a member variable was never set: op arm marks each node that sets it (slice_variable's writers) and every Branch on the way to one, as logpoints that record the next Play; play and do what should set it; op read then answers each writer: it ran (how often, when, on which object), or the first Branch before it that never ran, or that read the wrong value (the value it read and the one it needed), or that the Branches let it through but a node between did not continue. Marks last until clear_logpoints (inspect), at most 32.",
+        "whenToUse": [
+          "A variable should have changed in Play and did not: arm, play, read."
+        ],
+        "whenNotToUse": [
+          "Where a variable is set or read, without Play (slice_variable)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "variable": {
+              "type": "string",
+              "description": "The member variable, as its Blueprint names it."
+            },
+            "op": {
+              "type": "string",
+              "enum": [
+                "arm",
+                "read"
+              ],
+              "description": "arm (default): mark the nodes before Play; read: after Play, say why."
+            },
+            "scope": {
+              "type": "string",
+              "description": "The folder whose Blueprints are read for writers, as slice_variable takes it (default /Game)."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "variable"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "variable": {
+              "type": "string",
+              "description": "The variable explained."
+            },
+            "marked": {
+              "type": "number",
+              "description": "With arm: nodes marked."
+            },
+            "writerCount": {
+              "type": "number",
+              "description": "With arm: the sets found."
+            },
+            "writers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With read: each writer and its verdict."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find out in Play why a member variable was never set: op arm marks each node that sets it (slice_variable's writers) and every Branch on the way to one, as logpoints that record the next Play; play and do what should set it; op read then answers each writer: it ran (how often, when, on which object), or the first Branch before it that never ran, or that read the wrong value (the value it read and the one it needed), or that the Branches let it through but a node between did not continue. Marks last until clear_logpoints (inspect), at most 32.",
+          "input": {
+            "action": "explain_variable",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "variable": "bIsOpen",
+            "op": "read"
+          },
+          "output": {
+            "success": true,
+            "message": "never set: the Branch on bHasKey ran 3 time(s) and read false the last time; it must be true to reach the set",
+            "variable": "bIsOpen",
+            "writers": [
+              {
+                "writer": "/Game/Blueprints/BP_Door Set bIsOpen",
+                "verdict": "never set: the Branch on bHasKey ran 3 time(s) and read false the last time; it must be true to reach the set"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "explain_variable"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "64770554bc433934fe7082e1fc0ed10f9947dec18bd9ff9c08e1a796af2519ac",
+        "content": "72c01b2f0ccc9251730b860fded3d4925c85759e7fcaac5103e9d32b0932dac7"
       }
     },
     {
