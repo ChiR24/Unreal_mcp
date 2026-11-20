@@ -15817,12 +15817,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True once phase is done or failed; stop polling."
         },
+        "folderCount": {
+          "type": "number",
+          "description": "How many folders matched; more than folders lists when limit cut them (list a subfolder to see the rest)."
+        },
         "folders": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Subfolder paths."
+          "description": "The folders directly under path (down to depth levels with depth; every one below whose name holds filter with a filter), on the first page only and at most limit of them."
         },
         "fontFamily": {
           "type": "string",

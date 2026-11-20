@@ -146,11 +146,16 @@ bool UEngineWireSubsystem::HandleListAssets(
     Page.Append(AssetList.GetData() + Offset, Count);
   }
 
-  // Also fetch the sub-folders: the immediate ones, and for a recursive listing the nested ones, trimmed by depth.
+  // The folders, on the first page only and at most limit of them: those directly under the path, down to depth levels
+  // with depth, or every one below whose name holds the filter. A /Game listing with limit 5 once answered all of its
+  // 300 nested folders, on every page.
+  const int32 FolderDepth = Depth >= 0 ? Depth : (NameFilter.IsEmpty() ? 0 : MAX_int32);
   TArray<FString> SubPathList;
-  AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive);
+  if (Offset == 0) {
+    AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive && FolderDepth > 0);
+  }
   const int32 BaseSlashes = CountSlashes(PathFilter);
-  SubPathList.RemoveAll([&](const FString &Sub) { return Depth >= 0 && CountSlashes(Sub) - BaseSlashes - 1 > Depth; });
+  SubPathList.RemoveAll([&](const FString &Sub) { return CountSlashes(Sub) - BaseSlashes - 1 > FolderDepth; });
 
   bool bIncludeTags = false;
   Payload->TryGetBoolField(TEXT("includeTags"), bIncludeTags);
@@ -212,6 +217,8 @@ bool UEngineWireSubsystem::HandleListAssets(
       FoldersJson.Add(MakeShared<FJsonValueString>(SubPath));
     }
   }
+  const int32 FolderCount = FoldersJson.Num();
+  FoldersJson.SetNum(FMath::Min(FolderCount, Limit));
 
   const bool bHasMore = (Offset + Page.Num()) < TotalCount;
   const int32 NextOffset = Offset + Page.Num();
@@ -223,6 +230,7 @@ bool UEngineWireSubsystem::HandleListAssets(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetArrayField(TEXT("assets"), AssetsArray);
   Resp->SetArrayField(TEXT("folders"), FoldersJson);
+  Resp->SetNumberField(TEXT("folderCount"), FolderCount);
   Resp->SetNumberField(TEXT("totalCount"), TotalCount);
   Resp->SetNumberField(TEXT("count"), AssetsArray.Num());
   Resp->SetNumberField(TEXT("limit"), Limit);

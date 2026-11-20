@@ -144,6 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Editor**: `run_ubt` no longer holds the game thread for the whole build, an occlusion bake refuses a ray count that would hold the editor for minutes, `configure_screen_percentage` makes Play In Editor use the value before 5.3 as `set_resolution_scale` does, and the WebSocket bridge accepts TLS connections; `configure_recorded_tracks` starts a take on a fresh Take Recorder panel as `configure_take_sources` does, `enable_world_partition` that changes nothing no longer says the level is unsaved, and a failed Fab page script answers in its own words.
 - **Captures that go nowhere**: a screenshot with `keepFile: false` and `returnBase64: false` is refused before the window is restored or a frame drawn; the whole-window capture ran first.
 - **Long Custom nodes in a batch**: a `build_material_graph` step's `code` takes the length the single `add_custom_expression` takes; a step held it to 1023 characters.
+- **Asset listings**: `list` answers the folders directly under the path (down to `depth`, or every one whose name holds `filter`), on the first page and at most `limit` of them, with `folderCount`; a `/Game` listing answered all its nested folders on every page.
 - **A Border's child**: `set_widget_layout` padding and alignment on a Border's child reach the Border, which draws with its own copy, and a layout write compiles the Widget Blueprint, so Play shows it.
 
 </details>

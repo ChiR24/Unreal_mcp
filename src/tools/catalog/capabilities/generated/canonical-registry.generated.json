@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "67bb55fe4dd0a358",
+  "catalogRevision": "6f2911ee9c5b0212",
   "recordCount": 512,
   "records": [
     {
@@ -12227,7 +12227,11 @@
               "items": {
                 "type": "string"
               },
-              "description": "Subfolder paths."
+              "description": "The folders directly under path (down to depth levels with depth; every one below whose name holds filter with a filter), on the first page only and at most limit of them."
+            },
+            "folderCount": {
+              "type": "number",
+              "description": "How many folders matched; more than folders lists when limit cut them (list a subfolder to see the rest)."
             },
             "totalCount": {
               "type": "number",
@@ -12412,8 +12416,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "086d3cb13a1b4effc252b73d22f3b107250ccb17710b30fe543dacd4fe145cb6",
-        "content": "a38f3dfb857709ab304ac23c63a28a3fb60833308764771439cecfbc4c4b2ca4"
+        "schema": "60eb8e9d64302abbbe72dc9accc6d8109d73b18c0e77ca7b900175c96c36175e",
+        "content": "448d2d0969fcacab9d1ec2ef59cd0587a96a66bb682090e0bea54ee06ad7c99a"
       }
     },
     {
@@ -13738,7 +13742,11 @@
               "items": {
                 "type": "string"
               },
-              "description": "Subfolder paths."
+              "description": "The folders directly under path (down to depth levels with depth; every one below whose name holds filter with a filter), on the first page only and at most limit of them."
+            },
+            "folderCount": {
+              "type": "number",
+              "description": "How many folders matched; more than folders lists when limit cut them (list a subfolder to see the rest)."
             },
             "totalCount": {
               "type": "number",
@@ -14024,8 +14032,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fc8acbeb4ae9a8a6c999416790ccd43c314af461f90517e3b0758c244cb3f2f0",
-        "content": "4221ec46478100a8fd087e861790bc954494ce33b54657f781752f4588a65643"
+        "schema": "5fe03a1c69d0b0eadbe96050265aea93700e8466bc1fd5b2ec857d569c450868",
+        "content": "a25e50b8a1c94d6ad1b2f9f74787934673dbe87da9e7613527471df0b3f289f1"
       }
     },
     {

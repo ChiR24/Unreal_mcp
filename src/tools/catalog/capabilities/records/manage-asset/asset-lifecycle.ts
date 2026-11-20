@@ -12,7 +12,8 @@ const DEST_PATH = str('Destination /Game asset path.');
 const PAGINATED_OUTPUT = schema({
   success: bool('Operation succeeded.'),
   assets: arrObj('Matched assets on this page.'),
-  folders: arr('Subfolder paths.'),
+  folders: arr('The folders directly under path (down to depth levels with depth; every one below whose name holds filter with a filter), on the first page only and at most limit of them.'),
+  folderCount: num('How many folders matched; more than folders lists when limit cut them (list a subfolder to see the rest).'),
   totalCount: num('Total matched count before pagination.'),
   count: num('Asset count on this page.'),
   limit: num('Applied page size.'),

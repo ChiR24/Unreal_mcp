@@ -91,6 +91,8 @@ const testCases = [
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
   { scenario: 'OPTIONAL: list with includeMetadata', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true, includeMetadata: true }, expected: 'success' },
+  // A /Game listing with limit 5 answered every nested folder (300 rows), on every page.
+  { scenario: 'ACTION: list holds the folders to limit and counts them', toolName: 'manage_asset', arguments: { action: 'list', path: '/Game', limit: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.folders', length: 1, label: 'one folder for limit 1' }, { path: 'structuredContent.result.folderCount', gte: 1, label: 'how many there are' }] },
   { scenario: 'ACTION: list with a name filter narrows the folders too', toolName: 'manage_asset', arguments: { action: 'list', path: '/Game/MCPTest', filter: 'TestMesh' }, expected: 'success', assertions: [{ path: 'structuredContent.result.folders', length: 0, label: 'no subfolder is named like the filter, so none is listed' }] },
   { scenario: 'ACTION: import', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: IMPORTED_MESH, overwrite: true, save: true }, expected: 'success' },
   { scenario: 'ACTION: reimport the imported mesh from the file it came from', toolName: 'manage_asset', arguments: { action: 'reimport', assetPaths: [IMPORTED_MESH], save: true }, consent: { capability: 'asset.reimport', acknowledge: 'explicit' }, expected: 'success', assertions: [
