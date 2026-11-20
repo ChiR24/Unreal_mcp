@@ -22,14 +22,22 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   // blueprintPath, which every other Blueprint action takes: /Game/Folder/BP_Door is savePath /Game/Folder, name BP_Door.
   FString BlueprintPath;
   if (LocalPayload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) && !BlueprintPath.TrimStartAndEnd().IsEmpty()) {
-    if (!Name.TrimStartAndEnd().IsEmpty() || !SavePath.TrimStartAndEnd().IsEmpty()) {
+    FString Folder, Leaf;
+    McpBlueprintCheckPath(BlueprintPath.TrimStartAndEnd())
+        .Split(TEXT("/"), &Folder, &Leaf, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+    // A savePath or name that only repeats blueprintPath's own folder or name is no conflict: small models send all three.
+    FString GivenFolder = SavePath.TrimStartAndEnd();
+    GivenFolder.RemoveFromEnd(TEXT("/"));
+    if ((!Name.TrimStartAndEnd().IsEmpty() && Name.TrimStartAndEnd() != Leaf) || (!GivenFolder.IsEmpty() && GivenFolder != Folder)) {
       Self->SendAutomationError(RequestingSocket, RequestId,
-                                TEXT("Give blueprintPath, or name and savePath, not both: nothing was created."),
+                                FString::Printf(TEXT("blueprintPath says folder %s and name %s, which savePath or name contradict: "
+                                                     "give blueprintPath alone, or name and savePath. Nothing was created."),
+                                                *Folder, *Leaf),
                                 TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    McpBlueprintCheckPath(BlueprintPath.TrimStartAndEnd())
-        .Split(TEXT("/"), &SavePath, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+    SavePath = Folder;
+    Name = Leaf;
   }
   if (Name.TrimStartAndEnd().IsEmpty()) {
     Self->SendAutomationError(RequestingSocket, RequestId,
