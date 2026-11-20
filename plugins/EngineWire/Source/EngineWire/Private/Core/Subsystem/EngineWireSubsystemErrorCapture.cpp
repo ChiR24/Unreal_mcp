@@ -26,6 +26,13 @@ static bool IsKnownBenignMcpCompilerWarning(const FString& Message)
             Message.Contains(TEXT("granting no tag"), ESearchCase::IgnoreCase));
 }
 
+// The engine's own noise while the automation framework lists its tests (run_build kind=tests): MetaSound logs one line
+// per test it cannot tag, 32 a run, none about the call. Dropped, so a test run's reply keeps only its tests' warnings.
+static bool IsEngineTestListNoise(const FString& Message)
+{
+    return Message.StartsWith(TEXT("[LogMetaSound] Failed to register automation test tags"));
+}
+
 FMcpRequestErrorDevice::FMcpRequestErrorDevice(
     UEngineWireSubsystem* InSubsystem)
     : Subsystem(InSubsystem)
@@ -55,6 +62,10 @@ void FMcpRequestErrorDevice::Serialize(
     }
 
     FString Message = FString::Printf(TEXT("[%s] %s"), *Category.ToString(), V);
+    if (IsEngineTestListNoise(Message))
+    {
+        return;
+    }
     if (Message.Len() > MaxCapturedRequestMessageChars)
     {
         Message = Message.Left(MaxCapturedRequestMessageChars) + TEXT("[TRUNCATED]");
