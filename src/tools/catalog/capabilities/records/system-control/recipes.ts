@@ -1,7 +1,8 @@
 /**
  * Recipe records (S14): save_recipe, run_recipe, list_recipes. A run_script script kept in the project under a name, with
- * parameters, and run later as one checked call (plugin Domains/Scripts/McpRecipes). Three own records: a fold takes its
- * first member's effect, and a read must not share one with a destructive run.
+ * parameters, and run later as one checked call (plugin Domains/Scripts/McpRecipes). propose_recipe (S13) writes one from
+ * the caller's last calls (McpRecipeInduce). Own records: a fold takes its first member's effect, and a read must not
+ * share one with a destructive run.
  */
 import { CODE_MAX_LENGTH } from '../../constants.js';
 import type { CapabilityRecordSource } from '../../model.js';
@@ -78,5 +79,32 @@ export const RECIPE_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: [],
     effect: 'read',
     exampleInput: { action: 'list_recipes', query: 'crate' },
+  }),
+  buildCoreRecord({
+    parentTool: 'system_control', action: 'propose_recipe', domain: D, family: F, editorStates: ANY_EDITOR_STATE,
+    topics: ['turn what I just did into a recipe', 'make a recipe from my last calls', 'record these steps as a recipe', 'reuse the steps that worked'],
+    summary: 'Turn your last calls that succeeded (up to 32, kept since the editor started) into a recipe script for save_recipe, saving nothing. A value a call took from an earlier call\'s reply becomes that call\'s variable (s1.assetPath); a target path, name, label, location, rotation, scale or written value no earlier call produced becomes a parameter, its value this run\'s (args), one parameter per distinct value; a field that shapes the call (a class, property, pin or function name) stays as written. A read whose reply no later call uses is left out, and so are calls a script cannot make (skipped). The reply holds the script, paramNames, args, destructive and saveCall, the save_recipe call that keeps it: read the script first, then send saveCall with a summary a caller would search for.',
+    whenToUse: [
+      'A sequence of calls just worked and will be needed again with other values: propose it, check it, then send its saveCall.',
+    ],
+    whenNotToUse: ['The script is already written: save_recipe.', 'Running the steps again now: run_script.'],
+    inputProps: {
+      steps: { type: 'integer', minimum: 1, maximum: 32, description: 'How many of your last calls that succeeded to read, oldest left out first (default all kept, up to 32).' },
+      name: NAME,
+      summary: { type: 'string', maxLength: 300, description: 'Put in saveCall: what the recipe does, in a sentence.' },
+    },
+    required: [],
+    outputProps: {
+      script: { type: 'string', description: 'The recipe script: one (let sN (capability :param value ...)) per call kept, parameters and earlier variables in place of the values they stand for.' },
+      paramNames: { type: 'array', items: { type: 'string' }, description: 'The parameters, as save_recipe takes them.' },
+      args: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Each parameter\'s value in the calls read: run_recipe with these args repeats them.' },
+      destructive: { type: 'array', items: { type: 'string' }, description: 'The capabilities in the script that ask for consent, as save_recipe takes them.' },
+      stepCount: { type: 'number', description: 'Calls in the script.' },
+      skipped: { type: 'array', items: { type: 'string' }, description: 'Present when calls a script cannot make were left out (run_script, run_recipe, undo).' },
+      saveCall: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'The save_recipe execute call with this proposal (name default proposed_recipe): send it to keep the recipe.' },
+    },
+    outputRequired: [],
+    effect: 'read',
+    exampleInput: { action: 'propose_recipe', steps: 3, name: 'red_crate', summary: 'Make a red material and put it on a new crate.' },
   }),
 ];

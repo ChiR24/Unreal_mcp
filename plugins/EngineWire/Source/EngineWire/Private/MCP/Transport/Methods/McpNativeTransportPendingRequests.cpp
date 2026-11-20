@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Domains/Scripts/McpRecipeInduce.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
@@ -163,6 +164,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedResult->TryGetStringField(TEXT("errorCode"), ReportedErrorCode);
 		McpSettleIdempotency(Conn->IdempotencySlot, bReportedSuccess, ReportedResult);
 		McpLoopGuardNote(Conn->PageOwner, bReportedSuccess, ReportedErrorCode);
+		McpRecipeInduce::Note(Conn->PageOwner, bReportedSuccess, ReportedResult); // what propose_recipe reads
 	}
 	else
 	{

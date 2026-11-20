@@ -21963,6 +21963,7 @@
         "save_recipe",
         "run_recipe",
         "list_recipes",
+        "propose_recipe",
         "start_session",
         "get_trace_status",
         "create_widget",
@@ -22094,6 +22095,7 @@
         "soundPath",
         "source",
         "startTime",
+        "steps",
         "streamingDistance",
         "subfolder",
         "summary",
@@ -22940,6 +22942,12 @@
             "type": "number",
             "description": "Seconds into the sound to start playing from (default 0)."
           },
+          "steps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32,
+            "description": "How many of your last calls that succeeded to read, oldest left out first (default all kept, up to 32)."
+          },
           "streamingDistance": {
             "type": "number",
             "description": "Loading range of the first runtime grid, in cm: cells this close to a streaming source load."
@@ -22949,9 +22957,19 @@
             "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
           },
           "summary": {
-            "type": "string",
-            "maxLength": 300,
-            "description": "What the recipe does, in a sentence: search and list_recipes match its words."
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "description": "Put in saveCall: what the recipe does, in a sentence."
+              },
+              {
+                "type": "string",
+                "maxLength": 300,
+                "description": "What the recipe does, in a sentence: search and list_recipes match its words."
+              }
+            ],
+            "description": "Put in saveCall: what the recipe does, in a sentence."
           },
           "target": {
             "type": "string",
@@ -23092,6 +23110,7 @@
               "save_recipe",
               "run_recipe",
               "list_recipes",
+              "propose_recipe",
               "start_session",
               "get_trace_status",
               "create_widget",

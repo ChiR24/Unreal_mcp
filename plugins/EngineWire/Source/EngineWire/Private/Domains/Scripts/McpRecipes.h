@@ -33,4 +33,10 @@ TSharedPtr<FJsonObject> Load(const FString& Name);
  * the socket thread that answers search: files and JSON only, no editor API.
  */
 TArray<TSharedPtr<FJsonValue>> SearchRows(const TArray<FString>& ContentWords, int32 Max);
+
+namespace RecipeParts
+{
+/** A JSON value as the script language writes it: numbers and true/false bare, text quoted, (list ...), (obj :"key" ...). */
+FString ToScript(const TSharedPtr<FJsonValue>& Value);
+} // namespace RecipeParts
 } // namespace McpRecipes

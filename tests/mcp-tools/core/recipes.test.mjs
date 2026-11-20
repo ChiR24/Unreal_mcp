@@ -23,6 +23,11 @@ const testCases = [
     { actorName: `${PREFIX}_A`, location: { x: 40000, y: 40000, z: -100 } },
     { actorName: `${PREFIX}_B`, location: { x: 40300, y: 40000, z: -100 } },
   ] }, expected: 'success' },
+  // propose_recipe reads the caller's last calls that succeeded: here the spawn just made. Nothing is saved.
+  { scenario: 'READ: propose a recipe from the last call', toolName: 'system_control', arguments: { action: 'propose_recipe', steps: 1, name: `${NAME}_proposed`, summary: 'Spawn two crates.' }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.stepCount', equals: 1, label: 'the spawn is its one step' },
+    { path: 'structuredContent.result.saveCall.action', equals: 'save_recipe', label: 'the call that would keep it' },
+  ] },
   { scenario: 'ACTION: save the recipe', toolName: 'system_control', arguments: { action: 'save_recipe', name: NAME, summary: 'Lift every crate of a name prefix to a height.', paramNames: ['prefix', 'minZ'], script: SCRIPT }, expected: 'success' },
   { scenario: 'ERROR: the name is taken', toolName: 'system_control', arguments: { action: 'save_recipe', name: NAME, paramNames: ['prefix', 'minZ'], script: SCRIPT }, expected: 'error|RECIPE_EXISTS' },
   { scenario: 'ACTION: replace it with overwrite', toolName: 'system_control', arguments: { action: 'save_recipe', name: NAME, summary: 'Lift every crate of a name prefix to a height.', paramNames: ['prefix', 'minZ'], script: SCRIPT, destructive: [], overwrite: true }, expected: 'success' },

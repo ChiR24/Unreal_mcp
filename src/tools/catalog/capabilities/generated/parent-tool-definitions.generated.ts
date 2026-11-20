@@ -32234,6 +32234,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds into the sound to start playing from (default 0)."
         },
+        "steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "How many of your last calls that succeeded to read, oldest left out first (default all kept, up to 32)."
+        },
         "streamingDistance": {
           "type": "number",
           "description": "Loading range of the first runtime grid, in cm: cells this close to a streaming source load."
@@ -32243,9 +32249,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Folder under the module's Public (or Private) folder, such as Gameplay/Pickups; default none. A module without Public and Private folders refuses one: its own folder is no include path, so the class would not compile there."
         },
         "summary": {
-          "type": "string",
-          "maxLength": 300,
-          "description": "What the recipe does, in a sentence: search and list_recipes match its words."
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 300,
+              "description": "Put in saveCall: what the recipe does, in a sentence."
+            },
+            {
+              "type": "string",
+              "maxLength": 300,
+              "description": "What the recipe does, in a sentence: search and list_recipes match its words."
+            }
+          ],
+          "description": "Put in saveCall: what the recipe does, in a sentence."
         },
         "target": {
           "type": "string",
@@ -32386,6 +32402,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "save_recipe",
             "run_recipe",
             "list_recipes",
+            "propose_recipe",
             "start_session",
             "get_trace_status",
             "create_widget",
@@ -32418,6 +32435,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "archiveDirectory": {
           "type": "string",
           "description": "Resolved absolute archive directory."
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Each parameter's value in the calls read: run_recipe with these args repeats them."
         },
         "attributionCertain": {
           "type": "boolean",
@@ -32617,6 +32640,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "destination": {
           "type": "string",
           "description": "Trace destination string."
+        },
+        "destructive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The capabilities in the script that ask for consent, as save_recipe takes them."
         },
         "details": {
           "type": "object",
@@ -32953,6 +32983,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Captured stdout from the script."
         },
+        "paramNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The parameters, as save_recipe takes them."
+        },
         "parentName": {
           "type": "string",
           "description": "Panel it was added under."
@@ -33151,6 +33188,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The folders searched."
         },
+        "saveCall": {
+          "type": "object",
+          "x-unreal-reflection-boundary": true,
+          "description": "The save_recipe execute call with this proposal (name default proposed_recipe): send it to keep the recipe."
+        },
         "saveGameClass": {
           "type": "string",
           "description": "Class path of the slot's SaveGame object."
@@ -33158,6 +33200,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "saved": {
           "type": "boolean",
           "description": "True when the slot was written."
+        },
+        "script": {
+          "type": "string",
+          "description": "The recipe script: one (let sN (capability :param value ...)) per call kept, parameters and earlier variables in place of the values they stand for."
         },
         "seconds": {
           "type": "number",
@@ -33195,6 +33241,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
         },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Present when calls a script cannot make were left out (run_script, run_recipe, undo)."
+        },
         "slotName": {
           "type": "string",
           "description": "The slot changed."
@@ -33219,6 +33272,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "statusQuerySupported": {
           "type": "boolean",
           "description": "Whether this engine version supports status queries."
+        },
+        "stepCount": {
+          "type": "number",
+          "description": "Calls in the script."
         },
         "steps": {
           "oneOf": [

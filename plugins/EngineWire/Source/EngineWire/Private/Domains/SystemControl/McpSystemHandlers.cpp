@@ -1,6 +1,7 @@
 #include "Domains/SystemControl/McpSystemPrivate.h"
 
 #include "Dom/JsonObject.h"
+#include "Domains/Scripts/McpRecipeInduce.h"
 #include "Domains/Scripts/McpRecipes.h"
 #include "Domains/Scripts/McpScript.h"
 #include "EngineWireSubsystem.h"
@@ -144,6 +145,9 @@ bool UEngineWireSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("list_recipes")) {
     return McpRecipes::HandleList(*this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("propose_recipe")) {
+    return McpRecipeInduce::HandlePropose(*this, RequestId, Payload, RequestingSocket);
   }
 
   return false;

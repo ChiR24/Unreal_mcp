@@ -1663,6 +1663,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::play_sound_2d": "instant|low",
   "system_control::profile": "instant|low",
   "system_control::profile_performance": "long-running|medium",
+  "system_control::propose_recipe": "instant|low",
   "system_control::read_log": "instant|low",
   "system_control::read_profile": "instant|low",
   "system_control::remove_cpp_class": "interactive|low",
@@ -1704,4 +1705,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1691;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1692;
