@@ -119,12 +119,14 @@ void FActionContext::FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y, 
     // coordinates instead of silently stacking.
     FString OverlapMessage;
     TSharedPtr<FJsonObject> OverlapDetails;
-    if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails,
-                                              McpGraphLayout::NamesNoPosition(Payload)))
+    // A named position that overlaps is shifted right to free space too, and the reply says so: refusing it cost a
+    // small model a call to resend the same node one row down.
+    if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails, true))
     {
         SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
         return;
     }
+    const bool bMoved = !McpGraphLayout::NamesNoPosition(Payload) && !FMath::IsNearlyEqual(static_cast<float>(NewNode->NodePosX), X);
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     SaveLoadedAssetThrottled(Blueprint);
 
@@ -145,7 +147,9 @@ void FActionContext::FinishCreatedNode(UEdGraphNode* NewNode, float X, float Y, 
     // Where the node landed and how big it is, so consecutive creates do not stack.
     const FString PlacementWarning = McpGraphLayout::AddNodePlacementFields(Result, *NewNode);
     McpHandlerUtils::AddVerification(Result, Blueprint);
-    SendResponse(PlacementWarning.IsEmpty() ? FString(TEXT("Node created.")) : FString::Printf(TEXT("Node created. %s"), *PlacementWarning),
+    const FString Moved = bMoved ? FString::Printf(TEXT(" The position given overlapped another node, so it was placed at (%d, %d)."),
+                                                   NewNode->NodePosX, NewNode->NodePosY) : FString();
+    SendResponse((PlacementWarning.IsEmpty() ? FString(TEXT("Node created.")) : FString::Printf(TEXT("Node created. %s"), *PlacementWarning)) + Moved,
                  Result);
 }
 }
