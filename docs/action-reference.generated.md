@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `079a7a4870b4b076`
+Catalog revision: `31de2da381df598c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 500 capabilities across
+The catalog declares 501 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor` | 36 | 9 | 24 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
 | `inspect` | 29 | 24 | 4 | 1 | inspect |
-| `manage_ai` | 18 | 4 | 14 | 0 | manage ai |
+| `manage_ai` | 19 | 5 | 14 | 0 | manage ai |
 | `manage_asset` | 54 | 14 | 35 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 20 | 5 | 15 | 0 | audio |
 | `manage_blueprint` | 45 | 13 | 23 | 9 | blueprint, widget |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 500 capabilities require consent.
+77 of 501 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -414,6 +414,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai.get_ai_info` | `manage_ai` | `get_ai_info` | read | read | none | `manage_ai.get_ai_info` `manage_ai.get_navigation_info` `manage_ai.get_navigation_path` |
 | `manage_ai.get_live_ai_state` | `manage_ai` | `get_live_ai_state` | read | read | none | `manage_ai.get_live_ai_state` |
 | `manage_ai.get_tree` | `manage_ai` | `get_tree` | read | read | none | `manage_ai.get_tree` `manage_ai.get_blackboard_value` |
+| `manage_ai.prove_reachable` | `manage_ai` | `prove_reachable` | read | read | none | `manage_ai.prove_reachable` |
 | `manage_ai.run_behavior_tree` | `manage_ai` | `run_behavior_tree` | write | write | none | `manage_ai.run_behavior_tree` `manage_ai.stop_behavior_tree` `manage_ai.assign_behavior_tree` `manage_ai.assign_blackboard` |
 | `manage_ai.set_ai_movement` | `manage_ai` | `set_ai_movement` | write | write | none | `manage_ai.set_ai_movement` |
 | `manage_ai.set_focus` | `manage_ai` | `set_focus` | write | write | none | `manage_ai.set_focus` `manage_ai.clear_focus` |

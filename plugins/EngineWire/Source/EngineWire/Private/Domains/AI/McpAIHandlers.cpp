@@ -1,5 +1,6 @@
 #include "Domains/AI/McpAIContext.h"
 #include "Core/Routing/McpConsolidatedActionRouting.h"
+#include "Domains/AI/Reach/McpReach.h"
 
 DEFINE_LOG_CATEGORY(LogMcpAIHandlers);
 
@@ -67,6 +68,7 @@ bool UEngineWireSubsystem::HandleManageAIAction(
         {TEXT("add_mass_spawner"),               &McpAIHandlers::HandleAddMassSpawner},
         {TEXT("get_ai_info"),                    &McpAIHandlers::HandleGetAIInfo},
         {TEXT("get_live_ai_state"),              &McpAIHandlers::HandleGetLiveAIState},
+        {TEXT("prove_reachable"),                &McpReach::HandleProveReachable},
         {TEXT("set_ai_perception"),              &McpAIHandlers::HandleSetAIPerception},
         {TEXT("create_nav_modifier"),            &McpAIHandlers::HandleCreateNavModifier},
         {TEXT("set_ai_movement"),                &McpAIHandlers::HandleSetAIMovement},

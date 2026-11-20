@@ -178,6 +178,8 @@ const testCases = [
   { scenario: 'ERROR: add_mass_spawner refuses a query path that is no Environment Query', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', configPath: '${captured:configPath}', queryPath: '${captured:configPath}' }, expected: 'error|TYPE_MISMATCH' },
 
   // === UTILITY / ALIASES ===
+  // prove_reachable reads a Character's movement: a class that is none is refused before anything is sampled.
+  { scenario: 'ERROR: prove_reachable refuses a pawn class that is no Character', toolName: 'manage_ai', arguments: { action: 'prove_reachable', goals: [[0, 0, 0]], from: [100, 0, 0], pawnClass: '/Script/Engine.Actor', budgetMs: 1000, maxCells: 500 }, expected: 'error|NOT_A_CHARACTER' },
   // get_live_ai_state reads the Play world: in the editor world it is refused before it runs.
   { scenario: 'ERROR: get_live_ai_state outside Play', toolName: 'manage_ai', arguments: { action: 'get_live_ai_state', actorName: 'NoSuchAI_MCP' }, expected: 'error|EDITOR_STATE_MISMATCH' },
   { scenario: 'INFO: get_ai_info', toolName: 'manage_ai', arguments: { action: 'get_ai_info', controllerPath: '${captured:controllerPath}' }, expected: 'success' },

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "079a7a4870b4b076",
-  "recordCount": 500,
+  "catalogRevision": "31de2da381df598c",
+  "recordCount": 501,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -67750,6 +67750,189 @@
         "algorithm": "sha256",
         "schema": "aeef6e2d2ea7ad1423a3a1878d3539365773278ea60db8dc921d0593db157213",
         "content": "a8114f8d043c60a8535176895becb26f6ee3947cb15681bb3a4ace5e3934737f"
+      }
+    },
+    {
+      "id": "manage_ai.prove_reachable",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_ai",
+          "action": "prove_reachable"
+        }
+      ],
+      "discovery": {
+        "domain": "manage ai",
+        "family": "ai",
+        "topics": [
+          "prove_reachable",
+          "can the player reach",
+          "is the level finishable",
+          "is this jump possible",
+          "reachability",
+          "gap too wide to jump"
+        ],
+        "summary": "Prove whether the player can get from a start (from: an actor label or [x, y, z], default the player start) to each goal by walking, stepping, falling and jumping with its own movement (the pawnClass Character, default the level's game mode pawn: jump speed, gravity, walk speed, step height, walkable slope, capsule) over the level's collision. Each goal reads reachable with the jumps on the way (takeOff, landing, rise), or not, with nearestReached and missing: the extra height or the narrower gap the last jump needs. pawnMoves gives the jump height and reach it worked with. Surfaces are sampled on a grid (cellSize) from above, one floor per column; budgetExhausted says the time ran out before every jump was tried. Edit world, reads only.",
+        "whenToUse": [
+          "A level's goal, pickup or exit must be reachable, and a gap or ledge may be out of the player's jump.",
+          "After moving platforms or ledges: check every goal is still reachable."
+        ],
+        "whenNotToUse": [
+          "A navigation path for AI is wanted (get_navigation_path).",
+          "How the jump feels is wanted (control_actor sample_motion in Play)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "goals": {
+              "type": "array",
+              "items": {
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Goals: actor labels, or [x, y, z] points."
+            },
+            "from": {
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the player starts: an actor label or [x, y, z] (default the level's player start)."
+            },
+            "pawnClass": {
+              "type": "string",
+              "description": "The Character class whose movement is used (/Game/... _C or /Script/...); default the level game mode's default pawn."
+            },
+            "budgetMs": {
+              "type": "number",
+              "minimum": 500,
+              "maximum": 20000,
+              "description": "Milliseconds for trying jumps (default 8000)."
+            },
+            "maxCells": {
+              "type": "number",
+              "minimum": 100,
+              "maximum": 100000,
+              "description": "Most grid cells sampled (default 20000); a larger area samples coarser cells."
+            }
+          },
+          "required": [
+            "goals"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "goals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each goal: goal, reachable, jumps ({takeOff, landing, rise}) when reachable, else nearestReached and missing."
+            },
+            "pawnMoves": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "pawn, jumpHeight (cm), jumpReach (cm on level ground), stepHeight."
+            },
+            "surfaces": {
+              "type": "number",
+              "description": "Standing points sampled."
+            },
+            "cellSize": {
+              "type": "number",
+              "description": "Grid cell size in cm."
+            },
+            "budgetExhausted": {
+              "type": "boolean",
+              "description": "Present when the time ran out before every jump was tried: an unreachable goal may then be a missed jump."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Prove whether the player can get from a start (from: an actor label or [x, y, z], default the player start) to each goal by walking, stepping, falling and jumping with its own movement (the pawnClass Character, default the level's game mode pawn: jump speed, gravity, walk speed, step height, walkable slope, capsule) over the level's collision. Each goal reads reachable with the jumps on the way (takeOff, landing, rise), or not, with nearestReached and missing: the extra height or the narrower gap the last jump needs. pawnMoves gives the jump height and reach it worked with. Surfaces are sampled on a grid (cellSize) from above, one floor per column; budgetExhausted says the time ran out before every jump was tried. Edit world, reads only.",
+          "input": {
+            "action": "prove_reachable",
+            "goals": [
+              "Goal_Flag"
+            ],
+            "pawnClass": "/Game/Blueprints/BP_Hero.BP_Hero_C"
+          },
+          "output": {
+            "success": true,
+            "message": "0 of 1 goal(s) reachable from PlayerStart",
+            "goals": [
+              {
+                "goal": "Goal_Flag",
+                "reachable": false,
+                "nearestReached": [
+                  1200,
+                  0,
+                  100
+                ],
+                "missing": "a jump rises 90 cm; this needs 40 cm more height (a higher jump, or a step within reach)"
+              }
+            ],
+            "pawnMoves": {
+              "jumpHeight": 90,
+              "jumpReach": 514,
+              "stepHeight": 45
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_ai",
+        "dispatchAction": "prove_reachable"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0d9fc145eed5bbd25ade2ebea6c000791ff45e40e72bf12f64ca46096821149f",
+        "content": "0b455d4885174269120aea28376526a877642f5d0b17392163ca6e982827d71a"
       }
     },
     {

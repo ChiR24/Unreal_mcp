@@ -11309,6 +11309,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Radius, in units, of the agents told when the smart link switches; the engine default 0 tells none."
         },
+        "budgetMs": {
+          "type": "number",
+          "minimum": 500,
+          "maximum": 20000,
+          "description": "Milliseconds for trying jumps (default 8000)."
+        },
         "cellCm": {
           "type": "number",
           "minimum": 25,
@@ -11611,20 +11617,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Focus the first actor carrying this tag (mark the target with control_actor add_tag)."
         },
         "from": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Where the walk starts.",
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
+            {
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the player starts: an actor label or [x, y, z] (default the level's player start)."
             }
-          },
-          "description": "Where the walk starts.",
-          "additionalProperties": false
+          ],
+          "description": "Where the player starts: an actor label or [x, y, z] (default the level's player start)."
         },
         "fromActor": {
           "type": "string",
@@ -11691,6 +11706,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "goalActor": {
           "type": "string",
           "description": "Actor to walk to from the start, in place of goal."
+        },
+        "goals": {
+          "type": "array",
+          "items": {
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Goals: actor labels, or [x, y, z] points."
         },
         "hearingConfig": {
           "type": "object",
@@ -11837,6 +11859,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum acceleration; left unchanged when omitted."
         },
+        "maxCells": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 100000,
+          "description": "Most grid cells sampled (default 20000); a larger area samples coarser cells."
+        },
         "maxFlySpeed": {
           "type": "number",
           "description": "Maximum flying speed; left unchanged when omitted."
@@ -11958,6 +11986,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "path": {
           "type": "string",
           "description": "Canonical /Game output path for the created asset."
+        },
+        "pawnClass": {
+          "type": "string",
+          "description": "The Character class whose movement is used (/Game/... _C or /Script/...); default the level game mode's default pawn."
         },
         "peripheralVisionAngle": {
           "type": "number",
@@ -12345,6 +12377,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_nav_actor",
             "get_ai_info",
             "get_live_ai_state",
+            "prove_reachable",
             "get_tree",
             "analyze_level_layout",
             "set_ai_movement"
@@ -12527,9 +12560,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "budgetExhausted": {
+          "type": "boolean",
+          "description": "Present when the time ran out before every jump was tried: an unreachable goal may then be a missed jump."
+        },
         "cellCm": {
           "type": "number",
           "description": "The sample spacing used."
+        },
+        "cellSize": {
+          "type": "number",
+          "description": "Grid cell size in cm."
         },
         "chokes": {
           "type": "array",
@@ -12628,6 +12669,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "gap": {
           "type": "number",
           "description": "partial: how far the path stops short of the goal, in cm."
+        },
+        "goals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each goal: goal, reachable, jumps ({takeOff, landing, rise}) when reachable, else nearestReached and missing."
         },
         "hooks": {
           "type": "array",
@@ -12776,6 +12826,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The pawn it possesses."
         },
+        "pawnMoves": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "pawn, jumpHeight (cm), jumpReach (cm on level ground), stepHeight."
+        },
         "points": {
           "type": "array",
           "items": {
@@ -12905,6 +12961,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "surfaces": {
+          "type": "number",
+          "description": "Standing points sampled."
         },
         "toOnMesh": {
           "type": "array",
