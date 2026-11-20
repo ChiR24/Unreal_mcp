@@ -33,11 +33,12 @@ bool ReadRequest(FSocket& Client, FString& Method, FString& Path, FString& Token
     TArray<uint8> Data;
     int32 HeaderEnd = INDEX_NONE;
     int32 Length = 0;
-    uint8 Chunk[4096];
+    constexpr int32 ChunkSize = 4096;
+    uint8 Chunk[ChunkSize];
     while (HeaderEnd == INDEX_NONE || Data.Num() < HeaderEnd + Length)
     {
         int32 Read = 0;
-        if (!Client.Wait(ESocketWaitConditions::WaitForRead, FTimespan::FromSeconds(10)) || !Client.Recv(Chunk, sizeof(Chunk), Read) || Read <= 0)
+        if (!Client.Wait(ESocketWaitConditions::WaitForRead, FTimespan::FromSeconds(10)) || !Client.Recv(Chunk, ChunkSize, Read) || Read <= 0)
         {
             return false;
         }

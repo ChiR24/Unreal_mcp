@@ -2,7 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
-#include "Templates/Atomic.h"
+
+#include <atomic>
 
 class FRunnableThread;
 class FSocket;
@@ -43,5 +44,5 @@ private:
     FRunnableThread* Thread = nullptr;
     FString Token;
     int32 BoundPort = 0;
-    TAtomic<bool> bStopping{false};
+    std::atomic<bool> bStopping{false};
 };

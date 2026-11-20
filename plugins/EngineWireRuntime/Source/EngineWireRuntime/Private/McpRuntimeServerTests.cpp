@@ -28,9 +28,10 @@ FString Post(int32 Port, const FString& Token, const FString& Body)
         Client->Send(reinterpret_cast<const uint8*>(Head.Get()), Head.Length(), Sent);
         Client->Send(reinterpret_cast<const uint8*>(Payload.Get()), Payload.Length(), Sent);
         TArray<uint8> Data;
-        uint8 Chunk[4096];
+        constexpr int32 ChunkSize = 4096;
+        uint8 Chunk[ChunkSize];
         int32 Read = 0;
-        while (Client->Wait(ESocketWaitConditions::WaitForRead, FTimespan::FromSeconds(5)) && Client->Recv(Chunk, sizeof(Chunk), Read) && Read > 0)
+        while (Client->Wait(ESocketWaitConditions::WaitForRead, FTimespan::FromSeconds(5)) && Client->Recv(Chunk, ChunkSize, Read) && Read > 0)
         {
             Data.Append(Chunk, Read);
         }
