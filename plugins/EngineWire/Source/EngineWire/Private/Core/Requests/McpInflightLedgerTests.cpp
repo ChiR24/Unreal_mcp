@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Core/Subsystem/McpEndpointFile.h"
+#include "EngineWireSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -109,6 +110,29 @@ bool FMcpInflightLedgerTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("a call's two writes stay under 50 ms"), PerCallMs < 50.0);
 
     IFileManager::Get().DeleteDirectory(*Dir, false, true);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FMcpInflightLedgerTestSubsystemTest,
+    "EngineWire.Core.InflightLedger.TestSubsystemsStayOut",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpInflightLedgerTestSubsystemTest::RunTest(const FString& Parameters)
+{
+    (void)Parameters;
+    // A test's own subsystem (no transport) runs a request whose handler never replies, as the queue tests' fixtures
+    // do: the editor's inflight.json must not list it, or the next start reports it as a call the editor died in.
+    UEngineWireSubsystem* Subsystem = NewObject<UEngineWireSubsystem>();
+    Subsystem->RegisterHandler(TEXT("ledger_probe_fixture"),
+        [](const FString&, const FString&, const TSharedPtr<FJsonObject>&, TSharedPtr<FMcpBridgeWebSocket>) { return true; });
+    const FString Id = TEXT("ledger-probe-never-replies");
+    TestEqual(TEXT("queued"), Subsystem->QueueAutomationRequest(Id, TEXT("ledger_probe_fixture"), MakeShared<FJsonObject>(), nullptr),
+              EAutomationQueueRejection::None);
+    Subsystem->ProcessPendingAutomationRequests();
+    FString Text;
+    FFileHelper::LoadFileToString(Text, *FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("MCP"), TEXT("inflight.json")));
+    TestFalse(TEXT("the editor's ledger does not list a test subsystem's call"), Text.Contains(Id));
     return true;
 }
 

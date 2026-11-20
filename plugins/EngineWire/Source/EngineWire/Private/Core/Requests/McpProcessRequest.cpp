@@ -183,8 +183,13 @@ void UEngineWireSubsystem::ProcessAutomationRequest(
   // The call by tool and action, as the journal names it (a payload may carry its action as action, not subAction).
   FString Called = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
   Called = Called.IsEmpty() && Payload.IsValid() ? GetJsonStringField(Payload, TEXT("action")) : Called;
-  // On disk before the handler runs: if it takes the editor down, the proxy can say which call was running.
-  FMcpInflightLedger::Get().Dispatch(RequestId, Called.IsEmpty() || Called == Action ? Action : Action + TEXT(".") + Called);
+  // On disk before the handler runs: if it takes the editor down, the proxy can say which call was running. Only the
+  // subsystem serving the editor's transport records: an in-editor test's own subsystem (NewObject, no transport) runs
+  // fixture requests that never reply, and they stayed in the editor's file as calls it was running.
+  if (NativeTransport)
+  {
+    FMcpInflightLedger::Get().Dispatch(RequestId, Called.IsEmpty() || Called == Action ? Action : Action + TEXT(".") + Called);
+  }
   bool bDispatchHandled = false;
   bool bErrorCaptureStarted = false;
   const double DispatchStartSeconds = FPlatformTime::Seconds();
