@@ -99,8 +99,13 @@ bool ResolveStepAliases(const FBatchState& State, const TSharedPtr<FJsonObject>&
             TArray<FString> Known;
             State.Aliases.GenerateKeyArray(Known);
             const FString KnownList = Known.Num() > 0 ? FString::Join(Known, TEXT(", ")) : FString(TEXT("<none>"));
-            OutError = FString::Printf(TEXT("%s '%s' names no earlier step. Aliases defined so far: %s."),
-                                       Field, *Ref, *KnownList);
+            // Seen in recorded runs: an alias from the caller's previous batch, and $entry in an event graph.
+            OutError = FString::Printf(TEXT("%s '%s' names no earlier step of this batch (an alias does not carry over from "
+                                            "another call: use that node's id from its reply%s). Aliases defined so far: %s."),
+                                       Field, *Ref,
+                                       Ref == TEXT("$entry") ? TEXT("; $entry exists only in a function or Construction Script "
+                                                                    "graph, so an event graph starts from an event") : TEXT(""),
+                                       *KnownList);
             return false;
         }
         Payload->SetStringField(Field, *Guid);
