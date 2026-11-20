@@ -93,9 +93,14 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("blueprintPath"), Path);
         Resp->SetStringField(TEXT("propertyName"), PropertyName);
+        // An entry of a list (Modifiers[0].ModifierOp) is read where element paths are: inspect get_property on the
+        // class default object, which a small model could not find from this refusal.
+        const FString Elements = PropertyName.Contains(TEXT("[")) && Generated
+            ? FString::Printf(TEXT(" A list entry is read by inspect get_property with objectPath '%s' and this propertyName."), *Generated->GetDefaultObject()->GetPathName())
+            : FString();
         Bridge.SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Property '%s' not found on blueprint (its variables, CDO properties and, as Component.Property, its components' defaults are searched). Its variables: %s."), *PropertyName, *McpBlueprintVariableList(Generated)),
+            FString::Printf(TEXT("Property '%s' not found on blueprint (its variables, CDO properties and, as Component.Property, its components' defaults are searched).%s Its variables: %s."), *PropertyName, *Elements, *McpBlueprintVariableList(Generated)),
             Resp, TEXT("PROPERTY_NOT_FOUND"));
         return true;
       }

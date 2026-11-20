@@ -225,11 +225,12 @@ bool McpParseGatewayExecuteRequest(
 	const FMcpCapabilityRecord* Record = FromCapability ? FromCapability : FromLegacy;
 	if (!Record)
 	{
-		// describe {} lists the parent tools, so point the caller there.
-		OutGuidance = BuildGuidance({},
-			GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
-		OutError = McpValidationError(TEXT("UNKNOWN_CAPABILITY"),
-			TEXT("execute requires either capability or tool + action. Call describe with no arguments to list the parent tools, or search to find a capability."));
+		// describe {} lists the parent tools; a tool sent with no action (a small model sent manage_gas and its params
+		// only) gets describe {tool}, which lists that tool's actions: the one step it is missing.
+		const bool bToolOnly = !Tool.IsEmpty() && Action.IsEmpty() && Capability.IsEmpty();
+		OutGuidance = BuildGuidance({}, GatewayBuildNextCall(TEXT("describe"), bToolOnly ? Tool : FString(), FString(), FString()));
+		OutError = McpValidationError(TEXT("UNKNOWN_CAPABILITY"), bToolOnly ? FString::Printf(TEXT("execute names tool '%s' but no action: send the nextCall to list its actions, then execute with tool and action."), *Tool)
+			: FString(TEXT("execute requires either capability or tool + action. Call describe with no arguments to list the parent tools, or search to find a capability.")));
 		return false;
 	}
 

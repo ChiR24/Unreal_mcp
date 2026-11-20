@@ -113,4 +113,19 @@ inline FString EnumValueHint(const FString& Key, const TSharedPtr<FJsonObject>& 
 	}
 	return FString();
 }
+
+// A field of the call itself put inside params (a small model sent consent there): the whole message, saying where it
+// goes; empty for any other key.
+inline FString EnvelopeFieldHint(const FString& Key)
+{
+	for (const TCHAR* Field : {TEXT("consent"), TEXT("options"), TEXT("capability"), TEXT("tool"), TEXT("operation")})
+	{
+		if (Key.Equals(Field, ESearchCase::CaseSensitive))
+		{
+			return FString::Printf(TEXT("Undeclared parameter '%s': it is a field of the call, not a parameter. Send it at the "
+				"top level of the call, beside params, not inside params"), *Key);
+		}
+	}
+	return FString();
+}
 }

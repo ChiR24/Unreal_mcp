@@ -1,6 +1,8 @@
 #include "Domains/ControlActor/Placement/McpPartPlacement.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsResponses.h"
 
 #include "Foundation/BridgeHelpers/Blueprints/McpBPAssetLoad.h"
 

@@ -243,6 +243,7 @@ FString DescribeAllowedValues(const TArray<TSharedPtr<FJsonValue>>& Allowed, int
 // ranked ahead of the rest (see McpParameterHints), at most 24 names listed.
 FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonObject>& Properties)
 {
+	if (const FString Envelope = McpParameterHints::EnvelopeFieldHint(Key); !Envelope.IsEmpty()) return Envelope;
 	TArray<FString> Declared;
 	if (Properties.IsValid())
 	{

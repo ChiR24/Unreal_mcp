@@ -255,13 +255,21 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
 			}
 		}
 
+		// The example names THIS struct's own fields: a fixed {Left, Top} sent a small model after margin fields for a
+		// GameplayAttributeData. Up to three of them, numbers as 0, booleans as false, anything else as text.
+		TArray<FString> JsonFields, TextFields;
+		for (TFieldIterator<FProperty> It(SP->Struct); SP->Struct && It && JsonFields.Num() < 3; ++It)
+		{
+			const FString Sample = It->IsA<FNumericProperty>() ? TEXT("0") : It->IsA<FBoolProperty>() ? TEXT("false") : TEXT("\"...\"");
+			JsonFields.Add(FString::Printf(TEXT("\"%s\": %s"), *It->GetName(), *Sample));
+			TextFields.Add(FString::Printf(TEXT("%s=%s"), *It->GetName(), *Sample.Replace(TEXT("\""), TEXT(""))));
+		}
 		OutError = FString::Printf(
-				TEXT("Could not convert value to struct property of type '%s'. "
-						 "Accepted forms: a JSON object ({\"Left\": -48, \"Top\": -64}), "
-						 "UE export text ((Left=-48.000000,Top=-64.000000)) -- the form "
-						 "get_property returns -- or, for Vector/Rotator, a 3-element "
-						 "JSON array ([0, 0, 90])."),
-				TypeName.IsEmpty() ? TEXT("<unknown>") : *TypeName);
+				TEXT("Could not convert value to struct property of type '%s'. Accepted forms: a JSON object of its fields "
+						 "({%s}), UE export text ((%s)) -- the form get_property returns -- or, for Vector/Rotator, a "
+						 "3-element JSON array ([0, 0, 90])."),
+				TypeName.IsEmpty() ? TEXT("<unknown>") : *TypeName, *FString::Join(JsonFields, TEXT(", ")),
+				*FString::Join(TextFields, TEXT(",")));
     return false;
   }
   return false;
