@@ -6389,6 +6389,7 @@
         "compareWith",
         "componentName",
         "componentNames",
+        "derived",
         "detailed",
         "domain",
         "editorState",
@@ -6397,6 +6398,7 @@
         "folder",
         "format",
         "fov",
+        "function",
         "ignoreActors",
         "info",
         "keepFile",
@@ -6563,6 +6565,10 @@
             ],
             "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
           },
+          "derived": {
+            "type": "boolean",
+            "description": "List the classes derived from it (derivedClasses, up to 100; derivedCount counts them all)."
+          },
           "detailed": {
             "type": "boolean",
             "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
@@ -6609,6 +6615,10 @@
             "maximum": 170,
             "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
           },
+          "function": {
+            "type": "string",
+            "description": "A function of the class (declared or inherited) whose signature to return; one not there by that name returns functionMatches, the class's functions whose names hold it."
+          },
           "ignoreActors": {
             "type": "array",
             "items": {
@@ -6640,7 +6650,7 @@
               "struct",
               "cdo"
             ],
-            "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+            "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
             "default": "class"
           },
           "labels": {

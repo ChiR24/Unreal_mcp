@@ -42,6 +42,9 @@ TSharedPtr<FJsonObject> McpMakeBoundsObject(const FBox &Box);
 void McpAppendLevelDetails(UWorld *World, TSharedPtr<FJsonObject> Resp);
 void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp);
 void McpDescribeClass(UClass *Class, TSharedPtr<FJsonObject> Resp);
+// source (a native class's header, .cpp, include line and module), functionSignature for Payload's function, and
+// derivedClasses when Payload's derived is true (McpInspectClassCode.cpp).
+void McpDescribeClassCode(UClass *Class, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
 void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Resp);
 void McpDescribeAssetDetails(UObject *Object, TSharedPtr<FJsonObject> Resp);
 void McpDescribeMaterialAsset(UMaterialInterface *Material, TSharedPtr<FJsonObject> Resp);

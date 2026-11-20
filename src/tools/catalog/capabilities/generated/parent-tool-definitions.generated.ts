@@ -8941,6 +8941,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
         },
+        "derived": {
+          "type": "boolean",
+          "description": "List the classes derived from it (derivedClasses, up to 100; derivedCount counts them all)."
+        },
         "detailed": {
           "type": "boolean",
           "description": "Every property the component's class declares, as text (up to 200): a Niagara or mesh component declares about 200, most of the reply. Prefer propertyNames."
@@ -8987,6 +8991,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maximum": 170,
           "description": "Horizontal field of view in degrees (5-170), set with the camera; omitted, the viewport's current one, which the editor resets to 90 when it restarts. It stays."
         },
+        "function": {
+          "type": "string",
+          "description": "A function of the class (declared or inherited) whose signature to return; one not there by that name returns functionMatches, the class's functions whose names hold it."
+        },
         "ignoreActors": {
           "type": "array",
           "items": {
@@ -9018,7 +9026,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "struct",
             "cdo"
           ],
-          "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+          "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
           "default": "class"
         },
         "labels": {
@@ -10049,6 +10057,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": false,
           "description": "depth: nearest, median and farthest distance of the drawn pixels in cm, and the percent that is sky (nothing within 100 km)."
         },
+        "derivedClasses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With derived: the classes derived from it, up to 100, by path."
+        },
+        "derivedCount": {
+          "type": "number",
+          "description": "With derived: every class derived from it."
+        },
         "description": {
           "type": "string",
           "description": "Project description."
@@ -10155,6 +10174,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "functionCount": {
           "type": "number",
           "description": "Functions the class declares or inherits."
+        },
+        "functionMatches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With a function the class has no function of that name: its functions whose names hold the text."
+        },
+        "functionSignature": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With function: name, declaredIn, params ({name, type, out, byRef, default}), returnType, static, const, pure, blueprintCallable, blueprintEvent, rpc, category, tooltip."
         },
         "gRunningCommandlet": {
           "type": "number",
@@ -10902,6 +10934,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "slotBoundsAvailable": {
           "type": "boolean",
           "description": "Mesh assets: false when the render data keeps no CPU copy of its vertices, so each slot has its triangle count but no bounds."
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "A C++ class only: header and sourceFile (full paths, when the source is installed), includePath (as an #include names it) and buildDependency (the module a Build.cs adds)."
         },
         "startInVR": {
           "type": "boolean",

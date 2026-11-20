@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a0818473eae97d1d",
+  "catalogRevision": "50d00b56add04568",
   "recordCount": 499,
   "records": [
     {
@@ -60578,6 +60578,7 @@
         "summary": "Read reflection data, chosen by kind. class (className or classPath) gives the class path, parent and ancestors, module, flags (abstract, blueprintable, actor, component and more), every property it declares or inherits (name, type, category, where declared, editable, Blueprint-visible; at most 200 listed, propertyCount the total), the default value of each on its class default object, and its function count. cdo reads a Blueprint class default object without spawning anything (blueprintPath): its default values (propertyNames picks some) and its default components (componentName or componentNames narrows them). struct reads the members of a user struct (structPath): name, type, default and tooltip.",
         "whenToUse": [
           "kind=class: A class's hierarchy and defaults must be read.",
+          "kind=class: C++ code must include a class, call one of its functions, or depend on its module.",
           "kind=struct: A Blueprint Struct's member layout must be read.",
           "kind=cdo: A Blueprint's default properties and components must be read."
         ],
@@ -60603,6 +60604,14 @@
             "classPath": {
               "type": "string",
               "description": "Class asset path (alias of className)."
+            },
+            "function": {
+              "type": "string",
+              "description": "A function of the class (declared or inherited) whose signature to return; one not there by that name returns functionMatches, the class's functions whose names hold it."
+            },
+            "derived": {
+              "type": "boolean",
+              "description": "List the classes derived from it (derivedClasses, up to 100; derivedCount counts them all)."
             },
             "structPath": {
               "type": "string",
@@ -60641,7 +60650,7 @@
                 "struct",
                 "cdo"
               ],
-              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
+              "description": "Which inspect class variant to run; omit for 'class'.\nclass: Inspect a UClass: metadata, parent, default CDO properties; for a C++ class also where it lives in source (header, sourceFile, the includePath a .cpp writes, the buildDependency module a Build.cs lists). function returns one function's signature (params with C++ types, out and by-ref, the default Blueprint gives an omitted one; returnType; static, const, pure, Blueprint-callable, RPC), and derived lists the classes derived from it.\nstruct: Inspect a UserDefinedStruct layout (member names, types, defaults) read-only.\ncdo: Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.",
               "default": "class"
             }
           },
@@ -60765,6 +60774,36 @@
               "type": "number",
               "description": "Functions the class declares or inherits."
             },
+            "source": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "A C++ class only: header and sourceFile (full paths, when the source is installed), includePath (as an #include names it) and buildDependency (the module a Build.cs adds)."
+            },
+            "functionSignature": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With function: name, declaredIn, params ({name, type, out, byRef, default}), returnType, static, const, pure, blueprintCallable, blueprintEvent, rpc, category, tooltip."
+            },
+            "functionMatches": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With a function the class has no function of that name: its functions whose names hold the text."
+            },
+            "derivedClasses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With derived: the classes derived from it, up to 100, by path."
+            },
+            "derivedCount": {
+              "type": "number",
+              "description": "With derived: every class derived from it."
+            },
             "result": {
               "type": "object",
               "additionalProperties": true,
@@ -60863,6 +60902,12 @@
             "classPath": [
               "class"
             ],
+            "function": [
+              "class"
+            ],
+            "derived": [
+              "class"
+            ],
             "structPath": [
               "struct"
             ],
@@ -60904,8 +60949,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "59bb73583363e030be51e82289a057be83c7bcdac055a60bb2a54ccca952059a",
-        "content": "1329bfaefb347aba9ee2fef1dfdaa12d7ba2122cf8c999d50e3ad4d4d0ec1e4b"
+        "schema": "0d303fafe8b2b897e1a8768750ac47c062a263c8e8e133e1f3ba19ba43418f3b",
+        "content": "f7b72c9fb59227c71728506620b20a6f409aab19b469379ab34c8bb0e4f2695e"
       }
     },
     {

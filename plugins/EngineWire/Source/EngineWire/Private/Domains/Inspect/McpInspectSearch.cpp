@@ -34,6 +34,7 @@ bool HandleInspectSearchAction(
                     // properties[] and the CDO defaultProperties — see
                     // McpInspectClass.cpp.
                     McpDescribeClass(TargetClass, Resp);
+                    McpDescribeClassCode(TargetClass, Payload, Resp);
                     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                            TEXT("Class inspected"), Resp, FString());
                 }
