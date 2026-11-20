@@ -25,6 +25,11 @@ export type FoldSpec = {
   readonly primary: string;
   /** Selector parameter added to the union schema. Omit for a pure alias fold. */
   readonly selector?: string;
+  /**
+   * The selector value a call that leaves the selector out runs, when the primary is none of the members (a primary
+   * that is a member is the default already). Callers sent get_editor_state with no editorState and were refused.
+   */
+  readonly selectorDefault?: string;
   readonly summary: string;
   readonly whenToUse?: readonly string[];
   readonly whenNotToUse?: readonly string[];

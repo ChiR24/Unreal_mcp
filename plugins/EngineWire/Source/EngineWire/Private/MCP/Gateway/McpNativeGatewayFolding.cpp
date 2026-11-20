@@ -211,33 +211,6 @@ bool McpApplyFoldedPins(
 	return true;
 }
 
-// A call that omits the selector runs the variant its parameters point to:
-// every sent parameter the variants do not all share must be declared by one
-// and the same variant.
-void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
-{
-	if (Record.DispatchByDeclaredBy.Num() == 0 || !Params.IsValid() || Params->HasField(Record.DispatchBySelector))
-	{
-		return;
-	}
-	TOptional<TArray<FString>> Candidates;
-	for (const auto& Param : Params->Values)
-	{
-		if (const TArray<FString>* Owners = Record.DispatchByDeclaredBy.Find(FString(*Param.Key)))
-		{
-			if (!Candidates.IsSet())
-			{
-				Candidates = *Owners;
-			}
-			Candidates->RemoveAll([Owners](const FString& Value) { return !Owners->Contains(Value); });
-		}
-	}
-	if (Candidates.IsSet() && Candidates->Num() == 1)
-	{
-		Params->SetStringField(Record.DispatchBySelector, (*Candidates)[0]);
-	}
-}
-
 // The bridge action to dispatch once params are validated: an old name
 // dispatches itself, the primary maps its selector through dispatchBy. An
 // unmapped selector value FAILS CLOSED (empty return): validation enforces

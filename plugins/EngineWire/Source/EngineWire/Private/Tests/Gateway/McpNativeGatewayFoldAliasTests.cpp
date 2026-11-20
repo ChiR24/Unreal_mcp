@@ -107,6 +107,14 @@ bool FMcpNativeFoldAliasTest::RunTest(const FString& Parameters)
 	PairAlias->SetStringField(TEXT("capability"), TEXT("manage_level_structure.create_trigger_volume"));
 	TestEqual(TEXT("an alias whose last segment names a pair keeps that pair"),
 		McpRequestedLegacyAction(PairAlias, *Volume), FString(TEXT("create_trigger_volume")));
+
+	// A family whose primary is none of its members runs its selector's default when the call leaves the selector out.
+	TSharedPtr<FJsonObject> State = MakeShared<FJsonObject>();
+	State->SetStringField(TEXT("capability"), TEXT("inspect.get_editor_state"));
+	State->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
+	FMcpGatewayExecutePlan StatePlan;
+	TestEqual(TEXT("get_editor_state with no editorState is taken"), FoldAliasPlan(State, StatePlan), FString());
+	TestEqual(TEXT("as world_settings"), StatePlan.LegacyAction, FString(TEXT("get_world_settings")));
 	return true;
 }
 

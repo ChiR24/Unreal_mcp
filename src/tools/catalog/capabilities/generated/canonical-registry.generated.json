@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7d94f96226a621ba",
+  "catalogRevision": "984abada588106ed",
   "recordCount": 511,
   "records": [
     {
@@ -61142,12 +61142,12 @@
                 "editor_settings",
                 "focus"
               ],
-              "description": "Which get editor state variant to run.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session."
+              "description": "Which get editor state variant to run; omit for 'world_settings'.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session.",
+              "default": "world_settings"
             }
           },
           "required": [
-            "action",
-            "editorState"
+            "action"
           ],
           "additionalProperties": false
         },
@@ -61425,8 +61425,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3589de428fa6e342cbe54a6bb4d5b870342d4886e93b25367bdeb1d1c2e53226",
-        "content": "b8c3871ba40ff4ae264ef89d36d5ab600f19bc77e33c0e8527de3a25910ceb02"
+        "schema": "2949beb6615b926c106977cc35c231b2e22413d9cbac5913a81ace3b5227937d",
+        "content": "262815270c77893f3901ff04d3e8c273e780adb98d529aac55f34815c188c033"
       }
     },
     {

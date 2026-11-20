@@ -9107,7 +9107,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "editor_settings",
             "focus"
           ],
-          "description": "Which get editor state variant to run.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session."
+          "description": "Which get editor state variant to run; omit for 'world_settings'.\nselected_actors: Return the actors currently selected in the editor viewport.\nviewport: Return viewport information (view target, camera manager, world type).\nworld_settings: Return the current world/level settings summary (worldName, gravity, killZ, time).\nproject_settings: Return project settings key/value pairs.\neditor_settings: Return editor settings key/value pairs.\nfocus: Read what the user is working on: the open asset editors (most recently used first), each open Blueprint editor's graph in front and its selected nodes (title and nodeId), the selected actors, the distinct warnings and errors of the last minute, and the Blueprint runtime errors of the last play session.",
+          "default": "world_settings"
         },
         "event": {
           "type": "string",

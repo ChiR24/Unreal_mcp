@@ -145,9 +145,13 @@ export function buildFolded(
   const namespace = namespaceOf(String(first.id));
   const primaryIndex = entries.findIndex((entry) => entry.action === spec.primary);
   const base = members[primaryIndex] ?? first;
-  const primaryValue = entries[primaryIndex]?.value;
   const selector = spec.selector;
   const selected = entries.filter((entry): entry is MemberEntry & { value: string } => entry.value !== undefined);
+  if (spec.selectorDefault !== undefined && !selected.some((entry) => entry.value === spec.selectorDefault)) {
+    throw new Error(`fold ${spec.primary}: selectorDefault '${spec.selectorDefault}' is not one of its selector values`);
+  }
+  // The value an omitted selector takes: the primary's own, else the one the spec names (the gateway applies it).
+  const primaryValue = entries[primaryIndex]?.value ?? spec.selectorDefault;
   const memberActions = new Set(entries.map((entry) => entry.action));
 
   const inputProperties: Record<string, JsonValue> = {
@@ -257,7 +261,8 @@ export function buildFolded(
   const exampleIndex = spec.exampleFrom === undefined ? -1 : entries.findIndex((entry) => entry.action === spec.exampleFrom);
   if (spec.exampleFrom !== undefined && exampleIndex < 0) throw new Error(`${context}: exampleFrom '${spec.exampleFrom}' is not a member`);
   const example = (members[exampleIndex] ?? base).examples[0];
-  const exampleValue = exampleIndex >= 0 ? entries[exampleIndex]?.value : primaryValue ?? selected[0]?.value;
+  // The example is the base member's, so it carries that member's own value, never selectorDefault.
+  const exampleValue = exampleIndex >= 0 ? entries[exampleIndex]?.value : entries[primaryIndex]?.value ?? selected[0]?.value;
   const exampleInput: JsonObject = {
     ...(example?.input ?? {}),
     action: spec.primary,
