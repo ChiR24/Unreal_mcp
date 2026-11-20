@@ -16,7 +16,7 @@ namespace McpReachDetail
 {
 const ACharacter* PawnDefaults(UWorld* World, const TSharedPtr<FJsonObject>& Payload, FString& OutName);
 McpReach::FMover MoverOf(const ACharacter& Pawn, const UWorld& World);
-bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoint, FString& OutName);
+bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoint, FString& OutName, FVector* OutTop = nullptr);
 TArray<TSharedPtr<FJsonValue>> Vec(const FVector& V);
 
 // What a jump from Near toward Goal lacks: height above the apex, else the gap past its reach; empty when neither.
@@ -67,19 +67,21 @@ bool HandleProveReachable(UEngineWireSubsystem* Bridge, const FString& RequestId
         Bridge->SendAutomationError(Socket, RequestId, TEXT("goals (actor labels or [x, y, z]) are required, and from must name an actor or a point (default: the level's player start, which it has none of)."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    TArray<FVector> Goals;
+    TArray<FVector> Goals, Tops;
     TArray<FString> GoalNames;
     FBox Bounds(Start, Start);
     for (const TSharedPtr<FJsonValue>& Value : *GoalValues)
     {
-        FVector Point;
+        FVector Point, Top;
         FString Name;
-        if (!PointOf(World, Value, Point, Name))
+        if (!PointOf(World, Value, Point, Name, &Top))
         {
             Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("No actor named '%s' in the level."), *Name), TEXT("ACTOR_NOT_FOUND"));
             return true;
         }
         Goals.Add(Point);
+        Tops.Add(Top);
+        Bounds += Top;
         GoalNames.Add(Name);
         Bounds += Point;
     }
@@ -120,7 +122,8 @@ bool HandleProveReachable(UEngineWireSubsystem* Bridge, const FString& RequestId
     {
         TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
         Row->SetStringField(TEXT("goal"), GoalNames[Index]);
-        const int32 GoalNode = NearestNode(Graph, Goals[Index], Mover.HalfHeight);
+        int32 GoalNode = NearestNode(Graph, Goals[Index], Mover.HalfHeight);
+        GoalNode = GoalNode != INDEX_NONE ? GoalNode : NearestNode(Graph, Tops[Index], Mover.HalfHeight);
         const bool bReached = GoalNode != INDEX_NONE && Seen[Graph.Group[GoalNode]];
         Row->SetBoolField(TEXT("reachable"), bReached);
         Reached += bReached ? 1 : 0;

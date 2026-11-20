@@ -90,7 +90,7 @@ FMover MoverOf(const ACharacter& Pawn, const UWorld& World)
 }
 
 // A point from a JSON value: an actor's label, or [x, y, z]. Feet on the floor below it.
-bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoint, FString& OutName)
+bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoint, FString& OutName, FVector* OutTop)
 {
     if (!Value.IsValid()) return false;
     if (Value->Type == EJson::Array && Value->AsArray().Num() == 3)
@@ -98,6 +98,7 @@ bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoi
         const TArray<TSharedPtr<FJsonValue>>& Xyz = Value->AsArray();
         OutPoint = FVector(Xyz[0]->AsNumber(), Xyz[1]->AsNumber(), Xyz[2]->AsNumber());
         OutName = OutPoint.ToString();
+        if (OutTop) *OutTop = OutPoint;
         return true;
     }
     OutName = Value->AsString();
@@ -108,6 +109,7 @@ bool PointOf(UWorld* World, const TSharedPtr<FJsonValue>& Value, FVector& OutPoi
             FVector Origin, Extent;
             It->GetActorBounds(true, Origin, Extent);
             OutPoint = FVector(Origin.X, Origin.Y, Origin.Z - Extent.Z);
+            if (OutTop) *OutTop = FVector(Origin.X, Origin.Y, Origin.Z + Extent.Z); // a platform: its top is where one stands
             return true;
         }
     }
