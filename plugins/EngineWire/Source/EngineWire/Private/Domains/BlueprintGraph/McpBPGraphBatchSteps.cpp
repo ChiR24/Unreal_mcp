@@ -188,6 +188,9 @@ FString DescribeUnbatchableEdit(const FString& Edit)
         Edit.IsEmpty() ? TEXT("each step needs `edit`") : *FString::Printf(TEXT("`edit` '%s' is not a step this batch runs"), *Edit),
         Edit == TEXT("arrange_nodes") ? TEXT(". The batch already moves each node it places without posX and posY "
                                              "beside a node it is wired to.")
+        // Recorded runs sent it as a batch step, then dropped edit altogether: the batch makes the same nodes.
+        : Edit == TEXT("create_struct_make_break_nodes") ? TEXT(". In a batch, create_node with nodeType MakeStruct or "
+                                                                "BreakStruct and structPath makes the same node.")
                                       : TEXT(""));
 }
 
