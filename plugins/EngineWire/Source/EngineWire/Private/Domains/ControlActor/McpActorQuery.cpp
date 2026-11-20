@@ -79,15 +79,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByName(
                           Name.Contains(Query, ESearchCase::IgnoreCase) ||
                           Path.Contains(Query, ESearchCase::IgnoreCase);
     if (bMatches) {
-      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-      Entry->SetStringField(TEXT("label"), Label);
-      Entry->SetStringField(TEXT("name"), Name);
-      Entry->SetStringField(TEXT("path"), Path);
-      Entry->SetStringField(TEXT("class"),
-                            Actor->GetClass() ? Actor->GetClass()->GetPathName()
-                                              : TEXT(""));
-      Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
-      Matches.Add(MakeShared<FJsonValueObject>(Entry));
+      Matches.Add(MakeShared<FJsonValueObject>(McpFindRow(Actor)));
     }
   }
 

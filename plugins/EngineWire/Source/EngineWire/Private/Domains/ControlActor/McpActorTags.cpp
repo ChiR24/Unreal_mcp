@@ -32,14 +32,7 @@ bool UEngineWireSubsystem::HandleControlActorFindByTag(
     AActor *Actor = *It;
     const bool bMatches = Actor && Actor->ActorHasTag(TagName) && McpCapabilityPrincipal::ActiveRequestPermitsObject(Actor);
     if (bMatches) {
-      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-      Entry->SetStringField(TEXT("name"), McpActorRef(Actor));
-      Entry->SetStringField(TEXT("path"), Actor->GetPathName());
-      Entry->SetStringField(TEXT("class"),
-                            Actor->GetClass() ? Actor->GetClass()->GetPathName()
-                                              : TEXT(""));
-      Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
-      Matches.Add(MakeShared<FJsonValueObject>(Entry));
+      Matches.Add(MakeShared<FJsonValueObject>(McpFindRow(Actor)));
     }
   }
 

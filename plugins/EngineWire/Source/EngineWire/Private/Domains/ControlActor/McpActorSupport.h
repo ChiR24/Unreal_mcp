@@ -73,6 +73,18 @@ inline FString McpActorFolder(const AActor *Actor) {
   return Path.IsNone() ? FString() : Path.ToString();
 }
 
+// One matched actor of find_by_name, find_by_class or find_by_tag: the same fields whichever find made the list, so
+// select ["actors.label"] keeps the labels of each (a class find once put the label in name and had no label).
+inline TSharedPtr<FJsonObject> McpFindRow(const AActor *Actor) {
+  TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+  Row->SetStringField(TEXT("label"), Actor->GetActorLabel());
+  Row->SetStringField(TEXT("name"), Actor->GetName());
+  Row->SetStringField(TEXT("path"), Actor->GetPathName());
+  Row->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
+  Row->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
+  return Row;
+}
+
 // A property named for the whole actor or for one of its components: "bDead" is read off the actor,
 // "Visual.RelativeScale3D" off the component FindComponentByName finds under that name (a squash on
 // landing lives on a component, not the actor), and "CharacterMovement.MaxWalkSpeed" off the object the

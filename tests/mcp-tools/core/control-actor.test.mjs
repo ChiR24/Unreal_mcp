@@ -393,6 +393,8 @@ const testCases = [
   { scenario: 'DELETE: remove the 1023-character tag again', toolName: 'control_actor', arguments: actorArgs('add_tag', { tagOp: 'remove', tag: 'T'.repeat(1023) }), expected: 'success' },
   { scenario: 'INFO: find_by_tag', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_actors_by_tag', toolName: 'control_actor', arguments: { action: 'find_actors_by_tag', tag: TAG }, expected: 'success' },
+  // A tag or class find put the label in name and had no label, so select ["actors.label"] kept nothing of its rows.
+  { scenario: 'INFO: find_by_tag rows carry label, as find_by_name rows do', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, options: { select: ['actors.label'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.label', exists: true, label: 'the row keeps its label' }] },
   { scenario: 'INFO: find_by_name', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.location.z', exists: true, label: 'each row says where the actor is' }] },
   // find answers through the {success, data, warnings} envelope: the list counted is the one in data.
   { scenario: 'INFO: find_by_tag counted with aggregate', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, options: { aggregate: { groupBy: 'class' } }, expected: 'success', assertions: [{ path: 'structuredContent.aggregate.field', equals: 'actors', label: 'the actor list is the one counted' }, { path: 'structuredContent.aggregate.total', equals: 2, label: 'both tagged actors' }] },
