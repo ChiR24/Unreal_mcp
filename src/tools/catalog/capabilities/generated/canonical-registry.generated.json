@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "881205062662dc47",
+  "catalogRevision": "f21b94e92b08b849",
   "recordCount": 512,
   "records": [
     {
@@ -52276,7 +52276,7 @@
             },
             "toolName": {
               "type": "string",
-              "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list."
+              "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list; a toolset's own name lists that toolset's tools, as toolset does."
             },
             "limit": {
               "type": "integer",
@@ -52390,8 +52390,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dd984c9acaf5d8a503f424320561de0f5df8d3238d88ff24cf17d7261bf055db",
-        "content": "d7df77828cbda943861c2fe5156d0ec182736c0e0a5a917c10be96fb7497e594"
+        "schema": "fa19956d58e7cfd4e3488b183b726af885ce8c4c0fa4c4b25d9796d0da397242",
+        "content": "2714d3dadd7a04e523ffa3be537121befd2a0fc061d7670912f339f79e9c9c52"
       }
     },
     {

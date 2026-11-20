@@ -175,7 +175,16 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
     const int32 Limit = FMath::Clamp(GetJsonIntField(Payload, TEXT("limit"), 50), 1, 200);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (!ToolName.IsEmpty())
+    // A toolset's name sent as toolName lists that toolset's tools (a recorded run sent one and was refused).
+    const bool bToolsetName = !ToolName.IsEmpty() && !FindTool(Toolsets, ToolName).IsValid() &&
+        Toolsets.ContainsByPredicate([&ToolName](const TSharedPtr<FJsonValue>& Value) {
+            const TSharedPtr<FJsonObject>* Toolset = nullptr;
+            FString Name;
+            return Value.IsValid() && Value->TryGetObject(Toolset) && (*Toolset)->TryGetStringField(TEXT("name"), Name) &&
+                   Name.Equals(ToolName, ESearchCase::IgnoreCase);
+        });
+    OnlyToolset = bToolsetName ? ToolName : OnlyToolset;
+    if (!ToolName.IsEmpty() && !bToolsetName)
     {
         const TSharedPtr<FJsonObject> Tool = FindTool(Toolsets, ToolName);
         if (!Tool.IsValid())

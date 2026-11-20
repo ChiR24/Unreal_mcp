@@ -8055,7 +8055,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "toolName": {
           "type": "string",
-          "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list."
+          "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list; a toolset's own name lists that toolset's tools, as toolset does."
         },
         "toolset": {
           "type": "string",

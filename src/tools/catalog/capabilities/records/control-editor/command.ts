@@ -117,7 +117,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       query: { type: 'string', description: 'Words that must all appear in a tool\'s name or description (any case), e.g. "state tree add".' },
       toolset: { type: 'string', description: 'List only the tools of this toolset, by the name the toolsets list shows.' },
-      toolName: { type: 'string', description: 'Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list.' },
+      toolName: { type: 'string', description: 'Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list; a toolset\'s own name lists that toolset\'s tools, as toolset does.' },
       limit: { type: 'integer', minimum: 1, maximum: 200, description: 'Most tools listed (default 50); matchedTools and hasMore tell what was left out.' },
     },
     outputProps: {
