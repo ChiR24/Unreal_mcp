@@ -47,11 +47,12 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 		}
 	}
 
-	if (Index.RecordsById.Num() != McpGeneratedCapabilityShards::TotalRecordCount())
+	// The generated records plus what trusted extension providers added (the store counted those apart).
+	if (Index.RecordsById.Num() != McpGeneratedCapabilityShards::TotalRecordCount() + Store.GetExtensionCount())
 	{
 		Index.LoadError = FString::Printf(
-			TEXT("resolved %d records but the generated index declares %d"),
-			Index.RecordsById.Num(), McpGeneratedCapabilityShards::TotalRecordCount());
+			TEXT("resolved %d records but the generated index declares %d (and extensions %d)"),
+			Index.RecordsById.Num(), McpGeneratedCapabilityShards::TotalRecordCount(), Store.GetExtensionCount());
 		Index.RecordsById.Reset();
 		Index.LegacyToCapabilityId.Reset();
 		Index.CapabilityIdToLegacyAction.Reset();

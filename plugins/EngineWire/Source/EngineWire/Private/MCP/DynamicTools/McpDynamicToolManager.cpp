@@ -1,5 +1,6 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "Core/Security/McpConsentWindows.h"
+#include "MCP/Extensions/McpExtensions.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Registry/McpToolRegistry.h"
@@ -92,6 +93,10 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 	if (Action == TEXT("list_consent_windows") || Action == TEXT("revoke_consent_window"))
 	{
 		return McpConsentWindowsReply(Action, Args);
+	}
+	if (Action == TEXT("list_extensions"))
+	{
+		return McpExtensions::ListReply();
 	}
 
 	if (Action != TEXT("reset") && !Args.IsValid())

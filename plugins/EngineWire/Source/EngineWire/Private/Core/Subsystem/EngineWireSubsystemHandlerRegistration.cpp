@@ -1,6 +1,8 @@
 #include "EngineWireSubsystem.h"
 
 #include "Core/Routing/McpConsolidatedActionRouting.h"
+#include "IEngineWireCapabilityProvider.h"
+#include "MCP/Extensions/McpExtensions.h"
 
 namespace
 {
@@ -112,6 +114,28 @@ void UEngineWireSubsystem::InitializeHandlers()
     Route(TEXT("manage_asset"), &S::HandleAssetAction, {
         {&IsTextureAction, &S::HandleManageTextureAction, TEXT("manage_texture")},
         {&IsMaterialAuthoringAction, &S::HandleManageMaterialAuthoringAction, TEXT("manage_material_authoring")}});
+
+    // A trusted extension provider's parent tools: the call already passed the gate its record sets; the provider
+    // answers once through the call's Answer (IEngineWireCapabilityProvider.h).
+    for (const McpExtensions::FProviderEntry& Entry : McpExtensions::Providers())
+    {
+        for (const FString& Parent : Entry.bJoined ? Entry.Parents : TArray<FString>())
+        {
+            RegisterHandler(Parent, [this, Provider = Entry.Provider](const FString& R, const FString& A,
+                const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> Socket)
+            {
+                FMcpExtensionCall Call;
+                Call.Action = GetPayloadSubAction(P);
+                Call.Params = P;
+                Call.Answer = [this, R, Socket](bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Data, const FString& Code)
+                {
+                    SendAutomationResponse(Socket, R, bSuccess, Message, Data, Code);
+                };
+                Provider->Execute(Call);
+                return true;
+            });
+        }
+    }
 }
 
 bool UEngineWireSubsystem::RegisterHandler(

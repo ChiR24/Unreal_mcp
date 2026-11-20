@@ -22008,6 +22008,7 @@
         "get_status",
         "get_playbook",
         "get_task_result",
+        "list_extensions",
         "list_consent_windows",
         "revoke_consent_window",
         "reset"
@@ -22075,6 +22076,7 @@
               "get_status",
               "get_playbook",
               "get_task_result",
+              "list_extensions",
               "list_consent_windows",
               "revoke_consent_window",
               "reset"

@@ -103,6 +103,17 @@ If the action belongs to a domain other than its parent tool's default one, add 
 | **Size ceilings** | At most 250 lines of code per file and 25 files per folder, with no `Common*` or `Part<N>` split files. Split by responsibility into a subfolder instead. |
 | **Reuse Foundation** | Reflection, path, Blueprint, JSON, response and object-resolution helpers live in `Private/Foundation/`. Don't grow domain-local copies. |
 
+## Capabilities from another plugin
+
+A plugin that is not EngineWire can add capabilities on the same path as the built-in ones, without changing EngineWire:
+
+1. **Implement `IEngineWireCapabilityProvider`** (`Public/IEngineWireCapabilityProvider.h`) and register it as a modular feature under `IEngineWireCapabilityProvider::FeatureName()` when your module starts, before the editor finishes starting: providers are read once, when EngineWire builds its catalog.
+2. **Records:** `RecordsJson()` returns a JSON array of records in the generated shard shape (`{"record": {...}}`, as `Private/MCP/Generated/` carries them). Every record sits on a parent tool named `ext_<your plugin name in lower case>` (or one starting with it), declares an effect and a `requiredScope`, has consent when its effect is destructive, and takes an id no built-in or other provider has. One record that breaks a rule keeps the whole provider out.
+3. **Calls:** `Execute(const FMcpExtensionCall&)` runs on the game thread after the call passed the same gate as a built-in (scope, consent, the record's input schema, paths). Answer it once through `Call.Answer(bSuccess, Message, Data, ErrorCode)`.
+4. **Trust:** nothing joins until the user lists your plugin name in Project Settings > EngineWire > Trusted Extension Providers (empty by default). `manage_tools list_extensions` shows every provider EngineWire found, whether it joined, and why not.
+
+`ApiVersion()` returns `IEngineWireCapabilityProvider::CurrentApiVersion` as you built against it; a provider built for another version is refused rather than called.
+
 ## Where things live
 
 All paths are under `plugins/EngineWire/Source/EngineWire/`.

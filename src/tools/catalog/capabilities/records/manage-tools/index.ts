@@ -303,6 +303,40 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
       outcome: { success: true, message: 'Render finished' },
     },
   },
+  // Extension providers (IEngineWireCapabilityProvider.h): other plugins' capabilities, joined only when trusted.
+  {
+    action: 'list_extensions',
+    family: 'tool-extensions',
+    topics: ['extensions', 'third party capabilities', 'plugin capabilities', 'trusted extension providers'],
+    summary: 'List the extension providers other plugins registered: each one by plugin name, whether its capabilities joined search, describe and execute, its parent tools (ext_...) and record count, and for one that did not join, why (not listed in Project Settings > EngineWire > Trusted Extension Providers, another extension API version, or a record that is not allowed). Read when the editor starts.',
+    whenToUse: ['Checking whether a plugin added capabilities to this server, and why one did not.'],
+    whenNotToUse: ['Finding a capability to call (search instead: joined extensions are searched like built-ins).'],
+    inputProps: {},
+    required: [],
+    outputProps: {
+      extensions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'The plugin name the trust list takes.' },
+            apiVersion: { type: 'number', description: 'The extension API it was built for.' },
+            joined: { type: 'boolean', description: 'Whether its capabilities are part of the catalog.' },
+            records: { type: 'number', description: 'Capabilities it added.' },
+            parentTools: { type: 'array', items: { type: 'string' }, description: 'Its parent tools.' },
+            refusal: { type: 'string', description: 'Why it did not join.' },
+          },
+          additionalProperties: false,
+        },
+        description: 'Each provider found.',
+      },
+      apiVersion: { type: 'number', description: 'The extension API this server takes.' },
+    },
+    outputRequired: ['extensions'],
+    effect: 'read',
+    exampleInput: { action: 'list_extensions' },
+    exampleOutput: { success: true, message: '1 extension provider(s) found, 0 joined.', apiVersion: 1, extensions: [{ name: 'MyStudioTools', apiVersion: 1, joined: false, records: 0, parentTools: [], refusal: 'not trusted: list its plugin name in Project Settings > EngineWire > Trusted Extension Providers' }] },
+  },
   // Consent windows (Project Settings > EngineWire > Allow Consent Windows, off by default): only the user opens one, by
   // the second answer of the client's consent form; these two read and close them.
   {

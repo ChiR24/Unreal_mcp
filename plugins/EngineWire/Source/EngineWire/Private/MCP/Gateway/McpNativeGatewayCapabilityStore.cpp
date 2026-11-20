@@ -2,6 +2,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeGatewayCapabilityStore.cpp — see header for the fail-closed contract.
 
+#include "MCP/Extensions/McpExtensions.h"
 #include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
 #include "Serialization/JsonReader.h"
@@ -111,6 +112,11 @@ TArray<FString> DistinctSorted(const TArray<FMcpCapabilityRecord>& Records,
 }
 }
 
+bool McpParseCapabilityRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out, FString& OutError)
+{
+	return ParseRecord(Entry, Out, OutError);
+}
+
 const TCHAR* McpCapabilityStoreStatusToken(EMcpCapabilityStoreStatus Status)
 {
 	switch (Status)
@@ -176,6 +182,12 @@ FMcpCapabilityStore FMcpCapabilityStore::FromShards()
 		return Store;
 	}
 
+	// Trusted extension providers join here, after the generated records are counted (McpExtensions.h).
+	TSet<FString> BuiltinIds;
+	for (const FMcpCapabilityRecord& Record : Loaded) BuiltinIds.Add(Record.Id);
+	const McpExtensions::FCollected& Extensions = McpExtensions::Get(BuiltinIds);
+	Loaded.Append(Extensions.Records);
+	Store.ExtensionCount = Extensions.Records.Num();
 	Loaded.Sort([](const FMcpCapabilityRecord& L, const FMcpCapabilityRecord& R)
 		{ return L.Id.Compare(R.Id, ESearchCase::CaseSensitive) < 0; });
 	Store.Records = MoveTemp(Loaded);

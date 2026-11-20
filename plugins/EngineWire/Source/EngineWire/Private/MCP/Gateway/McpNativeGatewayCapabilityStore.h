@@ -136,12 +136,19 @@ public:
 	/** Every parent tool FindByParentAction resolves Action for, sorted. */
 	TArray<FString> GetParentsWithAction(const FString& Action) const;
 
+	/** Records that trusted extension providers added (McpExtensions.h), beyond the generated ones. */
+	int32 GetExtensionCount() const { return ExtensionCount; }
+
 private:
+	int32 ExtensionCount = 0;
 	EMcpCapabilityStoreStatus Status = EMcpCapabilityStoreStatus::ShardParseFailed;
 	FString StatusDetail;
 	FString CatalogRevision;
 	TArray<FMcpCapabilityRecord> Records;
 };
+
+/** One record in the generated shard shape ({"record": {...}}) parsed as the store parses the built-ins. */
+bool McpParseCapabilityRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out, FString& OutError);
 
 /** Stable machine-readable token for a store failure, echoed in discovery errors. */
 const TCHAR* McpCapabilityStoreStatusToken(EMcpCapabilityStoreStatus Status);

@@ -221,6 +221,11 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (DisplayName = "Allow Consent Windows"))
     bool bAllowConsentWindows = false;
 
+    /** Plugins whose EngineWire extension providers may add capabilities, by plugin name. Empty by default: a provider
+     *  that is not listed is shown by manage_tools list_extensions but adds nothing. Read when the editor starts. */
+    UPROPERTY(config, EditAnywhere, Category = "Security|Extensions")
+    TArray<FString> TrustedExtensionProviders;
+
     /** Calls one window covers at most. */
     UPROPERTY(config, EditAnywhere, Category = "Security|Consent Windows", meta = (ClampMin = "1", ClampMax = "50"))
     int32 ConsentWindowMaxCalls = 20;

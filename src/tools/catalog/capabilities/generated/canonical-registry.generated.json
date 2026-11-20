@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "bb95bd6ff7bd6728",
-  "recordCount": 507,
+  "catalogRevision": "1014ac4d56a45a2c",
+  "recordCount": 508,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -105798,6 +105798,170 @@
         "algorithm": "sha256",
         "schema": "7f2555133b861633406d36c20a09c23d4d25036a154b622fc8f933109ab9a31d",
         "content": "8c72620a9752b93ce460eaa77ac10ad65205c17959ceea9933df1469be9f6e9e"
+      }
+    },
+    {
+      "id": "manage_tools.list_extensions",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_tools",
+          "action": "list_extensions"
+        }
+      ],
+      "discovery": {
+        "domain": "tools",
+        "family": "tool-extensions",
+        "topics": [
+          "list_extensions",
+          "extensions",
+          "third party capabilities",
+          "plugin capabilities",
+          "trusted extension providers"
+        ],
+        "summary": "List the extension providers other plugins registered: each one by plugin name, whether its capabilities joined search, describe and execute, its parent tools (ext_...) and record count, and for one that did not join, why (not listed in Project Settings > EngineWire > Trusted Extension Providers, another extension API version, or a record that is not allowed). Read when the editor starts.",
+        "whenToUse": [
+          "Checking whether a plugin added capabilities to this server, and why one did not."
+        ],
+        "whenNotToUse": [
+          "Finding a capability to call (search instead: joined extensions are searched like built-ins)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "extensions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The plugin name the trust list takes."
+                  },
+                  "apiVersion": {
+                    "type": "number",
+                    "description": "The extension API it was built for."
+                  },
+                  "joined": {
+                    "type": "boolean",
+                    "description": "Whether its capabilities are part of the catalog."
+                  },
+                  "records": {
+                    "type": "number",
+                    "description": "Capabilities it added."
+                  },
+                  "parentTools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Its parent tools."
+                  },
+                  "refusal": {
+                    "type": "string",
+                    "description": "Why it did not join."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Each provider found."
+            },
+            "apiVersion": {
+              "type": "number",
+              "description": "The extension API this server takes."
+            }
+          },
+          "required": [
+            "success",
+            "extensions"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the extension providers other plugins registered: each one by plugin name, whether its capabilities joined search, describe and execute, its parent tools (ext_...) and record count, and for one that did not join, why (not listed in Project Settings > EngineWire > Trusted Extension Providers, another extension API version, or a record that is not allowed). Read when the editor starts.",
+          "input": {
+            "action": "list_extensions"
+          },
+          "output": {
+            "success": true,
+            "message": "1 extension provider(s) found, 0 joined.",
+            "apiVersion": 1,
+            "extensions": [
+              {
+                "name": "MyStudioTools",
+                "apiVersion": 1,
+                "joined": false,
+                "records": 0,
+                "parentTools": [],
+                "refusal": "not trusted: list its plugin name in Project Settings > EngineWire > Trusted Extension Providers"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_tools",
+        "dispatchAction": "list_extensions"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9fb25de09b34eb82892321e92592b42e0e99678a81f2c92f96a48d8819c8211c",
+        "content": "6a5481e094acce1d79616f18724745a2e74de2ccaed177779cee3f2328633902"
       }
     },
     {

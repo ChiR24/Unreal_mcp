@@ -31682,6 +31682,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "get_status",
             "get_playbook",
             "get_task_result",
+            "list_extensions",
             "list_consent_windows",
             "revoke_consent_window",
             "reset"
@@ -31697,6 +31698,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "apiVersion": {
+          "type": "number",
+          "description": "The extension API this server takes."
+        },
         "categories": {
           "type": "array",
           "items": {
@@ -31763,6 +31768,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enabledTools": {
           "type": "number"
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The plugin name the trust list takes."
+              },
+              "apiVersion": {
+                "type": "number",
+                "description": "The extension API it was built for."
+              },
+              "joined": {
+                "type": "boolean",
+                "description": "Whether its capabilities are part of the catalog."
+              },
+              "records": {
+                "type": "number",
+                "description": "Capabilities it added."
+              },
+              "parentTools": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Its parent tools."
+              },
+              "refusal": {
+                "type": "string",
+                "description": "Why it did not join."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Each provider found."
         },
         "message": {
           "type": "string",
