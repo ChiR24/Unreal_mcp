@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "Core/Module/McpOwnPlugin.h"
+#include "MCP/Extensions/McpExtensions.h"
 
 DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
 
@@ -95,8 +96,9 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	// The .uplugin VersionName is the native side's only copy of the version.
 	if (const TSharedPtr<IPlugin> Plugin = McpOwnPlugin()) { ServerVersion = Plugin->GetDescriptor().VersionName; }
 
-	// Initialize the dynamic tool manager from the tool registry
+	// Initialize the dynamic tool manager from the tool registry, trusted extensions' parent tools included
 	{
+		McpExtensions::RegisterParentTools();
 		FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
 		UE_LOG(LogMcpNativeTransport, Log,
 			TEXT("Tool registry: %d tools registered"), Registry.GetToolCount());

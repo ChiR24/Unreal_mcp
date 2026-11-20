@@ -41,4 +41,8 @@ const TArray<FProviderEntry>& Providers();
 
 /** manage_tools list_extensions: each provider found, whether it joined, its parent tools and records, and why not. */
 TSharedPtr<FJsonObject> ListReply();
+
+/** Put each joined provider's parent tools in the tool registry, before the native transport starts reading it: the
+ *  gateway refuses a call whose parent is not registered (UNKNOWN_TOOL), and only registered tools can be enabled. */
+void RegisterParentTools();
 } // namespace McpExtensions

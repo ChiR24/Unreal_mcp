@@ -3,6 +3,8 @@
 #include "EngineWireSettings.h"
 #include "Features/IModularFeatures.h"
 #include "IEngineWireCapabilityProvider.h"
+#include "MCP/Registry/McpToolDefinition.h"
+#include "MCP/Registry/McpToolRegistry.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -136,5 +138,22 @@ TSharedPtr<FJsonObject> ListReply()
     Out->SetNumberField(TEXT("apiVersion"), IEngineWireCapabilityProvider::CurrentApiVersion);
     Out->SetStringField(TEXT("message"), FString::Printf(TEXT("%d extension provider(s) found, %d joined."), Rows.Num(), Joined));
     return Out;
+}
+
+void RegisterParentTools()
+{
+    FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
+    for (const FProviderEntry& Entry : Providers())
+    {
+        for (const FString& Parent : Entry.bJoined ? Entry.Parents : TArray<FString>())
+        {
+            if (!Registry.FindTool(Parent))
+            {
+                // ponytail: never freed, as the generated parents' definitions live for the process.
+                Registry.Register(new FMcpToolDefinition(*Parent,
+                    *FString::Printf(TEXT("Capabilities of the %s extension."), *Entry.Name), TEXT("extension")));
+            }
+        }
+    }
 }
 } // namespace McpExtensions
