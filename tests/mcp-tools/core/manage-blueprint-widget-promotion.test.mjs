@@ -118,6 +118,8 @@ const testCases = [
   { scenario: 'Setup: a button too small to touch', toolName: 'manage_blueprint', arguments: auditTree(900, 500, 30, 30, { type: 'Button', name: 'TinyButton' }), expected: 'success' },
   { scenario: 'Setup: a dark grey label on nothing', toolName: 'manage_blueprint', arguments: auditTree(400, 700, 300, 30, { type: 'TextBlock', name: 'FaintLabel', text: 'Hard to read', fontSize: 12, color: [0.18, 0.18, 0.18, 1] }), expected: 'success' },
   { scenario: 'Setup: an icon past the right edge of a 1920 screen', toolName: 'manage_blueprint', arguments: auditTree(1850, 100, 120, 60, { type: 'Image', name: 'EdgeIcon' }), expected: 'success' },
+  // A hidden part was skipped without a word: a menu whose panels show only at runtime read "no findings".
+  { scenario: 'Setup: a collapsed tip', toolName: 'manage_blueprint', arguments: auditTree(400, 900, 300, 30, { type: 'TextBlock', name: 'HiddenTip', text: 'Shown later', visibility: 'Collapsed' }), expected: 'success' },
   { scenario: 'READ: audit_widget finds each problem at two sizes', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['1920x1080', '1280x720'], touch: true, safeZone: 0.95, image: true }), expected: 'success', assertions: [
     { path: 'structuredContent.result.counts.clipped_text', gte: 1, label: 'the narrow label is cut off' },
     { path: 'structuredContent.result.counts.overlap', gte: 1, label: 'the two buttons overlap' },
@@ -125,6 +127,7 @@ const testCases = [
     { path: 'structuredContent.result.counts.low_contrast', gte: 1, label: 'the dark grey label is hard to read' },
     { path: 'structuredContent.result.counts.off_screen', gte: 1, label: 'the icon leaves the screen' },
     { path: 'structuredContent.result.imageBase64', exists: true, label: 'the picture with the findings outlined' },
+    { path: 'structuredContent.result.hiddenWidgets', includes: 'HiddenTip', label: 'the collapsed tip is named as not judged' },
   ] },
   { scenario: 'READ: audit_widget judges once shaders finish', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
   { scenario: 'ERROR: audit_widget refuses a size it cannot draw', toolName: 'manage_blueprint', arguments: auditArgs('audit_widget', { resolutions: ['8000x8000'] }), expected: 'error|INVALID_ARGUMENT' },

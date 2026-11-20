@@ -20979,6 +20979,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Image height in pixels."
         },
+        "hiddenCount": {
+          "type": "number",
+          "description": "How many parts were not drawn; present with hiddenWidgets."
+        },
+        "hiddenWidgets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The top widget of each part not drawn at the first size (hidden, collapsed or fully transparent), at most 20: nothing in it was judged. Show one (set_widget_layout visibility) to audit it."
+        },
         "imageBase64": {
           "type": "string",
           "description": "The drawn widget as PNG, base64; returned as an image."

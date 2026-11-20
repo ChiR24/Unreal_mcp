@@ -82,7 +82,7 @@ void AuditText(const UWidget* Widget, FItem& Item)
 // panel children and named-slot content, never that tree, so a button widget used five times was five opaque boxes.
 // Its items are named 'Outer.Inner' (an object name holds no dot, so arrange_widgets' lookups by name meet only the
 // Blueprint's own widgets) and their ancestors go on from the nested widget's item.
-void CollectTree(const UUserWidget& Widget, const FString& Prefix, int32 OwnerItem, TArray<FItem>& Items)
+void CollectTree(const UUserWidget& Widget, const FString& Prefix, int32 OwnerItem, TArray<FItem>& Items, TArray<FString>* Hidden)
 {
     TMap<const UWidget*, int32> Seen; // each widget's item, INDEX_NONE for one not shown
     if (!Widget.WidgetTree)
@@ -95,9 +95,14 @@ void CollectTree(const UUserWidget& Widget, const FString& Prefix, int32 OwnerIt
         const int32* ParentItem = !Child ? nullptr : Child->GetParent() ? Seen.Find(Child->GetParent())
                                                    : OwnerItem != INDEX_NONE ? &OwnerItem : nullptr;
         const TSharedPtr<SWidget> Slate = Child ? Child->GetCachedWidget() : nullptr;
-        if (!Child || !Slate.IsValid() || (ParentItem && *ParentItem == INDEX_NONE) || !Slate->GetVisibility().IsVisible() ||
-            Child->GetRenderOpacity() <= 0.f)
+        const bool bShownParent = !ParentItem || *ParentItem != INDEX_NONE;
+        if (!Child || !Slate.IsValid() || !bShownParent || !Slate->GetVisibility().IsVisible() || Child->GetRenderOpacity() <= 0.f)
         {
+            // The top of each hidden part is named: a menu whose panels show only at runtime read "no findings".
+            if (Hidden && Child && Slate.IsValid() && bShownParent)
+            {
+                Hidden->Add(Prefix + Child->GetName());
+            }
             Seen.Add(Child, INDEX_NONE);
             return;
         }
@@ -122,16 +127,16 @@ void CollectTree(const UUserWidget& Widget, const FString& Prefix, int32 OwnerIt
         Seen.Add(Child, Index);
         if (const UUserWidget* Nested = Cast<UUserWidget>(Child))
         {
-            CollectTree(*Nested, Name + TEXT("."), Index, Items);
+            CollectTree(*Nested, Name + TEXT("."), Index, Items, Hidden);
         }
     });
 }
 } // namespace
 
-TArray<FItem> Collect(UUserWidget& Widget)
+TArray<FItem> Collect(UUserWidget& Widget, TArray<FString>* OutHidden)
 {
     TArray<FItem> Items;
-    CollectTree(Widget, FString(), INDEX_NONE, Items);
+    CollectTree(Widget, FString(), INDEX_NONE, Items, OutHidden);
     return Items;
 }
 } // namespace McpWidgetAudit

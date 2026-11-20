@@ -129,6 +129,8 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       } } },
       counts: { type: 'object', additionalProperties: { type: 'number' }, description: 'Findings per kind.' },
       widgetsChecked: { type: 'number', description: 'Visible widgets laid out at the first size.' },
+      hiddenWidgets: { type: 'array', items: { type: 'string' }, description: 'The top widget of each part not drawn at the first size (hidden, collapsed or fully transparent), at most 20: nothing in it was judged. Show one (set_widget_layout visibility) to audit it.' },
+      hiddenCount: { type: 'number', description: 'How many parts were not drawn; present with hiddenWidgets.' },
       imageBase64: { type: 'string', description: 'With image: the first size\'s picture with the findings outlined, PNG, base64.' },
       mimeType: { type: 'string', description: 'image/png.' },
       shadersCompiling: { type: 'number', description: 'Shader compile jobs outstanding when it was drawn: above 0, a material may have drawn blank (contrast then reads wrong); pass waitForShaders.' },

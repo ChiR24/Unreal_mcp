@@ -135,12 +135,14 @@ bool HandleWidgetAuthoringAudit(UEngineWireSubsystem& Subsystem, const FString& 
     TArray<FAuditRow> Rows;
     TArray<FColor> FirstPixels;
     TArray<McpWidgetAudit::FFinding> FirstFindings;
+    TArray<FString> Hidden; // at the first size
     int32 Checked = 0;
     for (const FIntPoint& Size : Sizes)
     {
         TArray<McpWidgetAudit::FItem> Items;
         TArray<FColor> Pixels;
-        if (!McpDrawWidget(WidgetBP, Size, Pixels, Error, [&Items](UUserWidget& Widget, float) { Items = McpWidgetAudit::Collect(Widget); }))
+        TArray<FString>* HiddenOut = FirstPixels.Num() == 0 ? &Hidden : nullptr;
+        if (!McpDrawWidget(WidgetBP, Size, Pixels, Error, [&Items, HiddenOut](UUserWidget& Widget, float) { Items = McpWidgetAudit::Collect(Widget, HiddenOut); }))
         {
             Subsystem.SendAutomationError(Socket, RequestId, Error, TEXT("AUDIT_FAILED"));
             return true;
@@ -198,6 +200,12 @@ bool HandleWidgetAuthoringAudit(UEngineWireSubsystem& Subsystem, const FString& 
     ResultJson->SetArrayField(TEXT("findings"), RowsJson);
     ResultJson->SetObjectField(TEXT("counts"), CountsJson);
     ResultJson->SetNumberField(TEXT("widgetsChecked"), Checked);
+    // A hidden part was skipped without a word, so a menu whose panels show only at runtime read "no findings".
+    if (Hidden.Num() > 0)
+    {
+        ResultJson->SetArrayField(TEXT("hiddenWidgets"), McpHandlerUtils::ToJsonStringArray(TArray<FString>(Hidden.GetData(), FMath::Min(Hidden.Num(), 20))));
+        ResultJson->SetNumberField(TEXT("hiddenCount"), Hidden.Num());
+    }
     McpHandlerUtils::MarkNoAssetsChanged(ResultJson);
     if (GetJsonBoolField(Payload, TEXT("image"), false))
     {
@@ -208,9 +216,11 @@ bool HandleWidgetAuthoringAudit(UEngineWireSubsystem& Subsystem, const FString& 
         ResultJson->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
     }
     McpAddShaderCompileState(ResultJson, Payload);
-    Subsystem.SendAutomationResponse(Socket, RequestId, true, Rows.Num() == 0
+    const FString HiddenNote = Hidden.Num() == 0 ? FString() : FString::Printf(TEXT(" %d hidden or collapsed part(s) were not "
+        "judged (hiddenWidgets): show one first to audit it."), Hidden.Num());
+    Subsystem.SendAutomationResponse(Socket, RequestId, true, (Rows.Num() == 0
         ? FString::Printf(TEXT("No findings at %d screen size(s); %d widgets checked."), Sizes.Num(), Checked)
-        : FString::Printf(TEXT("%d finding(s) at %d screen size(s): %s."), Rows.Num(), Sizes.Num(), *FString::Join(Parts, TEXT(", "))),
+        : FString::Printf(TEXT("%d finding(s) at %d screen size(s): %s."), Rows.Num(), Sizes.Num(), *FString::Join(Parts, TEXT(", ")))) + HiddenNote,
         ResultJson);
     return true;
 }

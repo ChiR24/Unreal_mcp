@@ -147,6 +147,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Asset listings**: `list` answers the folders directly under the path (down to `depth`, or every one whose name holds `filter`), on the first page and at most `limit` of them, with `folderCount`; a `/Game` listing answered all its nested folders on every page.
 - **A Border's child**: `set_widget_layout` padding and alignment on a Border's child reach the Border, which draws with its own copy, and a layout write compiles the Widget Blueprint, so Play shows it.
 - **MetaSound defaults**: a single `set_metasound_default` says whether it saved (`saved`), as the batch form does.
+- **Hidden parts in a widget audit**: `audit_widget` names the top of each hidden, collapsed or transparent part it did not judge (`hiddenWidgets`, `hiddenCount`); it skipped them without a word.
 
 </details>
 

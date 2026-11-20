@@ -56,8 +56,9 @@ struct FOptions
     double NearMissPx = 4.0;    // edges this close but not equal read as misaligned
 };
 
-/** The visible widgets of Widget as it was last drawn, in tree order (a parent before its children). */
-TArray<FItem> Collect(UUserWidget& Widget);
+/** The visible widgets of Widget as it was last drawn, in tree order (a parent before its children). OutHidden gets the
+ *  name of the top widget of each part that was not drawn (hidden, collapsed or fully transparent). */
+TArray<FItem> Collect(UUserWidget& Widget, TArray<FString>* OutHidden = nullptr);
 
 /** Layout findings for Items on a screen of Size pixels. */
 void CheckLayout(const TArray<FItem>& Items, FIntPoint Size, const FOptions& Options, TArray<FFinding>& Out);
