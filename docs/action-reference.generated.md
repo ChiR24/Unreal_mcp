@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e168752da8ba2e1c`
+Catalog revision: `96e94c5ebbd1477c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 496 capabilities across
+The catalog declares 497 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -57,7 +57,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
 | `manage_level` | 21 | 4 | 14 | 3 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
-| `manage_networking` | 21 | 5 | 13 | 3 | networking |
+| `manage_networking` | 22 | 6 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 22 | 2 | 19 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 12 | 6 | 6 | 0 | tools |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 496 capabilities require consent.
+77 of 497 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -527,6 +527,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level_structure.set_volume_properties` | `manage_level_structure` | `set_volume_properties` | write | write | none | `manage_level_structure.set_volume_properties` `manage_level_structure.set_volume_extent` `manage_level_structure.set_volume_bounds` |
 | `manage_networking.add_legacy_mapping` | `manage_networking` | `manage_input` | write | write | none | `manage_networking.add_legacy_mapping` `manage_networking.add_legacy_action_mapping` `manage_networking.add_legacy_axis_mapping` |
 | `manage_networking.add_local_player` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.add_local_player` |
+| `manage_networking.audit_replication` | `manage_networking` | `manage_networking` | read | read | none | `manage_networking.audit_replication` |
 | `manage_networking.check_authority` | `manage_networking` | `manage_networking` | read | read | none | `manage_networking.check_authority` `manage_networking.check_has_authority` `manage_networking.check_is_locally_controlled` |
 | `manage_networking.configure_game_mode` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.configure_game_mode` `manage_networking.set_default_pawn_class` `manage_networking.set_player_controller_class` `manage_networking.set_game_state_class` `manage_networking.set_player_state_class` `manage_networking.set_hud_class` `manage_networking.configure_game_rules` `manage_networking.set_respawn_rules` `manage_networking.configure_spectating` |
 | `manage_networking.configure_input` | `manage_networking` | `manage_input` | write | write | none | `manage_networking.configure_input` `manage_networking.create_input_action` `manage_networking.create_input_mapping_context` `manage_networking.add_mapping` `manage_networking.map_input_action` `manage_networking.set_input_trigger` `manage_networking.set_input_modifier` `manage_networking.enable_input_mapping` |

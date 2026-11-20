@@ -20,8 +20,8 @@ bool HasExec(const UEdGraphNode* Node, EEdGraphPinDirection Direction)
 {
     return Node->Pins.ContainsByPredicate([Direction](const UEdGraphPin* Pin) { return IsExecPin(Pin) && Pin->Direction == Direction; });
 }
+} // namespace
 
-// Every node the exec flow reaches from Starts, Starts included.
 TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts)
 {
     TSet<const UEdGraphNode*> Seen;
@@ -52,7 +52,6 @@ TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts)
     }
     return Seen;
 }
-} // namespace
 
 // Event Tick, and the pure nodes feeding what it runs, reaching a level search or a spawn: every frame.
 void TickHeavy(const UEdGraph* Graph, TArray<FFinding>& Out)

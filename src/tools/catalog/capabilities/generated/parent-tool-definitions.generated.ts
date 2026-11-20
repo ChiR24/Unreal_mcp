@@ -28200,6 +28200,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game net driver MaxClientRate (bytes per second per LAN client)."
         },
+        "maxFindings": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Most findings listed (1-200, default 50); counts and findingCount still count them all."
+        },
         "maxInternetClientRate": {
           "type": "number",
           "description": "Game net driver MaxInternetClientRate (bytes per second per internet client)."
@@ -28503,6 +28509,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_local_player",
             "configure_input",
             "configure_prediction",
+            "audit_replication",
             "check_authority",
             "configure_game_mode",
             "configure_session",
@@ -28548,6 +28555,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Full /Game path of the asset that was created, modified or inspected."
         },
+        "blueprintPath": {
+          "type": "string",
+          "description": "The Blueprint read."
+        },
         "changed": {
           "type": "boolean",
           "description": "Whether the call changed anything. false: the flag already had the value asked for, so nothing was compiled or saved."
@@ -28567,6 +28578,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "consumeInput": {
           "type": "boolean",
           "description": "Whether the Input Action consumes the input it handles."
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Findings per rule, listed or not."
         },
         "created": {
           "type": "boolean",
@@ -28592,6 +28610,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "existsAfter": {
           "type": "boolean",
           "description": "Whether the asset still resolved after the action completed."
+        },
+        "findingCount": {
+          "type": "number",
+          "description": "Every finding, listed or not."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One row per finding: rule, graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the call that fixes it)."
         },
         "functionCreated": {
           "type": "boolean",
@@ -28700,6 +28731,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The function clients call when the variable's new value arrives."
         },
+        "replicates": {
+          "type": "boolean",
+          "description": "Whether the Blueprint's actor or component replicates."
+        },
         "requiresRestart": {
           "type": "boolean",
           "description": "Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts."
@@ -28707,6 +28742,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "role": {
           "type": "string",
           "description": "Network role of the actor, such as ROLE_Authority."
+        },
+        "rpcCount": {
+          "type": "number",
+          "description": "The RPCs (custom events and functions set to replicate) in its graphs."
         },
         "rpcType": {
           "type": "string",

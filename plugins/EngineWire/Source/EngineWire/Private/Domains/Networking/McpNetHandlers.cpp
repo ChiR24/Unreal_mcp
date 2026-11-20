@@ -45,6 +45,7 @@ bool UEngineWireSubsystem::HandleManageNetworkingAction(
         {TEXT("set_net_role"), HandleSetNetRole},
         {TEXT("configure_replicated_movement"), HandleConfigureReplicatedMovement},
         {TEXT("get_networking_info"), HandleGetNetworkingInfo},
+        {TEXT("audit_replication"), HandleAuditReplication},
     };
 
     for (const FNetworkingRoute& Route : Routes)

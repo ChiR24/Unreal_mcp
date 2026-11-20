@@ -111,4 +111,6 @@ bool HandleSetNetRole(FNetworkingActionContext& Context);
 bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context);
 bool HandleAddNetworkPredictionData(FNetworkingActionContext& Context);
 bool HandleGetNetworkingInfo(FNetworkingActionContext& Context);
+/** audit_replication (McpNetAudit.cpp): RPCs on an actor that does not replicate, reliable RPCs and replicated reads on Tick. */
+bool HandleAuditReplication(FNetworkingActionContext& Context);
 }

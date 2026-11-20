@@ -1,4 +1,5 @@
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { buildCoreRecord } from '../core/builder.js';
 import { utilityRecord, withAliases, withInputProps, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
@@ -67,4 +68,28 @@ export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] =
   r('configure_replicated_movement', 'Configure replicated movement.', ['blueprintPath', 'replicateMovement'], ['blueprintPath']),
   withTopics(r('get_networking_info', 'Read an actor\'s or Blueprint\'s replication settings: replicates, always relevant, only relevant to owner, net update frequency, cull distance, priority and dormancy; for a live actor also its net role, remote role and authority.', ['blueprintPath', 'actorName'], [], ['networkingInfo'], ['networkingInfo'], true),
     ['replication settings', 'is actor replicated', 'net dormancy value']),
+  buildCoreRecord({
+    parentTool: T, action: 'audit_replication', dispatchAction: 'manage_networking', domain: 'networking', family: 'audit',
+    topics: ['audit replication', 'multiplayer mistakes', 'rpc does not run on server', 'reliable rpc on tick', 'check a blueprint for network bugs'],
+    summary: 'Read a Blueprint for the replication mistakes that only show with a second player, each with the node to fix: rpc_not_replicated (an RPC on an actor that does not replicate, so a Server or Multicast call runs only where it is made), reliable_on_tick (Event Tick reaches a reliable RPC every frame, which fills the reliable buffer and drops the client), polled_on_tick (Event Tick reads a replicated variable that has no RepNotify, polling for a change a RepNotify reports once). Nothing compiles or changes; a call to an RPC is judged by its compiled flags, so compile after changing one.',
+    whenToUse: ['A Blueprint will run in multiplayer and should be checked before a two-player test.'],
+    whenNotToUse: ['Its replication settings are wanted (get_networking_info).', 'Mistakes that show in single-player Play (manage_blueprint lint_blueprint).'],
+    inputProps: {
+      blueprintPath: { type: 'string', description: 'The Actor or ActorComponent Blueprint to read.' },
+      maxFindings: { type: 'number', minimum: 1, maximum: 200, description: 'Most findings listed (1-200, default 50); counts and findingCount still count them all.' },
+    },
+    required: ['blueprintPath'],
+    outputProps: {
+      findings: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'One row per finding: rule, graph, node (its title), nodeId (as edit_graph takes it) and detail (what is wrong and the call that fixes it).' },
+      counts: { type: 'object', additionalProperties: { type: 'number' }, description: 'Findings per rule, listed or not.' },
+      findingCount: { type: 'number', description: 'Every finding, listed or not.' },
+      replicates: { type: 'boolean', description: 'Whether the Blueprint\'s actor or component replicates.' },
+      rpcCount: { type: 'number', description: 'The RPCs (custom events and functions set to replicate) in its graphs.' },
+      blueprintPath: { type: 'string', description: 'The Blueprint read.' },
+    },
+    outputRequired: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'audit_replication', blueprintPath: '/Game/Blueprints/BP_Door' },
+  }),
 ];

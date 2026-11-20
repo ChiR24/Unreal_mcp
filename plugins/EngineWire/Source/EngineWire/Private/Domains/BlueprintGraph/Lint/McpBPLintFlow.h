@@ -28,6 +28,8 @@ bool IsExecPin(const UEdGraphPin* Pin);
 bool HasExecPin(const UEdGraphNode* Node);
 /** Where a chain starts: exec outputs and no exec input (an event, a function's entry, a collapsed graph's). */
 bool IsFlowEntry(const UEdGraphNode* Node);
+/** Every node the exec flow reaches from Starts, Starts included (McpBPLintRules.cpp). */
+TSet<const UEdGraphNode*> Flood(const TArray<const UEdGraphNode*>& Starts);
 /** The output an input's value comes from, past any reroute knots. */
 const UEdGraphPin* SourceOf(const UEdGraphPin* Input);
 /** Graph's exec flow with its immediate dominators. */

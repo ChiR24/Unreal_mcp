@@ -1395,6 +1395,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::add_local_player": "interactive|low",
   "manage_networking::add_mapping": "interactive|low",
   "manage_networking::add_network_prediction_data": "interactive|low",
+  "manage_networking::audit_replication": "interactive|low",
   "manage_networking::check_authority": "interactive|low",
   "manage_networking::check_has_authority": "interactive|low",
   "manage_networking::check_is_locally_controlled": "interactive|low",
@@ -1705,4 +1706,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1692;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1693;

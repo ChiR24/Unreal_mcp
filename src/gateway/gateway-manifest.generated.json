@@ -19396,6 +19396,7 @@
         "add_local_player",
         "configure_input",
         "configure_prediction",
+        "audit_replication",
         "check_authority",
         "configure_game_mode",
         "configure_session",
@@ -19450,6 +19451,7 @@
         "mapName",
         "mapping",
         "maxClientRate",
+        "maxFindings",
         "maxInternetClientRate",
         "maxPlayers",
         "micInputGain",
@@ -19679,6 +19681,12 @@
           "maxClientRate": {
             "type": "number",
             "description": "Game net driver MaxClientRate (bytes per second per LAN client)."
+          },
+          "maxFindings": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Most findings listed (1-200, default 50); counts and findingCount still count them all."
           },
           "maxInternetClientRate": {
             "type": "number",
@@ -19983,6 +19991,7 @@
               "add_local_player",
               "configure_input",
               "configure_prediction",
+              "audit_replication",
               "check_authority",
               "configure_game_mode",
               "configure_session",

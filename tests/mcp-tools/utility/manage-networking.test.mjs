@@ -259,6 +259,10 @@ const testCases = [
       { path: 'structuredContent.result.networkingInfo.netDormancy', equals: 'DORM_Awake', label: 'networking info reads dormancy' }
     ]
   },
+  { scenario: 'AUDIT: audit_replication reads the replicated Blueprint', toolName: 'manage_networking', arguments: { action: 'audit_replication', blueprintPath: ACTOR_BP_PATH, maxFindings: 10 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.replicates', equals: true, label: 'the Blueprint replicates' },
+    { path: 'structuredContent.result.findingCount', gte: 0, label: 'findings are counted' },
+  ] },
   // params envelope: clients that cannot send arbitrary top-level fields nest them
   // under `params`, which is merged with top-level arguments before routing.
   {
