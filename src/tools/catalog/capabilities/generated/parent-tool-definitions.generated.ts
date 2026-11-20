@@ -14372,6 +14372,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "array",
           "items": {
             "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 1048576,
+                "description": "HLSL code of an add_custom_expression or update_custom_expression step."
+              }
+            },
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },

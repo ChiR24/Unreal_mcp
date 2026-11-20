@@ -56,9 +56,16 @@ const NODE_PROPS_IN = schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: 
 // build_material_graph: a whole node graph under one consent. Each step is an
 // ordinary node adder, connect_nodes, set_node_position, update_custom_expression
 // or material property setter, run in-process by the same single-step handler.
+// A step's strings are held to the name limit (1023 characters) unless declared here: a Custom node's HLSL takes the
+// single call's length.
 const OPERATIONS = {
   type: 'array',
-  items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+  items: {
+    type: 'object',
+    properties: { code: codeStr('HLSL code of an add_custom_expression or update_custom_expression step.') },
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+  },
   'x-unreal-reflection-boundary': true,
   description: 'Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, '
     + 'add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, '

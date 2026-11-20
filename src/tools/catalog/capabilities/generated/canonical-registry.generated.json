@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f21b94e92b08b849",
+  "catalogRevision": "67bb55fe4dd0a358",
   "recordCount": 512,
   "records": [
     {
@@ -107561,6 +107561,13 @@
               "type": "array",
               "items": {
                 "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "maxLength": 1048576,
+                    "description": "HLSL code of an add_custom_expression or update_custom_expression step."
+                  }
+                },
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
@@ -108042,8 +108049,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0b7cbe7b3adb8bdaad344a2dbcfcfa1d6192f8d1fff3c65ffc33ec62c2fde0d5",
-        "content": "67a70f3b0f6e20810c737e20893c0ae193ce22f81f83d5ef8ba677f91f941ecb"
+        "schema": "ba633aeadc7d5156cf3a3ca5a84b8fc10cc9fb43d56deb4e3aa27be4d0fe2582",
+        "content": "a742471d6884015ddc9328e0e7dd9125031d658ca5af0187a0f74a21ba901477"
       }
     },
     {
