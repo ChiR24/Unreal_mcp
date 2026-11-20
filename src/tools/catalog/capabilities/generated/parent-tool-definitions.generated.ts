@@ -10081,6 +10081,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when every edge joins exactly two faces (seams count as joined): the surface is watertight (a solid, not a sheet or a shell with gaps)."
         },
+        "coloursRead": {
+          "type": "number",
+          "description": "Those whose material instance sets a colour of its own."
+        },
         "companyName": {
           "type": "string",
           "description": "Company name."
@@ -10788,13 +10792,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string",
                 "description": "The static mesh it places."
               },
-              "scale": {
-                "type": "number",
-                "description": "Its largest scale axis."
+              "statistic": {
+                "type": "string",
+                "description": "scale (against the other copies of its mesh), saturation or lightness (OKLab chroma and L, against the props with a colour of their own)."
               },
-              "typicalScale": {
+              "value": {
                 "type": "number",
-                "description": "The median of that mesh's copies."
+                "description": "Its value: the largest scale axis, or the colour statistic."
+              },
+              "typical": {
+                "type": "number",
+                "description": "The median it is measured against."
               },
               "score": {
                 "type": "number",
@@ -18560,7 +18568,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "function": {
           "type": "string",
-          "description": "The function or custom event, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
+          "description": "The function, custom event or dispatcher, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
         },
         "functionName": {
           "type": "string",
@@ -20099,6 +20107,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether it starts on its own."
         },
+        "binderCount": {
+          "type": "number",
+          "description": "For a dispatcher: every Bind or Assign found."
+        },
+        "binders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "For a dispatcher: each Bind or Assign of it (up to 100), with the same rows as callers."
+        },
         "binding": {
           "type": "object",
           "additionalProperties": false,
@@ -20949,6 +20971,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "keysAdded": {
           "type": "number",
           "description": "With keys: how many keyframes were added; the other fields describe the last one."
+        },
+        "kind": {
+          "type": "string",
+          "description": "dispatcher when function names an event dispatcher."
         },
         "layout": {
           "type": "object",

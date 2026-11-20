@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "07571ebb3d1fcf46",
+  "catalogRevision": "bb95bd6ff7bd6728",
   "recordCount": 507,
   "records": [
     {
@@ -29052,9 +29052,11 @@
           "why does this function never run",
           "where is a custom event called",
           "find every call of a function",
-          "unused function"
+          "unused function",
+          "who broadcasts this dispatcher",
+          "who binds to this dispatcher"
         ],
-        "summary": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Nothing compiles or changes.",
+        "summary": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Given the name of a dispatcher, its Calls (broadcasts) are the callers and its Binds and Assigns the binders (kind dispatcher). Nothing compiles or changes.",
         "whenToUse": [
           "A function or custom event never runs, and where it is called and what must hold for each call to run are wanted.",
           "A function may be called from nowhere."
@@ -29078,7 +29080,7 @@
             },
             "function": {
               "type": "string",
-              "description": "The function or custom event, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
+              "description": "The function, custom event or dispatcher, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
             },
             "scope": {
               "type": "string",
@@ -29133,6 +29135,24 @@
               "type": "number",
               "description": "Every call found, listed or not."
             },
+            "kind": {
+              "type": "string",
+              "description": "dispatcher when function names an event dispatcher."
+            },
+            "binders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "For a dispatcher: each Bind or Assign of it (up to 100), with the same rows as callers."
+            },
+            "binderCount": {
+              "type": "number",
+              "description": "For a dispatcher: every Bind or Assign found."
+            },
             "uncalled": {
               "type": "boolean",
               "description": "Present and true when nothing in scope calls it."
@@ -29158,7 +29178,7 @@
       },
       "examples": [
         {
-          "title": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Nothing compiles or changes.",
+          "title": "Find every call of one Blueprint function or custom event across the project's Blueprints (its own graphs, a child Blueprint's, and other Blueprints' calls on an object of its class). Each call lists the events and functions that reach it (entries, with their own callers) and each Branch every path to it passes with the value its condition must have (conditions: condition, mustBe), as slice_variable lists a writer. uncalled when nothing in scope calls it; an event the engine, a timer or a bound dispatcher fires is not a call here. Given the name of a dispatcher, its Calls (broadcasts) are the callers and its Binds and Assigns the binders (kind dispatcher). Nothing compiles or changes.",
           "input": {
             "action": "slice_function",
             "blueprintPath": "/Game/Blueprints/BP_Door",
@@ -29227,8 +29247,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "72d5b7aad18120968882357aa27180aab6b3460bdc7704d3c6018a985e16c525",
-        "content": "a91242b8a7532406d0364800d825980fef87f9f4d064cd91f4922477a6fb88d6"
+        "schema": "edcf6503c895da169d9a73b1326ba6a6a8c634243e8fd6f5f5d7c8344cb7fce4",
+        "content": "a1052fa58e05219f02a76fa43acfbfed2d2454e1ed01998ce6da9064f28ef54f"
       }
     },
     {
@@ -57536,9 +57556,11 @@
           "scale outlier",
           "inconsistent scale",
           "mis-scaled prop",
-          "level consistency"
+          "level consistency",
+          "too saturated prop",
+          "colour that does not fit"
         ],
-        "summary": "Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level's own median (a crate at 3x among forty at 1x).",
+        "summary": "Find placed props that stand out in the open level, judged against the level itself: a copy of a static mesh scaled unlike the other copies of that mesh (a crate at 3x among forty at 1x), and a prop whose own material colour (the colour parameter its material instance sets) is far more or less saturated, or far lighter or darker, than the other props with one (OKLab). Each outlier names its statistic (scale, saturation or lightness), its value, the typical value and how far apart in robust standard deviations.",
         "whenToUse": [
           "A dressed level should be checked for props scaled unlike their siblings before review.",
           "You placed many copies of a mesh and want the ones that drifted named."
@@ -57606,13 +57628,17 @@
                     "type": "string",
                     "description": "The static mesh it places."
                   },
-                  "scale": {
-                    "type": "number",
-                    "description": "Its largest scale axis."
+                  "statistic": {
+                    "type": "string",
+                    "description": "scale (against the other copies of its mesh), saturation or lightness (OKLab chroma and L, against the props with a colour of their own)."
                   },
-                  "typicalScale": {
+                  "value": {
                     "type": "number",
-                    "description": "The median of that mesh's copies."
+                    "description": "Its value: the largest scale axis, or the colour statistic."
+                  },
+                  "typical": {
+                    "type": "number",
+                    "description": "The median it is measured against."
                   },
                   "score": {
                     "type": "number",
@@ -57628,6 +57654,10 @@
             "actorsRead": {
               "type": "number",
               "description": "Static mesh actors read in the open level."
+            },
+            "coloursRead": {
+              "type": "number",
+              "description": "Those whose material instance sets a colour of its own."
             }
           },
           "required": [
@@ -57638,7 +57668,7 @@
       },
       "examples": [
         {
-          "title": "Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level's own median (a crate at 3x among forty at 1x).",
+          "title": "Find placed props that stand out in the open level, judged against the level itself: a copy of a static mesh scaled unlike the other copies of that mesh (a crate at 3x among forty at 1x), and a prop whose own material colour (the colour parameter its material instance sets) is far more or less saturated, or far lighter or darker, than the other props with one (OKLab). Each outlier names its statistic (scale, saturation or lightness), its value, the typical value and how far apart in robust standard deviations.",
           "input": {
             "action": "audit_style",
             "threshold": 3.5,
@@ -57646,15 +57676,17 @@
           },
           "output": {
             "success": true,
-            "message": "Copies scaled unlike the others of their mesh: 1 (largest score first).",
+            "message": "Props unlike the rest of the level: 1 (largest score first).",
             "outlierCount": 1,
             "actorsRead": 46,
+            "coloursRead": 12,
             "outliers": [
               {
                 "actor": "Crate_12",
                 "mesh": "/Game/Props/SM_Crate.SM_Crate",
-                "scale": 3,
-                "typicalScale": 1,
+                "statistic": "scale",
+                "value": 3,
+                "typical": 1,
                 "score": 20
               }
             ]
@@ -57688,8 +57720,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a7db6e9d3c081422ae4f28bc13e0e3bbc09b796fdf7a18fc3c449d76ae95dad6",
-        "content": "7e5d45a5815e3ee7cdc8119558a14dfe98d59356ac959fcacefbf1b80f9c7105"
+        "schema": "bf25c913d04960d1bb721e17bb20d1b210d8e5358a38c58e844f22f6bcc27342",
+        "content": "0a454b3335c5fc0faf15c89ebc47f51398c91cfa7f05a6e8859ceedfdb218e36"
       }
     },
     {

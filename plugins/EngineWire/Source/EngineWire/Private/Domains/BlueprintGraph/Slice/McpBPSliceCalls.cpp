@@ -10,6 +10,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
+#include "K2Node_BaseMCDelegate.h"
 #include "K2Node_CallFunction.h"
 
 namespace McpBPSlice
@@ -21,14 +22,20 @@ bool HandleSliceFunction(const McpBlueprintGraphHandlers::FActionContext& Contex
     UBlueprint* Owner = Context.Blueprint;
     const FName Function(*GetJsonStringField(Context.Payload, TEXT("function")));
     const UClass* Class = Owner->SkeletonGeneratedClass ? Owner->SkeletonGeneratedClass : Owner->GeneratedClass;
-    if (Function.IsNone() || !Class || !Class->FindFunctionByName(Function))
+    // An event dispatcher by its name: its Calls (broadcasts) are the callers, its Binds and Assigns the binders.
+    const bool bDispatcher = Class && FindFProperty<FMulticastDelegateProperty>(Class, Function) != nullptr;
+    if (Function.IsNone() || !Class || (!bDispatcher && !Class->FindFunctionByName(Function)))
     {
         TArray<FString> Names;
         for (TFieldIterator<UFunction> It(Class, EFieldIteratorFlags::ExcludeSuper); It && Names.Num() < 40; ++It)
         {
             if (!It->GetName().StartsWith(TEXT("ExecuteUbergraph"))) Names.Add(It->GetName());
         }
-        Context.SendError(FString::Printf(TEXT("%s has no function or custom event '%s'. Its own: %s."), *Owner->GetName(),
+        for (TFieldIterator<FMulticastDelegateProperty> It(Class, EFieldIteratorFlags::ExcludeSuper); It && Names.Num() < 40; ++It)
+        {
+            Names.Add(It->GetName() + TEXT(" (dispatcher)"));
+        }
+        Context.SendError(FString::Printf(TEXT("%s has no function, custom event or dispatcher '%s'. Its own: %s."), *Owner->GetName(),
                                           *Function.ToString(), Names.Num() ? *FString::Join(Names, TEXT(", ")) : TEXT("none")),
                           TEXT("FUNCTION_NOT_FOUND"));
         return true;
@@ -41,8 +48,8 @@ bool HandleSliceFunction(const McpBlueprintGraphHandlers::FActionContext& Contex
     }
     int32 Skipped = 0;
     const TArray<UBlueprint*> Scope = ScopeFor(Owner, Folder.Path, FMath::Clamp(GetJsonIntField(Context.Payload, TEXT("maxBlueprints"), 200), 1, 1000), Skipped);
-    TArray<TSharedPtr<FJsonValue>> Callers;
-    int32 Count = 0;
+    TArray<TSharedPtr<FJsonValue>> Callers, Binders;
+    int32 Count = 0, BinderCount = 0;
     TMap<const UEdGraph*, McpBPLint::FFlow> Flows;
     for (const UBlueprint* Blueprint : Scope)
     {
@@ -53,6 +60,14 @@ bool HandleSliceFunction(const McpBlueprintGraphHandlers::FActionContext& Contex
             if (!Graph) continue;
             for (const UEdGraphNode* Node : Graph->Nodes)
             {
+                const UK2Node_BaseMCDelegate* Delegate = bDispatcher ? Cast<UK2Node_BaseMCDelegate>(Node) : nullptr;
+                if (Delegate && Delegate->GetPropertyName() == Function &&
+                    SameBlueprintChain(Delegate->DelegateReference.GetMemberParentClass(Delegate->GetBlueprintClassFromNode()), Owner))
+                {
+                    const bool bCall = Node->GetClass()->GetName() == TEXT("K2Node_CallDelegate"); // a Bind or Assign otherwise
+                    if (++(bCall ? Count : BinderCount) <= MaxRows) (bCall ? Callers : Binders).Add(MakeShared<FJsonValueObject>(WriterRow(Blueprint, Node, Scope, Flows)));
+                    continue;
+                }
                 const UK2Node_CallFunction* Call = Cast<UK2Node_CallFunction>(Node);
                 if (!Call || Call->FunctionReference.GetMemberName() != Function ||
                     !SameBlueprintChain(Call->FunctionReference.GetMemberParentClass(Call->GetBlueprintClassFromNode()), Owner))
@@ -67,13 +82,20 @@ bool HandleSliceFunction(const McpBlueprintGraphHandlers::FActionContext& Contex
     Result->SetStringField(TEXT("function"), Function.ToString());
     Result->SetArrayField(TEXT("callers"), Callers);
     Result->SetNumberField(TEXT("callerCount"), Count);
+    if (bDispatcher)
+    {
+        Result->SetStringField(TEXT("kind"), TEXT("dispatcher"));
+        Result->SetArrayField(TEXT("binders"), Binders);
+        Result->SetNumberField(TEXT("binderCount"), BinderCount);
+    }
     Result->SetStringField(TEXT("scope"), Folder.Path);
     Result->SetNumberField(TEXT("blueprintsRead"), Scope.Num());
     if (Skipped > 0) Result->SetBoolField(TEXT("truncated"), true);
     if (Count == 0) Result->SetBoolField(TEXT("uncalled"), true);
     Context.NameBlueprint(Result, false);
-    Context.SendResponse(FString::Printf(TEXT("%s.%s: %d call(s) in %d Blueprint(s) under %s.%s"), *Owner->GetName(),
-        *Function.ToString(), Count, Scope.Num(), *Folder.Path, Count == 0
+    Context.SendResponse(FString::Printf(TEXT("%s.%s: %d call(s)%s in %d Blueprint(s) under %s.%s"), *Owner->GetName(),
+        *Function.ToString(), Count, bDispatcher ? *FString::Printf(TEXT(" (broadcasts) and %d bind(s)"), BinderCount) : TEXT(""),
+        Scope.Num(), *Folder.Path, Count == 0
             ? TEXT(" Nothing calls it here (an event the engine, a timer or a bound dispatcher fires is not a call).") : TEXT("")), Result);
     return true;
 }

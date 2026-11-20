@@ -252,8 +252,8 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'audit_style', dispatchAction: 'audit_style', domain: D, family: 'global',
-    topics: ['style outliers', 'scale outlier', 'inconsistent scale', 'mis-scaled prop', 'level consistency'],
-    summary: 'Find placed copies of one static mesh whose scale stands out from the other copies of that mesh in the open level, judged against the level\'s own median (a crate at 3x among forty at 1x).',
+    topics: ['style outliers', 'scale outlier', 'inconsistent scale', 'mis-scaled prop', 'level consistency', 'too saturated prop', 'colour that does not fit'],
+    summary: 'Find placed props that stand out in the open level, judged against the level itself: a copy of a static mesh scaled unlike the other copies of that mesh (a crate at 3x among forty at 1x), and a prop whose own material colour (the colour parameter its material instance sets) is far more or less saturated, or far lighter or darker, than the other props with one (OKLab). Each outlier names its statistic (scale, saturation or lightness), its value, the typical value and how far apart in robust standard deviations.',
     whenToUse: [
       'A dressed level should be checked for props scaled unlike their siblings before review.',
       'You placed many copies of a mesh and want the ones that drifted named.',
@@ -267,8 +267,8 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     exampleInput: { action: 'audit_style', threshold: 3.5, minCopies: 5 },
     exampleOutput: {
-      success: true, message: 'Copies scaled unlike the others of their mesh: 1 (largest score first).', outlierCount: 1, actorsRead: 46,
-      outliers: [{ actor: 'Crate_12', mesh: '/Game/Props/SM_Crate.SM_Crate', scale: 3, typicalScale: 1, score: 20 }],
+      success: true, message: 'Props unlike the rest of the level: 1 (largest score first).', outlierCount: 1, actorsRead: 46, coloursRead: 12,
+      outliers: [{ actor: 'Crate_12', mesh: '/Game/Props/SM_Crate.SM_Crate', statistic: 'scale', value: 3, typical: 1, score: 20 }],
     },
     outputProps: {
       outliers: {
@@ -278,14 +278,16 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
           type: 'object', additionalProperties: false, properties: {
             actor: { type: 'string', description: 'The actor label.' },
             mesh: { type: 'string', description: 'The static mesh it places.' },
-            scale: { type: 'number', description: 'Its largest scale axis.' },
-            typicalScale: { type: 'number', description: 'The median of that mesh\'s copies.' },
+            statistic: { type: 'string', description: 'scale (against the other copies of its mesh), saturation or lightness (OKLab chroma and L, against the props with a colour of their own).' },
+            value: { type: 'number', description: 'Its value: the largest scale axis, or the colour statistic.' },
+            typical: { type: 'number', description: 'The median it is measured against.' },
             score: { type: 'number', description: 'Distance from the median in robust standard deviations.' },
           },
         },
       },
       outlierCount: { type: 'number', description: 'Copies named, before the 50-row cap.' },
       actorsRead: { type: 'number', description: 'Static mesh actors read in the open level.' },
+      coloursRead: { type: 'number', description: 'Those whose material instance sets a colour of its own.' },
     },
   }),
 ];

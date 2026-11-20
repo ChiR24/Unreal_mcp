@@ -12636,7 +12636,7 @@
           },
           "function": {
             "type": "string",
-            "description": "The function or custom event, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
+            "description": "The function, custom event or dispatcher, as its Blueprint names it. One the Blueprint does not have is FUNCTION_NOT_FOUND, listing its own."
           },
           "functionName": {
             "type": "string",
