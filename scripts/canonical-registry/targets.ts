@@ -29,6 +29,7 @@ import {
 } from './native-shards.js';
 import { deriveParents } from './parent-derivation.js';
 import { buildActionReferenceDoc } from './docs-reference.js';
+import { buildExtensionRecordSchema } from './extension-schema.js';
 
 import type { GeneratedTarget } from '../lib/generated-files.js';
 
@@ -101,6 +102,7 @@ export const buildTargets = (input: BuildTargetsInput): GeneratedTarget[] => {
       resolve(docsDir(), 'action-reference.generated.md'),
       buildActionReferenceDoc({ records: sortedRecords, catalogRevision }),
     ],
+    [resolve(docsDir(), 'extension-records.schema.generated.json'), buildExtensionRecordSchema()],
     [resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.cpp'), buildParentRegistrySource(parents)],
     ...capTargets,
   ];

@@ -17,9 +17,9 @@ const TCHAR* const SampleRecords = TEXT(R"json([{"record":{
     "whenToUse":["Checking that an extension provider joined and its calls run."],
     "whenNotToUse":["Any real editor work."]},
   "schemas":{
-    "input":{"type":"object","properties":{"text":{"type":"string","maxLength":200,"description":"Text to echo back."}},"required":["text"],"additionalProperties":false},
-    "output":{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"},
-      "text":{"type":"string","description":"The text sent."},"length":{"type":"number","description":"Its length in characters."}},"additionalProperties":false}},
+    "input":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"text":{"type":"string","maxLength":200,"description":"Text to echo back."}},"required":["text"],"additionalProperties":false},
+    "output":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"},
+      "text":{"type":"string","description":"The text sent."},"length":{"type":"number","description":"Its length in characters."}},"required":["success"],"additionalProperties":false}},
   "examples":[{"title":"Echo a word","input":{"action":"echo","text":"hello"},"output":{"success":true,"message":"Echoed 5 character(s).","text":"hello","length":5}}],
   "availability":{"requiredPlugins":[],"editorStates":["edit","pie","simulate"]},
   "behavior":{"effect":"read","idempotency":"idempotent","longRunning":false,"safeToRetry":true},

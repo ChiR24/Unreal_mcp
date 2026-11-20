@@ -1,0 +1,656 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema0"
+          }
+        }
+      ]
+    }
+  },
+  "title": "EngineWire extension records",
+  "description": "What IEngineWireCapabilityProvider::RecordsJson() returns: one {record} per capability, each on the provider's own ext_<plugin> parent tool. Generated from the capability record schema; do not edit.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "record"
+    ],
+    "properties": {
+      "record": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160,
+            "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 160,
+              "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$"
+            }
+          },
+          "legacyIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tool": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "action": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120,
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "folded": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "aliases": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 160,
+                    "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$"
+                  }
+                }
+              },
+              "required": [
+                "tool",
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "discovery": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string"
+              },
+              "family": {
+                "type": "string"
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "summary": {
+                "type": "string"
+              },
+              "whenToUse": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "whenNotToUse": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "domain",
+              "family",
+              "topics",
+              "summary",
+              "whenToUse",
+              "whenNotToUse"
+            ],
+            "additionalProperties": false
+          },
+          "schemas": {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "object",
+                "properties": {
+                  "$schema": {
+                    "type": "string",
+                    "const": "https://json-schema.org/draft/2020-12/schema"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "object"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      }
+                    ]
+                  },
+                  "requiredOneOf": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "$schema",
+                  "type",
+                  "properties",
+                  "required",
+                  "additionalProperties"
+                ],
+                "additionalProperties": false
+              },
+              "output": {
+                "type": "object",
+                "properties": {
+                  "$schema": {
+                    "type": "string",
+                    "const": "https://json-schema.org/draft/2020-12/schema"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "object"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  "required": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      }
+                    ]
+                  },
+                  "requiredOneOf": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "$schema",
+                  "type",
+                  "properties",
+                  "required",
+                  "additionalProperties"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "input",
+              "output"
+            ],
+            "additionalProperties": false
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "input": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                },
+                "output": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                }
+              },
+              "required": [
+                "title",
+                "input",
+                "output"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "availability": {
+            "type": "object",
+            "properties": {
+              "requiredPlugins": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "editorStates": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "edit",
+                    "pie",
+                    "simulate"
+                  ]
+                }
+              },
+              "roles": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9]*(\\.[A-Za-z][A-Za-z0-9]*)*$"
+                }
+              },
+              "compiled": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              }
+            },
+            "required": [
+              "requiredPlugins",
+              "editorStates"
+            ],
+            "additionalProperties": false
+          },
+          "behavior": {
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write",
+                  "destructive"
+                ]
+              },
+              "idempotency": {
+                "type": "string",
+                "enum": [
+                  "non-idempotent",
+                  "idempotent",
+                  "idempotency-key"
+                ]
+              },
+              "longRunning": {
+                "type": "boolean"
+              },
+              "safeToRetry": {
+                "type": "boolean"
+              },
+              "compensation": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "inverse": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 160,
+                          "pattern": "^[a-z][a-z0-9_]*(?:\\.[a-z][a-z0-9_]*)+$"
+                        }
+                      }
+                    },
+                    "required": [
+                      "inverse"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "guidance": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "guidance"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "readBack": {
+                "type": "object",
+                "properties": {
+                  "compare": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "pattern": "^\\$params\\.[A-Za-z][A-Za-z0-9]*$"
+                    }
+                  }
+                },
+                "required": [
+                  "compare"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "effect",
+              "idempotency",
+              "longRunning",
+              "safeToRetry"
+            ],
+            "additionalProperties": false
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "requiredScope": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write",
+                  "destructive",
+                  "admin"
+                ]
+              },
+              "consent": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "explicit",
+                  "elevated"
+                ]
+              },
+              "dataAccess": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "project-read",
+                  "project-write",
+                  "engine-read"
+                ]
+              },
+              "raisedBy": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "write",
+                    "destructive",
+                    "admin"
+                  ]
+                }
+              },
+              "consentRaisedBy": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "explicit",
+                    "elevated"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "requiredScope",
+              "consent",
+              "dataAccess"
+            ],
+            "additionalProperties": false
+          },
+          "cost": {
+            "type": "object",
+            "properties": {
+              "latency": {
+                "type": "string",
+                "enum": [
+                  "instant",
+                  "interactive",
+                  "long-running"
+                ]
+              },
+              "resources": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            },
+            "required": [
+              "latency",
+              "resources"
+            ],
+            "additionalProperties": false
+          },
+          "routing": {
+            "type": "object",
+            "properties": {
+              "parentTool": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "dispatchAction": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              "dispatchBy": {
+                "type": "object",
+                "properties": {
+                  "param": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "actions": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120,
+                      "pattern": "^[a-z][a-z0-9_]*$"
+                    }
+                  },
+                  "declaredBy": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "additionalProperties": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "requires": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "required": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "oneOf": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "param",
+                  "actions"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "parentTool",
+              "dispatchAction"
+            ],
+            "additionalProperties": false
+          },
+          "hashes": {
+            "type": "object",
+            "description": "Required, any values: EngineWire does not check an extension record's hashes."
+          }
+        },
+        "required": [
+          "id",
+          "aliases",
+          "legacyIds",
+          "discovery",
+          "schemas",
+          "examples",
+          "availability",
+          "behavior",
+          "policy",
+          "cost",
+          "routing",
+          "hashes"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}
