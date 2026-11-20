@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ae065b675bce6e66",
+  "catalogRevision": "139274f330698fe9",
   "recordCount": 493,
   "records": [
     {
@@ -44447,6 +44447,32 @@
               "additionalProperties": false,
               "description": "Hold the run (samples and inputs) until another actor's property takes a value, so the timeline starts on a game event instead of whenever the call arrived."
             },
+            "watch": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "actorName": {
+                    "type": "string",
+                    "description": "Another actor in the running game, sampled beside the watched one."
+                  },
+                  "propertyNames": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Its properties read at every sample, as propertyNames reads them."
+                  }
+                },
+                "required": [
+                  "actorName"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Other actors sampled with the watched one (at most 4): each sample's watched gives each one's location and its propertyNames, under the name given, so judge can say what one must do while the other moves (\"Door.bOpen == true\", \"Crate.location.z in 0..10\")."
+            },
             "judge": {
               "type": "array",
               "minItems": 1,
@@ -44456,7 +44482,7 @@
                 "properties": {
                   "expect": {
                     "type": "string",
-                    "description": "What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll or a name from propertyNames, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or \"in low..high\"; terms joined with and, each optionally not: \"location.z in 120..220\", \"not bDead == true\"."
+                    "description": "What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll, a name from propertyNames, or a watched actor's as <actorName>.location.z or <actorName>.<property>, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or \"in low..high\"; terms joined with and, each optionally not: \"location.z in 120..220\", \"not bDead == true\"."
                   },
                   "when": {
                     "type": "string",
@@ -44572,7 +44598,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded)."
+              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded), and with watch each watched actor's location and properties under its name (watched)."
             },
             "overlapped": {
               "type": "array",
@@ -44799,6 +44825,9 @@
             "startWhen": [
               "motion"
             ],
+            "watch": [
+              "motion"
+            ],
             "judge": [
               "motion"
             ]
@@ -44819,8 +44848,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7143da8f887f01b32a331b32d2ae7cf55f14019f07ac2b71f633abbdd38b1591",
-        "content": "9f44100b025fa17aac160b064140195bc4a15e3d717c71b45c1cfff3887c8e75"
+        "schema": "80c3812880b5b5c2da4837c789b20759560a6e2e4eb79fe07693fc59aa9db6ea",
+        "content": "c692d3a75ec2ae997077ed31044c04256ac08611d5396dfea00d08c177fdf3e6"
       }
     },
     {

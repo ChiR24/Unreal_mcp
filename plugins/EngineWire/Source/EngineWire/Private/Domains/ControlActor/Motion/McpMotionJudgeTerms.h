@@ -24,8 +24,9 @@ struct FTerm
 /** The terms of Expect, joined by "and"; false with Error naming the term when one does not parse. */
 bool ParseTerms(const FString& Expect, TArray<FTerm>& Out, FString& Error);
 
-/** location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll (Rotation: the last one the samples carried) or a sampled
- *  property by the name it was asked by; null when the sample does not hold it. */
+/** location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll (Rotation: the last one the samples carried), a sampled
+ *  property by the name it was asked by, or a watched actor's as "<actor>.location.z" / "<actor>.<property>"; null when
+ *  the sample does not hold it. */
 TSharedPtr<FJsonValue> Read(const TSharedPtr<FJsonObject>& Sample, const TSharedPtr<FJsonValue>& Rotation, const FString& Path);
 
 ETri Eval(const FTerm& Term, const TSharedPtr<FJsonValue>& Value);

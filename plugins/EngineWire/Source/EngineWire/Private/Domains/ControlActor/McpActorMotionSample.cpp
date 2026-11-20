@@ -1,12 +1,7 @@
-#include "Domains/ControlActor/McpActorSupport.h"
-#include "Domains/ControlActor/Motion/McpMotionFeel.h"
+#include "Domains/ControlActor/Motion/McpMotionRun.h"
 #include "Domains/ControlActor/Motion/McpMotionJudge.h"
-#include "Domains/ControlActor/Motion/McpMotionPoints.h"
 #include "Domains/ControlActor/Motion/McpMotionSpawnWatch.h"
 #include "Containers/Ticker.h"
-#include "Foundation/Viewport/McpEditorScreenshotSupport.h"
-#include "Domains/Log/McpLogHistory.h"
-#include "Foundation/Reflection/McpPropertyReflection.h"
 
 // sample_motion: one call that watches an actor over GAME time in Play-In-Editor
 // and returns where it was, how fast it moved and the properties asked for at
@@ -16,100 +11,6 @@
 // death between two polls read as a teleport back to the start.
 namespace {
 constexpr int32 McpMaxMotionSamples = 400;
-
-struct FMcpMotionRun {
-  TWeakObjectPtr<AActor> Actor;
-  TWeakObjectPtr<UWorld> World;
-  TArray<FMcpMotionProperty> Properties;
-  TArray<TSharedPtr<FJsonValue>> Samples;
-  TArray<TSharedPtr<FJsonValue>> Missing;
-  double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05, LastSampleGame = -1.0;
-  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0, LogSince = FMcpLogHistory::Now();
-  FBox Extent = FBox(ForceInit);
-  FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
-  TOptional<FRotator> LastRotation; // the rotation the samples last carried
-  TArray<FMcpMotionInput> Inputs;
-  FMcpMotionPoints Points;
-  FMcpMotionOverlaps Overlaps;
-  FMcpMotionFeel Feel;
-  FMcpMotionTrigger Trigger;
-  TArray<TSharedPtr<FJsonValue>> Judge; // judge's clauses, judged on the samples once the run ends (Motion/McpMotionJudge.h)
-  int32 Frames = 0;
-  FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
-  bool bWaiting = false;
-};
-
-void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
-  const FVector Location = Actor->GetActorLocation();
-  TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
-  Sample->SetNumberField(TEXT("t"), McpRoundTo(GameTime - Run.StartGame, 1000.0));
-  Sample->SetArrayField(TEXT("location"), McpHandlerUtils::RoundedVectorToJsonArray(Location));
-  // GetVelocity reads a movement component or a physics body, so an actor moved by setting its location (a scripted
-  // cart, a tweened platform) read as standing still while it crossed 570 cm/s; it takes what its positions show.
-  const FVector Moved = Run.Samples.Num() > 0 && GameTime > Run.LastSampleGame ? (Location - Run.Last) / (GameTime - Run.LastSampleGame) : FVector::ZeroVector;
-  Sample->SetArrayField(TEXT("velocity"), McpHandlerUtils::RoundedVectorToJsonArray(Actor->GetVelocity().IsNearlyZero() ? Moved : Actor->GetVelocity()));
-  // A floating hull's roll or a turning pawn's heading was unreadable over time. The rotation rides on the first
-  // sample and on each one where it moved, so an actor that never turns adds nothing.
-  const FRotator Rotation = Actor->GetActorRotation();
-  if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {
-    Sample->SetArrayField(TEXT("rotation"), McpHandlerUtils::RoundedVectorToJsonArray(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
-    Run.LastRotation = Rotation;
-  }
-  if (Run.Properties.Num() > 0) {
-    TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
-    for (const FMcpMotionProperty &Watched : Run.Properties) {
-      UObject *Owner = Watched.Owner.Get();
-      if (FProperty *Property = Owner ? Owner->GetClass()->FindPropertyByName(Watched.Property) : nullptr) {
-        Values->SetField(Watched.Label, McpPropertyReflection::ExportPropertyToJsonValueOrText(Owner, Property));
-      }
-    }
-    Sample->SetObjectField(TEXT("properties"), Values);
-  }
-  if (Run.Samples.Num() == 0) {
-    Run.First = Location;
-  }
-  Run.Last = Location;
-  Run.LastSampleGame = GameTime;
-  Run.Extent += Location;
-  McpSampleMotionPoints(Run.Points, Actor, *Sample, GameTime);
-  McpSampleMotionFeel(Run.Feel, Actor, GameTime - Run.StartGame);
-  McpSampleMotionOverlaps(Run.Overlaps, Actor, *Sample);
-  Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
-}
-
-TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString &ActorName,
-                                        const FString &Ended) {
-  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("actorName"), ActorName);
-  Data->SetArrayField(TEXT("samples"), Run.Samples);
-  Data->SetNumberField(TEXT("sampleCount"), Run.Samples.Num());
-  Data->SetNumberField(TEXT("gameSeconds"), McpRoundTo(Run.LastGame - Run.StartGame, 1000.0));
-  Data->SetNumberField(TEXT("realSeconds"), McpRoundTo(FPlatformTime::Seconds() - Run.StartReal, 100.0));
-  Data->SetStringField(TEXT("endedBecause"), Ended);
-  if (Run.Samples.Num() > 0) {
-    Data->SetArrayField(TEXT("start"), McpHandlerUtils::RoundedVectorToJsonArray(Run.First));
-    Data->SetArrayField(TEXT("end"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Last));
-    Data->SetArrayField(TEXT("min"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Extent.Min));
-    Data->SetArrayField(TEXT("max"), McpHandlerUtils::RoundedVectorToJsonArray(Run.Extent.Max));
-  }
-  if (Run.Missing.Num() > 0) {
-    Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
-  }
-  McpAddMotionPointStats(Run.Points, *Data);
-  McpAddMotionFeel(Run.Feel, Run.Inputs, *Data);
-  McpAddMotionOverlapResult(Run.Overlaps, *Data);
-  McpMotionJudge::AddTo(Run.Judge, Run.Samples, Ended, *Data);
-  if (Run.Inputs.Num() > 0) {
-    Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
-  }
-  if (Run.Waited >= 0.0) {
-    Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
-  }
-  if (Run.Hold.bWindowRestored) {
-    Data->SetBoolField(TEXT("windowRestored"), true);
-  }
-  return Data;
-}
 
 // One tick of a run: sample when due, and say why it ended ("" = keep going).
 // Stopping PIE ends the world, and so does a death that reloads the level, but
@@ -230,23 +131,15 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
     Run->bWaiting = McpInitMotionTrigger(FindActorByName(GateName), *When, World, Run->Trigger, TimelineError);
   }
   if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError) ||
-      !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError) || !McpMotionJudge::Take(Payload, Run->Judge, TimelineError)) {
+      !McpParseMotionPoints(Found, Payload, Run->Points, TimelineError) || !McpMotionJudge::Take(Payload, Run->Judge, TimelineError) ||
+      !McpParseMotionWatch(Payload, [this](const FString &Name) { return FindActorByName(Name); }, *Run, TimelineError)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), TimelineError);
     return true;
   }
 
   const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
-  if (Payload->TryGetArrayField(TEXT("propertyNames"), Names) && Names) {
-    for (const TSharedPtr<FJsonValue> &Name : *Names) {
-      const FString Wanted = Name.IsValid() ? Name->AsString() : FString();
-      UObject *Owner = nullptr;
-      if (FProperty *Property = McpResolveActorPropertyPath(Found, Wanted, Owner)) {
-        Run->Properties.Add({Wanted, Owner, Property->GetFName()});
-      } else if (!Wanted.IsEmpty()) {
-        Run->Missing.Add(MakeShared<FJsonValueString>(Wanted));
-      }
-    }
-  }
+  Payload->TryGetArrayField(TEXT("propertyNames"), Names);
+  McpResolveMotionProperties(Found, Names, Run->Properties, Run->Missing);
   if (!Run->bWaiting) {
     McpTakeMotionSample(*Run, Found, Run->StartGame);
     Run->NextSample = Run->StartGame + Run->Interval;

@@ -53,6 +53,18 @@ bool FMcpMotionJudgeTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("rotation carries over from the sample that had it"), Verdicts(TEXT("[{\"expect\":\"rotation.yaw == 90\",\"when\":\"atEnd\"}]"), TEXT("duration")), FString(TEXT("ok")));
     TestEqual(TEXT("not"), Verdicts(TEXT("[{\"expect\":\"not location.z > 300\",\"when\":\"always\"}]"), TEXT("duration")), FString(TEXT("ok")));
 
+    // watch: a second actor beside the first, judged by its name: one changes, the other must not move.
+    const TArray<TSharedPtr<FJsonValue>> Two = Parse(TEXT("["
+        "{\"t\":0,\"location\":[0,0,0],\"watched\":{\"Door\":{\"location\":[500,0,0],\"properties\":{\"bOpen\":false}}}},"
+        "{\"t\":0.5,\"location\":[0,0,40],\"watched\":{\"Door\":{\"location\":[500,0,0],\"properties\":{\"bOpen\":true}}}}]"));
+    TArray<FString> Words;
+    for (const TSharedPtr<FJsonValue>& Each : McpMotionJudge::Judge(Parse(TEXT("[{\"expect\":\"Door.bOpen == true\",\"when\":\"ever\"},"
+        "{\"expect\":\"Door.location.x == 500\"},{\"expect\":\"Lift.location.z > 0\",\"when\":\"ever\"}]")), Two, TEXT("duration")))
+    {
+        Words.Add(Each->AsObject()->GetStringField(TEXT("verdict")));
+    }
+    TestEqual(TEXT("a watched actor is read by its name; one never watched is unknown"), FString::Join(Words, TEXT(",")), FString(TEXT("ok,ok,unknown")));
+
     FJsonObject Data;
     McpMotionJudge::AddTo(Parse(TEXT("[{\"expect\":\"location.z >= 100\"},{\"expect\":\"Heat > 0\",\"when\":\"ever\"}]")), Samples, TEXT("duration"), Data);
     TestEqual(TEXT("one unknown clause makes the run's verdict unknown"), Data.GetStringField(TEXT("judgeVerdict")), FString(TEXT("unknown")));

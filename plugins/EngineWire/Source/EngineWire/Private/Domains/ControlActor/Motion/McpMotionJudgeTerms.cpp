@@ -78,7 +78,19 @@ TSharedPtr<FJsonValue> Read(const TSharedPtr<FJsonObject>& Sample, const TShared
         return At && Field.IsValid() && Field->TryGetArray(Vector) && Vector && Vector->IsValidIndex(*At) ? (*Vector)[*At] : nullptr;
     }
     const TSharedPtr<FJsonObject>* Properties = nullptr;
-    return Sample->TryGetObjectField(TEXT("properties"), Properties) && Properties ? (*Properties)->TryGetField(Path) : nullptr;
+    if (Sample->TryGetObjectField(TEXT("properties"), Properties) && Properties && (*Properties)->HasField(Path))
+    {
+        return (*Properties)->TryGetField(Path);
+    }
+    // watch: "<actor>.location.z" or "<actor>.<property>", read from that actor's entry in the sample.
+    const TSharedPtr<FJsonObject>* Watched = nullptr;
+    const TSharedPtr<FJsonObject>* Other = nullptr;
+    FString Name;
+    FString Rest;
+    return Sample->TryGetObjectField(TEXT("watched"), Watched) && Watched && Path.Split(TEXT("."), &Name, &Rest) &&
+                   (*Watched)->TryGetObjectField(Name, Other) && Other
+               ? Read(*Other, nullptr, Rest)
+               : nullptr;
 }
 
 ETri Eval(const FTerm& Term, const TSharedPtr<FJsonValue>& Value)

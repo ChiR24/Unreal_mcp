@@ -268,6 +268,21 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           additionalProperties: false,
           description: 'Hold the run (samples and inputs) until another actor\'s property takes a value, so the timeline starts on a game event instead of whenever the call arrived.',
         },
+        watch: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 4,
+          items: {
+            type: 'object',
+            properties: {
+              actorName: { type: 'string', description: 'Another actor in the running game, sampled beside the watched one.' },
+              propertyNames: { type: 'array', items: { type: 'string' }, description: 'Its properties read at every sample, as propertyNames reads them.' },
+            },
+            required: ['actorName'],
+            additionalProperties: false,
+          },
+          description: 'Other actors sampled with the watched one (at most 4): each sample\'s watched gives each one\'s location and its propertyNames, under the name given, so judge can say what one must do while the other moves ("Door.bOpen == true", "Crate.location.z in 0..10").',
+        },
         judge: {
           type: 'array',
           minItems: 1,
@@ -275,7 +290,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           items: {
             type: 'object',
             properties: {
-              expect: { type: 'string', description: 'What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll or a name from propertyNames, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or "in low..high"; terms joined with and, each optionally not: "location.z in 120..220", "not bDead == true".' },
+              expect: { type: 'string', description: 'What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll, a name from propertyNames, or a watched actor\'s as <actorName>.location.z or <actorName>.<property>, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or "in low..high"; terms joined with and, each optionally not: "location.z in 120..220", "not bDead == true".' },
               when: { type: 'string', enum: ['always', 'ever', 'atEnd', 'at'], description: 'always (default): every sample in the window; ever: at least one; atEnd: the last sample; at: the first sample at or after atSeconds.' },
               atSeconds: { type: 'number', description: 'With when at: game seconds into the run (or after after first held).' },
               after: {
@@ -299,7 +314,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded).',
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z] (cm/s: the movement or physics velocity, or for an actor moved by setting its location, the one its positions show since the sample before), rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties, with points their world locations (points) and heights over the ground (aboveGround, with groundTrace; a point with nothing below it within 10 m is left out), and with overlaps the actors that began or stopped touching it since the sample before (overlapsBegan, overlapsEnded), and with watch each watched actor\'s location and properties under its name (watched).',
         },
         overlapped: { type: 'array', items: { type: 'string' }, description: 'With overlaps: every actor that touched the watched one during the run, first touch first; empty when nothing did.' },
         passedThrough: {

@@ -4371,6 +4371,7 @@
         "value",
         "variables",
         "visible",
+        "watch",
         "yaw"
       ],
       "inputSchema": {
@@ -4891,7 +4892,7 @@
               "properties": {
                 "expect": {
                   "type": "string",
-                  "description": "What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll or a name from propertyNames, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or \"in low..high\"; terms joined with and, each optionally not: \"location.z in 120..220\", \"not bDead == true\"."
+                  "description": "What a sample must show: location.x/y/z, velocity.x/y/z, rotation.pitch/yaw/roll, a name from propertyNames, or a watched actor's as <actorName>.location.z or <actorName>.<property>, compared with >, >=, <, <=, == or != to a number (or a word for == and !=), or \"in low..high\"; terms joined with and, each optionally not: \"location.z in 120..220\", \"not bDead == true\"."
                 },
                 "when": {
                   "type": "string",
@@ -5435,6 +5436,32 @@
           "visible": {
             "type": "boolean",
             "description": "Desired visibility state."
+          },
+          "watch": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "properties": {
+                "actorName": {
+                  "type": "string",
+                  "description": "Another actor in the running game, sampled beside the watched one."
+                },
+                "propertyNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Its properties read at every sample, as propertyNames reads them."
+                }
+              },
+              "required": [
+                "actorName"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Other actors sampled with the watched one (at most 4): each sample's watched gives each one's location and its propertyNames, under the name given, so judge can say what one must do while the other moves (\"Door.bOpen == true\", \"Crate.location.z in 0..10\")."
           },
           "yaw": {
             "type": "number",
