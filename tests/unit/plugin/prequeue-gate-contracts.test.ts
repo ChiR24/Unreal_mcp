@@ -422,7 +422,13 @@ describe('consent nonces are minted by the server and required on native /mcp', 
     const vouchers = pluginSourceFiles()
       .filter((rel) => !rel.startsWith('Core/Security/') && !rel.startsWith('Tests/'))
       .filter((rel) => readFileSync(resolve(PRIVATE_ROOT, rel), 'utf8').includes('RefundUnchangedConsent('));
-    expect(vouchers).toEqual(['Domains/BlueprintGraph/Code/McpGraphCodeWriteHandler.cpp']);
+    // The folder move refused over a dirty open level, and a close or restart refused over unsaved packages or a
+    // running render, both answer before touching anything.
+    expect([...vouchers].sort()).toEqual([
+      'Domains/AssetWorkflow/Rename/McpAssetFolderMove.cpp',
+      'Domains/BlueprintGraph/Code/McpGraphCodeWriteHandler.cpp',
+      'Domains/ControlEditor/McpEditorRestart.cpp',
+    ]);
   }, 60_000);
   // The native door answers a queue refusal itself, outside the subsystem's reply funnel that refunds.
   it('a native call the queue refuses gets its grant back', () => {

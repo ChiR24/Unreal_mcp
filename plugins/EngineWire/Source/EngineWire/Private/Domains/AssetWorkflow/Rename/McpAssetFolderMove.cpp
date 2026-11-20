@@ -4,6 +4,7 @@
 // one asset per call, so relocating a game's root folder (a few hundred assets) was out of reach.
 
 #include "Domains/AssetWorkflow/Rename/McpAssetRenameGuard.h"
+#include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/BridgeHelpers/McpHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
@@ -124,6 +125,7 @@ bool HandleMoveFolder(UEngineWireSubsystem* Bridge, const FString& RequestId, co
     }
     if (World->GetOutermost()->IsDirty())
     {
+        McpPrequeueGate::RefundUnchangedConsent(RequestId); // nothing moved yet: the grant is issued again
         Bridge->SendAutomationError(Socket, RequestId,
                                     FString::Printf(TEXT("%s is open with unsaved changes; save it first (control_editor save_all)."), *Current),
                                     TEXT("UNSAVED_CHANGES"));

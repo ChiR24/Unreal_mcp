@@ -26,6 +26,7 @@
 // gate: an idle editor can be shut down without a window click.
 
 #include "Domains/ControlEditor/McpEditorSupport.h"
+#include "Core/Security/McpPrequeueGate.h"
 
 #include "Containers/Ticker.h"
 #include "Safety/McpSafeOperationsRenderGuard.h"
@@ -57,6 +58,7 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
   const bool bBlockedByUnsaved = DirtyNames.Num() > 0 && !bDiscardUnsaved;
   // A restart answered "requested" while a render went on writing frames, and cut it off.
   if (McpMovieRenderRunning() && !GetJsonBoolField(Payload, TEXT("validateOnly"), false)) {
+    McpPrequeueGate::RefundUnchangedConsent(RequestId); // refused before anything: the grant is issued again
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("RENDER_IN_PROGRESS"), McpMovieRenderRunningMessage(), nullptr);
     return true;
   }
@@ -95,6 +97,8 @@ bool UEngineWireSubsystem::HandleControlEditorRestart(
     TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
     Details->SetArrayField(TEXT("unsavedPackages"), NameValues);
     Details->SetNumberField(TEXT("unsavedCount"), DirtyNames.Num());
+    // Nothing closed or restarted: the grant is issued again, so the retry with discardUnsaved needs no new describe.
+    McpPrequeueGate::RefundUnchangedConsent(RequestId);
     SendStandardErrorResponse(
         this, Socket, RequestId, TEXT("UNSAVED_CHANGES"),
         FString::Printf(
