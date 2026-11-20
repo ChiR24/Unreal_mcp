@@ -19523,7 +19523,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "scope": {
           "type": "string",
-          "description": "The folder whose Blueprints are read for writers, as slice_variable takes it (default /Game)."
+          "description": "The folder whose Blueprints are read for calls, as slice_function takes it (default /Game)."
         },
         "screen": {
           "type": "string",
@@ -20000,6 +20000,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "slice_variable",
             "slice_function",
             "explain_variable",
+            "explain_function",
             "read_graph_as_code",
             "write_graph_from_code",
             "add_function",
@@ -20344,13 +20345,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Every call found, listed or not."
         },
         "callers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Each call (up to 100): blueprint, graph, node, nodeId, entries and conditions as slice_variable gives a writer."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With read: each call and its verdict."
+            }
+          ],
           "description": "Each call (up to 100): blueprint, graph, node, nodeId, entries and conditions as slice_variable gives a writer."
         },
         "chain": {
@@ -20750,7 +20766,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "function": {
           "type": "string",
-          "description": "The function sliced."
+          "description": "The function explained."
         },
         "functionGraphs": {
           "oneOf": [

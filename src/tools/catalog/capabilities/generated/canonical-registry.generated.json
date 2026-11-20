@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "931202c4e4076e29",
-  "recordCount": 511,
+  "catalogRevision": "881205062662dc47",
+  "recordCount": 512,
   "records": [
     {
       "id": "animation_physics.add_pose_search_entry",
@@ -24585,6 +24585,172 @@
         "algorithm": "sha256",
         "schema": "45084a0d46b105adc47e506997aeb23e33910efd71fb6f8478c65310164ba898",
         "content": "25b8772480d81c59c3426e028283a621f788dd085fc59cf53dfb78b399c0eae2"
+      }
+    },
+    {
+      "id": "blueprint.explain_function",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "explain_function"
+        }
+      ],
+      "discovery": {
+        "domain": "blueprint",
+        "family": "slice",
+        "topics": [
+          "explain_function",
+          "why was this function never called",
+          "why did this custom event not run",
+          "why was the dispatcher never broadcast",
+          "which branch stopped the call"
+        ],
+        "summary": "Find out in Play why a function, custom event or event dispatcher was never called: op arm marks each call of it (slice_function's callers; a dispatcher's broadcasts) and every Branch on the way to one, as logpoints that record the next Play; play and do what should call it; op read then answers each call: it ran (how often, when, on which object), or the first Branch before it that never ran, or that read the wrong value (the value it read and the one it needed), or that the Branches let it through but a node between did not continue. Marks last until clear_logpoints (inspect), at most 32.",
+        "whenToUse": [
+          "A function or custom event should have run in Play and did not: arm, play, read."
+        ],
+        "whenNotToUse": [
+          "Where a function is called, without Play (slice_function).",
+          "A variable never changed (explain_variable)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Canonical /Game Blueprint asset path."
+            },
+            "function": {
+              "type": "string",
+              "description": "The function, custom event or event dispatcher, as its Blueprint names it."
+            },
+            "op": {
+              "type": "string",
+              "enum": [
+                "arm",
+                "read"
+              ],
+              "description": "arm (default): mark the nodes before Play; read: after Play, say why."
+            },
+            "scope": {
+              "type": "string",
+              "description": "The folder whose Blueprints are read for calls, as slice_function takes it (default /Game)."
+            }
+          },
+          "required": [
+            "action",
+            "blueprintPath",
+            "function"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "function": {
+              "type": "string",
+              "description": "The function explained."
+            },
+            "marked": {
+              "type": "number",
+              "description": "With arm: nodes marked."
+            },
+            "callerCount": {
+              "type": "number",
+              "description": "With arm: the calls found."
+            },
+            "callers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With read: each call and its verdict."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Find out in Play why a function, custom event or event dispatcher was never called: op arm marks each call of it (slice_function's callers; a dispatcher's broadcasts) and every Branch on the way to one, as logpoints that record the next Play; play and do what should call it; op read then answers each call: it ran (how often, when, on which object), or the first Branch before it that never ran, or that read the wrong value (the value it read and the one it needed), or that the Branches let it through but a node between did not continue. Marks last until clear_logpoints (inspect), at most 32.",
+          "input": {
+            "action": "explain_function",
+            "blueprintPath": "/Game/Blueprints/BP_Door",
+            "function": "OpenDoor",
+            "op": "read"
+          },
+          "output": {
+            "success": true,
+            "message": "never called: the Branch on bHasKey ran 2 time(s) and read false the last time; it must be true to reach the call",
+            "function": "OpenDoor",
+            "callers": [
+              {
+                "call": "/Game/Blueprints/BP_Trigger Open Door",
+                "verdict": "never called: the Branch on bHasKey ran 2 time(s) and read false the last time; it must be true to reach the call"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "explain_function"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "b75a5c6622cdad5b705f196b9a66321a9e586ca039ce7b361d33b3fecaf63787",
+        "content": "8dca2643b07033853a7dcde53ea840eca71c4f317075896530b418b86941d33c"
       }
     },
     {

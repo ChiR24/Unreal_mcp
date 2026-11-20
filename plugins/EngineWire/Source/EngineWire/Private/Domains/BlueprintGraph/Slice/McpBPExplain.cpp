@@ -57,12 +57,13 @@ bool Mark(UBlueprint* Blueprint, UEdGraphNode* Node)
     return true;
 }
 
-// One writer's verdict from what the marks recorded.
-TSharedPtr<FJsonObject> Verdict(const TSharedPtr<FJsonObject>& Writer)
+// One row's verdict from what the marks recorded: a writer of a variable ("set"), or a call of a function ("called").
+TSharedPtr<FJsonObject> Verdict(const TSharedPtr<FJsonObject>& Writer, bool bCall)
 {
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
     const FString Id = Writer->GetStringField(TEXT("nodeId"));
-    Out->SetStringField(TEXT("writer"), Writer->GetStringField(TEXT("blueprint")) + TEXT(" ") + Writer->GetStringField(TEXT("node")));
+    const TCHAR* Never = bCall ? TEXT("never called") : TEXT("never set");
+    Out->SetStringField(bCall ? TEXT("call") : TEXT("writer"), Writer->GetStringField(TEXT("blueprint")) + TEXT(" ") + Writer->GetStringField(TEXT("node")));
     const McpLogpoints::FPoint* Set = PointOf(Id);
     if (!Set)
     {
@@ -90,8 +91,8 @@ TSharedPtr<FJsonObject> Verdict(const TSharedPtr<FJsonObject>& Writer)
             {
                 Entries.Add(Entry->AsObject()->GetStringField(TEXT("node")));
             }
-            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("never set: the Branch on %s before it never ran, so what leads there (%s) did not happen in that Play"),
-                *Text, Entries.Num() > 0 ? *FString::Join(Entries, TEXT(", ")) : TEXT("no entry found")));
+            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("%s: the Branch on %s before it never ran, so what leads there (%s) did not happen in that Play"),
+                Never, *Text, Entries.Num() > 0 ? *FString::Join(Entries, TEXT(", ")) : TEXT("no entry found")));
             return Out;
         }
         FString Read;
@@ -99,12 +100,13 @@ TSharedPtr<FJsonObject> Verdict(const TSharedPtr<FJsonObject>& Writer)
         if (Inputs.IsValid()) Inputs->TryGetStringField(TEXT("Condition"), Read);
         if (Read.ToBool() != Condition->GetBoolField(TEXT("mustBe")))
         {
-            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("never set: the Branch on %s ran %d time(s) and read %s the last time; it must be %s to reach the set"),
-                *Text, Branch->Runs, Read.IsEmpty() ? TEXT("?") : *Read, Condition->GetBoolField(TEXT("mustBe")) ? TEXT("true") : TEXT("false")));
+            Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("%s: the Branch on %s ran %d time(s) and read %s the last time; it must be %s to reach the %s"),
+                Never, *Text, Branch->Runs, Read.IsEmpty() ? TEXT("?") : *Read, Condition->GetBoolField(TEXT("mustBe")) ? TEXT("true") : TEXT("false"),
+                bCall ? TEXT("call") : TEXT("set")));
             return Out;
         }
     }
-    Out->SetStringField(TEXT("verdict"), TEXT("never set, though every Branch before it let it through: a node between them did not continue (a cast that failed, a gate closed)"));
+    Out->SetStringField(TEXT("verdict"), FString::Printf(TEXT("%s, though every Branch before it let it through: a node between them did not continue (a cast that failed, a gate closed)"), Never));
     return Out;
 }
 } // namespace McpBPExplainDetail
@@ -114,28 +116,38 @@ namespace McpBPSlice
 bool HandleExplain(const McpBlueprintGraphHandlers::FActionContext& Context)
 {
     using namespace McpBPExplainDetail;
-    if (Context.SubAction != TEXT("explain_variable"))
+    // explain_function: the same marks on every call of a function or custom event (slice_function's callers).
+    const bool bCall = Context.SubAction == TEXT("explain_function");
+    if (!bCall && Context.SubAction != TEXT("explain_variable"))
     {
         return false;
     }
-    const FName Variable(*GetJsonStringField(Context.Payload, TEXT("variable")));
+    const FName Variable(*GetJsonStringField(Context.Payload, bCall ? TEXT("function") : TEXT("variable")));
     const FNormalizedAssetPath Folder = NormalizeAssetPath(GetJsonStringField(Context.Payload, TEXT("scope"), TEXT("/Game")));
     int32 Skipped = 0;
     const TArray<UBlueprint*> Blueprints = Folder.bIsValid ? ScopeFor(Context.Blueprint, Folder.Path, 200, Skipped) : TArray<UBlueprint*>{Context.Blueprint};
-    const TSharedPtr<FJsonObject> Sliced = Slice(Context.Blueprint, Variable, Blueprints);
-    const TArray<TSharedPtr<FJsonValue>>& Writers = Sliced->GetArrayField(TEXT("writers"));
+    const FCallSlice Calls = bCall ? SliceCalls(Context.Blueprint, Variable, Blueprints) : FCallSlice();
+    if (!Calls.Error.IsEmpty())
+    {
+        Context.SendError(Calls.Error, TEXT("FUNCTION_NOT_FOUND"));
+        return true;
+    }
+    const TArray<TSharedPtr<FJsonValue>> Writers = bCall ? Calls.Callers : Slice(Context.Blueprint, Variable, Blueprints)->GetArrayField(TEXT("writers"));
     if (Writers.Num() == 0)
     {
-        Context.SendError(FString::Printf(TEXT("Nothing in scope sets %s, so nothing can make it change: slice_variable lists its readers."), *Variable.ToString()), TEXT("NO_WRITERS"));
+        Context.SendError(bCall
+            ? FString::Printf(TEXT("Nothing in scope calls %s (an event the engine, a timer or a bound dispatcher fires is no call here), so there is no call to watch."), *Variable.ToString())
+            : FString::Printf(TEXT("Nothing in scope sets %s, so nothing can make it change: slice_variable lists its readers."), *Variable.ToString()),
+            bCall ? TEXT("NO_CALLERS") : TEXT("NO_WRITERS"));
         return true;
     }
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("variable"), Variable.ToString());
+    Result->SetStringField(bCall ? TEXT("function") : TEXT("variable"), Variable.ToString());
     if (GetJsonStringField(Context.Payload, TEXT("op"), TEXT("arm")) == TEXT("read"))
     {
         TArray<TSharedPtr<FJsonValue>> Rows;
-        for (const TSharedPtr<FJsonValue>& Writer : Writers) Rows.Add(MakeShared<FJsonValueObject>(Verdict(Writer->AsObject())));
-        Result->SetArrayField(TEXT("writers"), Rows);
+        for (const TSharedPtr<FJsonValue>& Writer : Writers) Rows.Add(MakeShared<FJsonValueObject>(Verdict(Writer->AsObject(), bCall)));
+        Result->SetArrayField(bCall ? TEXT("callers") : TEXT("writers"), Rows);
         Context.NameBlueprint(Result, false);
         Context.SendResponse(Rows[0]->AsObject()->GetStringField(TEXT("verdict")), Result);
         return true;
@@ -156,10 +168,10 @@ bool HandleExplain(const McpBlueprintGraphHandlers::FActionContext& Context)
     }
     McpLogpoints::Listen(true);
     Result->SetNumberField(TEXT("marked"), Marked);
-    Result->SetNumberField(TEXT("writerCount"), Writers.Num());
+    Result->SetNumberField(bCall ? TEXT("callerCount") : TEXT("writerCount"), Writers.Num());
     Context.NameBlueprint(Result, false);
-    Context.SendResponse(FString::Printf(TEXT("Marked %d node(s) on the way to %d set(s) of %s. Play, do what should set it, then call again with op read."),
-        Marked, Writers.Num(), *Variable.ToString()), Result);
+    Context.SendResponse(FString::Printf(TEXT("Marked %d node(s) on the way to %d %s of %s. Play, do what should %s it, then call again with op read."),
+        Marked, Writers.Num(), bCall ? TEXT("call(s)") : TEXT("set(s)"), *Variable.ToString(), bCall ? TEXT("call") : TEXT("set")), Result);
     return true;
 }
 } // namespace McpBPSlice

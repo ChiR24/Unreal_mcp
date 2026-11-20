@@ -14,7 +14,7 @@ inline const TArray<FString>& BlueprintGraph()
 		TEXT("list_node_types"), TEXT("find_functions"), TEXT("set_pin_default_value"),
 		TEXT("list_animbp_graphs"), TEXT("get_transition_rule_graph"),
 		TEXT("build_graph"), TEXT("arrange_nodes"), TEXT("lint_blueprint"), TEXT("read_graph_as_code"),
-		TEXT("write_graph_from_code"), TEXT("slice_variable"), TEXT("slice_function"), TEXT("explain_variable")
+		TEXT("write_graph_from_code"), TEXT("slice_variable"), TEXT("slice_function"), TEXT("explain_variable"), TEXT("explain_function")
 	};
 	return Actions;
 }
