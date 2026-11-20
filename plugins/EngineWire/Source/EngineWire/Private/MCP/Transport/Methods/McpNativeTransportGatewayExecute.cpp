@@ -75,6 +75,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	}
 	Context.ExpectedRevisions = Plan.ExpectedRevisions;
 	Context.GatewayWarnings = Plan.Warnings;
+	Context.Params = Plan.Arguments; // what a read-back is compared with (Request/McpExecuteVerify.h)
 	// search's and describe's paging fields mean nothing to execute: a caller that sent one meant to cap or page this
 	// reply, so it is told how execute does that rather than having the field dropped without a word.
 	for (const TCHAR* Field : {TEXT("maxBytes"), TEXT("limit"), TEXT("offset"), TEXT("cursor")})

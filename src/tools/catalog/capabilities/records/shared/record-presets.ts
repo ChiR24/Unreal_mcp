@@ -82,5 +82,6 @@ export function behavior(
     idempotency,
     longRunning: opts.longRunning ?? false,
     safeToRetry: opts.safeToRetry ?? (idempotency === 'idempotent' && effect !== 'destructive'),
+    ...(opts.readBack === undefined ? {} : { readBack: opts.readBack }),
   };
 }

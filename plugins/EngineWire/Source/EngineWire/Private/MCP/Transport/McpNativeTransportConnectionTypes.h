@@ -107,6 +107,8 @@ struct FSSEConnection
 	TSharedPtr<FJsonObject> Aggregate;
 	// options.select / omit of the call (FMcpReceiptContext::Shape).
 	TSharedPtr<FJsonObject> Shape;
+	// The call's validated params (FMcpReceiptContext::Params).
+	TSharedPtr<FJsonObject> Params;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

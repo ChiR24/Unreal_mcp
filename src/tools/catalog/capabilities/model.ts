@@ -102,12 +102,19 @@ export type CapabilityCompensation =
   | { readonly inverse: readonly CapabilityId[] }
   | { readonly guidance: string };
 
+/**
+ * A write whose reply carries what it wrote as read back afterwards: each reply field named here is compared with the
+ * input that set it ("$params.<name>"), and the receipt says verified, or which fields differ (mismatches).
+ */
+export type CapabilityReadBack = { readonly compare: Readonly<Record<string, string>> };
+
 export type CapabilityBehavior = {
   readonly effect: (typeof BEHAVIOR_EFFECTS)[number];
   readonly idempotency: (typeof IDEMPOTENCY_CLASSES)[number];
   readonly longRunning: boolean;
   readonly safeToRetry: boolean;
   readonly compensation?: CapabilityCompensation;
+  readonly readBack?: CapabilityReadBack;
 };
 
 export type CapabilityBehaviorSource = CapabilityBehavior;

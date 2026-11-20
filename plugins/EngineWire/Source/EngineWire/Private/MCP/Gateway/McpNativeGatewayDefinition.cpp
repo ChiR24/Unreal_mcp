@@ -49,7 +49,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		// client had no legal way to send an idempotency key or a timeout.
 		.ClosedObject(TEXT("options"),
 			TEXT("Execution controls for execute only; never put these inside params. Honored keys: "
-				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require, aggregate, select, omit."),
+				"idempotencyKey, expectedCatalogRevision, expectedRevisions, timeoutMs, pageCursor, expect, require, aggregate, select, omit, maxReplyChars, verify."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("idempotencyKey"),
@@ -97,7 +97,9 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 						})
 						.StringArray(TEXT("select"),
 							TEXT("Keep only these fields of the reply's data: dotted paths that cross lists (actors.label)."), 1, 32, 128)
-						.StringArray(TEXT("omit"), TEXT("Drop these fields of the reply's data, named as select names them; after select."), 1, 32, 128);
+						.StringArray(TEXT("omit"), TEXT("Drop these fields of the reply's data, named as select names them; after select."), 1, 32, 128)
+						.Integer(TEXT("maxReplyChars"), TEXT("Keep the reply under this many characters: details go first, then the largest list pages, then long strings are cut; cuts names each."), 1000, 100000)
+						.Boolean(TEXT("verify"), TEXT("false skips comparing a write's read-back with what it sent (receipt.verified, mismatches); on by default."));
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page. search: 12 by default. describe: a listing of domains, families or a family's capabilities shows 50 rows unless limit is set, and a tool's action list is whole."), 1, 25)
 		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a describe listing (domains, families, a family's capabilities or a tool's actions). Defaults to 0."), 0)

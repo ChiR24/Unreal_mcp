@@ -2,6 +2,7 @@
 // data once its output contract has passed (McpNativeGatewayExecuteReceiptBuild.cpp).
 
 #include "MCP/Execute/Request/McpExecuteSelect.h"
+#include "MCP/Execute/Request/McpExecuteBudget.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "Dom/JsonValue.h"
 
@@ -229,12 +230,18 @@ bool Validate(const TSharedPtr<FJsonObject>& Options, FMcpSemanticError& OutErro
 
 bool Wants(const TSharedPtr<FJsonObject>& Options)
 {
-    return Options.IsValid() && (Options->HasField(TEXT("select")) || Options->HasField(TEXT("omit")));
+    // maxReplyChars rides the same options to the receipt (McpExecuteBudget).
+    return Options.IsValid() &&
+        (Options->HasField(TEXT("select")) || Options->HasField(TEXT("omit")) || Options->HasField(TEXT("maxReplyChars")) || Options->HasField(TEXT("verify")));
 }
 
 FString FingerprintPart(const TSharedPtr<FJsonObject>& Options)
 {
     FString Part;
+    if (const int32 Budget = McpExecuteBudget::Of(Options))
+    {
+        Part += FString::Printf(TEXT(" maxReplyChars:%d"), Budget);
+    }
     for (const TCHAR* Key : {TEXT("select"), TEXT("omit")})
     {
         for (const FString& Path : ReadPaths(Options, Key))

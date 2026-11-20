@@ -1,8 +1,11 @@
 // McpNativeGatewayExecuteReceiptBuild.cpp — see header.
 
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/Request/McpExecuteAggregate.h"
+#include "MCP/Execute/Request/McpExecuteBudget.h"
 #include "MCP/Execute/Request/McpExecuteSelect.h"
+#include "MCP/Execute/Request/McpExecuteVerify.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
@@ -125,6 +128,14 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// options.aggregate counts a list in the plugin instead of sending it (Request/McpExecuteAggregate.cpp).
 	const TSharedPtr<FJsonObject> AggregateBlock = Context.Aggregate.IsValid() && Result.IsValid()
 		? McpExecuteAggregate::Apply(Context.Aggregate, OutputSchema, Published) : nullptr;
+	// options.maxReplyChars (Request/McpExecuteBudget.h): details and examples go first, then the pager below, then strings.
+	const int32 Budget = McpExecuteBudget::Of(Context.Shape);
+	TArray<FString> Cuts;
+	if (Budget > 0 && Budget < ResultCharBudget)
+	{
+		ResultCharBudget = Budget;
+		Published = McpExecuteBudget::DropExtras(Published, OutputSchema, Budget, Cuts);
+	}
 	if (McpSerializedResultExceeds(Published, ResultCharBudget, &SerializedChars))
 	{
 		// One top-level array that carries the size goes out a page at a time instead (McpNativeResultPages.cpp); a
@@ -132,16 +143,21 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 		bool bPayloadOk = true;
 		Result->TryGetBoolField(TEXT("success"), bPayloadOk);
 		FMcpResultPage Paged;
-		if (!bPayloadOk || !Context.PageOwner.IsValid() || !McpFirstResultPage(Published, ResultCharBudget, *Context.PageOwner, Paged))
+		if (bPayloadOk && Context.PageOwner.IsValid() && McpFirstResultPage(Published, ResultCharBudget, *Context.PageOwner, Paged))
 		{
-			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
-				FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
+			Published = Paged.Result;
+			PageBlock = Paged.Page;
+			if (Budget > 0) Cuts.Add(TEXT("paged the largest list (page.nextCall reads on)"));
+		}
+		else if (!(Budget > 0 && bPayloadOk && McpExecuteBudget::CutStrings(Published, Budget, Cuts)))
+		{
+			FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"), Budget > 0
+				? FString::Printf(TEXT("Result is %lld chars, over options.maxReplyChars %d even with its details dropped and long strings cut. Raise it, or narrow the request with this capability's own filter parameters."), SerializedChars, Budget)
+				: FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
 			TooLarge.bHasResultChars = true;
 			TooLarge.ResultChars = SerializedChars;
 			return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, NarrowingGuidance(CapabilityId));
 		}
-		Published = Paged.Result;
-		PageBlock = Paged.Page;
 	}
 
 	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
@@ -197,11 +213,16 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// options.select / omit trim the data the caller reads, once its contract has passed (Request/McpExecuteSelect.cpp):
 	// handles and changes still come from the whole result, and a path that matched nothing is a warning.
 	FMcpReceiptContext Shaped = Context;
+	const TSharedPtr<FJsonObject> Whole = Canonical; // a read-back is judged on the whole data, before select and omit
 	if (Context.Shape.IsValid())
 	{
 		Canonical = McpExecuteSelect::Apply(Context.Shape, Canonical, Shaped.GatewayWarnings);
 	}
 	const TSharedPtr<FJsonObject> Receipt = McpBuildSuccessReceipt(CapabilityId, Canonical, Shaped, Published, Message);
+	if (const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId))
+	{
+		McpExecuteVerify::Stamp(Record->Behavior, Context.Shape, Context.Params, Whole, Receipt); // Request/McpExecuteVerify.h
+	}
 	if (PageBlock.IsValid())
 	{
 		Receipt->SetObjectField(TEXT("page"), PageBlock);
@@ -209,6 +230,10 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (AggregateBlock.IsValid())
 	{
 		Receipt->SetObjectField(TEXT("aggregate"), AggregateBlock);
+	}
+	if (Cuts.Num() > 0)
+	{
+		Receipt->SetArrayField(TEXT("cuts"), McpHandlerUtils::ToJsonStringArray(Cuts)); // what maxReplyChars took out
 	}
 	return Receipt;
 }

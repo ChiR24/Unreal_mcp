@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9194974533c5c938",
+  "catalogRevision": "68d90b055478272d",
   "recordCount": 491,
   "records": [
     {
@@ -62688,7 +62688,12 @@
         "effect": "write",
         "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": false
+        "safeToRetry": false,
+        "readBack": {
+          "compare": {
+            "value": "$params.value"
+          }
+        }
       },
       "policy": {
         "requiredScope": "write",
@@ -62706,7 +62711,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7e75725336306789c048b2fb861ac9135570878b30d021c9e85a7ee56f9cdd2e",
-        "content": "3652c787910b66de5f8c69d5123b53dcbbba6803ab24f2fbc6a949d22c9f10a7"
+        "content": "e837fdff48ac2567f8764521186ef5e2acad6d639ada3b734e7df51e9c5aa1cf"
       }
     },
     {

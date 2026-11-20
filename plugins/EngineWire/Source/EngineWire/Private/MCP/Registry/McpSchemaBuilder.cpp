@@ -86,6 +86,12 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString
 	return *this;
 }
 
+FMcpSchemaBuilder& FMcpSchemaBuilder::Boolean(const FString& Name, const FString& Description)
+{
+	AddProperty(Name, MakeTypedProperty(TEXT("boolean"), Description));
+	return *this;
+}
+
 FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString& Description, int64 Minimum)
 {
 	auto Prop = MakeTypedProperty(TEXT("integer"), Description);

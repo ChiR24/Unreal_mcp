@@ -60,7 +60,12 @@ const behaviorSchema = z.strictObject({
   compensation: z.union([
     z.strictObject({ inverse: z.array(CapabilityIdSchema).min(1) }),
     z.strictObject({ guidance: z.string().min(1) })
-  ]).optional()
+  ]).optional(),
+  // reply field -> "$params.<input>": the gateway compares them after a successful write (receipt verified/mismatches).
+  readBack: z.strictObject({
+    compare: z.record(z.string().regex(/^[A-Za-z][A-Za-z0-9]*$/u), z.string().regex(/^\$params\.[A-Za-z][A-Za-z0-9]*$/u))
+      .refine((compare) => Object.keys(compare).length > 0, 'compare names at least one field')
+  }).optional()
 });
 
 const policySchema = z.strictObject({

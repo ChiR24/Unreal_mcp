@@ -76,5 +76,6 @@ inline FMcpReceiptContext McpReceiptContextOf(const FSSEConnection& Conn)
     Context.PageOwner = Conn.PageOwner;
     Context.Aggregate = Conn.Aggregate;
     Context.Shape = Conn.Shape;
+    Context.Params = Conn.Params;
     return Context;
 }

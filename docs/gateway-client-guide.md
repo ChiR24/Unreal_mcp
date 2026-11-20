@@ -347,6 +347,32 @@ too large for one message is still paged, and each page is trimmed alike. Both
 are part of the idempotency fingerprint. An element index (`actors[2]`) is
 refused with `INVALID_OPTIONS`.
 
+### A ceiling on one reply: `maxReplyChars`
+
+`options.maxReplyChars` (1000 to 100000) keeps a reply under that many
+characters, for a client with a small context. Over it, the reply shrinks in a
+fixed order: its `details` and `examples` go (unless its output contract
+requires them), then its largest list goes out a page at a time (the `page`
+block's `nextCall` reads on, so nothing is lost), then its longest strings are
+cut to 4000, 1000 or 200 characters, each ending with how many characters were
+cut. The reply's `cuts` names every step taken. A reply that cannot fit is
+refused `RESULT_TOO_LARGE`, naming the ceiling. The size is measured on the
+result as the handler sent it, before `select` and `omit`, and the ceiling is
+part of the idempotency fingerprint.
+
+### Did the write take: `receipt.verified`
+
+A write whose reply carries what it wrote as read back afterwards (its record
+declares `behavior.readBack`, as `inspect` `set_property` does for `value`) is
+judged by the gateway: the receipt says `verified: true` when every compared
+field matches what was sent, or `verified: false` with `mismatches` (each
+`field`, what was `sent`, what was read back). Numbers match within a small
+tolerance, a list of numbers matches an object of `X`/`Y`/`Z`, `R`/`G`/`B` or
+`Pitch`/`Yaw`/`Roll`, and a string matches another spelling of the same value
+(an enum's scope, an object path's repeated name, a `Class'...'` wrapper). A
+field that cannot be compared gives no verdict. `options.verify: false` skips
+it.
+
 ### Many calls in one: `run_script`
 
 `system_control run_script` runs a script of capability calls in one request,

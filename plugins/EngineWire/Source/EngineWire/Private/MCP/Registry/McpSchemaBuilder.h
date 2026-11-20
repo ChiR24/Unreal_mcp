@@ -43,6 +43,9 @@ public:
 	/** Integer property. */
 	FMcpSchemaBuilder& Integer(const FString& Name, const FString& Description = FString());
 
+	/** Boolean property. */
+	FMcpSchemaBuilder& Boolean(const FString& Name, const FString& Description);
+
 	/** Integer property of at least Minimum. */
 	FMcpSchemaBuilder& Integer(const FString& Name, const FString& Description, int64 Minimum);
 

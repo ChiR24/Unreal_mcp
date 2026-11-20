@@ -582,6 +582,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['propertyName', 'propertyPath', 'properties'],
     effect: 'write', costLatency: 'interactive',
+    // The single write's reply carries the value read back after it: the gateway compares it with the value sent.
+    behavior: { readBack: { compare: { value: '$params.value' } } },
     outputProps: {
       watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
       properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With properties: each write as {propertyName, applied, value read back}.' },

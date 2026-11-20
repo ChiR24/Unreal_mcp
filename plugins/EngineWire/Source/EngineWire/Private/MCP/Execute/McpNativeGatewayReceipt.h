@@ -117,6 +117,9 @@ struct FMcpReceiptContext
 
 	/** The call's options when they carry select or omit (Request/McpExecuteSelect.h); unset, the data goes out whole. */
 	TSharedPtr<FJsonObject> Shape;
+
+	/** The call's validated params, which a write's read-back is compared with (Request/McpExecuteVerify.h). */
+	TSharedPtr<FJsonObject> Params;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

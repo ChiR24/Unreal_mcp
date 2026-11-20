@@ -49,6 +49,7 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->PageOwner = Context.PageOwner;
 	Conn->Aggregate = Context.Aggregate;
 	Conn->Shape = Context.Shape;
+	Conn->Params = Context.Params;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;
 	{
