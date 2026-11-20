@@ -28,6 +28,11 @@ const TCHAR* ToolClassName(EToolClass Class);
 // False, with OutError, when the registry is not loaded.
 bool ReadToolsets(TArray<TSharedPtr<FJsonValue>>& OutToolsets, FString& OutError);
 
+// EDITOR_TOOLSETS_UNAVAILABLE with Error, and the enable_plugin call for the plugin that is off (the registry, else
+// All Toolsets) when this engine has it.
+void SendUnavailable(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                     const FString& Error);
+
 // The schema entry of one tool ("Toolset.Tool", any case), null when no registered toolset has it.
 TSharedPtr<FJsonObject> FindTool(const TArray<TSharedPtr<FJsonValue>>& Toolsets, const FString& FullToolName);
 

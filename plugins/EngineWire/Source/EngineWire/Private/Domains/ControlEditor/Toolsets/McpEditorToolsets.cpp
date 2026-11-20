@@ -58,28 +58,6 @@ FString AccessMode(const TSharedPtr<FJsonObject>& Schema)
     return Mode;
 }
 
-bool AnyAnnotated(const TArray<TSharedPtr<FJsonValue>>& Toolsets)
-{
-    for (const TSharedPtr<FJsonValue>& Value : Toolsets)
-    {
-        const TSharedPtr<FJsonObject>* Toolset = nullptr;
-        const TArray<TSharedPtr<FJsonValue>>* Tools = nullptr;
-        if (!Value.IsValid() || !Value->TryGetObject(Toolset) || !(*Toolset)->TryGetArrayField(TEXT("tools"), Tools))
-        {
-            continue;
-        }
-        for (const TSharedPtr<FJsonValue>& Tool : *Tools)
-        {
-            const TSharedPtr<FJsonObject>* Object = nullptr;
-            if (Tool.IsValid() && Tool->TryGetObject(Object) && !AccessMode(*Object).IsEmpty())
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 EToolClass ClassifyTool(const FString& FullToolName, const TSharedPtr<FJsonObject>& Schema, bool bRegistryAnnotates)
 {
     FString Toolset;
@@ -187,7 +165,7 @@ bool HandleListToolsets(UEngineWireSubsystem* Self, const FString& RequestId,
     FString Error;
     if (!ReadToolsets(Toolsets, Error))
     {
-        Self->SendAutomationError(Socket, RequestId, Error, TEXT("EDITOR_TOOLSETS_UNAVAILABLE"));
+        SendUnavailable(Self, RequestId, Socket, Error);
         return true;
     }
     FString ToolName, Query, OnlyToolset;

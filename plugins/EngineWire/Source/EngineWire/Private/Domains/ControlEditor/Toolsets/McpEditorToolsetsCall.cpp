@@ -8,6 +8,7 @@
 
 #include "Containers/Ticker.h"
 #include "Dom/JsonValue.h"
+#include "Interfaces/IPluginManager.h"
 #include "HAL/PlatformTime.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
@@ -111,7 +112,7 @@ bool HandleCallTool(UEngineWireSubsystem* Self, const FString& RequestId,
     FString Error;
     if (!ReadToolsets(Toolsets, Error))
     {
-        Self->SendAutomationError(Socket, RequestId, Error, TEXT("EDITOR_TOOLSETS_UNAVAILABLE"));
+        SendUnavailable(Self, RequestId, Socket, Error);
         return true;
     }
     const TSharedPtr<FJsonObject> Schema = FindTool(Toolsets, Requested);
@@ -191,5 +192,51 @@ bool HandleCallTool(UEngineWireSubsystem* Self, const FString& RequestId,
             return true;
         }), 0.05f);
     return true;
+}
+
+bool AnyAnnotated(const TArray<TSharedPtr<FJsonValue>>& Toolsets)
+{
+    for (const TSharedPtr<FJsonValue>& Value : Toolsets)
+    {
+        const TSharedPtr<FJsonObject>* Toolset = nullptr;
+        const TArray<TSharedPtr<FJsonValue>>* Tools = nullptr;
+        if (!Value.IsValid() || !Value->TryGetObject(Toolset) || !(*Toolset)->TryGetArrayField(TEXT("tools"), Tools))
+        {
+            continue;
+        }
+        for (const TSharedPtr<FJsonValue>& Tool : *Tools)
+        {
+            const TSharedPtr<FJsonObject>* Object = nullptr;
+            if (Tool.IsValid() && Tool->TryGetObject(Object) && (*Object)->HasField(TEXT("annotations")))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void SendUnavailable(UEngineWireSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                     const FString& Error)
+{
+    // The plugin that is off, when this engine has it: the registry first, then the toolsets it lists.
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    for (const TCHAR* Plugin : {TEXT("ToolsetRegistry"), TEXT("AllToolsets")})
+    {
+        const TSharedPtr<IPlugin> Found = IPluginManager::Get().FindPlugin(Plugin);
+        if (Found.IsValid() && !Found->IsEnabled())
+        {
+            TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+            Params->SetStringField(TEXT("pluginName"), Plugin);
+            TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
+            Next->SetStringField(TEXT("operation"), TEXT("execute"));
+            Next->SetStringField(TEXT("tool"), TEXT("system_control"));
+            Next->SetStringField(TEXT("action"), TEXT("enable_plugin"));
+            Next->SetObjectField(TEXT("params"), Params);
+            Result->SetObjectField(TEXT("nextCall"), Next);
+            break;
+        }
+    }
+    Self->SendAutomationResponse(Socket, RequestId, false, Error, Result, TEXT("EDITOR_TOOLSETS_UNAVAILABLE"));
 }
 } // namespace McpEditorToolsets
