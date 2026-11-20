@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "EngineWire Sample Extension",
+	"Description": "An example of a plugin that adds a capability to EngineWire through IEngineWireCapabilityProvider. It joins only once listed in Project Settings > EngineWire > Trusted Extension Providers.",
+	"Category": "Editor",
+	"EnabledByDefault": true,
+	"CanContainContent": false,
+	"Modules": [
+		{
+			"Name": "EngineWireSample",
+			"Type": "Editor",
+			"LoadingPhase": "PreDefault"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "EngineWire",
+			"Enabled": true
+		}
+	]
+}
