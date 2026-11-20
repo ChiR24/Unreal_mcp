@@ -1,4 +1,5 @@
 #include "Foundation/Viewport/McpEditorScreenshotSupport.h"
+#include "Misc/App.h"
 
 #include "Containers/Ticker.h"
 #include "Editor/EditorPerformanceSettings.h"
@@ -262,7 +263,20 @@ FMcpEditorRunHold BeginEditorRunForMcp() {
   return Hold;
 }
 
+void HoldFixedStepForMcp(FMcpEditorRunHold &Hold, double Fps) {
+  Hold.bFixedStep = true;
+  Hold.bWasFixed = FApp::UseFixedTimeStep();
+  Hold.WasDelta = FApp::GetFixedDeltaTime();
+  FApp::SetUseFixedTimeStep(true);
+  Hold.FixedFps = FMath::Clamp(Fps, 10.0, 240.0);
+  FApp::SetFixedDeltaTime(1.0 / Hold.FixedFps);
+}
+
 void EndEditorRunForMcp(const FMcpEditorRunHold &Hold) {
+  if (Hold.bFixedStep) {
+    FApp::SetUseFixedTimeStep(Hold.bWasFixed);
+    FApp::SetFixedDeltaTime(Hold.WasDelta);
+  }
   if (Hold.bThrottleWasOn) {
     GetMutableDefault<UEditorPerformanceSettings>()->bThrottleCPUWhenNotForeground = true;
   }

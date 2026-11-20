@@ -153,6 +153,11 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
   // in the background with it on: put the window back on screen without taking focus, as a screenshot
   // does, and switch the preference off in memory for this run. Every end of the run below undoes both.
   Run->Hold = BeginEditorRunForMcp();
+  // fps: a fixed step for the run (the engine advances exactly 1/fps a frame), so its timings repeat on any machine.
+  double Fps = 0.0;
+  if (Payload->TryGetNumberField(TEXT("fps"), Fps) && Fps > 0.0) {
+    HoldFixedStepForMcp(Run->Hold, Fps);
+  }
 
   const FString ActorName = McpActorRef(Found);
   TWeakObjectPtr<UEngineWireSubsystem> WeakThis(this);
@@ -189,8 +194,11 @@ bool UEngineWireSubsystem::HandleControlActorSampleMotion(
         // What the game logged while it ran (an Accessed None, a light that cannot move): the samples showed only
         // that nothing changed.
         Warnings.Append(FMcpLogHistory::Get().WarningsSince(Run->LogSince, 5));
-        SendStandardSuccessResponse(Self, Socket, RequestId, Message, McpMotionResult(*Run, ActorName, Ended),
-                                    Warnings);
+        const TSharedPtr<FJsonObject> Data = McpMotionResult(*Run, ActorName, Ended);
+        if (Run->Hold.bFixedStep) {
+          Data->SetNumberField(TEXT("fixedFps"), Run->Hold.FixedFps);
+        }
+        SendStandardSuccessResponse(Self, Socket, RequestId, Message, Data, Warnings);
         return false;
       }),
       0.0f);

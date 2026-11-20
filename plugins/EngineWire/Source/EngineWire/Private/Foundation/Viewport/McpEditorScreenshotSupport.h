@@ -110,7 +110,15 @@ struct FMcpEditorRunHold {
   bool bWindowRestored = false;
   bool bThrottleWasOn = false;
   uint32 RestoreCount = 0;
+  // A fixed engine step for the run (HoldFixedStepForMcp): what the app used before, put back at the end.
+  bool bFixedStep = false;
+  bool bWasFixed = false;
+  double WasDelta = 0.0;
+  double FixedFps = 0.0; // the step the run used
 };
+// Steps the engine by exactly 1/Fps a frame until EndEditorRunForMcp, so a timed run reads the same game times on any
+// machine (S12's determinism): the samples land on frames, not on wall time.
+void HoldFixedStepForMcp(FMcpEditorRunHold &Hold, double Fps);
 FMcpEditorRunHold BeginEditorRunForMcp();
 // A configure_editor request to restore the window, counted even when the window is up already: the startup hold and
 // the end of a timed run then leave the window as the caller asked.

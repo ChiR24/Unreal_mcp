@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `0d01b001888473e5`
+Catalog revision: `749620bbeaf75384`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 509 capabilities across
+The catalog declares 511 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 34 | 7 | 25 | 2 | animation physics |
+| `animation_physics` | 36 | 7 | 27 | 2 | animation physics |
 | `build_environment` | 44 | 5 | 36 | 3 | environment |
 | `control_actor` | 38 | 10 | 25 | 3 | actor |
 | `control_editor` | 29 | 10 | 16 | 3 | editor |
@@ -65,7 +65,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-77 of 509 capabilities require consent.
+77 of 511 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -151,6 +151,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Capability | Tool | Action | Effect | Scope | Consent | Legacy pairs |
 | --- | --- | --- | --- | --- | --- | --- |
+| `animation_physics.add_pose_search_entry` | `animation_physics` | `add_pose_search_entry` | write | write | none | `animation_physics.add_pose_search_entry` |
 | `animation_physics.analyze_animation` | `animation_physics` | `analyze_animation` | read | read | none | `animation_physics.analyze_animation` |
 | `animation_physics.auto_blend_space` | `animation_physics` | `auto_blend_space` | write | write | none | `animation_physics.auto_blend_space` |
 | `animation_physics.bind_cloth_to_skeletal_mesh` | `animation_physics` | `bind_cloth_to_skeletal_mesh` | write | write | none | `animation_physics.bind_cloth_to_skeletal_mesh` `animation_physics.assign_cloth_asset_to_mesh` |
@@ -162,6 +163,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.create_animation_blueprint` | `animation_physics` | `create_animation_blueprint` | write | write | none | `animation_physics.create_animation_blueprint` `animation_physics.create_anim_blueprint` `animation_physics.create_animation_bp` |
 | `animation_physics.create_control_rig` | `animation_physics` | `create_control_rig` | write | write | none | `animation_physics.create_control_rig` |
 | `animation_physics.create_physical_material` | `animation_physics` | `create_physical_material` | write | write | none | `animation_physics.create_physical_material` |
+| `animation_physics.create_pose_search_database` | `animation_physics` | `create_pose_search_database` | write | write | none | `animation_physics.create_pose_search_database` |
 | `animation_physics.create_skeleton` | `animation_physics` | `create_skeleton` | write | write | none | `animation_physics.create_skeleton` |
 | `animation_physics.edit_anim_graph` | `animation_physics` | `add_blend_node` | write | write | none | `animation_physics.edit_anim_graph` `animation_physics.add_blend_node` `animation_physics.add_cached_pose` `animation_physics.add_slot_node` `animation_physics.create_state_machine` `animation_physics.add_state_machine` `animation_physics.add_state` `animation_physics.add_transition` `animation_physics.set_transition_rules` `animation_physics.delete_transition` `animation_physics.create_blend_tree` |
 | `animation_physics.edit_animation` | `animation_physics` | `add_bone_track` | write | write | none | `animation_physics.edit_animation` `animation_physics.add_bone_track` `animation_physics.set_bone_key` `animation_physics.set_curve_key` `animation_physics.add_notify` `animation_physics.add_notify_state` `animation_physics.add_sync_marker` `animation_physics.set_additive_settings` `animation_physics.set_root_motion_settings` `animation_physics.set_sequence_length` `animation_physics.set_play_rate` `animation_physics.add_footsteps` `animation_physics.add_aim_offset_sample` |

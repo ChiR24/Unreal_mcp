@@ -231,6 +231,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         spawnWaitSeconds: { type: 'number', description: 'With spawnOf: game seconds to wait for the spawn (default 10, at most 30); nothing spawned ends with endedBecause spawnTimeout and no samples. The wait comes out of maxRealSeconds, so the wait and the run still answer inside it.' },
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap).' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
+        fps: { type: 'number', minimum: 10, maximum: 240, description: 'A fixed step for the run: the engine advances exactly 1/fps game seconds a frame until the run ends, then goes back to how it ran, so the same inputs give the same samples on any machine (60 for most games; 20 shows what a slow frame rate does to the mechanic).' },
         propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, each as JSON (a number, true or false, the name of an enum value, the path of an object, or an array of them), e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing), the component by its name or by the actor property that holds it ("CharacterMovement.MaxWalkSpeed"); a name that resolves to nothing is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 25, at most 50): the run stops here and reports how much game time it covered, so a long run or an editor throttled to 3 fps still answers before a client that gives up at 30 s. Raise it only for a client that waits longer.' },
         inputs: {
@@ -371,6 +372,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           description: 'With calls: one entry per call: functionName, atSeconds, calledAt (game seconds since the start; null when the run ended first) and its outputs, or error.',
         },
         judgeVerdict: { type: 'string', enum: ['ok', 'failed', 'unknown'], description: 'With judge: ok when every clause is ok, failed when any failed, else unknown. Unknown is never a pass.' },
+        fixedFps: { type: 'number', description: 'With fps: the fixed step the run used (fps held to 10-240).' },
       },
       outputRequired: [],
       effect: 'read',

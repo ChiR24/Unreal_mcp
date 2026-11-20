@@ -326,7 +326,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "databasePath": {
           "type": "string",
-          "description": "The Pose Search database asset (/Game/...)."
+          "description": "The Pose Search database (/Game/...)."
         },
         "deltas": {
           "type": "array",
@@ -1063,6 +1063,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Bone scale as [x, y, z]; left out, the bone keeps its own at this frame."
         },
+        "schemaPath": {
+          "type": "string",
+          "description": "A Pose Search schema asset to set on it."
+        },
         "sectionIndex": {
           "type": "number",
           "description": "Mesh section to bind (default 0)."
@@ -1407,6 +1411,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_physical_material",
             "edit_blend_space",
             "get_pose_search_database",
+            "create_pose_search_database",
+            "add_pose_search_entry",
             "get_chooser_table",
             "setup_retargeting",
             "skin_mesh_to_skeleton",
@@ -1766,7 +1772,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "databasePath": {
           "type": "string",
-          "description": "The database read."
+          "description": "The database changed."
         },
         "deleted": {
           "type": "boolean",
@@ -1805,7 +1811,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "entryCount": {
           "type": "number",
-          "description": "How many entries it holds."
+          "description": "Entries it now holds."
         },
         "existingAsset": {
           "type": "boolean",
@@ -1884,6 +1890,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": false
           },
           "description": "Each imported morph target."
+        },
+        "index": {
+          "type": "number",
+          "description": "Index of the new entry."
         },
         "influencesRemoved": {
           "type": "number",
@@ -2256,6 +2266,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "schema": {
           "type": "string",
           "description": "Its schema asset path."
+        },
+        "schemaSet": {
+          "type": "boolean",
+          "description": "Whether schemaPath was set on it."
         },
         "skeletalMeshPath": {
           "type": "string",
@@ -5520,6 +5534,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "The push as [x, y, z], applied once as an impulse in kg cm/s: a 100 kg crate given [30000, 0, 0] starts at 300 cm/s along X. A body that does not simulate is made to, in the running game only."
         },
+        "fps": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 240,
+          "description": "A fixed step for the run: the engine advances exactly 1/fps game seconds a frame until the run ends, then goes back to how it ran, so the same inputs give the same samples on any machine (60 for most games; 20 shows what a slow frame rate does to the mechanic)."
+        },
         "functionName": {
           "type": "string",
           "description": "Actor function name to call."
@@ -6711,6 +6731,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "filter": {
           "type": "string",
           "description": "Optional name substring filter for list."
+        },
+        "fixedFps": {
+          "type": "number",
+          "description": "With fps: the fixed step the run used (fps held to 10-240)."
         },
         "flagged": {
           "type": "number",

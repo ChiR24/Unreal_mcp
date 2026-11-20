@@ -75,6 +75,8 @@ bool UEngineWireSubsystem::HandleAnimationPhysicsAction(
       {TEXT("skin_mesh_to_skeleton"), McpAnimationHandlers::HandleAnimationSkinMeshToSkeletonAction},
       {TEXT("get_pose_search_database"), McpAnimationHandlers::HandleGetPoseSearchDatabase},
       {TEXT("get_chooser_table"), McpAnimationHandlers::HandleGetChooserTable},
+      {TEXT("create_pose_search_database"), McpAnimationHandlers::HandleCreatePoseSearchDatabase},
+      {TEXT("add_pose_search_entry"), McpAnimationHandlers::HandleAddPoseSearchEntry},
   };
 
   bool bMatchedAction = false;

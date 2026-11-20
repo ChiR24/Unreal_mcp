@@ -1,7 +1,141 @@
 {
-  "catalogRevision": "0d01b001888473e5",
-  "recordCount": 509,
+  "catalogRevision": "749620bbeaf75384",
+  "recordCount": 511,
   "records": [
+    {
+      "id": "animation_physics.add_pose_search_entry",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "add_pose_search_entry"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "motion-matching",
+        "topics": [
+          "add_pose_search_entry",
+          "add animation to pose search database",
+          "motion matching database entry"
+        ],
+        "summary": "Add an animation (sequence, blend space, montage or composite) to a Pose Search database as its next entry (index), saved; entryCount says how many it now holds. The entry shape of the engine is found by reflection (a plain entry from 5.7, an instanced one of the kind of the animation before), and a kind this engine cannot hold is NOT_SUPPORTED with nothing added.",
+        "whenToUse": [
+          "A motion matching database must search one more animation."
+        ],
+        "whenNotToUse": [
+          "The database must be read (get_pose_search_database)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "databasePath": {
+              "type": "string",
+              "description": "The Pose Search database (/Game/...)."
+            },
+            "animationPath": {
+              "type": "string",
+              "description": "The animation to add (/Game/...)."
+            }
+          },
+          "required": [
+            "databasePath",
+            "animationPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "databasePath": {
+              "type": "string",
+              "description": "The database changed."
+            },
+            "index": {
+              "type": "number",
+              "description": "Index of the new entry."
+            },
+            "entryCount": {
+              "type": "number",
+              "description": "Entries it now holds."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Add an animation (sequence, blend space, montage or composite) to a Pose Search database as its next entry (index), saved; entryCount says how many it now holds. The entry shape of the engine is found by reflection (a plain entry from 5.7, an instanced one of the kind of the animation before), and a kind this engine cannot hold is NOT_SUPPORTED with nothing added.",
+          "input": {
+            "action": "add_pose_search_entry",
+            "databasePath": "/Game/Locomotion/PSD_Walk",
+            "animationPath": "/Game/Locomotion/A_Walk_Fwd"
+          },
+          "output": {
+            "success": true,
+            "message": "Added A_Walk_Fwd to PSD_Walk as entry 0",
+            "databasePath": "/Game/Locomotion/PSD_Walk.PSD_Walk",
+            "index": 0,
+            "entryCount": 1
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "PoseSearch"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "roles": [
+          "PoseSearch"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "add_pose_search_entry"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "ffeabf05389bb72a4d1eeba84a6f77f2118a1ca5e9616a0b7aee4719035302a2",
+        "content": "4d1f125c18388eaacac0bf9db093329ca4c1782fc806bcc8d9bfb8e3ffa8d42c"
+      }
+    },
     {
       "id": "animation_physics.analyze_animation",
       "aliases": [],
@@ -2603,6 +2737,138 @@
         "algorithm": "sha256",
         "schema": "8fc12fe57a87d5606b19d0d2839598bf362c09b8576d999dab20e9571ffe3aae",
         "content": "1ef0d5573f8245f5ed52a1d912984fc371059f805e6b2bf62403d5dfa749c01c"
+      }
+    },
+    {
+      "id": "animation_physics.create_pose_search_database",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "animation_physics",
+          "action": "create_pose_search_database"
+        }
+      ],
+      "discovery": {
+        "domain": "animation physics",
+        "family": "motion-matching",
+        "topics": [
+          "create_pose_search_database",
+          "create pose search database",
+          "new motion matching database"
+        ],
+        "summary": "Create a Pose Search (motion matching) database named name in path (default /Game) with the own factory of the PoseSearch plugin, optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
+        "whenToUse": [
+          "A motion matching setup needs a new database of animations."
+        ],
+        "whenNotToUse": [
+          "The database exists: add entries with add_pose_search_entry, read it with get_pose_search_database."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The database asset name (PSD_Walk)."
+            },
+            "path": {
+              "type": "string",
+              "description": "The /Game folder it goes in (default /Game)."
+            },
+            "schemaPath": {
+              "type": "string",
+              "description": "A Pose Search schema asset to set on it."
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "databasePath": {
+              "type": "string",
+              "description": "The database made."
+            },
+            "schemaSet": {
+              "type": "boolean",
+              "description": "Whether schemaPath was set on it."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create a Pose Search (motion matching) database named name in path (default /Game) with the own factory of the PoseSearch plugin, optionally with its schema (schemaPath; schemaSet says whether it took), saved; add animations with add_pose_search_entry. By reflection, on every engine that has Pose Search.",
+          "input": {
+            "action": "create_pose_search_database",
+            "name": "PSD_Walk",
+            "path": "/Game/Locomotion"
+          },
+          "output": {
+            "success": true,
+            "message": "Created Pose Search database PSD_Walk",
+            "databasePath": "/Game/Locomotion/PSD_Walk.PSD_Walk",
+            "schemaSet": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "PoseSearch"
+        ],
+        "editorStates": [
+          "edit"
+        ],
+        "roles": [
+          "PoseSearch"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "animation_physics",
+        "dispatchAction": "create_pose_search_database"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "3779e0db01e0a0f976810c680f5c4d6356e49463e68aecece13d2b3b3834c96c",
+        "content": "563e6a0fd72dfa6703c94c7d3ceb4ed6b1733bbc821b4ce760303ca8e39bbea6"
       }
     },
     {
@@ -45283,6 +45549,12 @@
               "type": "number",
               "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
             },
+            "fps": {
+              "type": "number",
+              "minimum": 10,
+              "maximum": 240,
+              "description": "A fixed step for the run: the engine advances exactly 1/fps game seconds a frame until the run ends, then goes back to how it ran, so the same inputs give the same samples on any machine (60 for most games; 20 shows what a slow frame rate does to the mechanic)."
+            },
             "propertyNames": {
               "type": "array",
               "items": {
@@ -45687,6 +45959,10 @@
                 "unknown"
               ],
               "description": "With judge: ok when every clause is ok, failed when any failed, else unknown. Unknown is never a pass."
+            },
+            "fixedFps": {
+              "type": "number",
+              "description": "With fps: the fixed step the run used (fps held to 10-240)."
             }
           },
           "required": [
@@ -45776,6 +46052,9 @@
             "intervalSeconds": [
               "motion"
             ],
+            "fps": [
+              "motion"
+            ],
             "propertyNames": [
               "motion"
             ],
@@ -45829,8 +46108,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "353f8a32f1e8b22fc1f39d2aa810ec816e32ca954dcdf9f2828d7f9aa256a3ba",
-        "content": "a06d8084505939ff43f7938496bcc562859620167f3d6db4a501b124a84fa2d5"
+        "schema": "5ed9a4d082e586d99fe74faf10c7c57cf107181bfd7c75c82039ee6e5a25c426",
+        "content": "91e4efe4d3ced95a1ed79d41d477a15db0906b44a089d0a95f4e480f654b0380"
       }
     },
     {
