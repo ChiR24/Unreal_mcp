@@ -13,7 +13,7 @@
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FMcpSearchCamelCaseTest,
-	"EngineWire.Gateway.SearchCamelCase",
+	"EngineWire.Gateway.SearchCamelCase.Rules",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FMcpSearchCamelCaseTest::RunTest(const FString& Parameters)
