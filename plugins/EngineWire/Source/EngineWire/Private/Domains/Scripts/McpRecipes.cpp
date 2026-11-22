@@ -85,7 +85,7 @@ FString ToScript(const TSharedPtr<FJsonValue>& Value)
     case EJson::Object:
     {
         FString Out = TEXT("(obj");
-        for (const auto& Field : Value->AsObject()->Values)
+        for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Value->AsObject()->Values)
         {
             Out += FString::Printf(TEXT(" :%s %s"), *Quoted(FString(Field.Key)), *ToScript(Field.Value));
         }

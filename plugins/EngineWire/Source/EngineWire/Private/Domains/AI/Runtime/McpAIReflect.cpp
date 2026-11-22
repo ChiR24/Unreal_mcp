@@ -19,7 +19,7 @@ int32 ApplyAIJsonProperties(const UStruct* Type, void* Container, const TSharedP
     }
 
     int32 Applied = 0;
-    for (const auto& Pair : Properties->Values)
+    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Properties->Values)
     {
         FProperty* Property = Type->FindPropertyByName(FName(*Pair.Key));
         if (!Property || !Pair.Value.IsValid())

@@ -68,7 +68,7 @@ FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObj
     if (!Step->TryGetObjectField(TEXT("pinDefaults"), Defaults)) return FString();
     // Only a pin that stored something other than its literal is named.
     TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>();
-    for (const auto& Pair : (*Defaults)->Values)
+    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Defaults)->Values)
     {
         const TSharedPtr<FJsonObject> Payload = NodeStepPayload(StepPayload, Guid);
         Payload->SetStringField(TEXT("pinName"), Pair.Key);
