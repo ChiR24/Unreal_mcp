@@ -178,7 +178,7 @@ bool UEngineWireSubsystem::HandleControlActorSpawn(
   bool bSpawnStarted = false;
   Spawned = McpSpawnActorNoting(TargetWorld, ResolvedClass, Location, Rotation, SpawnParams, bSpawnStarted);
   if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
-    for (TPair<FString, TSharedPtr<FJsonValue>> Pair : (*Variables)->Values) {
+    for (const auto& Pair : (*Variables)->Values) {
       FString Unapplied; // reported by the batch's own pass
       // An actor reference by name resolves here too: it was set only by the batch's pass, after BeginPlay.
       if (FProperty *Property = Spawned->GetClass()->FindPropertyByName(*Pair.Key)) {

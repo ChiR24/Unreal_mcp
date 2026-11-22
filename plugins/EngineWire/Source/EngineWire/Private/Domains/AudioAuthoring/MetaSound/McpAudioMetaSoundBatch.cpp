@@ -195,12 +195,12 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 		{
 			// The step's own fields over the batch's shared ones (assetPath).
 			TSharedPtr<FJsonObject> Step = MakeShared<FJsonObject>();
-			for (TPair<FString, TSharedPtr<FJsonValue>> Pair : Params->Values)
+			for (const auto& Pair : Params->Values)
 			{
 				if (Pair.Key != TEXT("operations")) { Step->SetField(Pair.Key, Pair.Value); }
 			}
 			// One asset per batch: a step naming another MetaSound would edit it outside the batch's save.
-			for (TPair<FString, TSharedPtr<FJsonValue>> Pair : (*StepObj)->Values)
+			for (const auto& Pair : (*StepObj)->Values)
 			{
 				if (Pair.Key != TEXT("assetPath")) { Step->SetField(Pair.Key, Pair.Value); }
 			}
