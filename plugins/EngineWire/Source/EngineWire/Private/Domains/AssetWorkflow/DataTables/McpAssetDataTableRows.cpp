@@ -105,10 +105,11 @@ bool HandleDataTableRowActions(
         }
         TSharedPtr<FJsonObject> Merged = McpExportDataTableRow(Table->RowStruct, Existing);
         int32 Overwritten = 0;
-        for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : RowData->Values)
+        for (const auto& Field : RowData->Values)
         {
-            if (Merged->HasField(Field.Key)) { ++Overwritten; }
-            Merged->SetField(Field.Key, Field.Value);
+            const FString FieldKey(*Field.Key);
+            if (Merged->HasField(FieldKey)) { ++Overwritten; }
+            Merged->SetField(FieldKey, Field.Value);
         }
 
         uint8* RowMem = nullptr;

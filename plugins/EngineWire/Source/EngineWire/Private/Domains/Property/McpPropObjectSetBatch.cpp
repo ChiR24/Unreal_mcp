@@ -31,17 +31,18 @@ void RunProperties(const FString& RequestId, const TSharedPtr<FJsonObject>& Payl
   TArray<FString> Failed;
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   double InstancesUpdated = -1.0;
-  for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Properties.Values) {
+  for (const auto& Pair : Properties.Values) {
+    const FString PairKey(*Pair.Key);
     TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
     One->Values = Payload->Values;
     for (const TCHAR *Field : {TEXT("properties"), TEXT("propertyPath"), TEXT("watch")}) One->RemoveField(Field);
-    One->SetStringField(TEXT("propertyName"), Pair.Key);
+    One->SetStringField(TEXT("propertyName"), PairKey);
     One->SetField(TEXT("value"), Pair.Value);
     const FMcpCapturedResponse Reply = RunCaptured(FString::Printf(TEXT("%s#prop%d"), *RequestId, Rows.Num()), One, RunOne);
     TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
-    Row->SetStringField(TEXT("propertyName"), Pair.Key);
+    Row->SetStringField(TEXT("propertyName"), PairKey);
     Row->SetBoolField(TEXT("applied"), Reply.bSuccess);
-    if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Reply.Message));
+    if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *PairKey, *Reply.Message));
     // assetPath names the Blueprint or material a class-default or expression write saved: without it a batch on
     // a Blueprint's class defaults recompiled and saved the Blueprint while its receipt listed no change. Every row
     // saves the same package, so the last row's saved/saveSkippedReason is what reached disk.

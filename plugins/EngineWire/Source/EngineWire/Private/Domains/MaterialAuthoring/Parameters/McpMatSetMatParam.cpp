@@ -58,8 +58,8 @@ static bool SetMaterialParameterBatch(UEngineWireSubsystem* Bridge, const FStrin
     Item->RemoveField(TEXT("assets"));
     const TSharedPtr<FJsonObject>* Entry = nullptr;
     if (Entries[Index].IsValid() && Entries[Index]->TryGetObject(Entry)) {
-      for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Entry)->Values) {
-        Item->SetField(Pair.Key, Pair.Value);
+      for (const auto& Pair : (*Entry)->Values) {
+        Item->SetField(*Pair.Key, Pair.Value);
       }
     }
     const FString StepId = FString::Printf(TEXT("%s#asset%d"), *RequestId, Index);

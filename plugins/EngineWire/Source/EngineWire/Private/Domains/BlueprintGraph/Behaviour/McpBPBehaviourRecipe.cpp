@@ -77,9 +77,10 @@ bool FillPlaceholders(TSharedPtr<FJsonValue>& Value, const TMap<FString, TShared
     }
     const TSharedPtr<FJsonObject> Object = Value->AsObject();
     TArray<FString> Keys;
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+    for (const auto& Pair : Object->Values)
     {
-        Keys.Add(Pair.Key);
+        const FString PairKey(*Pair.Key);
+        Keys.Add(PairKey);
     }
     for (const FString& Key : Keys)
     {
@@ -146,18 +147,19 @@ namespace Detail
 bool CheckKeys(const TSharedPtr<FJsonObject>& Object, std::initializer_list<const TCHAR*> Allowed, const FString& Where,
                FString& OutError)
 {
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+    for (const auto& Pair : Object->Values)
     {
+        const FString PairKey(*Pair.Key);
         bool bKnown = false;
         FString List;
         for (const TCHAR* Key : Allowed)
         {
-            bKnown |= Pair.Key == Key;
+            bKnown |= PairKey == Key;
             List += (List.IsEmpty() ? TEXT("") : TEXT(", ")) + FString(Key);
         }
         if (!bKnown)
         {
-            OutError = FString::Printf(TEXT("%s has an unknown field '%s'. Its fields: %s."), *Where, *Pair.Key, *List);
+            OutError = FString::Printf(TEXT("%s has an unknown field '%s'. Its fields: %s."), *Where, *PairKey, *List);
             return false;
         }
     }

@@ -19,9 +19,10 @@ int32 ApplyAIJsonProperties(const UStruct* Type, void* Container, const TSharedP
     }
 
     int32 Applied = 0;
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Properties->Values)
+    for (const auto& Pair : Properties->Values)
     {
-        FProperty* Property = Type->FindPropertyByName(FName(*Pair.Key));
+        const FString PairKey(*Pair.Key);
+        FProperty* Property = Type->FindPropertyByName(FName(*PairKey));
         if (!Property || !Pair.Value.IsValid())
         {
             continue;
@@ -30,12 +31,12 @@ int32 ApplyAIJsonProperties(const UStruct* Type, void* Container, const TSharedP
         FString Error;
         if (ApplyJsonValueToProperty(Container, Property, Pair.Value, Error))
         {
-            OutApplied.AddUnique(Pair.Key);
+            OutApplied.AddUnique(PairKey);
             ++Applied;
         }
         else
         {
-            OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Error));
+            OutFailed.Add(FString::Printf(TEXT("%s: %s"), *PairKey, *Error));
         }
     }
     return Applied;
