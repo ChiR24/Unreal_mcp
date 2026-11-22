@@ -70,12 +70,12 @@ void ExpandEndpoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Key, co
 TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, const TSharedPtr<FJsonObject>& Step, const FString& Edit)
 {
   TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-  for (const auto& Pair : Batch->Values) {
+  for (TPair<FString, TSharedPtr<FJsonValue>> Pair : Batch->Values) {
     if (Pair.Key != TEXT("operations")) {
       Out->SetField(Pair.Key, Pair.Value);
     }
   }
-  for (const auto& Pair : Step->Values) {
+  for (TPair<FString, TSharedPtr<FJsonValue>> Pair : Step->Values) {
     // One asset per batch: the final compile and save are the batch's, so a step
     // naming another material would edit it and never save it.
     if (Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("materialPath")) {

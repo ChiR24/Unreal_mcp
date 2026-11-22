@@ -60,14 +60,14 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch,
                                          const TSharedPtr<FJsonObject>& Step, const FString& Edit)
 {
     TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-    for (const auto& Pair : Batch->Values)
+    for (TPair<FString, TSharedPtr<FJsonValue>> Pair : Batch->Values)
     {
         if (Pair.Key != TEXT("operations") && Pair.Key != TEXT("graphName"))
         {
             Out->SetField(Pair.Key, Pair.Value);
         }
     }
-    for (const auto& Pair : Step->Values)
+    for (TPair<FString, TSharedPtr<FJsonValue>> Pair : Step->Values)
     {
         // One Blueprint per batch: the pre-check, compile and save all use the
         // batch's, so a step naming another would edit it and never save it.

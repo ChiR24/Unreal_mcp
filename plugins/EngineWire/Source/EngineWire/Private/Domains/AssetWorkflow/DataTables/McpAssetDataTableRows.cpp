@@ -105,7 +105,7 @@ bool HandleDataTableRowActions(
         }
         TSharedPtr<FJsonObject> Merged = McpExportDataTableRow(Table->RowStruct, Existing);
         int32 Overwritten = 0;
-        for (const auto& Field : RowData->Values)
+        for (TPair<FString, TSharedPtr<FJsonValue>> Field : RowData->Values)
         {
             if (Merged->HasField(Field.Key)) { ++Overwritten; }
             Merged->SetField(Field.Key, Field.Value);
