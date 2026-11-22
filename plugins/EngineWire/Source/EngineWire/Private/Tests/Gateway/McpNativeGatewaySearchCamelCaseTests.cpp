@@ -27,6 +27,8 @@ bool FMcpSearchCamelCaseTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a lower-case prefix of an acronym stays on it"), Split(TEXT("sRGB iOS macOS")), FString(TEXT("sRGB iOS macOS")));
 	TestEqual(TEXT("a one-letter type prefix stays on its name"), Split(TEXT("UObject AActor FVector")), FString(TEXT("UObject AActor FVector")));
 	TestEqual(TEXT("lower case and ids are left alone"), Split(TEXT("manage_gas.create_gas_asset")), FString(TEXT("manage_gas.create_gas_asset")));
+	TestEqual(TEXT("punctuation separates independently split runs"), Split(TEXT("[PCGGraphNode]/Texture2DArray")),
+		FString(TEXT("[PCG Graph Node]/Texture2D Array")));
 	TestEqual(TEXT("an empty query stays empty"), Split(TEXT("")), FString());
 
 	// An engine name a summary spells whole is held for each of the words it joins, and only for those.
@@ -64,6 +66,85 @@ bool FMcpSearchCamelCaseTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("create GameplayEffect"), First(TEXT("create GameplayEffect")), FString(TEXT("manage_gas.create_gas_asset")));
 	TestEqual(TEXT("create PlayerController"), First(TEXT("create PlayerController")), First(TEXT("create player controller")));
 	TestEqual(TEXT("create MetaSound"), First(TEXT("create MetaSound")), FString(TEXT("manage_audio.edit_metasound")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpSearchJoinedSpanTest,
+	"EngineWire.Gateway.SearchCamelCase.JoinedSpans",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpSearchJoinedSpanTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	const TArray<FString> Content = { TEXT("sound"), TEXT("cue"), TEXT("graph"), TEXT("node"), TEXT("asset") };
+	const TArray<FMcpJoinedSpan> Spans = McpSearchJoinedSpans(TEXT("sound cue graph node asset"), Content);
+	for (const TCHAR* Word : { TEXT("sound"), TEXT("cue"), TEXT("graph"), TEXT("node") })
+	{
+		TestTrue(FString::Printf(TEXT("a four-word name covers %s"), Word),
+			McpSearchFieldHolds(TEXT("(SoundCueGraphNode)"), Word, Spans, true));
+	}
+	TestTrue(TEXT("a maximum-length span can end at the last query word"),
+		McpSearchFieldHolds(TEXT("CueGraphNodeAsset"), TEXT("asset"), Spans, true));
+	TestFalse(TEXT("a five-word name exceeds the span limit"),
+		McpSearchFieldHolds(TEXT("SoundCueGraphNodeAsset"), TEXT("sound"), Spans, true));
+	TestFalse(TEXT("a span cannot skip intervening words"),
+		McpSearchFieldHolds(TEXT("SoundGraph"), TEXT("sound"), Spans, true));
+	TestFalse(TEXT("a joined name must be a whole token"),
+		McpSearchFieldHolds(TEXT("PreSoundCueGraphNode"), TEXT("cue"), Spans, false));
+	const TArray<FMcpJoinedSpan> WithFunctionWord =
+		McpSearchJoinedSpans(TEXT("sound and cue"), { TEXT("sound"), TEXT("cue") });
+	TestFalse(TEXT("a function word is not covered by a joined name"),
+		McpSearchFieldHolds(TEXT("SoundAndCue"), TEXT("and"), WithFunctionWord, true));
+	TestFalse(TEXT("a function word cannot be skipped even though it does not score"),
+		McpSearchFieldHolds(TEXT("SoundCue"), TEXT("cue"), WithFunctionWord, true));
+	TestTrue(TEXT("a literal summary word needs no capital or joined span"),
+		McpSearchFieldHolds(TEXT("edit the cue"), TEXT("cue"), {}, true));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpSearchCamelCaseRecordTest,
+	"EngineWire.Gateway.SearchCamelCase.RecordScoring",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpSearchCamelCaseRecordTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	const FString Query = TEXT("sound cue");
+	const TArray<FString> Words = { TEXT("sound"), TEXT("cue") };
+	const TArray<FMcpJoinedSpan> Spans = McpSearchJoinedSpans(Query, Words);
+	FMcpCapabilityRecord Record;
+	Record.Id = TEXT("test.example");
+	Record.Topics = { TEXT("soundcue") };
+	Record.Summary = TEXT("Returns soundCue.");
+	FMcpSearchMatch TopicMatch;
+	TestTrue(TEXT("a joined topic makes the record a result"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, Spans, TopicMatch));
+	TestTrue(TEXT("the topic is the only reason despite the lower-camel summary"),
+		TopicMatch.Reasons == TArray<FString>{ TEXT("topic") });
+
+	Record.Topics.Reset();
+	Record.Family = TEXT("soundcue");
+	Record.Domain = TEXT("soundcue");
+	Record.Parent = TEXT("soundcue");
+	FMcpSearchMatch IgnoredMatch;
+	TestFalse(TEXT("a summary field and joined identifiers do not make the record a result"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, Spans, IgnoredMatch));
+
+	Record.Summary = TEXT("Returns a SoundCue.");
+	FMcpSearchMatch SummaryMatch;
+	TestTrue(TEXT("a capitalized summary name makes the record a result"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, Spans, SummaryMatch));
+	TestTrue(TEXT("the capitalized name fires only the summary rule"),
+		SummaryMatch.Reasons == TArray<FString>{ TEXT("summary") });
+	TestTrue(TEXT("the joined topic ranks higher than the joined summary"), TopicMatch.Score > SummaryMatch.Score);
+
+	FMcpSearchMatch ComputedMatch;
+	TestTrue(TEXT("scoring without cached spans also recognizes the name"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, ComputedMatch));
+	TestEqual(TEXT("the two scoring entry points assign the same score"), ComputedMatch.Score, SummaryMatch.Score);
+	TestTrue(TEXT("the two scoring entry points report the same reasons"), ComputedMatch.Reasons == SummaryMatch.Reasons);
 	return true;
 }
 #endif

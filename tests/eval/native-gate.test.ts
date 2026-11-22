@@ -13,7 +13,7 @@ import { measureRetrieval } from './measure-retrieval.js';
 import {
   NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_GENERIC_WORD_TOOLS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
   NATIVE_RULE_WEIGHTS, NATIVE_TYPO_LONG_LENGTH, NATIVE_TYPO_MIN_LENGTH, NATIVE_TYPO_SWAP_LENGTH, NATIVE_WORD_COVERAGE_BONUS,
-  NATIVE_JOINED_SPAN_WORDS, nativeCorrectQuery, nativeEditDistance, nativeGenericWords, nativeSearchRanker, nativeSplitCamelCase,
+  NATIVE_JOINED_SPAN_WORDS, nativeCorrectQuery, nativeEditDistance, nativeGenericWords, nativeScored, nativeSearchRanker, nativeSplitCamelCase,
   nativeWholeActions,
 } from './native-ranker.js';
 
@@ -108,6 +108,22 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeIntent).toContain('if (Words.Contains(Word) && !OutScored.Contains(Word) && (bAsked || Word == Words[0])) Added.Add(Word);');
     expect(nativeIntent).toContain('if (GenericWords.Contains(Word) || (Own.Num() > 0 && Word == Own[0]))');
     expect(nativeIntent).toContain('if (Entry.Value.Num() >= McpSearchGenericWordTools) Out.Add(Entry.Key);');
+  });
+});
+
+describe('CamelCase query normalization', () => {
+  it.each([
+    ['[GameplayEffect]/K2Node', '[Gameplay Effect]/K2Node'],
+    ['PCGGraphNode, Texture2DArray', 'PCG Graph Node, Texture2D Array'],
+    ['sRGB (UObjectFactory)', 'sRGB (UObject Factory)'],
+  ])('splits %s without changing punctuation or protected boundaries', (input, expected) => {
+    expect(nativeSplitCamelCase(input)).toBe(expected);
+  });
+
+  it('preserves the ranking and scores when a CamelCase name follows a typo', () => {
+    const spaced = nativeScored('create gameplay effect');
+    expect(spaced[0]?.id).toBe('manage_gas.create_gas_asset');
+    expect(nativeScored('craete GameplayEffect')).toEqual(spaced);
   });
 });
 
