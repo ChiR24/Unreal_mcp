@@ -29,6 +29,10 @@ bool FMcpSearchCamelCaseTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("lower case and ids are left alone"), Split(TEXT("manage_gas.create_gas_asset")), FString(TEXT("manage_gas.create_gas_asset")));
 	TestEqual(TEXT("punctuation separates independently split runs"), Split(TEXT("[PCGGraphNode]/Texture2DArray")),
 		FString(TEXT("[PCG Graph Node]/Texture2D Array")));
+	TestEqual(TEXT("prefix, acronym plural and acronym-to-word rules apply after another split"),
+		Split(TEXT("MakeUObject/MakeLODs/NPCSpawner")), FString(TEXT("Make UObject/Make LODs/NPC Spawner")));
+	TestEqual(TEXT("a lowercase prefix splits if the remainder is not an acronym"),
+		Split(TEXT("xInput")), FString(TEXT("x Input")));
 	TestEqual(TEXT("an empty query stays empty"), Split(TEXT("")), FString());
 
 	// An engine name a summary spells whole is held for each of the words it joins, and only for those.
@@ -64,6 +68,8 @@ bool FMcpSearchCamelCaseTest::RunTest(const FString& Parameters)
 		return Id;
 	};
 	TestEqual(TEXT("create GameplayEffect"), First(TEXT("create GameplayEffect")), FString(TEXT("manage_gas.create_gas_asset")));
+	TestEqual(TEXT("the typo pass sees the component words of a CamelCase name"),
+		First(TEXT("create GameplyaEffect")), FString(TEXT("manage_gas.create_gas_asset")));
 	TestEqual(TEXT("create PlayerController"), First(TEXT("create PlayerController")), First(TEXT("create player controller")));
 	TestEqual(TEXT("create MetaSound"), First(TEXT("create MetaSound")), FString(TEXT("manage_audio.edit_metasound")));
 	return true;
@@ -98,6 +104,14 @@ bool FMcpSearchJoinedSpanTest::RunTest(const FString& Parameters)
 		McpSearchFieldHolds(TEXT("SoundAndCue"), TEXT("and"), WithFunctionWord, true));
 	TestFalse(TEXT("a function word cannot be skipped even though it does not score"),
 		McpSearchFieldHolds(TEXT("SoundCue"), TEXT("cue"), WithFunctionWord, true));
+	TestTrue(TEXT("a function word can still be part of a joined name"),
+		McpSearchFieldHolds(TEXT("SoundAndCue"), TEXT("cue"), WithFunctionWord, true));
+	TestTrue(TEXT("a capitalized name still counts after a lower-camel field"),
+		McpSearchFieldHolds(TEXT("soundCue, then SoundCue"), TEXT("cue"), Spans, true));
+	TestFalse(TEXT("a later capitalized word cannot make a lower-camel field count"),
+		McpSearchFieldHolds(TEXT("soundCue, then SoundGraph"), TEXT("cue"), Spans, true));
+	TestFalse(TEXT("a joined name cannot reverse the order of the query words"),
+		McpSearchFieldHolds(TEXT("CueSound"), TEXT("cue"), Spans, true));
 	TestTrue(TEXT("a literal summary word needs no capital or joined span"),
 		McpSearchFieldHolds(TEXT("edit the cue"), TEXT("cue"), {}, true));
 	return true;
@@ -140,6 +154,21 @@ bool FMcpSearchCamelCaseRecordTest::RunTest(const FString& Parameters)
 		SummaryMatch.Reasons == TArray<FString>{ TEXT("summary") });
 	TestTrue(TEXT("the joined topic ranks higher than the joined summary"), TopicMatch.Score > SummaryMatch.Score);
 
+	Record.Summary.Reset();
+	Record.Topics = { TEXT("unrelated"), TEXT("sound/cue") };
+	FMcpSearchMatch LiteralTopicMatch;
+	TestTrue(TEXT("both literal topic words match without a phrase hit"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, Spans, LiteralTopicMatch));
+	TestEqual(TEXT("a joined topic gets the same coverage as two literal words"), TopicMatch.Score, LiteralTopicMatch.Score);
+
+	Record.Topics.Reset();
+	Record.Summary = TEXT("Returns sound/cue.");
+	FMcpSearchMatch LiteralSummaryMatch;
+	TestTrue(TEXT("both literal summary words match without a phrase hit"),
+		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, Spans, LiteralSummaryMatch));
+	TestEqual(TEXT("a joined summary gets the same coverage as two literal words"), SummaryMatch.Score, LiteralSummaryMatch.Score);
+
+	Record.Summary = TEXT("Returns a SoundCue.");
 	FMcpSearchMatch ComputedMatch;
 	TestTrue(TEXT("scoring without cached spans also recognizes the name"),
 		McpSearchScoreRecord(Record, Query, Words, Words, false, {}, ComputedMatch));

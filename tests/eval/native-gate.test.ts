@@ -116,6 +116,8 @@ describe('CamelCase query normalization', () => {
     ['[GameplayEffect]/K2Node', '[Gameplay Effect]/K2Node'],
     ['PCGGraphNode, Texture2DArray', 'PCG Graph Node, Texture2D Array'],
     ['sRGB (UObjectFactory)', 'sRGB (UObject Factory)'],
+    ['MakeUObject/MakeLODs/NPCSpawner', 'Make UObject/Make LODs/NPC Spawner'],
+    ['xInput—GameplayEffect\tPCGGraph', 'x Input—Gameplay Effect\tPCG Graph'],
   ])('splits %s without changing punctuation or protected boundaries', (input, expected) => {
     expect(nativeSplitCamelCase(input)).toBe(expected);
   });
@@ -124,6 +126,24 @@ describe('CamelCase query normalization', () => {
     const spaced = nativeScored('create gameplay effect');
     expect(spaced[0]?.id).toBe('manage_gas.create_gas_asset');
     expect(nativeScored('craete GameplayEffect')).toEqual(spaced);
+  });
+
+  it('scores SoundCue in a summary only for adjacent words in the right order', () => {
+    // The editor preview summary includes SoundCue and the standalone word sound.
+    // Both queries match sound; only the first also earns summary and coverage points for cue.
+    const previewScore = (query: string) => nativeScored(query).find(({ id }) => id === 'system_control.play_sound')?.score;
+    const forward = previewScore('sound cue');
+    const reversed = previewScore('cue sound');
+    expect(reversed).toBeDefined();
+    expect(forward).toBe((reversed ?? 0) + NATIVE_RULE_WEIGHTS.summary + NATIVE_WORD_COVERAGE_BONUS);
+  });
+
+  it('does not score a lower camel case field in summary prose as a joined name', () => {
+    // The same preview summary has soundPath, but the field should add no points for path.
+    const previewScore = (query: string) => nativeScored(query).find(({ id }) => id === 'system_control.play_sound')?.score;
+    const reversed = previewScore('path sound');
+    expect(reversed).toBeDefined();
+    expect(previewScore('sound path')).toBe(reversed);
   });
 });
 
