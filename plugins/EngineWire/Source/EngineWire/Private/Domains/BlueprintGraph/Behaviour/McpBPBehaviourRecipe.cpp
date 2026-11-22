@@ -77,7 +77,7 @@ bool FillPlaceholders(TSharedPtr<FJsonValue>& Value, const TMap<FString, TShared
     }
     const TSharedPtr<FJsonObject> Object = Value->AsObject();
     TArray<FString> Keys;
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+    for (const auto& Pair : Object->Values)
     {
         Keys.Add(Pair.Key);
     }
@@ -146,7 +146,7 @@ namespace Detail
 bool CheckKeys(const TSharedPtr<FJsonObject>& Object, std::initializer_list<const TCHAR*> Allowed, const FString& Where,
                FString& OutError)
 {
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+    for (const auto& Pair : Object->Values)
     {
         bool bKnown = false;
         FString List;

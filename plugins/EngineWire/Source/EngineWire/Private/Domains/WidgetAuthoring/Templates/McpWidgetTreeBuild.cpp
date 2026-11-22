@@ -44,7 +44,7 @@ const TArray<FString>& WidgetTreeSlotKeys()
 
 FString WidgetTreeUnknownKey(const TSharedPtr<FJsonObject>& Object, const TArray<FString>& Known)
 {
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Object->Values)
+    for (const auto& Pair : Object->Values)
     {
         if (!Known.Contains(Pair.Key))
         {

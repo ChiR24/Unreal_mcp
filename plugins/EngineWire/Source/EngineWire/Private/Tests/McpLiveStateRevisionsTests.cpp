@@ -167,7 +167,7 @@ bool FMcpExpectedRevisionsParseTest::RunTest(const FString& Parameters)
 		Bad.Emplace(TEXT("negative"), MakeShared<FJsonValueNumber>(-4));
 		Bad.Emplace(TEXT("fractional"), MakeShared<FJsonValueNumber>(2.5));
 		Bad.Emplace(TEXT("string"), MakeShared<FJsonValueString>(TEXT("2")));
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Case : Bad)
+		for (const auto& Case : Bad)
 		{
 			TSharedPtr<FJsonObject> Pins = MakeShared<FJsonObject>();
 			Pins->SetField(TEXT("selection"), Case.Value);

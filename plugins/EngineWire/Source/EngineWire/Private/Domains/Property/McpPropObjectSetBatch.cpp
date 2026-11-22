@@ -31,7 +31,7 @@ void RunProperties(const FString& RequestId, const TSharedPtr<FJsonObject>& Payl
   TArray<FString> Failed;
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   double InstancesUpdated = -1.0;
-  for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Properties.Values) {
+  for (const auto& Pair : Properties.Values) {
     TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
     One->Values = Payload->Values;
     for (const TCHAR *Field : {TEXT("properties"), TEXT("propertyPath"), TEXT("watch")}) One->RemoveField(Field);

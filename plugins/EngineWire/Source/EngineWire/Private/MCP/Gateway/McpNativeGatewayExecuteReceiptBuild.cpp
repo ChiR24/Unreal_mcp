@@ -43,7 +43,7 @@ TSharedPtr<FJsonObject> NarrowingGuidance(const FString& CapabilityId)
 		TEXT("summary"), TEXT("filter"), TEXT("name"), TEXT("path"), TEXT("kind"), TEXT("type"), TEXT("limit"),
 		TEXT("offset"), TEXT("page"), TEXT("cursor"), TEXT("count"), TEXT("max"), TEXT("top"), TEXT("depth")};
 	TArray<TSharedPtr<FJsonValue>> Suggestions;
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Properties)->Values)
+	for (const auto& Pair : (*Properties)->Values)
 	{
 		const FString Lower = Pair.Key.ToLower();
 		for (const TCHAR* Word : NarrowingWords)
