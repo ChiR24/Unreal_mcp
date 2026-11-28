@@ -32,8 +32,8 @@ TSharedPtr<FJsonObject> MergeSpawnItem(const TSharedPtr<FJsonObject> &Defaults,
   if (Defaults.IsValid()) {
     Out->Values = Defaults->Values;
   }
-  for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
-    Out->SetField(Pair.Key, Pair.Value);
+  for (const auto& Pair : Item->Values) {
+    Out->SetField(*Pair.Key, Pair.Value);
   }
   return Out;
 }
@@ -118,9 +118,10 @@ bool UEngineWireSubsystem::HandleControlActorSpawnBatch(
     }
     const bool bNamed = Item->HasField(TEXT("actorName"));
     TArray<FString> Ignored;
-    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
-      if (!IsSpawnItemKey(Pair.Key)) {
-        Ignored.Add(Pair.Key);
+    for (const auto& Pair : Item->Values) {
+      const FString PairKey(*Pair.Key);
+      if (!IsSpawnItemKey(PairKey)) {
+        Ignored.Add(PairKey);
       }
     }
     if (Ignored.Num() > 0) {

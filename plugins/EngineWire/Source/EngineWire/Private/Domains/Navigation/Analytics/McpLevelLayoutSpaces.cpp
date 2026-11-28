@@ -15,7 +15,7 @@ constexpr double LayoutMergeRatio = 0.75; // McpWatershed: a saddle this high (o
 // the wall beside every doorway out of its room.
 bool LayoutAtEdge(const FGraph& Graph, int32 Node)
 {
-    for (const FIntPoint Side : {FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1)})
+    for (const FIntPoint& Side : {FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1)})
     {
         if (!Graph.Adjacency[Node].ContainsByPredicate([&](int32 Next) { return Graph.Cells[Next] == Graph.Cells[Node] + Side; }))
         {

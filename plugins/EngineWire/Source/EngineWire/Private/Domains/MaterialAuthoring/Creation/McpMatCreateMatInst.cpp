@@ -16,8 +16,8 @@ static bool CreateMaterialInstanceBatch(UEngineWireSubsystem* Bridge, const FStr
     Item->RemoveField(TEXT("instances"));
     const TSharedPtr<FJsonObject>* Entry = nullptr;
     if (Entries[Index].IsValid() && Entries[Index]->TryGetObject(Entry)) {
-      for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Entry)->Values) {
-        Item->SetField(Pair.Key, Pair.Value);
+      for (const auto& Pair : (*Entry)->Values) {
+        Item->SetField(*Pair.Key, Pair.Value);
       }
     }
     const FString StepId = FString::Printf(TEXT("%s#instance%d"), *RequestId, Index);

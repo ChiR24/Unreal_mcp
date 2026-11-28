@@ -113,13 +113,14 @@ bool HandleSetVolumeProperties(UEngineWireSubsystem* Subsystem, const FString& R
     TArray<TSharedPtr<FJsonValue>> IgnoredArray;
     if (Payload.IsValid())
     {
-        for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Payload->Values)
+        for (const auto& Entry : Payload->Values)
         {
-            const bool bRoutingField = Entry.Key == TEXT("volumeName") || Entry.Key == TEXT("volumeProperty")
-                || Entry.Key == TEXT("action") || Entry.Key == TEXT("subAction") || Entry.Key == TEXT("save");
-            if (!bRoutingField && !PropertiesSet.Contains(Entry.Key))
+            const FString EntryKey(*Entry.Key);
+            const bool bRoutingField = EntryKey == TEXT("volumeName") || EntryKey == TEXT("volumeProperty")
+                || EntryKey == TEXT("action") || EntryKey == TEXT("subAction") || EntryKey == TEXT("save");
+            if (!bRoutingField && !PropertiesSet.Contains(EntryKey))
             {
-                IgnoredArray.Add(MakeShared<FJsonValueString>(Entry.Key));
+                IgnoredArray.Add(MakeShared<FJsonValueString>(EntryKey));
             }
         }
     }

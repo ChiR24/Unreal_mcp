@@ -68,23 +68,24 @@ FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObj
     if (!Step->TryGetObjectField(TEXT("pinDefaults"), Defaults)) return FString();
     // Only a pin that stored something other than its literal is named.
     TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>();
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Defaults)->Values)
+    for (const auto& Pair : (*Defaults)->Values)
     {
+        const FString PairKey(*Pair.Key);
         const TSharedPtr<FJsonObject> Payload = NodeStepPayload(StepPayload, Guid);
-        Payload->SetStringField(TEXT("pinName"), Pair.Key);
+        Payload->SetStringField(TEXT("pinName"), PairKey);
         Payload->SetField(TEXT("propertyValue"), Pair.Value);
         FString Unused;
         const FMcpCapturedResponse Reply = RunStep(Parent, Payload, TEXT("set_pin_default_value"),
-                                                   StepId + TEXT(".") + Pair.Key, Unused);
+                                                   StepId + TEXT(".") + PairKey, Unused);
         if (!Reply.bSuccess)
         {
-            return FString::Printf(TEXT("pinDefaults.%s: %s"), *Pair.Key, *Reply.Message);
+            return FString::Printf(TEXT("pinDefaults.%s: %s"), *PairKey, *Reply.Message);
         }
         FString AppliedValue;
         if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("appliedValue"), AppliedValue) &&
             McpAppliedValueDiffers(Pair.Value, AppliedValue))
         {
-            Applied->SetStringField(Pair.Key, AppliedValue);
+            Applied->SetStringField(PairKey, AppliedValue);
         }
     }
     if (Applied->Values.Num() > 0) Entry->SetObjectField(TEXT("pinDefaults"), Applied);
