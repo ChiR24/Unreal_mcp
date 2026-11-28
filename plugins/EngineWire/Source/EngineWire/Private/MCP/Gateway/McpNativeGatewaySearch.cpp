@@ -8,6 +8,7 @@
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
+#include "MCP/Gateway/Search/McpSearchCamelCase.h"
 #include "MCP/Gateway/Search/McpSearchIntent.h"
 #include "MCP/Gateway/Search/McpSearchTypos.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
@@ -85,9 +86,11 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	// socket worker busy ranking every record against a million words.
 	constexpr int32 McpSearchMaxQueryChars = 512;
 	// A word no record could match is a typo of the nearest catalog word (Search/McpSearchTypos.cpp): "spwan actor".
+	// CamelCase is split first, while the case is still there (Search/McpSearchCamelCase.h): "create GameplayEffect" is
+	// "create gameplay effect".
 	TArray<FMcpQueryCorrection> Corrections;
-	const FString Query =
-		McpCorrectQuery(Input.Query.Left(McpSearchMaxQueryChars).TrimStartAndEnd().ToLower(), Store, Corrections);
+	const FString Query = McpCorrectQuery(
+		McpSplitCamelCase(Input.Query.Left(McpSearchMaxQueryChars).TrimStartAndEnd()).ToLower(), Store, Corrections);
 	const int32 Limit = FMath::Clamp(Input.Limit, 1, McpSearchMaxLimit);
 	int32 Offset = FMath::Max(0, Input.Offset);
 	const FString& Revision = Store.GetCatalogRevision();
@@ -166,6 +169,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	TArray<FString> ContentWords;
 	McpSearchContentWords(AllWords, ContentWords);
 	const bool bLeadIsAction = ContentWords.Num() >= 2 && McpSearchIsWholeAction(ContentWords[0], Store);
+	const TArray<FMcpJoinedSpan> Spans = McpSearchJoinedSpans(Query, ContentWords);
 
 	TArray<FScoredRecord> Scored;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
@@ -192,7 +196,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			continue;
 		}
 		FMcpSearchMatch Match;
-		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, McpSearchGenericWords(Store), Match)) continue;
+		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, McpSearchGenericWords(Store), Spans, Match)) continue;
 		Entry.Score = Match.Score;
 		Scored.Add(MoveTemp(Entry));
 	}

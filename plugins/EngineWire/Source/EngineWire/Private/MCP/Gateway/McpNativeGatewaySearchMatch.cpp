@@ -3,6 +3,7 @@
 #include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
+#include "MCP/Gateway/Search/McpSearchCamelCase.h"
 #include "MCP/Gateway/Search/McpSearchIntent.h"
 
 namespace
@@ -133,11 +134,11 @@ bool AnyTopicContainsPhrase(const TArray<FString>& Topics, const FString& Query)
 	return false;
 }
 
-bool AnyTopicContainsWord(const TArray<FString>& Topics, const FString& Word)
+bool AnyTopicHolds(const TArray<FString>& Topics, const FString& Word, const TArray<FMcpJoinedSpan>& Spans)
 {
 	for (const FString& Topic : Topics)
 	{
-		if (ContainsWord(Topic, Word)) return true;
+		if (McpSearchFieldHolds(Topic, Word, Spans, false)) return true;
 	}
 	return false;
 }
@@ -181,6 +182,15 @@ bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
 	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
 	const TSet<FString>& GenericWords, FMcpSearchMatch& Out)
+{
+	return McpSearchScoreRecord(Record, Query, AllWords, ContentWords, bLeadIsAction, GenericWords,
+		McpSearchJoinedSpans(Query, ContentWords), Out);
+}
+
+bool McpSearchScoreRecord(
+	const FMcpCapabilityRecord& Record, const FString& Query,
+	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
+	const TSet<FString>& GenericWords, const TArray<FMcpJoinedSpan>& Spans, FMcpSearchMatch& Out)
 {
 	bool Fired[RuleCount] = {};
 	int32 Score = 0;
@@ -226,8 +236,8 @@ bool McpSearchScoreRecord(
 		Hits[RuleId] = ScoredWords.Contains(Word);
 		Hits[RuleFamily] = ContainsWord(Record.Family, Word);
 		Hits[RuleDomain] = ContainsWord(Record.Domain, Word);
-		Hits[RuleTopic] = AnyTopicContainsWord(Record.Topics, Word);
-		Hits[RuleSummary] = ContainsWord(Record.Summary, Word);
+		Hits[RuleTopic] = AnyTopicHolds(Record.Topics, Word, Spans);
+		Hits[RuleSummary] = McpSearchFieldHolds(Record.Summary, Word, Spans, true);
 		Hits[RuleParent] = ContainsWord(Record.Parent, Word);
 		bool bAny = false;
 		for (int32 Rule = 0; Rule < RuleCount; ++Rule)

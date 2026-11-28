@@ -13,7 +13,8 @@ import { measureRetrieval } from './measure-retrieval.js';
 import {
   NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_GENERIC_WORD_TOOLS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
   NATIVE_RULE_WEIGHTS, NATIVE_TYPO_LONG_LENGTH, NATIVE_TYPO_MIN_LENGTH, NATIVE_TYPO_SWAP_LENGTH, NATIVE_WORD_COVERAGE_BONUS,
-  nativeCorrectQuery, nativeEditDistance, nativeGenericWords, nativeSearchRanker, nativeWholeActions,
+  NATIVE_JOINED_SPAN_WORDS, nativeCorrectQuery, nativeEditDistance, nativeGenericWords, nativeScored, nativeSearchRanker, nativeSplitCamelCase,
+  nativeWholeActions,
 } from './native-ranker.js';
 
 const GATEWAY = join('plugins', 'EngineWire', 'Source', 'EngineWire', 'Private', 'MCP', 'Gateway');
@@ -69,6 +70,37 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeMatch).toContain('if (ContainsPhrase(Record.Summary.ToLower(), Query))');
   });
 
+  it('reads CamelCase under the same rules', () => {
+    const nativeSearch = readFileSync(join(GATEWAY, 'McpNativeGatewaySearch.cpp'), 'utf8');
+    const camelCase = readFileSync(join(GATEWAY, 'Search', 'McpSearchCamelCase.cpp'), 'utf8');
+    const camelHeader = readFileSync(join(GATEWAY, 'Search', 'McpSearchCamelCase.h'), 'utf8');
+    expect(nativeSearch).toContain('McpSplitCamelCase(Input.Query.Left(McpSearchMaxQueryChars).TrimStartAndEnd()).ToLower()');
+    expect(camelCase).toContain('? !(LowerIn(Run, 0, At, true) && !LowerIn(Run, At, Run.Len(), false))');
+    expect(camelCase).toContain(": IsUpper(Prev) && IsLower(Next) && At - Start > 1 && !(Next == TEXT('s') && At + 2 == Run.Len());");
+    expect(Number(camelHeader.match(/constexpr int32 McpSearchJoinedSpanWords = (\d+);/u)?.[1])).toBe(NATIVE_JOINED_SPAN_WORDS);
+    expect(nativeMatch).toContain('Hits[RuleTopic] = AnyTopicHolds(Record.Topics, Word, Spans);');
+    expect(nativeMatch).toContain('Hits[RuleSummary] = McpSearchFieldHolds(Record.Summary, Word, Spans, true);');
+    expect(nativeMatch).toContain('if (McpSearchFieldHolds(Topic, Word, Spans, false)) return true;');
+    expect(nativeMatch).toContain('McpSearchJoinedSpans(Query, ContentWords), Out);');
+    expect(camelCase).toContain('if (End > Index && IsUpper(Text[Index]))');
+    expect(nativeMatch).toContain('Hits[RuleFamily] = ContainsWord(Record.Family, Word);');
+    const split = (text: string): string => nativeSplitCamelCase(text);
+    expect(split('create GameplayEffect')).toBe('create Gameplay Effect');
+    expect(split('DSLParser PCGGraph')).toBe('DSL Parser PCG Graph');
+    expect(split('Texture2D K2Node UE5')).toBe('Texture2D K2Node UE5');
+    expect(split('LODs NPCs UVs')).toBe('LODs NPCs UVs');
+    expect(split('sRGB iOS macOS')).toBe('sRGB iOS macOS');
+    expect(split('UObject AActor FVector')).toBe('UObject AActor FVector');
+    expect(split('manage_gas.create_gas_asset')).toBe('manage_gas.create_gas_asset');
+  });
+
+  it('ranks an engine name typed whole as it ranks the name spaced', () => {
+    for (const [whole, spaced] of [['create PlayerController', 'create player controller'], ['create SoundCue', 'create sound cue'],
+      ['spawn PostProcessVolume', 'spawn post process volume'], ['add StaticMeshComponent', 'add static mesh component']]) {
+      expect(nativeSearchRanker(String(whole), 1)).toEqual(nativeSearchRanker(String(spaced), 1));
+    }
+  });
+
   it('asks an alias for a word that sets it apart under the same rule', () => {
     expect(headerConstant('McpSearchGenericWordTools')).toBe(NATIVE_GENERIC_WORD_TOOLS);
     expect(nativeMatch).toContain('McpSearchActionWords(Record, ContentWords, bLeadIsAction, GenericWords, HeldWords, ScoredWords);');
@@ -76,6 +108,42 @@ describe('the TypeScript copy matches the native source', () => {
     expect(nativeIntent).toContain('if (Words.Contains(Word) && !OutScored.Contains(Word) && (bAsked || Word == Words[0])) Added.Add(Word);');
     expect(nativeIntent).toContain('if (GenericWords.Contains(Word) || (Own.Num() > 0 && Word == Own[0]))');
     expect(nativeIntent).toContain('if (Entry.Value.Num() >= McpSearchGenericWordTools) Out.Add(Entry.Key);');
+  });
+});
+
+describe('CamelCase query normalization', () => {
+  it.each([
+    ['[GameplayEffect]/K2Node', '[Gameplay Effect]/K2Node'],
+    ['PCGGraphNode, Texture2DArray', 'PCG Graph Node, Texture2D Array'],
+    ['sRGB (UObjectFactory)', 'sRGB (UObject Factory)'],
+    ['MakeUObject/MakeLODs/NPCSpawner', 'Make UObject/Make LODs/NPC Spawner'],
+    ['xInput—GameplayEffect\tPCGGraph', 'x Input—Gameplay Effect\tPCG Graph'],
+  ])('splits %s without changing punctuation or protected boundaries', (input, expected) => {
+    expect(nativeSplitCamelCase(input)).toBe(expected);
+  });
+
+  it('preserves the ranking and scores when a CamelCase name follows a typo', () => {
+    const spaced = nativeScored('create gameplay effect');
+    expect(spaced[0]?.id).toBe('manage_gas.create_gas_asset');
+    expect(nativeScored('craete GameplayEffect')).toEqual(spaced);
+  });
+
+  it('scores SoundCue in a summary only for adjacent words in the right order', () => {
+    // The editor preview summary includes SoundCue and the standalone word sound.
+    // Both queries match sound; only the first also earns summary and coverage points for cue.
+    const previewScore = (query: string) => nativeScored(query).find(({ id }) => id === 'system_control.play_sound')?.score;
+    const forward = previewScore('sound cue');
+    const reversed = previewScore('cue sound');
+    expect(reversed).toBeDefined();
+    expect(forward).toBe((reversed ?? 0) + NATIVE_RULE_WEIGHTS.summary + NATIVE_WORD_COVERAGE_BONUS);
+  });
+
+  it('does not score a lower camel case field in summary prose as a joined name', () => {
+    // The same preview summary has soundPath, but the field should add no points for path.
+    const previewScore = (query: string) => nativeScored(query).find(({ id }) => id === 'system_control.play_sound')?.score;
+    const reversed = previewScore('path sound');
+    expect(reversed).toBeDefined();
+    expect(previewScore('sound path')).toBe(reversed);
   });
 });
 

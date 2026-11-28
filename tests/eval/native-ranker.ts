@@ -64,6 +64,37 @@ function foldWord(word: string): string {
   return folded === 'remove' || folded === 'destroy' || folded === 'erase' ? 'delete' : folded;
 }
 
+/** McpSplitCamelCaseWord: the parts of one ASCII alphanumeric run at its CamelCase boundaries ("GameplayEffect" ->
+ * Gameplay, Effect; "DSLParser" -> DSL, Parser). A boundary is a lower-case letter before an upper-case one, unless the
+ * lower-case letters open the run and no lower-case letter follows ("sRGB", "iOS", "macOS"); or the last letter of an
+ * upper-case run before a lower-case one, unless that would leave one letter in front ("UObject", "AActor") or the
+ * lower-case one is a closing plural s ("LODs", "NPCs"). A digit is never a boundary ("Texture2D", "K2Node"). */
+export function nativeSplitCamelCaseWord(run: string): string[] {
+  const upper = (ch: string): boolean => ch >= 'A' && ch <= 'Z';
+  const lower = (ch: string): boolean => ch >= 'a' && ch <= 'z';
+  const parts: string[] = [];
+  let start = 0;
+  for (let at = 1; at < run.length; at += 1) {
+    const prev = run.charAt(at - 1);
+    const next = run.charAt(at + 1);
+    if (!upper(run.charAt(at))) continue;
+    const split = lower(prev)
+      ? !(/^[a-z]+$/u.test(run.slice(0, at)) && !/[a-z]/u.test(run.slice(at)))
+      : upper(prev) && lower(next) && at - start > 1 && !(next === 's' && at + 2 === run.length);
+    if (!split) continue;
+    parts.push(run.slice(start, at));
+    start = at;
+  }
+  parts.push(run.slice(start));
+  return parts;
+}
+
+/** McpSplitCamelCase: the raw query with a space at each boundary of nativeSplitCamelCaseWord, before it is
+ * lower-cased, so an engine class name typed whole reads as its words. */
+export function nativeSplitCamelCase(text: string): string {
+  return text.replace(/[A-Za-z0-9]+/gu, (run) => nativeSplitCamelCaseWord(run).join(' '));
+}
+
 // Record text repeats across every query of a probe; re-tokenizing it per query word took the
 // 364-case plain probe past vitest's 10 s budget.
 const wordCache = new Map<string, string[]>();
@@ -136,6 +167,45 @@ function containsPhrase(text: string, phrase: string): boolean {
   return false;
 }
 
+export const NATIVE_JOINED_SPAN_WORDS = 4;
+
+/** McpSearchJoinedSpans: each run of 2 to NATIVE_JOINED_SPAN_WORDS adjacent query words written as one word, with the
+ * content words it covers ("sound cue" -> soundcue), so an engine name a topic or summary spells whole ('SoundCue',
+ * 'PlayerController') is found from its parts, whether they were typed spaced or as CamelCase (split before the query
+ * is lower-cased). Family, domain and parent are identifiers the id rules already read whole. */
+type JoinedSpan = { readonly word: string; readonly covers: readonly string[] };
+function joinedSpans(query: string, content: readonly string[]): readonly JoinedSpan[] {
+  // Joined from the words as typed, then folded: "directories to scan" is 'DirectoriesToScan', not directorytoscan.
+  const raw = query.match(/[a-z0-9]+/gu) ?? [];
+  const spans: JoinedSpan[] = [];
+  for (let from = 0; from < raw.length; from += 1) {
+    for (let to = from + 2; to <= Math.min(raw.length, from + NATIVE_JOINED_SPAN_WORDS); to += 1) {
+      const covers = raw.slice(from, to).map(foldWord).filter((word) => content.includes(word));
+      spans.push({ word: foldWord(raw.slice(from, to).join('')), covers });
+    }
+  }
+  return spans;
+}
+
+const nameCache = new Map<string, ReadonlySet<string>>();
+/** McpSearchNameWords: the folded runs of the text that open with a capital, the way an engine name is spelled
+ * ('PlayerController', 'SoundCue', 'Blackboard'); a lower-camel field name ('currentLevel', 'assetPath') is not one. */
+function nameWords(text: string): ReadonlySet<string> {
+  let names = nameCache.get(text);
+  if (names === undefined) {
+    names = new Set((text.match(/[A-Za-z0-9]+/gu) ?? []).filter((run) => /^[A-Z]/u.test(run)).map((run) => foldWord(run.toLowerCase())));
+    nameCache.set(text, names);
+  }
+  return names;
+}
+
+/** McpSearchFieldHolds: the text holds the word itself, or a joined span that covers it as one word. Summary prose
+ * counts a span only where it spells it as a name (namesOnly); a topic is written to be matched, so any word counts. */
+function fieldHolds(text: string, word: string, spans: readonly JoinedSpan[], namesOnly: boolean): boolean {
+  const whole = namesOnly ? nameWords(text) : new Set(searchWords(text));
+  return searchWords(text).includes(word) || spans.some((span) => span.covers.includes(word) && whole.has(span.word));
+}
+
 /** McpSearchLeadTied: the record's action, an alias or a topic holds the first content word and another one. */
 function leadTied(record: NativeRecord, content: readonly string[]): boolean {
   const holds = (words: readonly string[]): boolean => words.includes(content[0] ?? '') && content.slice(1).some((word) => words.includes(word));
@@ -143,7 +213,7 @@ function leadTied(record: NativeRecord, content: readonly string[]): boolean {
     || record.topics.some((topic) => holds(searchWords(topic)));
 }
 
-function scoreRecord(record: NativeRecord, query: string, all: readonly string[], content: readonly string[], leadIsAction: boolean): number | null {
+function scoreRecord(record: NativeRecord, query: string, all: readonly string[], content: readonly string[], leadIsAction: boolean, spans: readonly JoinedSpan[]): number | null {
   let score = 0;
   let fired = false;
   const fire = (rule: keyof typeof NATIVE_RULE_WEIGHTS): void => { score += NATIVE_RULE_WEIGHTS[rule]; fired = true; };
@@ -166,8 +236,8 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
       ['id', scored.has(word)],
       ['family', containsWord(record.family, word)],
       ['domain', containsWord(record.domain, word)],
-      ['topic', record.topics.some((topic) => containsWord(topic, word))],
-      ['summary', containsWord(record.summary, word)],
+      ['topic', record.topics.some((topic) => fieldHolds(topic, word, spans, false))],
+      ['summary', fieldHolds(record.summary, word, spans, true)],
       ['parent', containsWord(record.parent, word)],
     ];
     let any = false;
@@ -317,13 +387,15 @@ export function nativeCorrectQuery(query: string): { readonly query: string; rea
 
 /** Every record the native door ranks for a query, best first, with its score. */
 export function nativeScored(intent: string): readonly { readonly id: string; readonly score: number }[] {
-  // The native door reads at most McpSearchMaxQueryChars (512) characters of a query, before its typo pass.
-  const query = nativeCorrectQuery(intent.slice(0, 512).trim().toLowerCase()).query;
+  // The native door reads at most McpSearchMaxQueryChars (512) characters of a query, before its typo pass, and
+  // splits CamelCase while the query still has its case.
+  const query = nativeCorrectQuery(nativeSplitCamelCase(intent.slice(0, 512).trim()).toLowerCase()).query;
   const all = searchWords(query);
   const content = [...new Set(all.filter((word) => !RETRIEVAL_FUNCTION_WORDS.has(word)))];
   const leadIsAction = content.length >= 2 && nativeWholeActions().has(content[0] ?? '');
+  const spans = joinedSpans(query, content);
   return nativeRecords()
-    .map((record) => ({ id: record.id, score: scoreRecord(record, query, all, content, leadIsAction) }))
+    .map((record) => ({ id: record.id, score: scoreRecord(record, query, all, content, leadIsAction, spans) }))
     .filter((entry): entry is { id: string; score: number } => entry.score !== null)
     .sort((left, right) => right.score - left.score || compareAscii(left.id, right.id));
 }

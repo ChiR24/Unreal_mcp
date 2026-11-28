@@ -17,6 +17,7 @@
 #include "CoreMinimal.h"
 
 struct FMcpCapabilityRecord;
+struct FMcpJoinedSpan;
 
 /** Lowercase ASCII alphanumeric runs of Text, folded, in order (`searchWords`). */
 void McpSearchWords(const FString& Text, TArray<FString>& OutWords);
@@ -41,3 +42,12 @@ bool McpSearchScoreRecord(
 	const FMcpCapabilityRecord& Record, const FString& Query,
 	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
 	const TSet<FString>& GenericWords, FMcpSearchMatch& Out);
+
+/**
+ * The same, with the query's joined spans (Search/McpSearchCamelCase.h) built once for every record: a topic or summary
+ * word that is a span of the query written whole ('SoundCue' for "sound cue") counts for each word of the span.
+ */
+bool McpSearchScoreRecord(
+	const FMcpCapabilityRecord& Record, const FString& Query,
+	const TArray<FString>& AllWords, const TArray<FString>& ContentWords, bool bLeadIsAction,
+	const TSet<FString>& GenericWords, const TArray<FMcpJoinedSpan>& Spans, FMcpSearchMatch& Out);
